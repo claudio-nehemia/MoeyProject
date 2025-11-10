@@ -17,7 +17,12 @@ interface Props {
 }
 
 export default function Index({ divisis }: Props) {
-    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth >= 1024;
+        }
+        return true;
+    });
     const [showModal, setShowModal] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [selectedDivisi, setSelectedDivisi] = useState<Divisi | null>(null);
@@ -29,8 +34,19 @@ export default function Index({ divisis }: Props) {
         nama_divisi: '',
     });
 
-    useEffect(() => {
+useEffect(() => {
         setMounted(true);
+        
+        const handleResize = () => {
+            if (window.innerWidth >= 1024) {
+                setSidebarOpen(true);
+            } else {
+                setSidebarOpen(false);
+            }
+        };
+        
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     useEffect(() => {
@@ -158,7 +174,7 @@ export default function Index({ divisis }: Props) {
             <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
             {/* Sidebar */}
-            <Sidebar isOpen={sidebarOpen} currentPage="divisi" />
+            <Sidebar isOpen={sidebarOpen} currentPage="divisi" onClose={() => setSidebarOpen(false)} />
 
             {/* Main Content */}
             <div className="p-3 lg:ml-60">

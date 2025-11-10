@@ -23,7 +23,12 @@ interface Props {
 }
 
 export default function Show({ item }: Props) {
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth >= 1024;
+        }
+        return true;
+    });
 
     const formatPrice = (price: number) => {
         return new Intl.NumberFormat("id-ID", {
@@ -46,7 +51,7 @@ export default function Show({ item }: Props) {
         <div className="min-h-screen bg-gradient-to-br from-stone-50 via-orange-50 to-stone-50">
             <Head title={`Item - ${item.nama_item}`} />
             <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-            <Sidebar isOpen={sidebarOpen} currentPage="item" />
+            <Sidebar isOpen={sidebarOpen} currentPage="item" onClose={() => setSidebarOpen(false)} />
 
             {/* Main Content */}
             <main className="pt-12 pl-60 px-4 pb-6 transition-all">

@@ -30,7 +30,12 @@ interface Props {
 }
 
 export default function Index({ users }: Props) {
-    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth >= 1024;
+        }
+        return true;
+    });
     const [showModal, setShowModal] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -213,7 +218,7 @@ export default function Index({ users }: Props) {
             <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
             {/* Sidebar */}
-            <Sidebar isOpen={sidebarOpen} currentPage="user" />
+            <Sidebar isOpen={sidebarOpen} currentPage="user" onClose={() => setSidebarOpen(false)} />
 
             {/* Main Content */}
             <div className="p-3 lg:ml-60">

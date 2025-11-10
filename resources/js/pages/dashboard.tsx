@@ -4,11 +4,29 @@ import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 
 export default function Dashboard() {
-    const [sidebarOpen, setSidebarOpen] = useState(false);
+    // Set sidebar terbuka di desktop, tertutup di mobile
+    const [sidebarOpen, setSidebarOpen] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth >= 1024; // lg breakpoint
+        }
+        return true;
+    });
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
         setMounted(true);
+        
+        // Handle window resize
+        const handleResize = () => {
+            if (window.innerWidth >= 1024) {
+                setSidebarOpen(true); // Auto buka di desktop
+            } else {
+                setSidebarOpen(false); // Auto tutup di mobile
+            }
+        };
+        
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     return (
@@ -124,7 +142,11 @@ export default function Dashboard() {
             <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
             {/* Sidebar */}
-            <Sidebar isOpen={sidebarOpen} currentPage="dashboard" />
+            <Sidebar 
+                isOpen={sidebarOpen} 
+                currentPage="dashboard" 
+                onClose={() => setSidebarOpen(false)}
+            />
 
             {/* Main Content */}
             <div className="p-3 lg:ml-60 bg-gradient-to-br from-stone-50 via-amber-50/20 to-stone-50 min-h-screen">

@@ -4,18 +4,35 @@ import { useEffect, useState } from 'react';
 interface SidebarProps {
     isOpen: boolean;
     currentPage?: string;
+    onClose?: () => void;
 }
 
-export default function Sidebar({ isOpen, currentPage = 'dashboard' }: SidebarProps) {
+export default function Sidebar({ isOpen, currentPage = 'dashboard', onClose }: SidebarProps) {
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
         setMounted(true);
     }, []);
 
+    const handleLinkClick = () => {
+        // Close sidebar on mobile when link is clicked
+        if (onClose && window.innerWidth < 1024) {
+            onClose();
+        }
+    };
+
     return (
-        <aside className={`fixed top-0 left-0 z-40 w-60 h-screen pt-16 transition-transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} glass-effect border-r border-stone-200 lg:translate-x-0`}>
-            <div className="h-full px-2.5 pb-3 overflow-y-auto flex flex-col">
+        <>
+            {/* Overlay blur untuk mobile */}
+            {isOpen && (
+                <div 
+                    className="fixed inset-0 backdrop-blur-sm bg-white/30 z-30 lg:hidden transition-all"
+                    onClick={onClose}
+                ></div>
+            )}
+            
+            <aside className={`fixed top-0 left-0 z-40 w-60 h-screen pt-16 transition-transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} bg-white border-r border-stone-200 lg:translate-x-0 shadow-lg lg:shadow-none`}>
+                <div className="h-full px-2.5 pb-3 overflow-y-auto flex flex-col bg-white">
                 {/* Master Data Section */}
                 <div className="px-1.5 py-2 mb-2">
                     <p className="text-xs font-bold text-stone-500 uppercase tracking-wider">Master Data</p>
@@ -25,6 +42,7 @@ export default function Sidebar({ isOpen, currentPage = 'dashboard' }: SidebarPr
                     <li className={mounted ? 'slideInLeft' : 'opacity-0'} style={{ animationDelay: '0.1s' }}>
                         <Link
                             href="/dashboard"
+                            onClick={handleLinkClick}
                             className={`flex items-center p-2 rounded-lg group transition-all ${
                                 currentPage === 'dashboard' 
                                     ? 'text-stone-900 bg-gradient-to-r from-amber-50 to-amber-100 shadow-sm' 
@@ -52,6 +70,7 @@ export default function Sidebar({ isOpen, currentPage = 'dashboard' }: SidebarPr
                     <li className={mounted ? 'slideInLeft' : 'opacity-0'} style={{ animationDelay: '0.2s' }}>
                         <Link
                             href="/divisi"
+                            onClick={handleLinkClick}
                             className={`flex items-center p-2 rounded-lg group transition-all ${
                                 currentPage === 'divisi' 
                                     ? 'text-stone-900 bg-gradient-to-r from-amber-50 to-amber-100 shadow-sm' 
@@ -79,6 +98,7 @@ export default function Sidebar({ isOpen, currentPage = 'dashboard' }: SidebarPr
                     <li className={mounted ? 'slideInLeft' : 'opacity-0'} style={{ animationDelay: '0.3s' }}>
                         <Link
                             href="/user"
+                            onClick={handleLinkClick}
                             className={`flex items-center p-2 rounded-lg group transition-all ${
                                 currentPage === 'user' 
                                     ? 'text-stone-900 bg-gradient-to-r from-amber-50 to-amber-100 shadow-sm' 
@@ -106,6 +126,7 @@ export default function Sidebar({ isOpen, currentPage = 'dashboard' }: SidebarPr
                     <li className={mounted ? 'slideInLeft' : 'opacity-0'} style={{ animationDelay: '0.4s' }}>
                         <Link
                             href="/role"
+                            onClick={handleLinkClick}
                             className={`flex items-center p-2 rounded-lg group transition-all ${
                                 currentPage === 'role' 
                                     ? 'text-stone-900 bg-gradient-to-r from-amber-50 to-amber-100 shadow-sm' 
@@ -133,6 +154,7 @@ export default function Sidebar({ isOpen, currentPage = 'dashboard' }: SidebarPr
                     <li className={mounted ? 'slideInLeft' : 'opacity-0'} style={{ animationDelay: '0.5s' }}>
                         <Link
                             href="/jenis-interior"
+                            onClick={handleLinkClick}
                             className={`flex items-center p-2 rounded-lg group transition-all ${
                                 currentPage === 'jenis-interior' 
                                     ? 'text-stone-900 bg-gradient-to-r from-amber-50 to-amber-100 shadow-sm' 
@@ -160,6 +182,7 @@ export default function Sidebar({ isOpen, currentPage = 'dashboard' }: SidebarPr
                     <li className={mounted ? 'slideInLeft' : 'opacity-0'} style={{ animationDelay: '0.6s' }}>
                         <Link
                             href="/jenis-item"
+                            onClick={handleLinkClick}
                             className={`flex items-center p-2 rounded-lg group transition-all ${
                                 currentPage === 'jenis-item' 
                                     ? 'text-stone-900 bg-gradient-to-r from-amber-50 to-amber-100 shadow-sm' 
@@ -187,6 +210,7 @@ export default function Sidebar({ isOpen, currentPage = 'dashboard' }: SidebarPr
                     <li className={mounted ? 'slideInLeft' : 'opacity-0'} style={{ animationDelay: '0.7s' }}>
                         <Link
                             href="/produk"
+                            onClick={handleLinkClick}
                             className={`flex items-center p-2 rounded-lg group transition-all ${
                                 currentPage === 'produk' 
                                     ? 'text-stone-900 bg-gradient-to-r from-amber-50 to-amber-100 shadow-sm' 
@@ -214,6 +238,7 @@ export default function Sidebar({ isOpen, currentPage = 'dashboard' }: SidebarPr
                     <li className={mounted ? 'slideInLeft' : 'opacity-0'} style={{ animationDelay: '0.8s' }}>
                         <Link
                             href="/item"
+                            onClick={handleLinkClick}
                             className={`flex items-center p-2 rounded-lg group transition-all ${
                                 currentPage === 'item' 
                                     ? 'text-stone-900 bg-gradient-to-r from-amber-50 to-amber-100 shadow-sm' 
@@ -239,14 +264,80 @@ export default function Sidebar({ isOpen, currentPage = 'dashboard' }: SidebarPr
                         </Link>
                     </li>
                 </ul>
+
+                {/* Operations Section */}
+                <div className="px-1.5 py-3 mt-4 mb-2 border-t border-stone-200 pt-4">
+                    <p className="text-xs font-bold text-stone-500 uppercase tracking-wider">Operations</p>
+                </div>
+
+                <ul className="space-y-1.5 font-medium mb-6">
+                    <li className={mounted ? 'slideInLeft' : 'opacity-0'} style={{ animationDelay: '0.9s' }}>
+                        <Link
+                            href="/order"
+                            onClick={handleLinkClick}
+                            className={`flex items-center p-2 rounded-lg group transition-all ${
+                                currentPage === 'order' 
+                                    ? 'text-stone-900 bg-gradient-to-r from-cyan-50 to-cyan-100 shadow-sm' 
+                                    : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
+                            }`}
+                        >
+                            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center mr-2 shadow-md group-hover:scale-110 transition-transform float`} style={{ animationDelay: '0.9s' }}>
+                                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                            </div>
+                            <span className={`flex-1 text-xs ${currentPage === 'order' ? 'text-cyan-700 font-medium' : ''}`}>Orders</span>
+                            {currentPage === 'order' && (
+                                <svg className="w-3.5 h-3.5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            )}
+                            {currentPage !== 'order' && (
+                                <svg className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            )}
+                        </Link>
+                    </li>
+                    
+                    <li className={mounted ? 'slideInLeft' : 'opacity-0'} style={{ animationDelay: '1s' }}>
+                        <Link
+                            href="/survey-results"
+                            onClick={handleLinkClick}
+                            className={`flex items-center p-2 rounded-lg group transition-all ${
+                                currentPage === 'survey' 
+                                    ? 'text-stone-900 bg-gradient-to-r from-emerald-50 to-emerald-100 shadow-sm' 
+                                    : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
+                            }`}
+                        >
+                            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center mr-2 shadow-md group-hover:scale-110 transition-transform float`} style={{ animationDelay: '1s' }}>
+                                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                            <span className={`flex-1 text-xs ${currentPage === 'survey' ? 'text-emerald-700 font-medium' : ''}`}>Survey Results</span>
+                            {currentPage === 'survey' && (
+                                <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            )}
+                            {currentPage !== 'survey' && (
+                                <svg className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            )}
+                        </Link>
+                    </li>
+                </ul>
                 
                 <div className="mt-auto pt-2 border-t border-stone-200">
-                    <div className="p-2 rounded-lg bg-gradient-to-br from-amber-100 to-amber-200">
-                        <p className="text-xs font-semibold text-amber-900 mb-0.5">� Master Data</p>
-                        <p className="text-xs text-amber-800">All your core business entities</p>
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-100 to-cyan-200">
+                        <p className="text-xs font-semibold text-cyan-900 mb-0.5">🚀 Operations</p>
+                        <p className="text-xs text-cyan-800">Manage your projects & orders</p>
                     </div>
                 </div>
             </div>
         </aside>
+        </>
     );
 }

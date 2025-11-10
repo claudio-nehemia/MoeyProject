@@ -16,7 +16,12 @@ interface Props {
 }
 
 export default function Index({ jenisInteriors }: Props) {
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth >= 1024;
+        }
+        return true;
+    });
     const [showModal, setShowModal] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [selectedJenisInterior, setSelectedJenisInterior] = useState<JenisInterior | null>(null);
@@ -28,8 +33,19 @@ export default function Index({ jenisInteriors }: Props) {
         nama_interior: "",
     });
 
-    useEffect(() => {
+useEffect(() => {
         setMounted(true);
+        
+        const handleResize = () => {
+            if (window.innerWidth >= 1024) {
+                setSidebarOpen(true);
+            } else {
+                setSidebarOpen(false);
+            }
+        };
+        
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     useEffect(() => {
@@ -89,7 +105,7 @@ export default function Index({ jenisInteriors }: Props) {
             <Head title="Jenis Interior Management" />
 
             <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-            <Sidebar isOpen={sidebarOpen} currentPage="jenis-interior" />
+            <Sidebar isOpen={sidebarOpen} currentPage="jenis-interior" onClose={() => setSidebarOpen(false)} />
 
             <div
                 className={`transition-all duration-300 ${

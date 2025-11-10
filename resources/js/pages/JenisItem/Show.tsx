@@ -23,11 +23,27 @@ interface Props {
 }
 
 export default function Show({ jenisItem }: Props) {
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth >= 1024;
+        }
+        return true;
+    });
     const [mounted, setMounted] = useState(false);
 
-    useEffect(() => {
+useEffect(() => {
         setMounted(true);
+        
+        const handleResize = () => {
+            if (window.innerWidth >= 1024) {
+                setSidebarOpen(true);
+            } else {
+                setSidebarOpen(false);
+            }
+        };
+        
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     return (
@@ -35,7 +51,7 @@ export default function Show({ jenisItem }: Props) {
             <Head title={`Jenis Item: ${jenisItem.nama_jenis_item}`} />
 
             <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-            <Sidebar isOpen={sidebarOpen} currentPage="jenis-item" />
+            <Sidebar isOpen={sidebarOpen} currentPage="jenis-item" onClose={() => setSidebarOpen(false)} />
 
             <div
                 className={`transition-all duration-300 ${

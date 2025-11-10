@@ -23,7 +23,12 @@ interface Props {
 }
 
 export default function Index({ roles }: Props) {
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth >= 1024;
+        }
+        return true;
+    });
     const [showModal, setShowModal] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [selectedRole, setSelectedRole] = useState<Role | null>(null);
@@ -130,7 +135,7 @@ export default function Index({ roles }: Props) {
             <Head title="Role Management" />
 
             <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-            <Sidebar isOpen={sidebarOpen} currentPage="role" />
+            <Sidebar isOpen={sidebarOpen} currentPage="role" onClose={() => setSidebarOpen(false)} />
 
             <div
                 className={`transition-all duration-300 ${
