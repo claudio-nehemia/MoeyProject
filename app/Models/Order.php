@@ -34,4 +34,9 @@ class Order extends Model
     {
         return $this->hasOne(SurveyResults::class, 'order_id');
     }
+
+    public function moodboard()
+    {
+        return $this->hasOne(Moodboard::class, 'order_id');
+    }
 }

@@ -328,6 +328,93 @@ export default function Sidebar({ isOpen, currentPage = 'dashboard', onClose }: 
                             )}
                         </Link>
                     </li>
+                    
+                    <li className={mounted ? 'slideInLeft' : 'opacity-0'} style={{ animationDelay: '1.1s' }}>
+                        <Link
+                            href="/moodboard"
+                            onClick={handleLinkClick}
+                            className={`flex items-center p-2 rounded-lg group transition-all ${
+                                currentPage === 'moodboard' 
+                                    ? 'text-stone-900 bg-gradient-to-r from-violet-50 to-violet-100 shadow-sm' 
+                                    : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
+                            }`}
+                        >
+                            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center mr-2 shadow-md group-hover:scale-110 transition-transform float`} style={{ animationDelay: '1.1s' }}>
+                                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                                </svg>
+                            </div>
+                            <span className={`flex-1 text-xs ${currentPage === 'moodboard' ? 'text-violet-700 font-medium' : ''}`}>Moodboard</span>
+                            {currentPage === 'moodboard' && (
+                                <svg className="w-3.5 h-3.5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            )}
+                            {currentPage !== 'moodboard' && (
+                                <svg className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            )}
+                        </Link>
+                    </li>
+
+                    <li className={mounted ? 'slideInLeft' : 'opacity-0'} style={{ animationDelay: '1.2s' }}>
+                        <Link
+                            href="/estimasi"
+                            onClick={handleLinkClick}
+                            className={`flex items-center p-2 rounded-lg group transition-all ${
+                                currentPage === 'estimasi' 
+                                    ? 'text-stone-900 bg-gradient-to-r from-blue-50 to-blue-100 shadow-sm' 
+                                    : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
+                            }`}
+                        >
+                            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center mr-2 shadow-md group-hover:scale-110 transition-transform float`} style={{ animationDelay: '1.2s' }}>
+                                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                            <span className={`flex-1 text-xs ${currentPage === 'estimasi' ? 'text-blue-700 font-medium' : ''}`}>Estimasi</span>
+                            {currentPage === 'estimasi' && (
+                                <svg className="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            )}
+                            {currentPage !== 'estimasi' && (
+                                <svg className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            )}
+                        </Link>
+                    </li>
+                    
+                    <li className={mounted ? 'slideInLeft' : 'opacity-0'} style={{ animationDelay: '1.3s' }}>
+                        <Link
+                            href="/commitment-fee"
+                            onClick={handleLinkClick}
+                            className={`flex items-center p-2 rounded-lg group transition-all ${
+                                currentPage === 'commitment' 
+                                    ? 'text-stone-900 bg-gradient-to-r from-teal-50 to-teal-100 shadow-sm' 
+                                    : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
+                            }`}
+                        >
+                            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center mr-2 shadow-md group-hover:scale-110 transition-transform float`} style={{ animationDelay: '1.3s' }}>
+                                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <span className={`flex-1 text-xs ${currentPage === 'commitment' ? 'text-teal-700 font-medium' : ''}`}>Commitment Fee</span>
+                            {currentPage === 'commitment' && (
+                                <svg className="w-3.5 h-3.5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            )}
+                            {currentPage !== 'commitment' && (
+                                <svg className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            )}
+                        </Link>
+                    </li>
                 </ul>
                 
                 <div className="mt-auto pt-2 border-t border-stone-200">

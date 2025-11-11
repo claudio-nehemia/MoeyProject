@@ -10,8 +10,11 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\DivisiController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\JenisItemController;
+use App\Http\Controllers\MoodboardController;
+use App\Http\Controllers\EstimasiController;
 use App\Http\Controllers\JenisInteriorController;
 use App\Http\Controllers\SurveyResultsController;
+use App\Http\Controllers\CommitmentFeeController;
 
 Route::get('/', function () {
     return Inertia::render('welcome', [
@@ -53,6 +56,31 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // SURVEY RESULTS ROUTES
     Route::resource('survey-results', SurveyResultsController::class);
     Route::post('survey-results/{orderId}/mark-response', [SurveyResultsController::class, 'markResponse'])->name('survey-results.mark-response');
+
+    // MOODBOARD ROUTES
+    Route::get('moodboard',[MoodboardController::class,'index'])->name('moodboard.index');
+    Route::post('moodboard/response/{orderId}', [MoodboardController::class, 'responseMoodboard'])->name('moodboard.response');
+    Route::post('moodboard/desain-kasar', [MoodboardController::class, 'uploadDesainKasar'])->name('moodboard.uploadDesainKasar');
+    Route::post('moodboard/desain-final/{moodboardId}', [MoodboardController::class, 'uploadDesainFinal'])->name('moodboard.uploadDesainFinal');
+    Route::post('moodboard/revise/{moodboardId}', [MoodboardController::class, 'reviseMoodboard'])->name('moodboard.revise');
+    Route::post('moodboard/accept/{moodboardId}', [MoodboardController::class, 'acceptDesain'])->name('moodboard.accept');
+    Route::get('moodboard/{id}', [MoodboardController::class, 'show'])->name('moodboard.show');
+    Route::delete('moodboard/{moodboardId}', [MoodboardController::class, 'destroy'])->name('moodboard.delete');
+
+    // ESTIMASI ROUTES
+    Route::get('estimasi', [EstimasiController::class, 'index'])->name('estimasi.index');
+    Route::post('estimasi/response/{moodboardId}', [EstimasiController::class, 'responseEstimasi'])->name('estimasi.response');
+    Route::post('estimasi/store', [EstimasiController::class, 'store'])->name('estimasi.store');
+    Route::post('estimasi/accept/{moodboardId}', [MoodboardController::class, 'acceptDesain'])->name('estimasi.accept');
+    Route::post('estimasi/revise/{moodboardId}', [MoodboardController::class, 'reviseMoodboard'])->name('estimasi.revise');
+
+    // COMMITMENT FEE ROUTES
+    Route::get('commitment-fee', [CommitmentFeeController::class, 'index'])->name('commitment-fee.index');
+    Route::post('commitment-fee/response/{moodboardId}', [CommitmentFeeController::class, 'responseFee'])->name('commitment-fee.response');
+    Route::post('commitment-fee/update-fee/{commitmentFeeId}', [CommitmentFeeController::class, 'updateFee'])->name('commitment-fee.update-fee');
+    Route::post('commitment-fee/upload-payment/{commitmentFeeId}', [CommitmentFeeController::class, 'uploadPayment'])->name('commitment-fee.upload-payment');
+
+
 });
 
 require __DIR__.'/settings.php';
