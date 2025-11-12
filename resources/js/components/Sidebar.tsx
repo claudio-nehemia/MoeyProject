@@ -1122,6 +1122,75 @@ export default function Sidebar({
                                 )}
                             </Link>
                         </li>
+
+                        <li
+                            className={mounted ? 'slideInLeft' : 'opacity-0'}
+                            style={{ animationDelay: '1.6s' }}
+                        >
+                            <Link
+                                href="/kontrak"
+                                onClick={handleLinkClick}
+                                className={`group flex items-center rounded-lg p-2 transition-all ${
+                                    currentPage === 'kontrak'
+                                        ? 'bg-gradient-to-r from-indigo-50 to-indigo-100 text-stone-900 shadow-sm'
+                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
+                                }`}
+                            >
+                                <div
+                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-400 to-indigo-600 shadow-md transition-transform group-hover:scale-110`}
+                                    style={{ animationDelay: '1.6s' }}
+                                >
+                                    <svg
+                                        className="h-3.5 w-3.5 text-white"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                        />
+                                    </svg>
+                                </div>
+                                <span
+                                    className={`flex-1 text-xs ${currentPage === 'kontrak' ? 'font-medium text-indigo-700' : ''}`}
+                                >
+                                    Kontrak
+                                </span>
+                                {currentPage === 'kontrak' && (
+                                    <svg
+                                        className="h-3.5 w-3.5 text-indigo-600"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth="2"
+                                            d="M9 5l7 7-7 7"
+                                        />
+                                    </svg>
+                                )}
+                                {currentPage !== 'kontrak' && (
+                                    <svg
+                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth="2"
+                                            d="M9 5l7 7-7 7"
+                                        />
+                                    </svg>
+                                )}
+                            </Link>
+                        </li>
                     </ul>
 
                     <div className="mt-auto border-t border-stone-200 pt-2">

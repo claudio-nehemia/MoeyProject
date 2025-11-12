@@ -42,8 +42,9 @@ class ItemPekerjaan extends Model
         return $this->hasOne(RabJasa::class);
     }
 
-    public function kontraks()
+
+    public function kontrak()
     {
-        return $this->hasMany(Kontrak::class);
+        return $this->hasOne(Kontrak::class);
     }
 }

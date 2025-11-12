@@ -252,6 +252,9 @@ class RabInternalController extends Controller
                 'id' => $rabInternal->id,
                 'response_by' => $rabInternal->response_by,
                 'response_time' => $rabInternal->response_time,
+                'is_submitted' => $rabInternal->is_submitted,
+                'submitted_by' => $rabInternal->submitted_by,
+                'submitted_at' => $rabInternal->submitted_at,
                 'order' => [
                     'nama_project' => $rabInternal->itemPekerjaan->moodboard->order->nama_project,
                     'company_name' => $rabInternal->itemPekerjaan->moodboard->order->company_name,
@@ -489,5 +492,44 @@ class RabInternalController extends Controller
             Log::error('Update RAB Internal error: ' . $e->getMessage());
             return back()->with('error', 'Gagal mengupdate RAB Internal: ' . $e->getMessage());
         }
+    }
+
+    public function submit($rabInternalId)
+    {
+        $rabInternal = RabInternal::with(['itemPekerjaan'])->findOrFail($rabInternalId);
+
+        // Check if already submitted
+        if ($rabInternal->is_submitted) {
+            return redirect()->back()
+                ->with('info', 'RAB sudah di-submit sebelumnya.');
+        }
+
+        // Check if all RAB types exist
+        $itemPekerjaan = $rabInternal->itemPekerjaan;
+        
+        if (!$itemPekerjaan->rabKontrak) {
+            return redirect()->back()
+                ->with('error', 'RAB Kontrak belum ada. Silakan generate RAB Kontrak terlebih dahulu.');
+        }
+
+        if (!$itemPekerjaan->rabVendor) {
+            return redirect()->back()
+                ->with('error', 'RAB Vendor belum ada. Silakan generate RAB Vendor terlebih dahulu.');
+        }
+
+        if (!$itemPekerjaan->rabJasa) {
+            return redirect()->back()
+                ->with('error', 'RAB Jasa belum ada. Silakan generate RAB Jasa terlebih dahulu.');
+        }
+
+        // Submit RAB
+        $rabInternal->update([
+            'is_submitted' => true,
+            'submitted_by' => auth()->user()->name ?? 'System',
+            'submitted_at' => now(),
+        ]);
+
+        return redirect()->back()
+            ->with('success', 'RAB berhasil di-submit! Semua RAB (Internal, Kontrak, Vendor, Jasa) telah ACC.');
     }
 }

@@ -11,6 +11,13 @@ class Kontrak extends Model
         'tanggal_selesai',
         'termin_id',
         'item_pekerjaan_id',
+        'harga_kontrak',
+    ];
+
+    protected $casts = [
+        'tanggal_mulai' => 'date',
+        'tanggal_selesai' => 'date',
+        'harga_kontrak' => 'decimal:0',
     ];
 
     public function termin()

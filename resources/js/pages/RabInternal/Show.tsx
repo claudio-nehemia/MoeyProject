@@ -46,6 +46,9 @@ interface RabInternal {
     id: number;
     response_by: string;
     response_time: string;
+    is_submitted: boolean;
+    submitted_by: string | null;
+    submitted_at: string | null;
     order: {
         nama_project: string;
         company_name: string;
@@ -87,6 +90,12 @@ export default function Show({ rabInternal }: Props) {
         });
     };
 
+    const handleSubmit = () => {
+        if (confirm('Submit RAB? Pastikan semua RAB (Internal, Kontrak, Vendor, Jasa) sudah lengkap dan benar.')) {
+            router.post(`/rab-internal/${rabInternal.id}/submit`);
+        }
+    };
+
     const totalSemuaProduk = rabInternal.produks.reduce((sum, produk) => sum + Number(produk.harga_akhir), 0);
 
     return (
@@ -101,19 +110,53 @@ export default function Show({ rabInternal }: Props) {
                     {/* Header */}
                     <div className="mb-6 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
                             <div className="bg-gradient-to-r from-amber-500 to-amber-600 p-6">
-                                <h2 className="text-2xl font-bold text-white">
-                                    RAB Internal
-                                </h2>
-                                <div className="mt-3 grid grid-cols-1 gap-3 text-sm text-amber-50 md:grid-cols-2">
-                                    <div>
-                                        <p><strong className="text-white">Project:</strong> {rabInternal.order.nama_project}</p>
-                                        <p><strong className="text-white">Company:</strong> {rabInternal.order.company_name}</p>
-                                        <p><strong className="text-white">Customer:</strong> {rabInternal.order.customer_name}</p>
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                        <h2 className="text-2xl font-bold text-white">
+                                            RAB Internal
+                                        </h2>
+                                        <div className="mt-3 grid grid-cols-1 gap-3 text-sm text-amber-50 md:grid-cols-2">
+                                            <div>
+                                                <p><strong className="text-white">Project:</strong> {rabInternal.order.nama_project}</p>
+                                                <p><strong className="text-white">Company:</strong> {rabInternal.order.company_name}</p>
+                                                <p><strong className="text-white">Customer:</strong> {rabInternal.order.customer_name}</p>
+                                            </div>
+                                            <div>
+                                                <p><strong className="text-white">Response By:</strong> {rabInternal.response_by}</p>
+                                                <p><strong className="text-white">Response Time:</strong> {formatDate(rabInternal.response_time)}</p>
+                                                {rabInternal.is_submitted && (
+                                                    <>
+                                                        <p className="mt-2"><strong className="text-white">Submitted By:</strong> {rabInternal.submitted_by}</p>
+                                                        <p><strong className="text-white">Submitted At:</strong> {formatDate(rabInternal.submitted_at!)}</p>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p><strong className="text-white">Response By:</strong> {rabInternal.response_by}</p>
-                                        <p><strong className="text-white">Response Time:</strong> {formatDate(rabInternal.response_time)}</p>
-                                    </div>
+                                    
+                                    {/* Submit Button */}
+                                    {!rabInternal.is_submitted && (
+                                        <div className="ml-4">
+                                            <button
+                                                onClick={handleSubmit}
+                                                className="rounded-lg bg-white px-6 py-3 font-semibold text-amber-600 shadow-lg transition-all hover:bg-amber-50 hover:shadow-xl"
+                                            >
+                                                Submit RAB
+                                            </button>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Status Badge if Submitted */}
+                                    {rabInternal.is_submitted && (
+                                        <div className="ml-4">
+                                            <span className="inline-flex items-center rounded-full bg-green-500 px-6 py-3 text-sm font-bold text-white shadow-lg">
+                                                <svg className="mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                </svg>
+                                                RAB Submitted
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

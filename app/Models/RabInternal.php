@@ -10,6 +10,15 @@ class RabInternal extends Model
         'item_pekerjaan_id',
         'response_by',
         'response_time',
+        'is_submitted',
+        'submitted_by',
+        'submitted_at',
+    ];
+
+    protected $casts = [
+        'response_time' => 'datetime',
+        'submitted_at' => 'datetime',
+        'is_submitted' => 'boolean',
     ];
 
     public function itemPekerjaan()

@@ -10,13 +10,14 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\DivisiController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\TerminController;
+use App\Http\Controllers\KontrakController;
+use App\Http\Controllers\RabJasaController;
 use App\Http\Controllers\EstimasiController;
 use App\Http\Controllers\JenisItemController;
 use App\Http\Controllers\MoodboardController;
-use App\Http\Controllers\RabInternalController;
-use App\Http\Controllers\RabKontrakController;
 use App\Http\Controllers\RabVendorController;
-use App\Http\Controllers\RabJasaController;
+use App\Http\Controllers\RabKontrakController;
+use App\Http\Controllers\RabInternalController;
 use App\Http\Controllers\CommitmentFeeController;
 use App\Http\Controllers\ItemPekerjaanController;
 use App\Http\Controllers\JenisInteriorController;
@@ -108,6 +109,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('rab-internal/{rabInternalId}/show', [RabInternalController::class, 'show'])->name('rab-internal.show');
     Route::get('rab-internal/{rabInternalId}/edit', [RabInternalController::class, 'edit'])->name('rab-internal.edit');
     Route::put('rab-internal/{rabInternalId}/update', [RabInternalController::class, 'update'])->name('rab-internal.update');
+    Route::post('rab-internal/{rabInternalId}/submit', [RabInternalController::class, 'submit'])->name('rab-internal.submit');
 
     // RAB KONTRAK ROUTES (Auto-generate from RAB Internal)
     Route::get('rab-kontrak', [RabKontrakController::class, 'index'])->name('rab-kontrak.index');
@@ -126,6 +128,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('rab-jasa/{itemPekerjaanId}/generate', [RabJasaController::class, 'generate'])->name('rab-jasa.generate');
     Route::get('rab-jasa/{rabJasaId}/show', [RabJasaController::class, 'show'])->name('rab-jasa.show');
     Route::delete('rab-jasa/{rabJasaId}', [RabJasaController::class, 'destroy'])->name('rab-jasa.destroy');
+
+    // KONTRAK ROUTES
+    Route::resource('kontrak', KontrakController::class);
 
 });
 
