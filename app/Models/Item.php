@@ -12,4 +12,9 @@ class Item extends Model
     {
         return $this->belongsTo(JenisItem::class, 'jenis_item_id');
     }
+
+    public function itemPekerjaanItems()
+    {
+        return $this->hasMany(ItemPekerjaanItem::class);
+    }   
 }

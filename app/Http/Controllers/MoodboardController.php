@@ -15,7 +15,7 @@ class MoodboardController extends Controller
      */
     public function index()
     {
-        $orders = Order::with(['moodboard.estimasi', 'moodboard.commitmentFee', 'jenisInterior', 'users.role'])
+        $orders = Order::with(['moodboard.estimasi', 'moodboard.itemPekerjaan', 'moodboard.commitmentFee', 'jenisInterior', 'users.role'])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($order) {
@@ -31,6 +31,7 @@ class MoodboardController extends Controller
                         'id' => $order->moodboard->id,
                         'moodboard_kasar' => $order->moodboard->moodboard_kasar,
                         'moodboard_final' => $order->moodboard->moodboard_final,
+                        'has_item_pekerjaan' => $order->moodboard->itemPekerjaan ? true : false,
                         'response_time' => $order->moodboard->response_time,
                         'response_by' => $order->moodboard->response_by,
                         'status' => $order->moodboard->status,

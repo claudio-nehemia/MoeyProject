@@ -13,7 +13,7 @@ class Moodboard extends Model
         'response_time',
         'response_by',
         'status',
-        'notes',  
+        'notes',
     ];
 
     public function order()
@@ -30,4 +30,10 @@ class Moodboard extends Model
     {
         return $this->hasOne(CommitmentFee::class);
     }
+
+    public function itemPekerjaan()
+    {
+        return $this->hasOne(ItemPekerjaan::class);
+    }
+
 }

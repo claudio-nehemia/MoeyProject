@@ -14,4 +14,9 @@ class JenisItem extends Model
     {
         return $this->hasMany(Item::class, 'jenis_item_id');
     }   
+
+    public function itemPekerjaanJenisItems()
+    {
+        return $this->hasMany(ItemPekerjaanJenisItem::class);
+    }
 }
