@@ -32,13 +32,13 @@ interface Props {
 }
 
 export default function MoodboardModal({ show, order, mode, onClose }: Props) {
-    const [file, setFile] = useState<File | null>(null);
+    const [files, setFiles] = useState<File[]>([]);
     const [notes, setNotes] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
-            setFile(e.target.files[0]);
+            setFiles(Array.from(e.target.files));
         }
     };
 
@@ -55,11 +55,15 @@ export default function MoodboardModal({ show, order, mode, onClose }: Props) {
                         onClose();
                     }
                 });
-            } else if (mode === 'upload-kasar' && file) {
-                console.log('Mode: upload-kasar, Moodboard ID:', order.moodboard!.id, 'File:', file.name);
+            } else if (mode === 'upload-kasar' && files.length > 0) {
+                console.log('Mode: upload-kasar, Moodboard ID:', order.moodboard!.id, 'Files:', files.length);
                 const formData = new FormData();
                 formData.append('moodboard_id', order.moodboard!.id.toString());
-                formData.append('moodboard_kasar', file);
+                
+                // Append multiple files
+                files.forEach((file, index) => {
+                    formData.append('moodboard_kasar[]', file);
+                });
 
                 router.post('/moodboard/desain-kasar', formData as any, {
                     onSuccess: () => {
@@ -75,10 +79,10 @@ export default function MoodboardModal({ show, order, mode, onClose }: Props) {
                         setLoading(false);
                     }
                 });
-            } else if (mode === 'upload-final' && file) {
-                console.log('Mode: upload-final, Moodboard ID:', order.moodboard!.id, 'File:', file.name);
+            } else if (mode === 'upload-final' && files.length > 0) {
+                console.log('Mode: upload-final, Moodboard ID:', order.moodboard!.id, 'File:', files[0].name);
                 const formData = new FormData();
-                formData.append('moodboard_final', file);
+                formData.append('moodboard_final', files[0]);
 
                 router.post(`/moodboard/desain-final/${order.moodboard!.id}`, formData as any, {
                     onSuccess: () => {
@@ -186,7 +190,7 @@ export default function MoodboardModal({ show, order, mode, onClose }: Props) {
                     {(mode === 'upload-kasar' || mode === 'upload-final') && (
                         <div>
                             <label className="block text-xs sm:text-sm font-semibold text-stone-700 mb-2">
-                                {mode === 'upload-kasar' ? 'Desain Kasar' : 'Desain Final'}
+                                {mode === 'upload-kasar' ? 'Desain Kasar (Multiple Files)' : 'Desain Final'}
                             </label>
                             <div className="relative border-2 border-dashed border-violet-300 rounded-lg p-4 sm:p-6 text-center hover:border-violet-400 transition-colors">
                                 <input
@@ -195,18 +199,25 @@ export default function MoodboardModal({ show, order, mode, onClose }: Props) {
                                     onChange={handleFileChange}
                                     className="hidden"
                                     id="file-upload"
+                                    multiple={mode === 'upload-kasar'}
                                     required
                                 />
                                 <label htmlFor="file-upload" className="cursor-pointer">
-                                    {file ? (
+                                    {files.length > 0 ? (
                                         <div className="text-center">
                                             <svg className="w-8 h-8 text-emerald-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
-                                            <p className="text-xs sm:text-sm font-medium text-emerald-700">{file.name}</p>
-                                            <p className="text-xs text-stone-500 mt-1">
-                                                {(file.size / 1024 / 1024).toFixed(2)} MB
+                                            <p className="text-xs sm:text-sm font-medium text-emerald-700">
+                                                {files.length} file{files.length > 1 ? 's' : ''} dipilih
                                             </p>
+                                            <div className="mt-2 max-h-24 overflow-y-auto">
+                                                {files.map((f, idx) => (
+                                                    <p key={idx} className="text-xs text-stone-600">
+                                                        {f.name} ({(f.size / 1024 / 1024).toFixed(2)} MB)
+                                                    </p>
+                                                ))}
+                                            </div>
                                         </div>
                                     ) : (
                                         <div>
@@ -252,7 +263,7 @@ export default function MoodboardModal({ show, order, mode, onClose }: Props) {
                         </button>
                         <button
                             type="submit"
-                            disabled={loading || (mode === 'upload-kasar' && !file) || (mode === 'upload-final' && !file) || (mode === 'revise' && !notes)}
+                            disabled={loading || (mode === 'upload-kasar' && files.length === 0) || (mode === 'upload-final' && files.length === 0) || (mode === 'revise' && !notes)}
                             className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-gradient-to-r from-violet-500 to-violet-600 text-white rounded-lg hover:from-violet-600 hover:to-violet-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? 'Memproses...' : mode === 'create' ? 'Buat Moodboard' : 'Upload'}

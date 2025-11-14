@@ -4,22 +4,17 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Estimasi extends Model
+class MoodboardFile extends Model
 {
     protected $fillable = [
         'moodboard_id',
-        'estimated_cost',
-        'response_by',
-        'response_time',
+        'file_path',
+        'file_type',
+        'original_name',
     ];
 
     public function moodboard()
     {
         return $this->belongsTo(Moodboard::class);
-    }
-
-    public function files()
-    {
-        return $this->hasMany(EstimasiFile::class);
     }
 }

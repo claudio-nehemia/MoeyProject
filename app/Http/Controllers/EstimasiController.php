@@ -15,8 +15,8 @@ class EstimasiController extends Controller
      */
     public function index()
     {
-        $moodboards = Moodboard::with('estimasi', 'order')
-            ->whereNotNull('moodboard_kasar')
+        $moodboards = Moodboard::with('estimasi.files.moodboardFile', 'order', 'kasarFiles')
+            ->whereHas('kasarFiles')
             ->get()
             ->map(function ($moodboard) {
                 return [
@@ -28,6 +28,27 @@ class EstimasiController extends Controller
                     'notes' => $moodboard->notes,
                     'response_by' => $moodboard->response_by,
                     'response_time' => $moodboard->response_time,
+                    'kasar_files' => $moodboard->kasarFiles->map(function ($file) use ($moodboard) {
+                        $estimasiFile = null;
+                        if ($moodboard->estimasi) {
+                            $estimasiFile = $moodboard->estimasi->files()
+                                ->where('moodboard_file_id', $file->id)
+                                ->first();
+                        }
+                        
+                        return [
+                            'id' => $file->id,
+                            'file_path' => $file->file_path,
+                            'original_name' => $file->original_name,
+                            'url' => asset('storage/' . $file->file_path),
+                            'estimasi_file' => $estimasiFile ? [
+                                'id' => $estimasiFile->id,
+                                'file_path' => $estimasiFile->file_path,
+                                'original_name' => $estimasiFile->original_name,
+                                'url' => asset('storage/' . $estimasiFile->file_path),
+                            ] : null,
+                        ];
+                    }),
                     'order' => $moodboard->order ? [
                         'id' => $moodboard->order->id,
                         'nama_project' => $moodboard->order->nama_project,
@@ -59,35 +80,58 @@ class EstimasiController extends Controller
             \Log::info('Has file: ' . ($request->hasFile('estimated_cost') ? 'YES' : 'NO'));
             
             $validated = $request->validate([
-                'moodboard_id' => 'required|exists:moodboards,id',
+                'estimasi_id' => 'required|exists:estimasis,id',
+                'moodboard_file_id' => 'required|exists:moodboard_files,id',
                 'estimated_cost' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
             ]);
             
             \Log::info('Validation passed');
             
-            // Check if estimasi already exists
-            $estimasi = Estimasi::where('moodboard_id', $validated['moodboard_id'])->first();
+            $estimasi = Estimasi::findOrFail($validated['estimasi_id']);
             
-            if (!$estimasi) {
-                \Log::error('Estimasi record not found for moodboard_id: ' . $validated['moodboard_id']);
-                return back()->with('error', 'Response estimasi belum dibuat. Silakan buat response terlebih dahulu.');
-            }
+            // Check if estimasi file already exists for this moodboard file
+            $estimasiFile = \App\Models\EstimasiFile::where('estimasi_id', $estimasi->id)
+                ->where('moodboard_file_id', $validated['moodboard_file_id'])
+                ->first();
             
             if($request->hasFile('estimated_cost')) {
-                // Delete old file if exists
-                if ($estimasi->estimated_cost && Storage::disk('public')->exists($estimasi->estimated_cost)) {
-                    Storage::disk('public')->delete($estimasi->estimated_cost);
-                    \Log::info('Old file deleted: ' . $estimasi->estimated_cost);
-                }
-                
                 $file = $request->file('estimated_cost');
                 $filePath = $file->store('estimasi', 'public');
+                $originalName = $file->getClientOriginalName();
+                
                 \Log::info('File stored at: ' . $filePath);
                 
-                $estimasi->update(['estimated_cost' => $filePath]);
+                if ($estimasiFile) {
+                    // Update existing
+                    if ($estimasiFile->file_path && Storage::disk('public')->exists($estimasiFile->file_path)) {
+                        Storage::disk('public')->delete($estimasiFile->file_path);
+                        \Log::info('Old file deleted: ' . $estimasiFile->file_path);
+                    }
+                    
+                    $estimasiFile->update([
+                        'file_path' => $filePath,
+                        'original_name' => $originalName,
+                    ]);
+                    
+                    \Log::info('EstimasiFile updated with ID: ' . $estimasiFile->id);
+                } else {
+                    // Create new
+                    $estimasiFile = \App\Models\EstimasiFile::create([
+                        'estimasi_id' => $estimasi->id,
+                        'moodboard_file_id' => $validated['moodboard_file_id'],
+                        'file_path' => $filePath,
+                        'original_name' => $originalName,
+                    ]);
+                    
+                    \Log::info('EstimasiFile created with ID: ' . $estimasiFile->id);
+                }
+                
+                // Update legacy field for backward compatibility (use first uploaded file)
+                if (!$estimasi->estimated_cost) {
+                    $estimasi->update(['estimated_cost' => $filePath]);
+                }
             }
 
-            \Log::info('Estimasi updated with ID: ' . $estimasi->id);
             \Log::info('=== ESTIMASI STORE END ===');
 
             return back()->with('success', 'File estimasi berhasil diupload.');

@@ -11,10 +11,19 @@ interface Team {
     role: string;
 }
 
+interface MoodboardFile {
+    id: number;
+    file_path: string;
+    original_name: string;
+    url: string;
+}
+
 interface Moodboard {
     id: number;
     moodboard_kasar: string | null;
     moodboard_final: string | null;
+    kasar_files: MoodboardFile[];
+    final_files: MoodboardFile[];
     response_time: string;
     response_by: string;
     status: 'pending' | 'approved' | 'revisi';
@@ -158,7 +167,7 @@ export default function Index({ orders }: Props) {
 
         return (
             <div className="flex flex-col gap-2 sm:flex-row">
-                {!moodboard.moodboard_kasar && (
+                {moodboard.kasar_files.length === 0 && (
                     <button
                         onClick={() => openUploadKasarModal(order)}
                         className="rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-all hover:from-blue-600 hover:to-blue-700 sm:px-3.5 sm:py-2"
@@ -167,35 +176,23 @@ export default function Index({ orders }: Props) {
                     </button>
                 )}
 
-                {moodboard.moodboard_kasar &&
+                {moodboard.kasar_files.length > 0 && (
+                    <button
+                        onClick={() => openUploadKasarModal(order)}
+                        className="rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-all hover:from-blue-600 hover:to-blue-700 sm:px-3.5 sm:py-2"
+                    >
+                        Tambah Kasar ({moodboard.kasar_files.length})
+                    </button>
+                )}
+
+                {moodboard.kasar_files.length > 0 &&
                     moodboard.status === 'pending' && (
-                        <>
-                            {moodboard.has_estimasi && (
-                                <>
-                                    <button
-                                        onClick={() => openReviseModal(order)}
-                                        className="rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-3 py-1.5 text-xs font-medium text-white transition-all hover:from-orange-600 hover:to-orange-700 sm:px-3.5 sm:py-2"
-                                    >
-                                        Revisi
-                                    </button>
-                                    <button
-                                        onClick={() =>
-                                            router.post(
-                                                `/moodboard/accept/${moodboard.id}`,
-                                            )
-                                        }
-                                        className="rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-all hover:from-emerald-600 hover:to-emerald-700 sm:px-3.5 sm:py-2"
-                                    >
-                                        Terima
-                                    </button>
-                                </>
-                            )}
-                            {!moodboard.has_estimasi && (
-                                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                                    Menunggu estimasi dibuat terlebih dahulu
-                                </div>
-                            )}
-                        </>
+                        <button
+                            onClick={() => openReviseModal(order)}
+                            className="rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-3 py-1.5 text-xs font-medium text-white transition-all hover:from-orange-600 hover:to-orange-700 sm:px-3.5 sm:py-2"
+                        >
+                            Revisi
+                        </button>
                     )}
 
                 {moodboard.status === 'revisi' && (
@@ -416,10 +413,63 @@ export default function Index({ orders }: Props) {
                                         {/* Moodboard Status */}
                                         {moodboard && (
                                             <div className="mb-4 space-y-3 border-b border-stone-200 pb-4">
+                                                {/* List Kasar Files */}
+                                                {moodboard.kasar_files.length > 0 && (
+                                                    <div className="mb-3">
+                                                        <p className="text-xs font-semibold text-stone-700 mb-2">
+                                                            File Desain Kasar ({moodboard.kasar_files.length}):
+                                                        </p>
+                                                        <div className="space-y-2">
+                                                            {moodboard.kasar_files.map((file, idx) => (
+                                                                <div key={file.id} className="border border-stone-200 rounded-lg p-2.5 bg-stone-50">
+                                                                    <div className="flex items-center gap-2 mb-2">
+                                                                        <div className="flex-shrink-0 w-12 h-12 rounded overflow-hidden bg-stone-200">
+                                                                            <img
+                                                                                src={file.url}
+                                                                                alt={file.original_name}
+                                                                                className="w-full h-full object-cover"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <p className="text-xs font-medium text-stone-900 truncate">
+                                                                                #{idx + 1}: {file.original_name}
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-2">
+                                                                        <a
+                                                                            href={file.url}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="flex-1 px-2 py-1.5 text-xs font-medium text-center text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded transition-all"
+                                                                        >
+                                                                            👁️ Lihat File
+                                                                        </a>
+                                                                        {moodboard.status === 'pending' && moodboard.has_estimasi && (
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    if (window.confirm(`Pilih desain "${file.original_name}" sebagai moodboard kasar?`)) {
+                                                                                        router.post(`/moodboard/accept/${moodboard.id}`, {
+                                                                                            moodboard_file_id: file.id,
+                                                                                        });
+                                                                                    }
+                                                                                }}
+                                                                                className="flex-1 px-2 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded transition-all"
+                                                                            >
+                                                                                ✓ Terima
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
                                                 {moodboard.moodboard_kasar && (
                                                     <div className="flex items-center justify-between text-xs">
                                                         <span className="text-stone-600">
-                                                            Desain Kasar:
+                                                            Desain Kasar Terpilih:
                                                         </span>
                                                         <a
                                                             href={`/storage/${moodboard.moodboard_kasar}`}

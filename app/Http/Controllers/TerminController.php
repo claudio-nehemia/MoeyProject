@@ -8,9 +8,6 @@ use Inertia\Inertia;
 
 class TerminController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         $termins = Termin::all();
@@ -19,49 +16,94 @@ class TerminController extends Controller
         ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
             'kode_tipe' => 'required|string|max:255',
             'nama_tipe' => 'required|string|max:255',
             'deskripsi' => 'nullable|string',
+            'tahapan'   => 'required|array|min:1',
+            'tahapan.*.tahapan' => 'required|string',
         ]);
 
-        Termin::create($validated);
+        // Transform tahapan dari frontend format ke database format
+        $tahapan = [];
+        foreach ($validated['tahapan'] as $index => $item) {
+            if (!empty($item['tahapan'])) {
+                $tahapan[] = [
+                    'step' => $index + 1,
+                    'text' => $item['tahapan'],
+                ];
+            }
+        }
+
+        Termin::create([
+            'kode_tipe' => $validated['kode_tipe'],
+            'nama_tipe' => $validated['nama_tipe'],
+            'deskripsi' => $validated['deskripsi'],
+            'tahapan' => $tahapan,
+        ]);
 
         return redirect()->back()->with('success', 'Termin created successfully.');
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Termin $termin)
     {
-        return response()->json($termin);
+        // Transform tahapan dari database format ke frontend format
+        $tahapanFormatted = [];
+        if ($termin->tahapan) {
+            foreach ($termin->tahapan as $item) {
+                $tahapanFormatted[] = [
+                    'tahapan' => $item['text'] ?? ''
+                ];
+            }
+        }
+        
+        // Jika tidak ada tahapan, berikan default 1 row kosong
+        if (empty($tahapanFormatted)) {
+            $tahapanFormatted = [['tahapan' => '']];
+        }
+
+        return response()->json([
+            'id' => $termin->id,
+            'kode_tipe' => $termin->kode_tipe,
+            'nama_tipe' => $termin->nama_tipe,
+            'deskripsi' => $termin->deskripsi,
+            'tahapan' => $tahapanFormatted,
+        ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Termin $termin)
     {
         $validated = $request->validate([
             'kode_tipe' => 'required|string|max:255',
             'nama_tipe' => 'required|string|max:255',
             'deskripsi' => 'nullable|string',
+            'tahapan'   => 'required|array|min:1',
+            'tahapan.*.tahapan' => 'required|string',
         ]);
 
-        $termin->update($validated);
+        // Transform tahapan dari frontend format ke database format
+        $tahapan = [];
+        foreach ($validated['tahapan'] as $index => $item) {
+            if (!empty($item['tahapan'])) {
+                $tahapan[] = [
+                    'step' => $index + 1,
+                    'text' => $item['tahapan'],
+                ];
+            }
+        }
+
+        $termin->update([
+            'kode_tipe' => $validated['kode_tipe'],
+            'nama_tipe' => $validated['nama_tipe'],
+            'deskripsi' => $validated['deskripsi'],
+            'tahapan' => $tahapan,
+        ]);
 
         return redirect()->back()->with('success', 'Termin updated successfully.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Termin $termin)
     {
         $termin->delete();

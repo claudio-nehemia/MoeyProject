@@ -10,6 +10,11 @@ class Termin extends Model
         'kode_tipe',
         'nama_tipe',
         'deskripsi',
+        'tahapan',
+    ];
+
+    protected $casts = [
+        'tahapan' => 'array',
     ];
 
     public function kontraks()

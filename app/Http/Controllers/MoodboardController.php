@@ -15,7 +15,7 @@ class MoodboardController extends Controller
      */
     public function index()
     {
-        $orders = Order::with(['moodboard.estimasi', 'moodboard.itemPekerjaan', 'moodboard.commitmentFee', 'jenisInterior', 'users.role'])
+        $orders = Order::with(['moodboard.estimasi', 'moodboard.itemPekerjaan', 'moodboard.commitmentFee', 'moodboard.kasarFiles', 'moodboard.finalFiles', 'jenisInterior', 'users.role'])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($order) {
@@ -31,6 +31,22 @@ class MoodboardController extends Controller
                         'id' => $order->moodboard->id,
                         'moodboard_kasar' => $order->moodboard->moodboard_kasar,
                         'moodboard_final' => $order->moodboard->moodboard_final,
+                        'kasar_files' => $order->moodboard->kasarFiles->map(function ($file) {
+                            return [
+                                'id' => $file->id,
+                                'file_path' => $file->file_path,
+                                'original_name' => $file->original_name,
+                                'url' => asset('storage/' . $file->file_path),
+                            ];
+                        }),
+                        'final_files' => $order->moodboard->finalFiles->map(function ($file) {
+                            return [
+                                'id' => $file->id,
+                                'file_path' => $file->file_path,
+                                'original_name' => $file->original_name,
+                                'url' => asset('storage/' . $file->file_path),
+                            ];
+                        }),
                         'has_item_pekerjaan' => $order->moodboard->itemPekerjaan ? true : false,
                         'response_time' => $order->moodboard->response_time,
                         'response_by' => $order->moodboard->response_by,
@@ -99,12 +115,13 @@ class MoodboardController extends Controller
             Log::info('Request method: ' . $request->method());
             Log::info('Request headers: ', $request->headers->all());
             Log::info('Request data: ', $request->all());
-            Log::info('Has file: ' . ($request->hasFile('moodboard_kasar') ? 'YES' : 'NO'));
+            Log::info('Has files: ' . ($request->hasFile('moodboard_kasar') ? 'YES' : 'NO'));
             Log::info('Has token: ' . ($request->has('_token') ? 'YES' : 'NO'));
             
             $validated = $request->validate([
                 'moodboard_id' => 'required|exists:moodboards,id',
-                'moodboard_kasar' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
+                'moodboard_kasar' => 'required|array',
+                'moodboard_kasar.*' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
             ]);
 
             Log::info('Validation passed');
@@ -113,15 +130,27 @@ class MoodboardController extends Controller
             Log::info('Moodboard found: ' . $moodboard->id);
 
             if ($request->hasFile('moodboard_kasar')) {
-                Log::info('Processing file upload');
-                // Delete old file if exists
-                if ($moodboard->moodboard_kasar) {
-                    Log::info('Deleting old file: ' . $moodboard->moodboard_kasar);
-                    \Storage::disk('public')->delete($moodboard->moodboard_kasar);
+                Log::info('Processing file uploads');
+                
+                foreach ($request->file('moodboard_kasar') as $file) {
+                    $filePath = $file->store('moodboards', 'public');
+                    $originalName = $file->getClientOriginalName();
+                    
+                    \App\Models\MoodboardFile::create([
+                        'moodboard_id' => $moodboard->id,
+                        'file_path' => $filePath,
+                        'file_type' => 'kasar',
+                        'original_name' => $originalName,
+                    ]);
+                    
+                    Log::info('File stored: ' . $filePath . ' (' . $originalName . ')');
                 }
-                $filePath = $request->file('moodboard_kasar')->store('moodboards', 'public');
-                Log::info('File stored at: ' . $filePath);
-                $moodboard->moodboard_kasar = $filePath;
+                
+                // Update legacy field for backward compatibility
+                if (!$moodboard->moodboard_kasar) {
+                    $firstFile = $request->file('moodboard_kasar')[0];
+                    $moodboard->moodboard_kasar = $firstFile->store('moodboards', 'public');
+                }
             }
 
             $moodboard->status = 'pending';
@@ -310,28 +339,54 @@ class MoodboardController extends Controller
         try {
             Log::info('=== ACCEPT DESAIN START ===');
             Log::info('Moodboard ID: ' . $moodboardId);
+            Log::info('Request data: ', $request->all());
             
-            $moodboard = Moodboard::findOrFail($moodboardId);
+            $validated = $request->validate([
+                'moodboard_file_id' => 'required|exists:moodboard_files,id',
+            ]);
+            
+            $moodboard = Moodboard::with('estimasi.files')->findOrFail($moodboardId);
             Log::info('Moodboard found');
             
-            if (!$moodboard->moodboard_kasar) {
-                Log::warning('No kasar design found for moodboard: ' . $moodboardId);
-                return back()->with('error', 'Desain kasar harus diupload terlebih dahulu.');
-            }
-
             // Check if estimasi exists
             if (!$moodboard->estimasi) {
                 Log::warning('No estimasi found for moodboard: ' . $moodboardId);
                 return back()->with('error', 'Estimasi harus dibuat terlebih dahulu sebelum accept desain.');
             }
 
-            $moodboard->status = 'approved';
-            $moodboard->save();
+            // Get selected moodboard file
+            $moodboardFile = \App\Models\MoodboardFile::findOrFail($validated['moodboard_file_id']);
+            Log::info('Selected moodboard file: ' . $moodboardFile->id);
             
-            Log::info('Moodboard approved, status changed to: approved');
+            // Find corresponding estimasi file
+            $estimasiFile = $moodboard->estimasi->files()
+                ->where('moodboard_file_id', $moodboardFile->id)
+                ->first();
+                
+            if (!$estimasiFile) {
+                Log::warning('No estimasi file found for selected moodboard file: ' . $moodboardFile->id);
+                return back()->with('error', 'File estimasi untuk desain kasar yang dipilih belum diupload.');
+            }
+            
+            Log::info('Found estimasi file: ' . $estimasiFile->id);
+
+            // Update moodboard with selected files
+            $moodboard->moodboard_kasar = $moodboardFile->file_path;
+            $moodboard->estimasi->estimated_cost = $estimasiFile->file_path;
+            $moodboard->status = 'approved';
+            
+            $moodboard->save();
+            $moodboard->estimasi->save();
+            
+            Log::info('Moodboard approved with selected file');
+            Log::info('Moodboard kasar: ' . $moodboard->moodboard_kasar);
+            Log::info('Estimated cost: ' . $moodboard->estimasi->estimated_cost);
             Log::info('=== ACCEPT DESAIN END ===');
 
             return back()->with('success', 'Desain kasar diterima. Siap untuk upload desain final.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation error: ', $e->errors());
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Accept desain error: ' . $e->getMessage());
             Log::error('Stack trace: ' . $e->getTraceAsString());
