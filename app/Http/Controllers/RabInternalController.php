@@ -96,12 +96,14 @@ class RabInternalController extends Controller
                         // Hitung harga items non-aksesoris
                         $hargaItemsNonAksesoris = 0;
                         $aksesorisList = [];
+                        $nonAksesorisList = [];
 
                         foreach ($produk->jenisItems as $jenisItem) {
                             if ($jenisItem->jenis_item_id === $aksesorisJenisItem->id) {
                                 // Collect aksesoris
                                 foreach ($jenisItem->items as $item) {
                                     $aksesorisList[] = [
+                                        'id' => $item->id,
                                         'item_pekerjaan_item_id' => $item->id,
                                         'nama' => $item->item->nama_item,
                                         'harga_satuan' => $item->item->harga,
@@ -109,9 +111,14 @@ class RabInternalController extends Controller
                                     ];
                                 }
                             } else {
-                                // Sum non-aksesoris items
+                                // Collect non-aksesoris items
                                 foreach ($jenisItem->items as $item) {
                                     $hargaItemsNonAksesoris += ($item->item->harga * $item->quantity);
+                                    $nonAksesorisList[] = [
+                                        'id' => $item->id,
+                                        'nama' => $item->item->nama_item,
+                                        'harga_satuan' => $item->item->harga * $item->quantity,
+                                    ];
                                 }
                             }
                         }
@@ -126,6 +133,7 @@ class RabInternalController extends Controller
                             'tinggi' => $produk->tinggi,
                             'harga_dasar' => $produk->produk->harga,
                             'harga_items_non_aksesoris' => $hargaItemsNonAksesoris,
+                            'non_aksesoris_items' => $nonAksesorisList,
                             'aksesoris' => $aksesorisList,
                         ];
                     }),
@@ -167,11 +175,13 @@ class RabInternalController extends Controller
                 }
 
                 // Calculate harga dimensi (P × L × T × Qty)
-                $hargaDimensi = 0;
+                // If all dimensions exist, use them; otherwise default to qty only
+                $hargaDimensi = 1;
                 if ($itemProduk->panjang && $itemProduk->lebar && $itemProduk->tinggi) {
                     $hargaDimensi = $itemProduk->panjang * $itemProduk->lebar * $itemProduk->tinggi * $itemProduk->quantity;
+                } else {
+                    $hargaDimensi = $itemProduk->quantity;
                 }
-
 
                 // Calculate harga satuan = (harga_dasar + harga_items_non_aksesoris) * (1 + markup/100) * harga_dimensi
                 $markupSatuan = $produkData['markup_satuan'];
@@ -349,6 +359,7 @@ class RabInternalController extends Controller
                         // Hitung harga items non-aksesoris
                         $hargaItemsNonAksesoris = 0;
                         $aksesorisList = [];
+                        $nonAksesorisList = [];
 
                         foreach ($produk->jenisItems as $jenisItem) {
                             if ($jenisItem->jenis_item_id === $aksesorisJenisItem->id) {
@@ -370,6 +381,11 @@ class RabInternalController extends Controller
                                 // Sum non-aksesoris items
                                 foreach ($jenisItem->items as $item) {
                                     $hargaItemsNonAksesoris += ($item->item->harga * $item->quantity);
+                                    $nonAksesorisList[] = [
+                                        'id' => $item->id,
+                                        'nama' => $item->item->nama_item,
+                                        'harga_satuan' => $item->item->harga * $item->quantity,
+                                    ];
                                 }
                             }
                         }
@@ -384,6 +400,7 @@ class RabInternalController extends Controller
                             'tinggi' => $produk->tinggi,
                             'harga_dasar' => $produk->produk->harga,
                             'harga_items_non_aksesoris' => $hargaItemsNonAksesoris,
+                            'non_aksesoris_items' => $nonAksesorisList ?? [],
                             'markup_satuan' => $rabProduk ? $rabProduk->markup_satuan : 0,
                             'aksesoris' => $aksesorisList,
                         ];
@@ -429,9 +446,12 @@ class RabInternalController extends Controller
                 }
 
                 // Calculate harga dimensi (P × L × T × Qty)
-                $hargaDimensi = 0;
+                // If all dimensions exist, use them; otherwise default to qty only
+                $hargaDimensi = 1;
                 if ($itemProduk->panjang && $itemProduk->lebar && $itemProduk->tinggi) {
                     $hargaDimensi = $itemProduk->panjang * $itemProduk->lebar * $itemProduk->tinggi * $itemProduk->quantity;
+                } else {
+                    $hargaDimensi = $itemProduk->quantity;
                 }
 
                 // Calculate harga satuan

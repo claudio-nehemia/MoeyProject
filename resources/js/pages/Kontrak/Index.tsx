@@ -12,10 +12,15 @@ interface CommitmentFee {
 
 interface Kontrak {
     id: number;
-    tanggal_mulai: string;
-    tanggal_selesai: string;
+    durasi_kontrak: number;
     harga_kontrak: number;
-    termin: string | null;
+    termin: {
+        nama: string;
+        tahapan: Array<{
+            step: number;
+            text: string;
+        }>;
+    } | null;
 }
 
 interface Order {
@@ -35,6 +40,10 @@ interface Termin {
     id: number;
     kode_tipe: string;
     nama_tipe: string;
+    tahapan: Array<{
+        step: number;
+        text: string;
+    }>;
 }
 
 interface Props {
@@ -91,10 +100,10 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                 Sisa Pembayaran
                                             </th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Termin
+                                                Durasi Kontrak
                                             </th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Tanggal Kontrak
+                                                Termin
                                             </th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Actions
@@ -137,7 +146,7 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                     </div>
                                                                     <span
                                                                         className={`inline-flex px-2 text-xs font-semibold rounded-full ${
-                                                                            item.commitment_fee.status === 'paid'
+                                                                            item.commitment_fee.status === 'Paid'
                                                                                 ? 'bg-green-100 text-green-800'
                                                                                 : 'bg-yellow-100 text-yellow-800'
                                                                         }`}
@@ -168,25 +177,37 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                             )}
                                                         </td>
                                                         <td className="px-6 py-4">
-                                                            {item.kontrak?.termin ? (
-                                                                <span className="text-sm text-gray-900">
-                                                                    {item.kontrak.termin}
-                                                                </span>
+                                                            {item.kontrak ? (
+                                                                <div className="text-sm">
+                                                                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 font-semibold">
+                                                                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                                        </svg>
+                                                                        {item.kontrak.durasi_kontrak} Hari
+                                                                    </span>
+                                                                </div>
                                                             ) : (
                                                                 <span className="text-sm text-gray-400">-</span>
                                                             )}
                                                         </td>
                                                         <td className="px-6 py-4">
-                                                            {item.kontrak ? (
-                                                                <div className="text-sm text-gray-900">
-                                                                    <div>
-                                                                        Mulai:{' '}
-                                                                        {new Date(item.kontrak.tanggal_mulai).toLocaleDateString('id-ID')}
+                                                            {item.kontrak?.termin ? (
+                                                                <div className="text-sm">
+                                                                    <div className="font-medium text-gray-900 mb-2">
+                                                                        {item.kontrak.termin.nama}
                                                                     </div>
-                                                                    <div>
-                                                                        Selesai:{' '}
-                                                                        {new Date(item.kontrak.tanggal_selesai).toLocaleDateString('id-ID')}
-                                                                    </div>
+                                                                    {item.kontrak.termin.tahapan && item.kontrak.termin.tahapan.length > 0 && (
+                                                                        <div className="space-y-1">
+                                                                            {item.kontrak.termin.tahapan.map((tahap, idx) => (
+                                                                                <div key={idx} className="flex items-center gap-2 text-xs text-gray-600">
+                                                                                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-semibold">
+                                                                                        {tahap.step}
+                                                                                    </span>
+                                                                                    <span>{tahap.text}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             ) : (
                                                                 <span className="text-sm text-gray-400">-</span>

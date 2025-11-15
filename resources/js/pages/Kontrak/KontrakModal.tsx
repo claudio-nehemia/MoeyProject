@@ -22,20 +22,22 @@ interface KontrakModalProps {
         id: number;
         kode_tipe: string;
         nama_tipe: string;
+        tahapan: Array<{
+            step: number;
+            text: string;
+        }>;
     }>;
 }
 
 export default function KontrakModal({ show, onClose, itemPekerjaan, termins }: KontrakModalProps) {
     const { data, setData, post, processing, errors, reset } = useForm<{
         item_pekerjaan_id: number;
-        tanggal_mulai: string;
-        tanggal_selesai: string;
+        durasi_kontrak: number | string;
         termin_id: number | string;
         harga_kontrak: number | string;
     }>({
         item_pekerjaan_id: itemPekerjaan.id,
-        tanggal_mulai: '',
-        tanggal_selesai: '',
+        durasi_kontrak: '',
         termin_id: '',
         harga_kontrak: '',
     });
@@ -62,7 +64,7 @@ export default function KontrakModal({ show, onClose, itemPekerjaan, termins }: 
 
     return (
         <Modal show={show} onClose={onClose} maxWidth="3xl">
-            <form onSubmit={submit} className="p-6">
+            <div className="p-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">
                     Buat Kontrak
                 </h2>
@@ -101,53 +103,45 @@ export default function KontrakModal({ show, onClose, itemPekerjaan, termins }: 
 
                 {/* Form Fields */}
                 <div className="space-y-4">
-                    {/* Tanggal Mulai */}
+                    {/* Durasi Kontrak */}
                     <div>
-                        <label htmlFor="tanggal_mulai" className="block text-sm font-medium text-gray-700 mb-1">
-                            Tanggal Mulai <span className="text-red-500">*</span>
+                        <label htmlFor="durasi_kontrak" className="block text-sm font-medium text-gray-700 mb-1">
+                            Durasi Kontrak (Hari) <span className="text-red-500">*</span>
                         </label>
-                        <input
-                            type="date"
-                            id="tanggal_mulai"
-                            value={data.tanggal_mulai}
-                            onChange={(e) => setData('tanggal_mulai', e.target.value)}
-                            className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                            required
-                        />
-                        {errors.tanggal_mulai && (
-                            <p className="mt-1 text-sm text-red-600">{errors.tanggal_mulai}</p>
+                        <div className="relative">
+                            <input
+                                type="number"
+                                id="durasi_kontrak"
+                                value={data.durasi_kontrak}
+                                onChange={(e) => setData('durasi_kontrak', e.target.value ? parseInt(e.target.value) : '')}
+                                className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 pr-16"
+                                placeholder="Contoh: 30"
+                                min="1"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
+                                Hari
+                            </span>
+                        </div>
+                        {errors.durasi_kontrak && (
+                            <p className="mt-1 text-sm text-red-600">{errors.durasi_kontrak}</p>
                         )}
-                    </div>
-
-                    {/* Tanggal Selesai */}
-                    <div>
-                        <label htmlFor="tanggal_selesai" className="block text-sm font-medium text-gray-700 mb-1">
-                            Tanggal Selesai <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="date"
-                            id="tanggal_selesai"
-                            value={data.tanggal_selesai}
-                            onChange={(e) => setData('tanggal_selesai', e.target.value)}
-                            className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                            required
-                        />
-                        {errors.tanggal_selesai && (
-                            <p className="mt-1 text-sm text-red-600">{errors.tanggal_selesai}</p>
+                        {data.durasi_kontrak && (
+                            <p className="mt-1 text-xs text-gray-500">
+                                ≈ {Math.floor(Number(data.durasi_kontrak) / 30)} bulan {Number(data.durasi_kontrak) % 30} hari
+                            </p>
                         )}
                     </div>
 
                     {/* Termin */}
                     <div>
                         <label htmlFor="termin_id" className="block text-sm font-medium text-gray-700 mb-1">
-                            Termin <span className="text-red-500">*</span>
+                            Termin Pembayaran <span className="text-red-500">*</span>
                         </label>
                         <select
                             id="termin_id"
                             value={data.termin_id}
                             onChange={(e) => setData('termin_id', e.target.value ? parseInt(e.target.value) : '')}
                             className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                            required
                         >
                             <option value="">Pilih Termin</option>
                             {termins.map((termin) => (
@@ -159,6 +153,23 @@ export default function KontrakModal({ show, onClose, itemPekerjaan, termins }: 
                         {errors.termin_id && (
                             <p className="mt-1 text-sm text-red-600">{errors.termin_id}</p>
                         )}
+                        
+                        {/* Tampilkan Tahapan Termin */}
+                        {data.termin_id && termins.find(t => t.id === Number(data.termin_id))?.tahapan && (
+                            <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <h4 className="text-sm font-semibold text-blue-900 mb-2">Tahapan Pembayaran:</h4>
+                                <div className="space-y-1.5">
+                                    {termins.find(t => t.id === Number(data.termin_id))?.tahapan.map((tahap, index) => (
+                                        <div key={index} className="flex items-center gap-2 text-sm">
+                                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold">
+                                                {tahap.step}
+                                            </span>
+                                            <span className="text-gray-700">{tahap.text}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Harga Kontrak */}
@@ -166,33 +177,67 @@ export default function KontrakModal({ show, onClose, itemPekerjaan, termins }: 
                         <label htmlFor="harga_kontrak" className="block text-sm font-medium text-gray-700 mb-1">
                             Harga Kontrak <span className="text-red-500">*</span>
                         </label>
-                        <input
-                            type="number"
-                            id="harga_kontrak"
-                            value={data.harga_kontrak}
-                            onChange={(e) => setData('harga_kontrak', e.target.value ? parseFloat(e.target.value) : '')}
-                            className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                            placeholder="Masukkan harga kontrak"
-                            min="0"
-                            required
-                        />
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
+                                Rp
+                            </span>
+                            <input
+                                type="number"
+                                id="harga_kontrak"
+                                value={data.harga_kontrak}
+                                onChange={(e) => setData('harga_kontrak', e.target.value ? parseFloat(e.target.value) : '')}
+                                className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 pl-12"
+                                placeholder="0"
+                                min="0"
+                            />
+                        </div>
                         {errors.harga_kontrak && (
                             <p className="mt-1 text-sm text-red-600">{errors.harga_kontrak}</p>
+                        )}
+                        {data.harga_kontrak && (
+                            <p className="mt-1 text-xs text-gray-500">
+                                {new Intl.NumberFormat('id-ID', {
+                                    style: 'currency',
+                                    currency: 'IDR',
+                                    minimumFractionDigits: 0,
+                                }).format(Number(data.harga_kontrak))}
+                            </p>
                         )}
                     </div>
 
                     {/* Sisa Pembayaran */}
                     {data.harga_kontrak && (
-                        <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
-                            <div className="flex justify-between items-center">
-                                <span className="font-medium text-gray-700">Sisa Pembayaran:</span>
-                                <span className="text-xl font-bold text-amber-600">
-                                    Rp {sisaPembayaran.toLocaleString('id-ID')}
+                        <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border-2 border-amber-200">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                    <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span className="font-semibold text-gray-700">Sisa Pembayaran</span>
+                                </div>
+                                <span className="text-2xl font-bold text-amber-600">
+                                    {new Intl.NumberFormat('id-ID', {
+                                        style: 'currency',
+                                        currency: 'IDR',
+                                        minimumFractionDigits: 0,
+                                    }).format(sisaPembayaran)}
                                 </span>
                             </div>
-                            <p className="text-xs text-gray-600 mt-1">
-                                (Harga Kontrak - Commitment Fee)
-                            </p>
+                            <div className="flex items-center gap-2 text-xs text-gray-600">
+                                <span>Harga Kontrak</span>
+                                <span className="font-semibold">{new Intl.NumberFormat('id-ID', {
+                                    style: 'currency',
+                                    currency: 'IDR',
+                                    minimumFractionDigits: 0,
+                                }).format(Number(data.harga_kontrak))}</span>
+                                <span>-</span>
+                                <span>Commitment Fee</span>
+                                <span className="font-semibold">{new Intl.NumberFormat('id-ID', {
+                                    style: 'currency',
+                                    currency: 'IDR',
+                                    minimumFractionDigits: 0,
+                                }).format(commitmentFee)}</span>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -200,21 +245,35 @@ export default function KontrakModal({ show, onClose, itemPekerjaan, termins }: 
                 {/* Buttons */}
                 <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
                     <button
-                        type="button"
                         onClick={onClose}
                         className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
                         Batal
                     </button>
                     <button
-                        type="submit"
+                        onClick={submit}
                         disabled={processing}
-                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
-                        {processing ? 'Menyimpan...' : 'Simpan Kontrak'}
+                        {processing ? (
+                            <>
+                                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Menyimpan...
+                            </>
+                        ) : (
+                            <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Simpan Kontrak
+                            </>
+                        )}
                     </button>
                 </div>
-            </form>
+            </div>
         </Modal>
     );
 }

@@ -40,26 +40,20 @@ class KontrakController extends Controller
                 ] : null,
                 'kontrak' => $itemPekerjaan->kontrak ? [
                     'id' => $itemPekerjaan->kontrak->id,
-                    'tanggal_mulai' => $itemPekerjaan->kontrak->tanggal_mulai,
-                    'tanggal_selesai' => $itemPekerjaan->kontrak->tanggal_selesai,
+                    'durasi_kontrak' => $itemPekerjaan->kontrak->durasi_kontrak,
                     'harga_kontrak' => $itemPekerjaan->kontrak->harga_kontrak,
-                    'termin' => $itemPekerjaan->kontrak->termin->nama_termin ?? null,
+                    'termin' => [
+                        'nama' => $itemPekerjaan->kontrak->termin->nama_tipe ?? null,
+                        'tahapan' => $itemPekerjaan->kontrak->termin->tahapan ?? [],
+                    ],
                 ] : null,
             ];
         });
 
         return Inertia::render('Kontrak/Index', [
             'itemPekerjaans' => $itemPekerjaans,
-            'termins' => Termin::all(['id', 'kode_tipe', 'nama_tipe']),
+            'termins' => Termin::all(['id', 'kode_tipe', 'nama_tipe', 'tahapan']),
         ]);
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        
     }
 
     /**
@@ -72,15 +66,14 @@ class KontrakController extends Controller
 
         $validated = $request->validate([
             'item_pekerjaan_id' => 'required|exists:item_pekerjaans,id',
-            'tanggal_mulai' => 'required|date',
-            'tanggal_selesai' => 'required|date|after:tanggal_mulai',
+            'durasi_kontrak' => 'required|integer|min:1',
             'termin_id' => 'required|integer|exists:termins,id',
             'harga_kontrak' => 'required|numeric|min:0',
         ], [
             'item_pekerjaan_id.required' => 'Item Pekerjaan harus dipilih.',
-            'tanggal_mulai.required' => 'Tanggal mulai harus diisi.',
-            'tanggal_selesai.required' => 'Tanggal selesai harus diisi.',
-            'tanggal_selesai.after' => 'Tanggal selesai harus setelah tanggal mulai.',
+            'durasi_kontrak.required' => 'Durasi kontrak harus diisi.',
+            'durasi_kontrak.integer' => 'Durasi kontrak harus berupa angka.',
+            'durasi_kontrak.min' => 'Durasi kontrak minimal 1 hari.',
             'termin_id.required' => 'Termin harus dipilih.',
             'termin_id.integer' => 'Termin tidak valid.',
             'termin_id.exists' => 'Termin yang dipilih tidak ditemukan.',

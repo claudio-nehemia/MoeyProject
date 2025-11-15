@@ -7,8 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Kontrak extends Model
 {
     protected $fillable = [
-        'tanggal_mulai',
-        'tanggal_selesai',
+        'durasi_kontrak',
         'termin_id',
         'item_pekerjaan_id',
         'harga_kontrak',

@@ -88,9 +88,11 @@ export default function Index({ orders }: Props) {
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [showModal, setShowModal] = useState(false);
     const [modalMode, setModalMode] = useState<
-        'create' | 'upload-kasar' | 'upload-final' | 'revise'
+        'create' | 'upload-kasar' | 'revise'
     >('create');
     const [filteredOrders, setFilteredOrders] = useState(orders);
+    const [replaceFileId, setReplaceFileId] = useState<number | null>(null);
+    const [newFile, setNewFile] = useState<File | null>(null);
 
     useEffect(() => {
         setMounted(true);
@@ -129,12 +131,6 @@ export default function Index({ orders }: Props) {
         setShowModal(true);
     };
 
-    const openUploadFinalModal = (order: Order) => {
-        setSelectedOrder(order);
-        setModalMode('upload-final');
-        setShowModal(true);
-    };
-
     const openReviseModal = (order: Order) => {
         setSelectedOrder(order);
         setModalMode('revise');
@@ -144,6 +140,37 @@ export default function Index({ orders }: Props) {
     const closeModal = () => {
         setShowModal(false);
         setSelectedOrder(null);
+    };
+
+    const handleDeleteFile = (fileId: number, fileName: string) => {
+        if (window.confirm(`Hapus file "${fileName}"?`)) {
+            router.delete(`/moodboard/file-kasar/${fileId}`, {
+                preserveScroll: true,
+            });
+        }
+    };
+
+    const handleReplaceFileClick = (fileId: number) => {
+        setReplaceFileId(fileId);
+        document.getElementById(`replace-file-${fileId}`)?.click();
+    };
+
+    const handleReplaceFileChange = (e: React.ChangeEvent<HTMLInputElement>, fileId: number) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (window.confirm(`Ganti file dengan "${file.name}"?`)) {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                router.post(`/moodboard/file-kasar/${fileId}/replace`, formData as any, {
+                    preserveScroll: true,
+                    onFinish: () => {
+                        setReplaceFileId(null);
+                        setNewFile(null);
+                    }
+                });
+            }
+        }
     };
 
     const getMoodboardStatus = (moodboard: Moodboard | null) => {
@@ -176,12 +203,12 @@ export default function Index({ orders }: Props) {
                     </button>
                 )}
 
-                {moodboard.kasar_files.length > 0 && (
+                {moodboard.kasar_files.length > 0 && moodboard.status !== 'approved' && (
                     <button
                         onClick={() => openUploadKasarModal(order)}
                         className="rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-all hover:from-blue-600 hover:to-blue-700 sm:px-3.5 sm:py-2"
                     >
-                        Tambah Kasar ({moodboard.kasar_files.length})
+                        + Tambah File ({moodboard.kasar_files.length})
                     </button>
                 )}
 
@@ -213,24 +240,16 @@ export default function Index({ orders }: Props) {
                                 </p>
                             </div>
                         )}
-                        {moodboard.has_commitment_fee_completed &&
-                            !moodboard.moodboard_final && (
-                                <button
-                                    onClick={() => openUploadFinalModal(order)}
-                                    className="rounded-lg bg-gradient-to-r from-indigo-500 to-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-all hover:from-indigo-600 hover:to-indigo-700 sm:px-3.5 sm:py-2"
-                                >
-                                    Upload Final
-                                </button>
-                            )}
-                        {moodboard.has_commitment_fee_completed &&
-                            moodboard.moodboard_final && (
-                                <button
-                                    onClick={() => openUploadFinalModal(order)}
-                                    className="rounded-lg bg-gradient-to-r from-indigo-500 to-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-all hover:from-indigo-600 hover:to-indigo-700 sm:px-3.5 sm:py-2"
-                                >
-                                    Update Final
-                                </button>
-                            )}
+                        {moodboard.has_commitment_fee_completed && (
+                            <div className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
+                                <p className="text-xs font-medium text-indigo-700">
+                                    ✓ Commitment Fee selesai - Lanjut ke{' '}
+                                    <Link href="/desain-final" className="underline font-semibold">
+                                        Desain Final
+                                    </Link>
+                                </p>
+                            </div>
+                        )}
                         {moodboard.moodboard_final && (
                             <Link
                                 href="/item-pekerjaan"
@@ -413,7 +432,7 @@ export default function Index({ orders }: Props) {
                                         {/* Moodboard Status */}
                                         {moodboard && (
                                             <div className="mb-4 space-y-3 border-b border-stone-200 pb-4">
-                                                {/* List Kasar Files */}
+                                                {/* List Kasar Files with Actions */}
                                                 {moodboard.kasar_files.length > 0 && (
                                                     <div className="mb-3">
                                                         <p className="text-xs font-semibold text-stone-700 mb-2">
@@ -436,15 +455,41 @@ export default function Index({ orders }: Props) {
                                                                             </p>
                                                                         </div>
                                                                     </div>
-                                                                    <div className="flex gap-2">
+                                                                    
+                                                                    <div className="grid grid-cols-2 gap-2">
                                                                         <a
                                                                             href={file.url}
                                                                             target="_blank"
                                                                             rel="noopener noreferrer"
-                                                                            className="flex-1 px-2 py-1.5 text-xs font-medium text-center text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded transition-all"
+                                                                            className="px-2 py-1.5 text-xs font-medium text-center text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded transition-all"
                                                                         >
-                                                                            👁️ Lihat File
+                                                                            👁️ Lihat
                                                                         </a>
+                                                                        
+                                                                        {moodboard.status !== 'approved' && (
+                                                                            <>
+                                                                                <button
+                                                                                    onClick={() => handleReplaceFileClick(file.id)}
+                                                                                    className="px-2 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded transition-all"
+                                                                                >
+                                                                                    🔄 Ganti
+                                                                                </button>
+                                                                                <input
+                                                                                    type="file"
+                                                                                    id={`replace-file-${file.id}`}
+                                                                                    accept=".jpg,.jpeg,.png,.pdf"
+                                                                                    className="hidden"
+                                                                                    onChange={(e) => handleReplaceFileChange(e, file.id)}
+                                                                                />
+                                                                                <button
+                                                                                    onClick={() => handleDeleteFile(file.id, file.original_name)}
+                                                                                    className="px-2 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 rounded transition-all"
+                                                                                >
+                                                                                    🗑️ Hapus
+                                                                                </button>
+                                                                            </>
+                                                                        )}
+                                                                        
                                                                         {moodboard.status === 'pending' && moodboard.has_estimasi && (
                                                                             <button
                                                                                 onClick={() => {
@@ -454,9 +499,9 @@ export default function Index({ orders }: Props) {
                                                                                         });
                                                                                     }
                                                                                 }}
-                                                                                className="flex-1 px-2 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded transition-all"
+                                                                                className="col-span-2 px-2 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded transition-all"
                                                                             >
-                                                                                ✓ Terima
+                                                                                ✓ Terima Desain Ini
                                                                             </button>
                                                                         )}
                                                                     </div>
@@ -486,9 +531,7 @@ export default function Index({ orders }: Props) {
                                                                 <path
                                                                     strokeLinecap="round"
                                                                     strokeLinejoin="round"
-                                                                    strokeWidth={
-                                                                        2
-                                                                    }
+                                                                    strokeWidth={2}
                                                                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                                                                 />
                                                             </svg>
@@ -517,9 +560,7 @@ export default function Index({ orders }: Props) {
                                                                 <path
                                                                     strokeLinecap="round"
                                                                     strokeLinejoin="round"
-                                                                    strokeWidth={
-                                                                        2
-                                                                    }
+                                                                    strokeWidth={2}
                                                                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                                                                 />
                                                             </svg>
@@ -543,7 +584,7 @@ export default function Index({ orders }: Props) {
                                                     moodboard.response_by) && (
                                                     <div className="rounded-lg bg-stone-50 p-2.5 text-xs">
                                                         <p className="text-stone-600">
-                                                            Di-respond oleh:{' '}
+                                                            Di-response oleh:{' '}
                                                             <span className="font-semibold text-stone-900">
                                                                 {moodboard.response_by ||
                                                                     '-'}
@@ -595,8 +636,7 @@ export default function Index({ orders }: Props) {
                                                     ))}
                                                 {order.team.length > 3 && (
                                                     <div className="px-2 py-1 text-xs text-stone-600">
-                                                        +{order.team.length - 3}{' '}
-                                                        lebih
+                                                        +{order.team.length - 3} lebih
                                                     </div>
                                                 )}
                                             </div>

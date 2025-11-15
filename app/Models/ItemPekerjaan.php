@@ -47,4 +47,9 @@ class ItemPekerjaan extends Model
     {
         return $this->hasOne(Kontrak::class);
     }
+
+    public function invoice()
+    {
+        return $this->hasOne(Invoice::class);
+    }
 }

@@ -38,6 +38,11 @@ class CommitmentFeeController extends Controller
                         'response_by' => $moodboard->commitmentFee->response_by,
                         'response_time' => $moodboard->commitmentFee->response_time,
                     ] : null,
+                    'moodboard_kasar' => $moodboard->moodboard_kasar,
+                    'estimasi' => $moodboard->estimasi ? [
+                        'id' => $moodboard->estimasi->id,
+                        'estimated_cost' => $moodboard->estimasi->estimated_cost,                
+                    ] : null,
                 ];
             });
             

@@ -6,7 +6,9 @@ use Inertia\Inertia;
 use App\Models\Order;
 use App\Models\Moodboard;
 use Illuminate\Http\Request;
+use App\Models\MoodboardFile;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class MoodboardController extends Controller
 {
@@ -77,7 +79,7 @@ class MoodboardController extends Controller
             Log::info('=== RESPONSE MOODBOARD START ===');
             Log::info('Order ID: ' . $orderId);
             Log::info('User: ' . auth()->user()->name);
-            
+
             $order = Order::findOrFail($orderId);
             Log::info('Order found: ' . $order->id);
 
@@ -93,7 +95,7 @@ class MoodboardController extends Controller
                 'response_by' => auth()->user()->name,
                 'status' => 'pending',
             ]);
-            
+
             Log::info('Moodboard created with ID: ' . $moodboard->id);
             Log::info('=== RESPONSE MOODBOARD END ===');
 
@@ -117,7 +119,7 @@ class MoodboardController extends Controller
             Log::info('Request data: ', $request->all());
             Log::info('Has files: ' . ($request->hasFile('moodboard_kasar') ? 'YES' : 'NO'));
             Log::info('Has token: ' . ($request->has('_token') ? 'YES' : 'NO'));
-            
+
             $validated = $request->validate([
                 'moodboard_id' => 'required|exists:moodboards,id',
                 'moodboard_kasar' => 'required|array',
@@ -131,21 +133,21 @@ class MoodboardController extends Controller
 
             if ($request->hasFile('moodboard_kasar')) {
                 Log::info('Processing file uploads');
-                
+
                 foreach ($request->file('moodboard_kasar') as $file) {
                     $filePath = $file->store('moodboards', 'public');
                     $originalName = $file->getClientOriginalName();
-                    
+
                     \App\Models\MoodboardFile::create([
                         'moodboard_id' => $moodboard->id,
                         'file_path' => $filePath,
                         'file_type' => 'kasar',
                         'original_name' => $originalName,
                     ]);
-                    
+
                     Log::info('File stored: ' . $filePath . ' (' . $originalName . ')');
                 }
-                
+
                 // Update legacy field for backward compatibility
                 if (!$moodboard->moodboard_kasar) {
                     $firstFile = $request->file('moodboard_kasar')[0];
@@ -155,7 +157,7 @@ class MoodboardController extends Controller
 
             $moodboard->status = 'pending';
             $moodboard->save();
-            
+
             Log::info('Moodboard saved successfully');
             Log::info('=== UPLOAD DESAIN KASAR END ===');
 
@@ -176,10 +178,10 @@ class MoodboardController extends Controller
             Log::info('=== UPLOAD DESAIN FINAL START ===');
             Log::info('Moodboard ID: ' . $moodboardId);
             Log::info('Has file: ' . ($request->hasFile('moodboard_final') ? 'YES' : 'NO'));
-            
+
             $moodboard = Moodboard::with('commitmentFee')->findOrFail($moodboardId);
             Log::info('Moodboard found, status: ' . $moodboard->status);
-            
+
             if ($moodboard->status !== 'approved') {
                 Log::warning('Moodboard not approved, status: ' . $moodboard->status);
                 return back()->with('error', 'Moodboard harus di-approve terlebih dahulu sebelum upload desain final.');
@@ -230,7 +232,7 @@ class MoodboardController extends Controller
             Log::info('=== REVISE MOODBOARD START ===');
             Log::info('Moodboard ID: ' . $moodboardId);
             Log::info('Request data: ', $request->all());
-            
+
             $moodboard = Moodboard::findOrFail($moodboardId);
             Log::info('Moodboard found');
 
@@ -239,17 +241,17 @@ class MoodboardController extends Controller
                 Log::warning('No estimasi found for moodboard: ' . $moodboardId);
                 return back()->with('error', 'Estimasi harus dibuat terlebih dahulu sebelum revisi.');
             }
-            
+
             $validated = $request->validate([
                 'notes' => 'required|string|max:500',
             ]);
 
             Log::info('Validation passed');
-            
+
             $moodboard->status = 'revisi';
             $moodboard->notes = $validated['notes'];
             $moodboard->save();
-            
+
             Log::info('Moodboard updated, status: revisi');
             Log::info('=== REVISE MOODBOARD END ===');
 
@@ -294,26 +296,188 @@ class MoodboardController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function updateDesainKasar(Request $request, Moodboard $moodboard)
+    public function updateDesainKasar(Request $request, $moodboardId)
     {
-        $validated = $request->validate([
-            'moodboard_id' => 'required|exists:moodboards,id',
-            'moodboard_kasar' => 'nullable|file|mimes:jpg,jpeg,png,pdf',
-        ]);
+        try {
+            Log::info('=== UPDATE DESAIN KASAR START ===');
+            Log::info('Moodboard ID: ' . $moodboardId);
+            Log::info('Request data: ', $request->all());
 
-        $moodboard = Moodboard::find($validated['moodboard_id']);
+            $moodboard = Moodboard::findOrFail($moodboardId);
+            Log::info('Moodboard found');
 
-        if ($request->hasFile('moodboard_kasar')) {
-            $moodboard->moodboard_kasar = $request->file('moodboard_kasar')->store('moodboards', 'public');
+            $validated = $request->validate([
+                'moodboard_kasar' => 'nullable|array',
+                'moodboard_kasar.*' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
+                'delete_file_ids' => 'nullable|array',
+                'delete_file_ids.*' => 'exists:moodboard_files,id',
+            ]);
+
+            // Handle file deletion
+            if (!empty($validated['delete_file_ids'])) {
+                Log::info('Deleting files: ', $validated['delete_file_ids']);
+
+                foreach ($validated['delete_file_ids'] as $fileId) {
+                    $file = MoodboardFile::where('id', $fileId)
+                        ->where('moodboard_id', $moodboardId)
+                        ->where('file_type', 'kasar')
+                        ->first();
+
+                    if ($file) {
+                        // Delete physical file
+                        Storage::disk('public')->delete($file->file_path);
+                        // Delete database record
+                        $file->delete();
+                        Log::info('File deleted: ' . $fileId);
+                    }
+                }
+            }
+
+            // Handle new file uploads
+            if ($request->hasFile('moodboard_kasar')) {
+                Log::info('Adding new files');
+
+                foreach ($request->file('moodboard_kasar') as $file) {
+                    $filePath = $file->store('moodboards', 'public');
+                    $originalName = $file->getClientOriginalName();
+
+                    MoodboardFile::create([
+                        'moodboard_id' => $moodboard->id,
+                        'file_path' => $filePath,
+                        'file_type' => 'kasar',
+                        'original_name' => $originalName,
+                    ]);
+
+                    Log::info('New file added: ' . $filePath . ' (' . $originalName . ')');
+                }
+            }
+
+            // Update legacy field jika ada file kasar
+            $firstKasarFile = $moodboard->kasarFiles()->first();
+            if ($firstKasarFile) {
+                $moodboard->moodboard_kasar = $firstKasarFile->file_path;
+                $moodboard->save();
+            }
+
+            Log::info('Desain kasar updated successfully');
+            Log::info('=== UPDATE DESAIN KASAR END ===');
+
+            return back()->with('success', 'Desain kasar berhasil diupdate.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation error: ', $e->errors());
+            throw $e;
+        } catch (\Exception $e) {
+            Log::error('Update desain kasar error: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            return back()->with('error', 'Gagal update desain kasar: ' . $e->getMessage());
         }
-
-        unset($validated['moodboard_id']);
-
-        $moodboard->update($validated);
-
-        return redirect()->back()->with('success', 'Moodboard updated successfully.');
     }
 
+    /**
+     * Delete single file kasar
+     */
+    public function deleteFileKasar($fileId)
+    {
+        try {
+            Log::info('=== DELETE FILE KASAR START ===');
+            Log::info('File ID: ' . $fileId);
+
+            $file = MoodboardFile::where('id', $fileId)
+                ->where('file_type', 'kasar')
+                ->firstOrFail();
+
+            Log::info('File found: ' . $file->file_path);
+
+            $moodboardId = $file->moodboard_id;
+
+            // Delete physical file
+            if (Storage::disk('public')->exists($file->file_path)) {
+                Storage::disk('public')->delete($file->file_path);
+                Log::info('Physical file deleted');
+            }
+
+            // Delete database record
+            $file->delete();
+            Log::info('Database record deleted');
+
+            // Update legacy field jika diperlukan
+            $moodboard = Moodboard::find($moodboardId);
+            if ($moodboard && $moodboard->moodboard_kasar === $file->file_path) {
+                $firstKasarFile = $moodboard->kasarFiles()->first();
+                $moodboard->moodboard_kasar = $firstKasarFile ? $firstKasarFile->file_path : null;
+                $moodboard->save();
+                Log::info('Legacy field updated');
+            }
+
+            Log::info('=== DELETE FILE KASAR END ===');
+
+            return back()->with('success', 'File berhasil dihapus.');
+        } catch (\Exception $e) {
+            Log::error('Delete file kasar error: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            return back()->with('error', 'Gagal menghapus file: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Replace specific file kasar
+     */
+    public function replaceFileKasar(Request $request, $fileId)
+    {
+        try {
+            Log::info('=== REPLACE FILE KASAR START ===');
+            Log::info('File ID: ' . $fileId);
+
+            $validated = $request->validate([
+                'file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            ]);
+
+            $oldFile = MoodboardFile::where('id', $fileId)
+                ->where('file_type', 'kasar')
+                ->firstOrFail();
+
+            Log::info('Old file found: ' . $oldFile->file_path);
+
+            $moodboardId = $oldFile->moodboard_id;
+            $oldPath = $oldFile->file_path;
+
+            // Store new file
+            $newFilePath = $request->file('file')->store('moodboards', 'public');
+            $originalName = $request->file('file')->getClientOriginalName();
+
+            Log::info('New file stored: ' . $newFilePath);
+
+            // Update database record
+            $oldFile->file_path = $newFilePath;
+            $oldFile->original_name = $originalName;
+            $oldFile->save();
+
+            // Delete old physical file
+            if (Storage::disk('public')->exists($oldPath)) {
+                Storage::disk('public')->delete($oldPath);
+                Log::info('Old physical file deleted');
+            }
+
+            // Update legacy field if necessary
+            $moodboard = Moodboard::find($moodboardId);
+            if ($moodboard && $moodboard->moodboard_kasar === $oldPath) {
+                $moodboard->moodboard_kasar = $newFilePath;
+                $moodboard->save();
+                Log::info('Legacy field updated');
+            }
+
+            Log::info('=== REPLACE FILE KASAR END ===');
+
+            return back()->with('success', 'File berhasil diganti.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation error: ', $e->errors());
+            throw $e;
+        } catch (\Exception $e) {
+            Log::error('Replace file kasar error: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            return back()->with('error', 'Gagal mengganti file: ' . $e->getMessage());
+        }
+    }
     public function updateDesainFinal(Request $request, $moodboardId)
     {
         $moodboard = Moodboard::findOrFail($moodboardId);
@@ -340,14 +504,14 @@ class MoodboardController extends Controller
             Log::info('=== ACCEPT DESAIN START ===');
             Log::info('Moodboard ID: ' . $moodboardId);
             Log::info('Request data: ', $request->all());
-            
+
             $validated = $request->validate([
                 'moodboard_file_id' => 'required|exists:moodboard_files,id',
             ]);
-            
+
             $moodboard = Moodboard::with('estimasi.files')->findOrFail($moodboardId);
             Log::info('Moodboard found');
-            
+
             // Check if estimasi exists
             if (!$moodboard->estimasi) {
                 Log::warning('No estimasi found for moodboard: ' . $moodboardId);
@@ -357,27 +521,27 @@ class MoodboardController extends Controller
             // Get selected moodboard file
             $moodboardFile = \App\Models\MoodboardFile::findOrFail($validated['moodboard_file_id']);
             Log::info('Selected moodboard file: ' . $moodboardFile->id);
-            
+
             // Find corresponding estimasi file
             $estimasiFile = $moodboard->estimasi->files()
                 ->where('moodboard_file_id', $moodboardFile->id)
                 ->first();
-                
+
             if (!$estimasiFile) {
                 Log::warning('No estimasi file found for selected moodboard file: ' . $moodboardFile->id);
                 return back()->with('error', 'File estimasi untuk desain kasar yang dipilih belum diupload.');
             }
-            
+
             Log::info('Found estimasi file: ' . $estimasiFile->id);
 
             // Update moodboard with selected files
             $moodboard->moodboard_kasar = $moodboardFile->file_path;
             $moodboard->estimasi->estimated_cost = $estimasiFile->file_path;
             $moodboard->status = 'approved';
-            
+
             $moodboard->save();
             $moodboard->estimasi->save();
-            
+
             Log::info('Moodboard approved with selected file');
             Log::info('Moodboard kasar: ' . $moodboard->moodboard_kasar);
             Log::info('Estimated cost: ' . $moodboard->estimasi->estimated_cost);

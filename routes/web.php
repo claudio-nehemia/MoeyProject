@@ -11,6 +11,7 @@ use App\Http\Controllers\DivisiController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\TerminController;
 use App\Http\Controllers\KontrakController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\RabJasaController;
 use App\Http\Controllers\EstimasiController;
 use App\Http\Controllers\JenisItemController;
@@ -22,6 +23,7 @@ use App\Http\Controllers\CommitmentFeeController;
 use App\Http\Controllers\ItemPekerjaanController;
 use App\Http\Controllers\JenisInteriorController;
 use App\Http\Controllers\SurveyResultsController;
+use App\Http\Controllers\DesainFinalController;
 
 Route::get('/', function () {
     return Inertia::render('welcome', [
@@ -75,6 +77,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('moodboard/revise/{moodboardId}', [MoodboardController::class, 'reviseMoodboard'])->name('moodboard.revise');
     Route::post('moodboard/accept/{moodboardId}', [MoodboardController::class, 'acceptDesain'])->name('moodboard.accept');
     Route::get('moodboard/{id}', [MoodboardController::class, 'show'])->name('moodboard.show');
+    Route::put('/moodboard/{moodboardId}/desain-kasar', [MoodboardController::class, 'updateDesainKasar'])
+        ->name('moodboard.update-desain-kasar');
+    Route::delete('/moodboard/file-kasar/{fileId}', [MoodboardController::class, 'deleteFileKasar'])
+        ->name('moodboard.delete-file-kasar');
+    Route::post('/moodboard/file-kasar/{fileId}/replace', [MoodboardController::class, 'replaceFileKasar'])
+        ->name('moodboard.replace-file-kasar');
     Route::delete('moodboard/{moodboardId}', [MoodboardController::class, 'destroy'])->name('moodboard.delete');
 
     // ESTIMASI ROUTES
@@ -89,6 +97,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('commitment-fee/response/{moodboardId}', [CommitmentFeeController::class, 'responseFee'])->name('commitment-fee.response');
     Route::post('commitment-fee/update-fee/{commitmentFeeId}', [CommitmentFeeController::class, 'updateFee'])->name('commitment-fee.update-fee');
     Route::post('commitment-fee/upload-payment/{commitmentFeeId}', [CommitmentFeeController::class, 'uploadPayment'])->name('commitment-fee.upload-payment');
+
+    // DESAIN FINAL ROUTES
+    Route::get('desain-final', [DesainFinalController::class, 'index'])->name('desain-final.index');
+    Route::post('desain-final/upload', [DesainFinalController::class, 'uploadDesainFinal'])->name('desain-final.upload');
+    Route::post('desain-final/accept/{moodboardId}', [DesainFinalController::class, 'acceptDesainFinal'])->name('desain-final.accept');
+    Route::post('desain-final/revise/{moodboardId}', [DesainFinalController::class, 'reviseDesainFinal'])->name('desain-final.revise');
+    Route::delete('desain-final/file/{fileId}', [DesainFinalController::class, 'deleteDesainFinalFile'])->name('desain-final.file.delete');
+    Route::post('desain-final/file/{fileId}/replace', [DesainFinalController::class, 'replaceDesainFinalFile'])->name('desain-final.file.replace');
 
     // INPUT ITEM ROUTES
 
@@ -131,6 +147,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // KONTRAK ROUTES
     Route::resource('kontrak', KontrakController::class);
+
+    // INVOICE ROUTES
+    Route::get('invoice', [InvoiceController::class, 'index'])->name('invoice.index');
+    Route::post('invoice/{itemPekerjaanId}/generate', [InvoiceController::class, 'generate'])->name('invoice.generate');
+    Route::get('invoice/{invoiceId}/show', [InvoiceController::class, 'show'])->name('invoice.show');
+    Route::post('invoice/{invoiceId}/upload-bukti', [InvoiceController::class, 'uploadBuktiBayar'])->name('invoice.upload-bukti');
+    Route::delete('invoice/{invoiceId}', [InvoiceController::class, 'destroy'])->name('invoice.destroy');
 
 });
 
