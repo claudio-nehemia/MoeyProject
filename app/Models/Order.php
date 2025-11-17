@@ -25,9 +25,10 @@ class Order extends Model
         return $this->belongsTo(JenisInterior::class, 'jenis_interior_id');
     }
 
-    public function users() {
+    public function users()
+    {
         return $this->belongsToMany(User::class, 'order_teams')
-                    ->withTimestamps();
+            ->withTimestamps();
     }
 
     public function surveyResults()
@@ -38,5 +39,27 @@ class Order extends Model
     public function moodboard()
     {
         return $this->hasOne(Moodboard::class, 'order_id');
+    }
+
+    public function itemPekerjaans()
+    {
+        return $this->hasManyThrough(
+            ItemPekerjaan::class,
+            Moodboard::class,
+            'order_id', // Foreign key on moodboard table
+            'moodboard_id', // Foreign key on item_pekerjaans table
+            'id', // Local key on orders table
+            'id' // Local key on moodboard table
+        );
+    }
+
+    public function getProgressAttribute()
+    {
+        $items = $this->itemPekerjaans;
+        if ($items->count() === 0)
+            return 0;
+
+
+        return round($items->avg->progress, 2);
     }
 }

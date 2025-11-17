@@ -13,6 +13,7 @@ class ItemPekerjaanProduk extends Model
         'panjang',
         'lebar',
         'tinggi',
+        'current_stage',
     ];
 
     public function itemPekerjaan()
@@ -28,5 +29,41 @@ class ItemPekerjaanProduk extends Model
     public function jenisItems()
     {
         return $this->hasMany(ItemPekerjaanJenisItem::class);
+    }
+
+    public static function stageWeights()
+    {
+        return config('stage.stages');
+    }
+
+
+    public function getProgressAttribute()
+    {
+        if (!$this->current_stage) {
+            return 0;
+        }
+
+        $stages = self::stageWeights();
+        $progress = 0;
+
+        foreach ($stages as $stage => $percent) {
+            $progress += $percent;
+            if ($this->current_stage === $stage)
+                break;
+        }
+
+        return $progress;
+    }
+
+
+    public function getTotalHargaAttribute()
+    {
+        $vendorProduk = $this->itemPekerjaan
+            ->rabVendor
+            ?->rabVendorProduks
+            ->firstWhere('item_pekerjaan_produk_id', $this->id);
+
+
+        return $vendorProduk?->harga_akhir ?? 0;
     }
 }

@@ -93,6 +93,7 @@ export default function Index({ orders }: Props) {
     const [filteredOrders, setFilteredOrders] = useState(orders);
     const [replaceFileId, setReplaceFileId] = useState<number | null>(null);
     const [newFile, setNewFile] = useState<File | null>(null);
+    const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
 
     useEffect(() => {
         setMounted(true);
@@ -140,6 +141,18 @@ export default function Index({ orders }: Props) {
     const closeModal = () => {
         setShowModal(false);
         setSelectedOrder(null);
+    };
+
+    const toggleExpand = (orderId: number) => {
+        setExpandedCards((prev) => {
+            const newSet = new Set(prev);
+            if (newSet.has(orderId)) {
+                newSet.delete(orderId);
+            } else {
+                newSet.add(orderId);
+            }
+            return newSet;
+        });
     };
 
     const handleDeleteFile = (fileId: number, fileName: string) => {
@@ -243,22 +256,9 @@ export default function Index({ orders }: Props) {
                         {moodboard.has_commitment_fee_completed && (
                             <div className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
                                 <p className="text-xs font-medium text-indigo-700">
-                                    ✓ Commitment Fee selesai - Lanjut ke{' '}
-                                    <Link href="/desain-final" className="underline font-semibold">
-                                        Desain Final
-                                    </Link>
+                                    ✓ Approved
                                 </p>
                             </div>
-                        )}
-                        {moodboard.moodboard_final && (
-                            <Link
-                                href="/item-pekerjaan"
-                                className="text-sm font-medium text-blue-600 hover:text-blue-800"
-                            >
-                                {moodboard.has_item_pekerjaan
-                                    ? '✓ Lihat Item Pekerjaan'
-                                    : '→ Input Item Pekerjaan'}
-                            </Link>
                         )}
                     </>
                 )}
@@ -367,6 +367,7 @@ export default function Index({ orders }: Props) {
                             const statusColor = status
                                 ? statusColors[status]
                                 : null;
+                            const isExpanded = expandedCards.has(order.id);
 
                             return (
                                 <div
@@ -377,28 +378,43 @@ export default function Index({ orders }: Props) {
                                             : 'border-stone-100 bg-white hover:border-violet-200'
                                     }`}
                                 >
-                                    <div className="p-4 sm:p-5">
-                                        {/* Header */}
-                                        <div className="mb-4">
-                                            <div className="mb-2 flex items-start justify-between gap-2">
-                                                <h3 className="line-clamp-2 flex-1 text-base font-bold text-stone-900 sm:text-lg">
+                                    <div className="p-3 sm:p-4">
+                                        {/* Compact Header */}
+                                        <div className="flex items-start justify-between gap-2 mb-3">
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className="text-sm sm:text-base font-bold text-stone-900 truncate mb-1">
                                                     {order.nama_project}
                                                 </h3>
+                                                <p className="text-xs text-stone-600 truncate">{order.company_name}</p>
                                                 {moodboard && (
-                                                    <span
-                                                        className={`rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${statusColor?.badge} ${statusColor?.text}`}
-                                                    >
+                                                    <span className={`inline-block mt-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${statusColor?.badge} ${statusColor?.text}`}>
                                                         {statusLabels[status!]}
                                                     </span>
                                                 )}
                                             </div>
-                                            <p className="text-xs text-stone-600">
-                                                {order.company_name}
-                                            </p>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleExpand(order.id);
+                                                }}
+                                                className="flex-shrink-0 p-1.5 rounded-lg hover:bg-stone-200/50 transition-colors"
+                                            >
+                                                <svg
+                                                    className={`w-4 h-4 text-stone-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
                                         </div>
 
-                                        {/* Info */}
-                                        <div className="mb-4 space-y-2 border-b border-stone-200 pb-4">
+                                        {/* Expanded Details */}
+                                        {isExpanded && (
+                                            <>
+                                                {/* Info */}
+                                                <div className="mb-3 space-y-1.5 border-b border-stone-200 pb-3">
                                             <div className="flex items-center justify-between text-xs">
                                                 <span className="text-stone-600">
                                                     Customer:
@@ -434,216 +450,98 @@ export default function Index({ orders }: Props) {
                                             <div className="mb-4 space-y-3 border-b border-stone-200 pb-4">
                                                 {/* List Kasar Files with Actions */}
                                                 {moodboard.kasar_files.length > 0 && (
-                                                    <div className="mb-3">
+                                                    <div className="mb-2">
                                                         <p className="text-xs font-semibold text-stone-700 mb-2">
-                                                            File Desain Kasar ({moodboard.kasar_files.length}):
+                                                            File Kasar ({moodboard.kasar_files.length}):
                                                         </p>
-                                                        <div className="space-y-2">
-                                                            {moodboard.kasar_files.map((file, idx) => (
-                                                                <div key={file.id} className="border border-stone-200 rounded-lg p-2.5 bg-stone-50">
-                                                                    <div className="flex items-center gap-2 mb-2">
-                                                                        <div className="flex-shrink-0 w-12 h-12 rounded overflow-hidden bg-stone-200">
-                                                                            <img
-                                                                                src={file.url}
-                                                                                alt={file.original_name}
-                                                                                className="w-full h-full object-cover"
-                                                                            />
-                                                                        </div>
-                                                                        <div className="flex-1 min-w-0">
-                                                                            <p className="text-xs font-medium text-stone-900 truncate">
-                                                                                #{idx + 1}: {file.original_name}
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
-                                                                    
-                                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            {moodboard.kasar_files.slice(0, 2).map((file) => (
+                                                                <div key={file.id} className="relative group">
+                                                                    <img
+                                                                        src={file.url}
+                                                                        alt={file.original_name}
+                                                                        className="w-full h-20 object-cover rounded-lg border border-stone-200"
+                                                                    />
+                                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-1">
                                                                         <a
                                                                             href={file.url}
                                                                             target="_blank"
-                                                                            rel="noopener noreferrer"
-                                                                            className="px-2 py-1.5 text-xs font-medium text-center text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded transition-all"
+                                                                            className="p-1.5 bg-white rounded-md hover:bg-stone-100"
                                                                         >
-                                                                            👁️ Lihat
+                                                                            <svg className="w-3 h-3 text-stone-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                                            </svg>
                                                                         </a>
-                                                                        
                                                                         {moodboard.status !== 'approved' && (
                                                                             <>
                                                                                 <button
                                                                                     onClick={() => handleReplaceFileClick(file.id)}
-                                                                                    className="px-2 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded transition-all"
+                                                                                    className="p-1.5 bg-white rounded-md hover:bg-stone-100"
                                                                                 >
-                                                                                    🔄 Ganti
+                                                                                    <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                                                                    </svg>
                                                                                 </button>
-                                                                                <input
-                                                                                    type="file"
-                                                                                    id={`replace-file-${file.id}`}
-                                                                                    accept=".jpg,.jpeg,.png,.pdf"
-                                                                                    className="hidden"
-                                                                                    onChange={(e) => handleReplaceFileChange(e, file.id)}
-                                                                                />
                                                                                 <button
                                                                                     onClick={() => handleDeleteFile(file.id, file.original_name)}
-                                                                                    className="px-2 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 rounded transition-all"
+                                                                                    className="p-1.5 bg-white rounded-md hover:bg-stone-100"
                                                                                 >
-                                                                                    🗑️ Hapus
+                                                                                    <svg className="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                                    </svg>
                                                                                 </button>
                                                                             </>
                                                                         )}
-                                                                        
-                                                                        {moodboard.status === 'pending' && moodboard.has_estimasi && (
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    if (window.confirm(`Pilih desain "${file.original_name}" sebagai moodboard kasar?`)) {
-                                                                                        router.post(`/moodboard/accept/${moodboard.id}`, {
-                                                                                            moodboard_file_id: file.id,
-                                                                                        });
-                                                                                    }
-                                                                                }}
-                                                                                className="col-span-2 px-2 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded transition-all"
-                                                                            >
-                                                                                ✓ Terima Desain Ini
-                                                                            </button>
-                                                                        )}
                                                                     </div>
+                                                                    <input
+                                                                        type="file"
+                                                                        id={`replace-file-${file.id}`}
+                                                                        className="hidden"
+                                                                        accept="image/*"
+                                                                        onChange={(e) => handleReplaceFileChange(e, file.id)}
+                                                                    />
                                                                 </div>
                                                             ))}
                                                         </div>
-                                                    </div>
-                                                )}
-
-                                                {moodboard.moodboard_kasar && (
-                                                    <div className="flex items-center justify-between text-xs">
-                                                        <span className="text-stone-600">
-                                                            Desain Kasar Terpilih:
-                                                        </span>
-                                                        <a
-                                                            href={`/storage/${moodboard.moodboard_kasar}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="flex items-center gap-1 font-medium text-blue-600 hover:text-blue-700"
-                                                        >
-                                                            <svg
-                                                                className="h-3.5 w-3.5"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={2}
-                                                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                                                                />
-                                                            </svg>
-                                                            Download
-                                                        </a>
-                                                    </div>
-                                                )}
-
-                                                {moodboard.moodboard_final && (
-                                                    <div className="flex items-center justify-between text-xs">
-                                                        <span className="text-stone-600">
-                                                            Desain Final:
-                                                        </span>
-                                                        <a
-                                                            href={`/storage/${moodboard.moodboard_final}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="flex items-center gap-1 font-medium text-emerald-600 hover:text-emerald-700"
-                                                        >
-                                                            <svg
-                                                                className="h-3.5 w-3.5"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={2}
-                                                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                                                                />
-                                                            </svg>
-                                                            Download
-                                                        </a>
+                                                        {moodboard.kasar_files.length > 2 && (
+                                                            <p className="text-xs text-stone-500 mt-1.5 text-center">
+                                                                +{moodboard.kasar_files.length - 2} file lainnya
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 )}
 
                                                 {moodboard.notes && (
-                                                    <div className="text-xs">
-                                                        <p className="mb-1 text-stone-600">
-                                                            Catatan Revisi:
-                                                        </p>
-                                                        <p className="text-stone-700 italic">
-                                                            {moodboard.notes}
-                                                        </p>
-                                                    </div>
-                                                )}
-
-                                                {(moodboard.response_time ||
-                                                    moodboard.response_by) && (
-                                                    <div className="rounded-lg bg-stone-50 p-2.5 text-xs">
-                                                        <p className="text-stone-600">
-                                                            Di-response oleh:{' '}
-                                                            <span className="font-semibold text-stone-900">
-                                                                {moodboard.response_by ||
-                                                                    '-'}
-                                                            </span>
-                                                        </p>
-                                                        <p className="mt-1 text-stone-600">
-                                                            Waktu:{' '}
-                                                            <span className="font-semibold text-stone-900">
-                                                                {moodboard.response_time
-                                                                    ? new Date(
-                                                                          moodboard.response_time,
-                                                                      ).toLocaleString(
-                                                                          'id-ID',
-                                                                      )
-                                                                    : '-'}
-                                                            </span>
-                                                        </p>
+                                                    <div className="mb-2 bg-orange-50 border border-orange-200 rounded-lg p-2">
+                                                        <p className="text-xs font-semibold text-orange-900 mb-0.5">Catatan:</p>
+                                                        <p className="text-xs text-orange-700 line-clamp-2">{moodboard.notes}</p>
                                                     </div>
                                                 )}
                                             </div>
                                         )}
 
                                         {/* Team */}
-                                        <div className="mb-4">
-                                            <p className="mb-2 text-xs font-semibold text-stone-700">
-                                                Tim:
-                                            </p>
+                                        <div className="mb-3">
+                                            <p className="text-xs font-semibold text-stone-700 mb-1.5">Tim:</p>
                                             <div className="flex flex-wrap gap-1.5">
-                                                {order.team
-                                                    .slice(0, 3)
-                                                    .map((member) => (
-                                                        <div
-                                                            key={member.id}
-                                                            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-violet-100 to-violet-200 px-2.5 py-1"
-                                                        >
-                                                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-violet-600">
-                                                                <span className="text-xs font-bold text-white">
-                                                                    {member.name
-                                                                        .charAt(
-                                                                            0,
-                                                                        )
-                                                                        .toUpperCase()}
-                                                                </span>
-                                                            </div>
-                                                            <span className="text-xs font-medium text-violet-900">
-                                                                {member.name}
-                                                            </span>
-                                                        </div>
-                                                    ))}
-                                                {order.team.length > 3 && (
-                                                    <div className="px-2 py-1 text-xs text-stone-600">
-                                                        +{order.team.length - 3} lebih
-                                                    </div>
-                                                )}
+                                                {order.team.map((member) => (
+                                                    <span
+                                                        key={member.id}
+                                                        className="px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full text-xs font-medium"
+                                                    >
+                                                        {member.name}
+                                                    </span>
+                                                ))}
                                             </div>
                                         </div>
+                                    </>
+                                        )}
 
-                                        {/* Action Buttons */}
-                                        <div>{getActionButtons(order)}</div>
+                                        {/* Actions - Always Visible */}
+                                        <div className="pt-2 border-t border-stone-200">
+                                            {getActionButtons(order)}
+                                        </div>
                                     </div>
                                 </div>
                             );

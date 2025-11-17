@@ -48,6 +48,7 @@ export default function DesainFinalIndex({ moodboards }: Props) {
     const [showReplaceModal, setShowReplaceModal] = useState(false);
     const [selectedFile, setSelectedFile] = useState<MoodboardFile | null>(null);
     const [replaceFile, setReplaceFile] = useState<File | null>(null);
+    const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
 
     const filteredMoodboards = moodboards.filter((moodboard) => {
         const search = searchQuery.toLowerCase();
@@ -173,6 +174,18 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                 alert('Gagal ganti file');
                 setLoading(false);
             },
+        });
+    };
+
+    const toggleExpand = (moodboardId: number) => {
+        setExpandedCards((prev) => {
+            const newSet = new Set(prev);
+            if (newSet.has(moodboardId)) {
+                newSet.delete(moodboardId);
+            } else {
+                newSet.add(moodboardId);
+            }
+            return newSet;
         });
     };
 

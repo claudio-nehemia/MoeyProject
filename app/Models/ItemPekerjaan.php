@@ -52,4 +52,28 @@ class ItemPekerjaan extends Model
     {
         return $this->hasOne(Invoice::class);
     }
+
+    public function getProgressAttribute()
+    {
+        $produks = $this->produks;
+        if ($produks->count() === 0)
+            return 0;
+
+
+        $totalHarga = $produks->sum->total_harga;
+        if ($totalHarga == 0)
+            return 0;
+
+
+        $progress = 0;
+
+
+        foreach ($produks as $produk) {
+            $bobot = $produk->total_harga / $totalHarga;
+            $progress += $bobot * ($produk->progress / 100);
+        }
+
+
+        return round($progress * 100, 2);
+    }
 }

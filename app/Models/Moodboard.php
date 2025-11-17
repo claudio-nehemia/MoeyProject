@@ -37,6 +37,11 @@ class Moodboard extends Model
         return $this->hasOne(ItemPekerjaan::class);
     }
 
+    public function itemPekerjaans()
+    {
+        return $this->hasMany(ItemPekerjaan::class);
+    }
+
     public function files()
     {
         return $this->hasMany(MoodboardFile::class);

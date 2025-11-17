@@ -10,20 +10,21 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\DivisiController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\TerminController;
-use App\Http\Controllers\KontrakController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\KontrakController;
 use App\Http\Controllers\RabJasaController;
 use App\Http\Controllers\EstimasiController;
 use App\Http\Controllers\JenisItemController;
 use App\Http\Controllers\MoodboardController;
 use App\Http\Controllers\RabVendorController;
 use App\Http\Controllers\RabKontrakController;
+use App\Http\Controllers\DesainFinalController;
 use App\Http\Controllers\RabInternalController;
 use App\Http\Controllers\CommitmentFeeController;
 use App\Http\Controllers\ItemPekerjaanController;
 use App\Http\Controllers\JenisInteriorController;
 use App\Http\Controllers\SurveyResultsController;
-use App\Http\Controllers\DesainFinalController;
+use App\Http\Controllers\ProjectManagementController;
 
 Route::get('/', function () {
     return Inertia::render('welcome', [
@@ -155,6 +156,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('invoice/{invoiceId}/upload-bukti', [InvoiceController::class, 'uploadBuktiBayar'])->name('invoice.upload-bukti');
     Route::delete('invoice/{invoiceId}', [InvoiceController::class, 'destroy'])->name('invoice.destroy');
 
+    // PROJECT MANAGEMENT ROUTES
+    Route::get('/project-management', [ProjectManagementController::class, 'index']);
+    Route::get('/project-management/{id}', [ProjectManagementController::class, 'show']);
+    Route::post('/produk/{id}/update-stage', [ProjectManagementController::class, 'updateStage']);
+
 });
 
 require __DIR__ . '/settings.php';
+require __DIR__ . '/api.php';

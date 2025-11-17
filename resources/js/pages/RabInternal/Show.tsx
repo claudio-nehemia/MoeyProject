@@ -286,7 +286,7 @@ export default function Show({ rabInternal }: Props) {
                                                             Markup: {produk.markup_satuan}%
                                                         </div>
                                                         <div className="text-xs text-gray-600 dark:text-gray-400">
-                                                            Dimensi: {produk.harga_dimensi.toLocaleString('id-ID')}
+                                                            Dimensi x QTY: {produk.harga_dimensi.toLocaleString('id-ID')}
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-3 text-right text-sm font-bold text-blue-600 dark:text-blue-400">

@@ -85,6 +85,7 @@ export default function EstimasiIndex({ moodboards }: Props) {
     const [uploadFile, setUploadFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
 
     const filteredMoodboards = moodboards.filter((moodboard) => {
         const search = searchQuery.toLowerCase();
@@ -142,6 +143,18 @@ export default function EstimasiIndex({ moodboards }: Props) {
         setSelectedMoodboard(moodboard);
         setSelectedKasarFile(kasarFile);
         setShowUploadModal(true);
+    };
+
+    const toggleExpand = (moodboardId: number) => {
+        setExpandedCards((prev) => {
+            const newSet = new Set(prev);
+            if (newSet.has(moodboardId)) {
+                newSet.delete(moodboardId);
+            } else {
+                newSet.add(moodboardId);
+            }
+            return newSet;
+        });
     };
 
     return (

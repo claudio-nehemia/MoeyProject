@@ -173,7 +173,7 @@ class InvoiceController extends Controller
         $invoice = Invoice::findOrFail($invoiceId);
 
         $request->validate([
-            'bukti_bayar' => 'required|image|mimes:jpeg,png,jpg,pdf|max:5120', // 5MB
+            'bukti_bayar' => 'required|file|mimes:jpeg,png,jpg,pdf|max:5120', // 5MB
         ]);
 
         DB::transaction(function () use ($request, $invoice) {

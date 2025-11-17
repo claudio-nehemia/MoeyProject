@@ -1329,6 +1329,75 @@ export default function Sidebar({
                                 )}
                             </Link>
                         </li>
+
+                        <li
+                            className={mounted ? 'slideInLeft' : 'opacity-0'}
+                            style={{ animationDelay: '1.8s' }}
+                        >
+                            <Link
+                                href="/project-management"
+                                onClick={handleLinkClick}
+                                className={`group flex items-center rounded-lg p-2 transition-all ${
+                                    currentPage === 'project-management'
+                                        ? 'bg-gradient-to-r from-teal-50 to-teal-100 text-stone-900 shadow-sm'
+                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
+                                }`}
+                            >
+                                <div
+                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 shadow-md transition-transform group-hover:scale-110`}
+                                    style={{ animationDelay: '1.8s' }}
+                                >
+                                    <svg
+                                        className="h-3.5 w-3.5 text-white"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                                        />
+                                    </svg>
+                                </div>
+                                <span
+                                    className={`flex-1 text-xs ${currentPage === 'project-management' ? 'font-medium text-teal-700' : ''}`}
+                                >
+                                    Project Management
+                                </span>
+                                {currentPage === 'project-management' && (
+                                    <svg
+                                        className="h-3.5 w-3.5 text-purple-600"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth="2"
+                                            d="M9 5l7 7-7 7"
+                                        />
+                                    </svg>
+                                )}
+                                {currentPage !== 'invoice' && (
+                                    <svg
+                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth="2"
+                                            d="M9 5l7 7-7 7"
+                                        />
+                                    </svg>
+                                )}
+                            </Link>
+                        </li>
                     </ul>
 
                     <div className="mt-auto border-t border-stone-200 pt-2">
