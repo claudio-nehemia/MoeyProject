@@ -454,61 +454,76 @@ export default function Index({ orders }: Props) {
                                                         <p className="text-xs font-semibold text-stone-700 mb-2">
                                                             File Kasar ({moodboard.kasar_files.length}):
                                                         </p>
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            {moodboard.kasar_files.slice(0, 2).map((file) => (
-                                                                <div key={file.id} className="relative group">
-                                                                    <img
-                                                                        src={file.url}
-                                                                        alt={file.original_name}
-                                                                        className="w-full h-20 object-cover rounded-lg border border-stone-200"
-                                                                    />
-                                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-1">
+                                                        <div className="space-y-2">
+                                                            {moodboard.kasar_files.map((file, idx) => (
+                                                                <div key={file.id} className="border border-stone-200 rounded-lg p-2 bg-stone-50">
+                                                                    <div className="flex items-center gap-2 mb-2">
+                                                                        <div className="flex-shrink-0 w-16 h-16 rounded overflow-hidden bg-stone-200">
+                                                                            <img
+                                                                                src={file.url}
+                                                                                alt={file.original_name}
+                                                                                className="w-full h-full object-cover"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <p className="text-xs font-medium text-stone-900 truncate">
+                                                                                #{idx + 1}: {file.original_name}
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    <div className="grid grid-cols-2 gap-1.5">
                                                                         <a
                                                                             href={file.url}
                                                                             target="_blank"
-                                                                            className="p-1.5 bg-white rounded-md hover:bg-stone-100"
+                                                                            rel="noopener noreferrer"
+                                                                            className="px-2 py-1 text-xs font-medium text-center text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded transition-all"
                                                                         >
-                                                                            <svg className="w-3 h-3 text-stone-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                                            </svg>
+                                                                            👁️ Lihat
                                                                         </a>
+                                                                        
                                                                         {moodboard.status !== 'approved' && (
                                                                             <>
                                                                                 <button
                                                                                     onClick={() => handleReplaceFileClick(file.id)}
-                                                                                    className="p-1.5 bg-white rounded-md hover:bg-stone-100"
+                                                                                    className="px-2 py-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded transition-all"
                                                                                 >
-                                                                                    <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                                                                                    </svg>
+                                                                                    🔄 Ganti
                                                                                 </button>
+                                                                                <input
+                                                                                    type="file"
+                                                                                    id={`replace-file-${file.id}`}
+                                                                                    accept=".jpg,.jpeg,.png,.pdf"
+                                                                                    className="hidden"
+                                                                                    onChange={(e) => handleReplaceFileChange(e, file.id)}
+                                                                                />
                                                                                 <button
                                                                                     onClick={() => handleDeleteFile(file.id, file.original_name)}
-                                                                                    className="p-1.5 bg-white rounded-md hover:bg-stone-100"
+                                                                                    className="px-2 py-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 rounded transition-all"
                                                                                 >
-                                                                                    <svg className="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                                    </svg>
+                                                                                    🗑️ Hapus
                                                                                 </button>
                                                                             </>
                                                                         )}
+                                                                        
+                                                                        {moodboard.status === 'pending' && moodboard.has_estimasi && (
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    if (window.confirm(`Pilih desain "${file.original_name}" sebagai moodboard kasar?`)) {
+                                                                                        router.post(`/moodboard/accept/${moodboard.id}`, {
+                                                                                            moodboard_file_id: file.id,
+                                                                                        });
+                                                                                    }
+                                                                                }}
+                                                                                className="col-span-2 px-2 py-1 text-xs font-medium text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded transition-all"
+                                                                            >
+                                                                                ✓ Terima Desain Ini
+                                                                            </button>
+                                                                        )}
                                                                     </div>
-                                                                    <input
-                                                                        type="file"
-                                                                        id={`replace-file-${file.id}`}
-                                                                        className="hidden"
-                                                                        accept="image/*"
-                                                                        onChange={(e) => handleReplaceFileChange(e, file.id)}
-                                                                    />
                                                                 </div>
                                                             ))}
                                                         </div>
-                                                        {moodboard.kasar_files.length > 2 && (
-                                                            <p className="text-xs text-stone-500 mt-1.5 text-center">
-                                                                +{moodboard.kasar_files.length - 2} file lainnya
-                                                            </p>
-                                                        )}
                                                     </div>
                                                 )}
 
