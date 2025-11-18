@@ -36,6 +36,19 @@ class ItemPekerjaanProduk extends Model
         return config('stage.stages');
     }
 
+    public function defects()
+    {
+        return $this->hasMany(Defect::class);
+    }
+
+    // Accessor: Cek apakah produk punya defect yang belum selesai
+    public function getHasPendingDefectsAttribute()
+    {
+        return $this->defects()
+            ->whereIn('status', ['pending', 'in_repair'])
+            ->exists();
+    }
+
 
     public function getProgressAttribute()
     {

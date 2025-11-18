@@ -7,6 +7,7 @@ use App\Http\Controllers\ItemController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\DefectController;
 use App\Http\Controllers\DivisiController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\TerminController;
@@ -160,6 +161,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/project-management', [ProjectManagementController::class, 'index']);
     Route::get('/project-management/{id}', [ProjectManagementController::class, 'show']);
     Route::post('/produk/{id}/update-stage', [ProjectManagementController::class, 'updateStage']);
+
+    // DEFECT ROUTES
+    Route::get('/defect-management', [DefectController::class, 'index'])->name('defect.index');
+    Route::get('/defect-management/{id}', [DefectController::class, 'show'])->name('defect.show');
+    Route::post('/defects', [DefectController::class, 'store'])->name('defect.store');
+    Route::post('/defect-items/{id}/repair', [DefectController::class, 'storeRepair'])->name('defect.repair.store');
+    Route::delete('/defect-repairs/{id}', [DefectController::class, 'deleteRepair'])->name('defect.repair.delete');
+    Route::patch('/defects/{id}/status', [DefectController::class, 'updateStatus'])->name('defect.status.update');
+
 
 });
 

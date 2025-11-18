@@ -41,14 +41,20 @@ class ProjectManagementController extends Controller
         $itemPekerjaans = $order->moodboard->itemPekerjaans->map(function ($itemPekerjaan) {
             // Calculate total harga for this item pekerjaan
             $totalHargaItem = $itemPekerjaan->produks->sum('total_harga');
-            
+
             $produks = $itemPekerjaan->produks->map(function ($produk) use ($totalHargaItem) {
                 // Calculate weight percentage based on harga
                 $weightPercentage = $totalHargaItem > 0 ? ($produk->total_harga / $totalHargaItem) * 100 : 0;
-                
+
                 // Calculate actual contribution (weight * progress)
                 $actualContribution = ($weightPercentage * $produk->progress) / 100;
-                
+
+                $canReportDefect = in_array($produk->current_stage, ['Finishing QC', 'Install QC']);
+
+                $hasActiveDefect = $produk->defects()
+                    ->whereIn('status', ['pending', 'in_repair'])
+                    ->exists();
+
                 return [
                     'id' => $produk->id,
                     'nama_produk' => $produk->produk->nama_produk,
@@ -59,6 +65,11 @@ class ProjectManagementController extends Controller
                     'current_stage' => $produk->current_stage,
                     'weight_percentage' => round($weightPercentage, 2),
                     'actual_contribution' => round($actualContribution, 2),
+                    'can_report_defect' => $canReportDefect,
+                    'has_active_defect' => $hasActiveDefect,
+                    'defect_id' => $hasActiveDefect ? $produk->defects()
+                        ->whereIn('status', ['pending', 'in_repair'])
+                        ->first()->id : null,
                 ];
             });
 
