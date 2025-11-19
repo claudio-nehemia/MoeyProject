@@ -99,9 +99,19 @@ export default function Show({ rabVendor }: Props) {
                     {/* Header */}
                     <div className="mb-6 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
                         <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6">
-                            <h2 className="text-2xl font-bold text-white">
-                                RAB Vendor (Harga Asli + Aksesoris)
-                            </h2>
+                            <div className="flex justify-between">
+                                <h2 className="text-2xl font-bold text-white">
+                                    RAB Vendor
+                                </h2>
+                                <button className="bg-green-600">
+                                    <a
+                                        href={`/rab-vendor/${rabVendor.id}/pdf`}
+                                        className="rounded-3xl inline-flex items-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                                    >
+                                        Download PDF
+                                    </a>
+                                </button>
+                            </div>
                             <div className="mt-3 grid grid-cols-1 gap-3 text-sm text-blue-50 md:grid-cols-2">
                                 <div>
                                     <p><strong className="text-white">Project:</strong> {rabVendor.order.nama_project}</p>

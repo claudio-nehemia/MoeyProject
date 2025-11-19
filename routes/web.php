@@ -149,12 +149,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // KONTRAK ROUTES
     Route::resource('kontrak', KontrakController::class);
+    Route::get('kontrak/{kontrakId}/export-pdf', [KontrakController::class, 'exportPdf'])->name('kontrak.export-pdf');
 
     // INVOICE ROUTES
     Route::get('invoice', [InvoiceController::class, 'index'])->name('invoice.index');
     Route::post('invoice/{itemPekerjaanId}/generate', [InvoiceController::class, 'generate'])->name('invoice.generate');
     Route::get('invoice/{invoiceId}/show', [InvoiceController::class, 'show'])->name('invoice.show');
     Route::post('invoice/{invoiceId}/upload-bukti', [InvoiceController::class, 'uploadBuktiBayar'])->name('invoice.upload-bukti');
+    Route::get('invoice/{invoiceId}/export-pdf', [InvoiceController::class, 'exportPdf'])->name('invoice.export-pdf');
     Route::delete('invoice/{invoiceId}', [InvoiceController::class, 'destroy'])->name('invoice.destroy');
 
     // PROJECT MANAGEMENT ROUTES
@@ -170,6 +172,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/defect-repairs/{id}', [DefectController::class, 'deleteRepair'])->name('defect.repair.delete');
     Route::patch('/defects/{id}/status', [DefectController::class, 'updateStatus'])->name('defect.status.update');
 
+    // PDF ROUTES
+    Route::get('/rab-jasa/{id}/pdf', [RabJasaController::class, 'exportPdf'])
+    ->name('rab-jasa.pdf');
+    Route::get('/rab-kontrak/{id}/pdf', [RabKontrakController::class, 'exportPdf'])
+    ->name('rab-kontrak.pdf');
+    Route::get('/rab-vendor/{id}/pdf', [RabVendorController::class, 'exportPdf'])
+    ->name('rab-vendor.pdf');
 
 });
 

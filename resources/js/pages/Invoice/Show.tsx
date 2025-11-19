@@ -191,8 +191,17 @@ export default function Show({ invoice }: Props) {
                                         <p className="text-xl font-bold text-blue-100">{invoice.invoice_number}</p>
                                         <p className="text-sm text-blue-200 mt-1">Issue Date: {formatDate(invoice.created_at)}</p>
                                     </div>
-                                    <div className="text-right">
+                                    <div className="text-right flex flex-col items-end gap-3">
                                         {getStatusBadge(invoice.status)}
+                                        <a
+                                            href={`/invoice/${invoice.id}/export-pdf`}
+                                            className="inline-flex items-center gap-2 px-4 py-2 bg-white text-blue-600 rounded-lg font-semibold text-sm shadow-md hover:shadow-xl hover:bg-blue-50 transition-all duration-200"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                            Download PDF
+                                        </a>
                                         {invoice.paid_at && (
                                             <p className="text-sm text-blue-100 mt-3 bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm">
                                                 💰 Paid: {formatDate(invoice.paid_at)}

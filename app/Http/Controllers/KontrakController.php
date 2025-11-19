@@ -124,6 +124,28 @@ class KontrakController extends Controller
     }
 
     /**
+     * Export kontrak as PDF.
+     */
+    public function exportPdf($kontrakId)
+    {
+        $kontrak = Kontrak::with([
+            'itemPekerjaan.moodboard.order',
+            'termin'
+        ])->findOrFail($kontrakId);
+
+        $data = [
+            'kontrak' => $kontrak,
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.kontrak', $data);
+        $pdf->setPaper('a4', 'portrait');
+
+        $filename = 'Kontrak-' . $kontrak->itemPekerjaan->moodboard->order->nama_project . '-' . date('YmdHis') . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(Kontrak $kontrak)

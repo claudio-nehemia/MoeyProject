@@ -10,6 +10,7 @@ use App\Models\RabInternal;
 use App\Models\ItemPekerjaan;
 use App\Models\JenisItem;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class RabVendorController extends Controller
 {
@@ -20,25 +21,25 @@ class RabVendorController extends Controller
             'rabInternal',
             'rabVendor.rabVendorProduks'
         ])
-        ->whereHas('produks')
-        ->whereHas('rabInternal')
-        ->get()
-        ->map(function ($itemPekerjaan) {
-            return [
-                'id' => $itemPekerjaan->id,
-                'order' => [
-                    'nama_project' => $itemPekerjaan->moodboard->order->nama_project,
-                    'company_name' => $itemPekerjaan->moodboard->order->company_name,
-                    'customer_name' => $itemPekerjaan->moodboard->order->customer_name,
-                ],
-                'rabVendor' => $itemPekerjaan->rabVendor ? [
-                    'id' => $itemPekerjaan->rabVendor->id,
-                    'response_by' => $itemPekerjaan->rabVendor->response_by,
-                    'response_time' => $itemPekerjaan->rabVendor->response_time,
-                    'total_produks' => $itemPekerjaan->rabVendor->rabVendorProduks->count(),
-                ] : null,
-            ];
-        });
+            ->whereHas('produks')
+            ->whereHas('rabInternal')
+            ->get()
+            ->map(function ($itemPekerjaan) {
+                return [
+                    'id' => $itemPekerjaan->id,
+                    'order' => [
+                        'nama_project' => $itemPekerjaan->moodboard->order->nama_project,
+                        'company_name' => $itemPekerjaan->moodboard->order->company_name,
+                        'customer_name' => $itemPekerjaan->moodboard->order->customer_name,
+                    ],
+                    'rabVendor' => $itemPekerjaan->rabVendor ? [
+                        'id' => $itemPekerjaan->rabVendor->id,
+                        'response_by' => $itemPekerjaan->rabVendor->response_by,
+                        'response_time' => $itemPekerjaan->rabVendor->response_time,
+                        'total_produks' => $itemPekerjaan->rabVendor->rabVendorProduks->count(),
+                    ] : null,
+                ];
+            });
 
         return Inertia::render('RabVendor/Index', [
             'itemPekerjaans' => $itemPekerjaans,
@@ -75,10 +76,10 @@ class RabVendorController extends Controller
                 // So we just copy them directly - NO need to divide by markup
                 $hargaDasarOriginal = $rabProduk->harga_dasar;
                 $hargaItemsOriginal = $rabProduk->harga_items_non_aksesoris;
-                
+
                 // Calculate harga_satuan WITHOUT markup
                 $hargaSatuanVendor = ($hargaDasarOriginal + $hargaItemsOriginal) * $rabProduk->harga_dimensi;
-                
+
                 $rabVendorProduk = RabVendorProduk::create([
                     'rab_vendor_id' => $rabVendor->id,
                     'item_pekerjaan_produk_id' => $rabProduk->item_pekerjaan_produk_id,
@@ -96,7 +97,7 @@ class RabVendorController extends Controller
                     // Items in ItemPekerjaan already have original prices
                     $hargaSatuanAksOriginal = $rabAksesoris->itemPekerjaanItem->item->harga;
                     $hargaTotalOriginal = $hargaSatuanAksOriginal * $rabAksesoris->qty_aksesoris;
-                    
+
                     RabVendorAksesoris::create([
                         'rab_vendor_produk_id' => $rabVendorProduk->id,
                         'item_pekerjaan_item_id' => $rabAksesoris->item_pekerjaan_item_id,
@@ -104,10 +105,10 @@ class RabVendorController extends Controller
                         'qty_aksesoris' => $rabAksesoris->qty_aksesoris,
                         'harga_total' => $hargaTotalOriginal,
                     ]);
-                    
+
                     $totalAksesoris += $hargaTotalOriginal;
                 }
-                
+
                 // Update with aksesoris
                 $rabVendorProduk->update([
                     'harga_total_aksesoris' => $totalAksesoris,
@@ -144,10 +145,14 @@ class RabVendorController extends Controller
                 ],
                 'produks' => $rabVendor->rabVendorProduks->map(function ($rabProduk) use ($aksesorisJenisItem) {
                     $jenisItemsList = [];
-                    foreach ($rabProduk->itemPekerjaanProduk->jenisItems as $jenisItem) {
+                    $jenisItems = $rabProduk->itemPekerjaanProduk->jenisItems ?? collect([]);
+                    
+                    foreach ($jenisItems as $jenisItem) {
                         if ($jenisItem->jenis_item_id !== $aksesorisJenisItem->id) {
                             $itemsList = [];
-                            foreach ($jenisItem->items as $item) {
+                            $items = $jenisItem->items ?? collect([]);
+                            
+                            foreach ($items as $item) {
                                 $itemsList[] = [
                                     'nama_item' => $item->item->nama_item,
                                     'harga_satuan' => $item->item->harga,
@@ -155,14 +160,14 @@ class RabVendorController extends Controller
                                     'harga_total' => $item->item->harga * $item->quantity,
                                 ];
                             }
-                            
+
                             $jenisItemsList[] = [
                                 'nama_jenis' => $jenisItem->jenisItem->nama_jenis_item,
                                 'items' => $itemsList,
                             ];
                         }
                     }
-                    
+
                     return [
                         'id' => $rabProduk->id,
                         'nama_produk' => $rabProduk->itemPekerjaanProduk->produk->nama_produk,
@@ -190,6 +195,94 @@ class RabVendorController extends Controller
                 })->toArray(),
             ],
         ]);
+    }
+
+    public function exportPdf($rabVendorId)
+    {
+        $rabVendor = RabVendor::with([
+            'itemPekerjaan.moodboard.order',
+            'rabVendorProduks.itemPekerjaanProduk.produk',
+            'rabVendorProduks.itemPekerjaanProduk.jenisItems.jenisItem',
+            'rabVendorProduks.itemPekerjaanProduk.jenisItems.items.item',
+            'rabVendorProduks.rabVendorAksesoris.itemPekerjaanItem.item'
+        ])->findOrFail($rabVendorId);
+
+        $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
+
+        // Prepare data for PDF
+        $produks = $rabVendor->rabVendorProduks->map(function ($rabProduk) use ($aksesorisJenisItem) {
+
+            // NON AKSESORIS
+            $jenisItemsList = [];
+            $jenisItems = $rabProduk->itemPekerjaanProduk->jenisItems ?? collect([]);
+            
+            foreach ($jenisItems as $jenisItem) {
+                if ($jenisItem->jenis_item_id !== $aksesorisJenisItem->id) {
+
+                    $itemsList = [];
+                    $items = $jenisItem->items ?? collect([]);
+                    
+                    foreach ($items as $item) {
+                        $itemsList[] = [
+                            'nama_item' => $item->item->nama_item,
+                            'harga_satuan' => $item->item->harga,
+                            'qty' => $item->quantity,
+                            'harga_total' => $item->item->harga * $item->quantity,
+                        ];
+                    }
+
+                    $jenisItemsList[] = [
+                        'nama_jenis' => $jenisItem->jenisItem->nama_jenis_item,
+                        'items' => $itemsList,
+                    ];
+                }
+            }
+
+            // AKSESORIS
+            $aksesorisList = $rabProduk->rabVendorAksesoris->map(function ($aks) {
+                return [
+                    'nama_aksesoris' => $aks->itemPekerjaanItem->item->nama_item,
+                    'qty_aksesoris' => $aks->qty_aksesoris,
+                    'harga_satuan_aksesoris' => $aks->harga_satuan_aksesoris,
+                    'harga_total' => $aks->harga_total,
+                ];
+            });
+
+            return [
+                'id' => $rabProduk->id,
+                'nama_produk' => $rabProduk->itemPekerjaanProduk->produk->nama_produk,
+                'qty_produk' => $rabProduk->itemPekerjaanProduk->quantity,
+                'panjang' => $rabProduk->itemPekerjaanProduk->panjang,
+                'lebar' => $rabProduk->itemPekerjaanProduk->lebar,
+                'tinggi' => $rabProduk->itemPekerjaanProduk->tinggi,
+                'harga_dasar' => $rabProduk->harga_dasar,
+                'harga_items_non_aksesoris' => $rabProduk->harga_items_non_aksesoris,
+                'harga_dimensi' => $rabProduk->harga_dimensi,
+                'harga_satuan' => $rabProduk->harga_satuan,
+                'harga_total_aksesoris' => $rabProduk->harga_total_aksesoris,
+                'harga_akhir' => $rabProduk->harga_akhir,
+                'jenis_items' => $jenisItemsList,
+                'aksesoris' => $aksesorisList,
+            ];
+        });
+
+        // FINAL PDF DATA
+        $data = [
+            'rabVendor' => $rabVendor, 
+            'id' => $rabVendor->id,
+            'response_by' => $rabVendor->response_by,
+            'response_time' => $rabVendor->response_time,
+            'order' => [
+                'nama_project' => $rabVendor->itemPekerjaan->moodboard->order->nama_project,
+                'company_name' => $rabVendor->itemPekerjaan->moodboard->order->company_name,
+                'customer_name' => $rabVendor->itemPekerjaan->moodboard->order->customer_name,
+            ],
+            'produks' => $produks,
+        ];
+
+        $pdf = Pdf::loadView('pdf.rab-vendor', $data)->setPaper('a4', 'portrait');
+
+        return $pdf->stream("RAB-Vendor-{$rabVendor->id}.pdf");
     }
 
     public function destroy($rabVendorId)
