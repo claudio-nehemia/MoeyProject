@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 interface SidebarProps {
@@ -7,27 +7,341 @@ interface SidebarProps {
     onClose?: () => void;
 }
 
+interface AuthUser {
+    permissions: string[];
+}
+
 export default function Sidebar({
     isOpen,
     currentPage = 'dashboard',
     onClose,
 }: SidebarProps) {
     const [mounted, setMounted] = useState(false);
+    const { auth } = usePage<{ auth: { user: AuthUser } }>().props;
+    const userPermissions = auth?.user?.permissions || [];
 
     useEffect(() => {
         setMounted(true);
     }, []);
 
     const handleLinkClick = () => {
-        // Close sidebar on mobile when link is clicked
         if (onClose && window.innerWidth < 1024) {
             onClose();
         }
     };
 
+    // Helper function to check if user has permission
+    const hasPermission = (permission: string): boolean => {
+        return userPermissions.includes(permission);
+    };
+
+    // Define menu items with their required permissions
+    const masterDataMenus = [
+        {
+            name: 'Dashboard',
+            href: '/dashboard',
+            page: 'dashboard',
+            permission: null, // Dashboard accessible to all
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
+                </svg>
+            ),
+            gradient: 'from-amber-400 to-amber-600',
+        },
+        {
+            name: 'Divisi',
+            href: '/divisi',
+            page: 'divisi',
+            permission: 'divisi.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path>
+                </svg>
+            ),
+            gradient: 'from-blue-400 to-blue-600',
+        },
+        {
+            name: 'Users',
+            href: '/user',
+            page: 'user',
+            permission: 'user.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"></path>
+                </svg>
+            ),
+            gradient: 'from-green-400 to-green-600',
+        },
+        {
+            name: 'Roles',
+            href: '/role',
+            page: 'role',
+            permission: 'role.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+            ),
+            gradient: 'from-purple-400 to-purple-600',
+        },
+        {
+            name: 'Interior',
+            href: '/jenis-interior',
+            page: 'jenis-interior',
+            permission: 'jenis-interior.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                </svg>
+            ),
+            gradient: 'from-teal-400 to-teal-600',
+        },
+        {
+            name: 'Termin',
+            href: '/termin',
+            page: 'termin',
+            permission: 'termin.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+            ),
+            gradient: 'from-pink-400 to-pink-600',
+        },
+        {
+            name: 'Item Type',
+            href: '/jenis-item',
+            page: 'jenis-item',
+            permission: 'jenis-item.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+            ),
+            gradient: 'from-indigo-400 to-indigo-600',
+        },
+        {
+            name: 'Products',
+            href: '/produk',
+            page: 'produk',
+            permission: 'produk.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+            ),
+            gradient: 'from-rose-400 to-rose-600',
+        },
+        {
+            name: 'Items',
+            href: '/item',
+            page: 'item',
+            permission: 'item.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042L5.96 9H9a2 2 0 100-4H6.75A2.75 2.75 0 004.75 2.5a2.5 2.5 0 00-2.466 2.667L1.897 5H1a1 1 0 000 2v3a1 1 0 001 1h1.17l.04.04a.997.997 0 00.042.01L5.96 18H3a1 1 0 100 2h14a1 1 0 100-2h-2.22l-.305-1.222a.997.997 0 00-.01-.042L14.04 11H11a2 2 0 100 4h2.25a2.75 2.75 0 002.25 2.5 2.5 2.5 0 002.466-2.667l.04-.04H19a1 1 0 100-2v-3a1 1 0 00-1-1h-1.17l-.04-.04a.997.997 0 00-.042-.01L14.04 2H17a1 1 0 100-2H3z" />
+                </svg>
+            ),
+            gradient: 'from-orange-400 to-orange-600',
+        },
+    ];
+
+    const operationsMenus = [
+        {
+            name: 'Orders',
+            href: '/order',
+            page: 'order',
+            permission: 'order.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+            ),
+            gradient: 'from-cyan-400 to-cyan-600',
+        },
+        {
+            name: 'Survey Results',
+            href: '/survey-results',
+            page: 'survey',
+            permission: 'survey-results.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            ),
+            gradient: 'from-emerald-400 to-emerald-600',
+        },
+        {
+            name: 'Moodboard',
+            href: '/moodboard',
+            page: 'moodboard',
+            permission: 'moodboard.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                </svg>
+            ),
+            gradient: 'from-violet-400 to-violet-600',
+        },
+        {
+            name: 'Estimasi',
+            href: '/estimasi',
+            page: 'estimasi',
+            permission: 'estimasi.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            ),
+            gradient: 'from-blue-400 to-blue-600',
+        },
+        {
+            name: 'Commitment Fee',
+            href: '/commitment-fee',
+            page: 'commitment',
+            permission: 'commitment-fee.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            ),
+            gradient: 'from-teal-400 to-teal-600',
+        },
+        {
+            name: 'Desain Final',
+            href: '/desain-final',
+            page: 'desain-final',
+            permission: 'desain-final.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            ),
+            gradient: 'from-indigo-400 to-indigo-600',
+        },
+        {
+            name: 'Item Pekerjaan',
+            href: '/item-pekerjaan',
+            page: 'item-pekerjaan',
+            permission: 'item-pekerjaan.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+            ),
+            gradient: 'from-fuchsia-400 to-fuchsia-600',
+        },
+        {
+            name: 'RAB',
+            href: '/rab-internal',
+            page: 'rab-internal',
+            permission: 'rab-internal.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+            ),
+            gradient: 'from-amber-400 to-amber-600',
+        },
+        {
+            name: 'Kontrak',
+            href: '/kontrak',
+            page: 'kontrak',
+            permission: 'kontrak.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            ),
+            gradient: 'from-indigo-400 to-indigo-600',
+        },
+        {
+            name: 'Invoice',
+            href: '/invoice',
+            page: 'invoice',
+            permission: 'invoice.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z" />
+                </svg>
+            ),
+            gradient: 'from-purple-400 to-purple-600',
+        },
+        {
+            name: 'Project Management',
+            href: '/project-management',
+            page: 'project-management',
+            permission: 'project-management.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+            ),
+            gradient: 'from-teal-400 to-teal-600',
+        },
+        {
+            name: 'Defect Management',
+            href: '/defect-management',
+            page: 'defect-management',
+            permission: 'defect.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            ),
+            gradient: 'from-red-400 to-red-600',
+        },
+    ];
+
+    // Filter menus based on permissions
+    const visibleMasterData = masterDataMenus.filter(
+        menu => !menu.permission || hasPermission(menu.permission)
+    );
+    
+    const visibleOperations = operationsMenus.filter(
+        menu => !menu.permission || hasPermission(menu.permission)
+    );
+
+    const renderMenuItem = (menu: typeof masterDataMenus[0], index: number) => (
+        <li
+            key={menu.href}
+            className={mounted ? 'slideInLeft' : 'opacity-0'}
+            style={{ animationDelay: `${0.1 * (index + 1)}s` }}
+        >
+            <Link
+                href={menu.href}
+                onClick={handleLinkClick}
+                className={`group flex items-center rounded-lg p-2 transition-all ${
+                    currentPage === menu.page
+                        ? 'bg-gradient-to-r from-amber-50 to-amber-100 text-stone-900 shadow-sm'
+                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
+                }`}
+            >
+                <div
+                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br ${menu.gradient} shadow-md transition-transform group-hover:scale-110`}
+                >
+                    {menu.icon}
+                </div>
+                <span className={`flex-1 text-xs ${currentPage === menu.page ? 'font-medium text-amber-700' : ''}`}>
+                    {menu.name}
+                </span>
+                {currentPage === menu.page && (
+                    <svg className="h-3.5 w-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                )}
+                {currentPage !== menu.page && (
+                    <svg className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                )}
+            </Link>
+        </li>
+    );
+
     return (
         <>
-            {/* Overlay blur untuk mobile */}
             {isOpen && (
                 <div
                     className="fixed inset-0 z-30 bg-white/30 backdrop-blur-sm transition-all lg:hidden"
@@ -40,1434 +354,34 @@ export default function Sidebar({
             >
                 <div className="flex h-full flex-col overflow-y-auto bg-white px-2.5 pb-3">
                     {/* Master Data Section */}
-                    <div className="mb-2 px-1.5 py-2">
-                        <p className="text-xs font-bold tracking-wider text-stone-500 uppercase">
-                            Master Data
-                        </p>
-                    </div>
-
-                    <ul className="flex-1 space-y-1.5 font-medium">
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '0.1s' }}
-                        >
-                            <Link
-                                href="/dashboard"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'dashboard'
-                                        ? 'bg-gradient-to-r from-amber-50 to-amber-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 shadow-md transition-transform group-hover:scale-110`}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="currentColor"
-                                        viewBox="0 0 20 20"
-                                    >
-                                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
-                                    </svg>
-                                </div>
-                                <span className="flex-1 text-xs">
-                                    Dashboard
-                                </span>
-                                {currentPage === 'dashboard' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-amber-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'dashboard' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '0.2s' }}
-                        >
-                            <Link
-                                href="/divisi"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'divisi'
-                                        ? 'bg-gradient-to-r from-amber-50 to-amber-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '0.2s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="currentColor"
-                                        viewBox="0 0 20 20"
-                                    >
-                                        <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path>
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'divisi' ? 'font-medium text-amber-700' : ''}`}
-                                >
-                                    Divisi
-                                </span>
-                                {currentPage === 'divisi' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-amber-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'divisi' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '0.3s' }}
-                        >
-                            <Link
-                                href="/user"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'user'
-                                        ? 'bg-gradient-to-r from-amber-50 to-amber-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-green-400 to-green-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '0.3s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="currentColor"
-                                        viewBox="0 0 20 20"
-                                    >
-                                        <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"></path>
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'user' ? 'font-medium text-amber-700' : ''}`}
-                                >
-                                    Users
-                                </span>
-                                {currentPage === 'user' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-amber-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'user' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '0.4s' }}
-                        >
-                            <Link
-                                href="/role"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'role'
-                                        ? 'bg-gradient-to-r from-amber-50 to-amber-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '0.4s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="currentColor"
-                                        viewBox="0 0 20 20"
-                                    >
-                                        <path
-                                            fillRule="evenodd"
-                                            d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                            clipRule="evenodd"
-                                        />
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'role' ? 'font-medium text-amber-700' : ''}`}
-                                >
-                                    Roles
-                                </span>
-                                {currentPage === 'role' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-amber-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'role' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '0.5s' }}
-                        >
-                            <Link
-                                href="/jenis-interior"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'jenis-interior'
-                                        ? 'bg-gradient-to-r from-amber-50 to-amber-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '0.5s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
-                                        />
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'jenis-interior' ? 'font-medium text-amber-700' : ''}`}
-                                >
-                                    Interior
-                                </span>
-                                {currentPage === 'jenis-interior' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-amber-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'jenis-interior' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '0.9s' }}
-                        >
-                            <Link
-                                href="/termin"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'termin'
-                                        ? 'bg-gradient-to-r from-amber-50 to-amber-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-pink-400 to-pink-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '0.9s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                        />
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'termin' ? 'font-medium text-amber-700' : ''}`}
-                                >
-                                    Termin
-                                </span>
-                                {currentPage === 'termin' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-amber-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'termin' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '0.6s' }}
-                        >
-                            <Link
-                                href="/jenis-item"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'jenis-item'
-                                        ? 'bg-gradient-to-r from-amber-50 to-amber-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-400 to-indigo-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '0.6s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                                        />
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'jenis-item' ? 'font-medium text-amber-700' : ''}`}
-                                >
-                                    Item Type
-                                </span>
-                                {currentPage === 'jenis-item' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-amber-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'jenis-item' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '0.7s' }}
-                        >
-                            <Link
-                                href="/produk"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'produk'
-                                        ? 'bg-gradient-to-r from-amber-50 to-amber-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-rose-400 to-rose-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '0.7s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                                        />
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'produk' ? 'font-medium text-amber-700' : ''}`}
-                                >
-                                    Products
-                                </span>
-                                {currentPage === 'produk' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-amber-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'produk' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '0.8s' }}
-                        >
-                            <Link
-                                href="/item"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'item'
-                                        ? 'bg-gradient-to-r from-amber-50 to-amber-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '0.8s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="currentColor"
-                                        viewBox="0 0 20 20"
-                                    >
-                                        <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042L5.96 9H9a2 2 0 100-4H6.75A2.75 2.75 0 004.75 2.5a2.5 2.5 0 00-2.466 2.667L1.897 5H1a1 1 0 000 2v3a1 1 0 001 1h1.17l.04.04a.997.997 0 00.042.01L5.96 18H3a1 1 0 100 2h14a1 1 0 100-2h-2.22l-.305-1.222a.997.997 0 00-.01-.042L14.04 11H11a2 2 0 100 4h2.25a2.75 2.75 0 002.25 2.5 2.5 2.5 0 002.466-2.667l.04-.04H19a1 1 0 100-2v-3a1 1 0 00-1-1h-1.17l-.04-.04a.997.997 0 00-.042-.01L14.04 2H17a1 1 0 100-2H3z" />
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'item' ? 'font-medium text-amber-700' : ''}`}
-                                >
-                                    Items
-                                </span>
-                                {currentPage === 'item' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-amber-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'item' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-                    </ul>
+                    {visibleMasterData.length > 0 && (
+                        <>
+                            <div className="mb-2 px-1.5 py-2">
+                                <p className="text-xs font-bold tracking-wider text-stone-500 uppercase">
+                                    Master Data
+                                </p>
+                            </div>
+                            <ul className="flex-1 space-y-1.5 font-medium">
+                                {visibleMasterData.map((menu, index) => renderMenuItem(menu, index))}
+                            </ul>
+                        </>
+                    )}
 
                     {/* Operations Section */}
-                    <div className="mt-4 mb-2 border-t border-stone-200 px-1.5 py-3 pt-4">
-                        <p className="text-xs font-bold tracking-wider text-stone-500 uppercase">
-                            Operations
-                        </p>
-                    </div>
-
-                    <ul className="mb-6 space-y-1.5 font-medium">
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '0.9s' }}
-                        >
-                            <Link
-                                href="/order"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'order'
-                                        ? 'bg-gradient-to-r from-cyan-50 to-cyan-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '0.9s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                                        />
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'order' ? 'font-medium text-cyan-700' : ''}`}
-                                >
-                                    Orders
-                                </span>
-                                {currentPage === 'order' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-cyan-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
+                    {visibleOperations.length > 0 && (
+                        <>
+                            <div className="mt-4 mb-2 border-t border-stone-200 px-1.5 py-3 pt-4">
+                                <p className="text-xs font-bold tracking-wider text-stone-500 uppercase">
+                                    Operations
+                                </p>
+                            </div>
+                            <ul className="mb-6 space-y-1.5 font-medium">
+                                {visibleOperations.map((menu, index) => 
+                                    renderMenuItem(menu, visibleMasterData.length + index)
                                 )}
-                                {currentPage !== 'order' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '1s' }}
-                        >
-                            <Link
-                                href="/survey-results"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'survey'
-                                        ? 'bg-gradient-to-r from-emerald-50 to-emerald-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '1s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                        />
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'survey' ? 'font-medium text-emerald-700' : ''}`}
-                                >
-                                    Survey Results
-                                </span>
-                                {currentPage === 'survey' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-emerald-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'survey' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '1.1s' }}
-                        >
-                            <Link
-                                href="/moodboard"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'moodboard'
-                                        ? 'bg-gradient-to-r from-violet-50 to-violet-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-400 to-violet-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '1.1s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
-                                        />
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'moodboard' ? 'font-medium text-violet-700' : ''}`}
-                                >
-                                    Moodboard
-                                </span>
-                                {currentPage === 'moodboard' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-violet-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'moodboard' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '1.2s' }}
-                        >
-                            <Link
-                                href="/estimasi"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'estimasi'
-                                        ? 'bg-gradient-to-r from-blue-50 to-blue-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '1.2s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                        />
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'estimasi' ? 'font-medium text-blue-700' : ''}`}
-                                >
-                                    Estimasi
-                                </span>
-                                {currentPage === 'estimasi' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-blue-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'estimasi' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '1.3s' }}
-                        >
-                            <Link
-                                href="/commitment-fee"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'commitment'
-                                        ? 'bg-gradient-to-r from-teal-50 to-teal-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '1.3s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                        />
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'commitment' ? 'font-medium text-teal-700' : ''}`}
-                                >
-                                    Commitment Fee
-                                </span>
-                                {currentPage === 'commitment' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-teal-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'commitment' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '1.4s' }}
-                        >
-                            <Link
-                                href="/desain-final"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'desain-final'
-                                        ? 'bg-gradient-to-r from-indigo-50 to-indigo-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-400 to-indigo-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '1.4s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                        />
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'desain-final' ? 'font-medium text-indigo-700' : ''}`}
-                                >
-                                    Desain Final
-                                </span>
-                                {currentPage === 'desain-final' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-indigo-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'desain-final' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '1.5s' }}
-                        >
-                            <Link
-                                href="/item-pekerjaan"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'item-pekerjaan'
-                                        ? 'bg-gradient-to-r from-fuchsia-50 to-fuchsia-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-fuchsia-400 to-fuchsia-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '1.4s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-                                        />
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'item-pekerjaan' ? 'font-medium text-fuchsia-700' : ''}`}
-                                >
-                                    Item Pekerjaan
-                                </span>
-                                {currentPage === 'item-pekerjaan' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-fuchsia-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'item-pekerjaan' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '1.5s' }}
-                        >
-                            <Link
-                                href="/rab-internal"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'rab-internal'
-                                        ? 'bg-gradient-to-r from-amber-50 to-amber-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '1.5s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                                        />
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'rab-internal' ? 'font-medium text-amber-700' : ''}`}
-                                >
-                                    RAB
-                                </span>
-                                {currentPage === 'rab-internal' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-amber-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'rab-internal' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '1.6s' }}
-                        >
-                            <Link
-                                href="/kontrak"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'kontrak'
-                                        ? 'bg-gradient-to-r from-indigo-50 to-indigo-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-400 to-indigo-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '1.6s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                        />
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'kontrak' ? 'font-medium text-indigo-700' : ''}`}
-                                >
-                                    Kontrak
-                                </span>
-                                {currentPage === 'kontrak' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-indigo-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'kontrak' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '1.7s' }}
-                        >
-                            <Link
-                                href="/invoice"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'invoice'
-                                        ? 'bg-gradient-to-r from-purple-50 to-purple-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '1.7s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"
-                                        />
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'invoice' ? 'font-medium text-purple-700' : ''}`}
-                                >
-                                    Invoice
-                                </span>
-                                {currentPage === 'invoice' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-purple-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'invoice' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '1.8s' }}
-                        >
-                            <Link
-                                href="/project-management"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'project-management'
-                                        ? 'bg-gradient-to-r from-teal-50 to-teal-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '1.8s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                                        />
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'project-management' ? 'font-medium text-teal-700' : ''}`}
-                                >
-                                    Project Management
-                                </span>
-                                {currentPage === 'project-management' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-purple-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'invoice' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-
-                        <li
-                            className={mounted ? 'slideInLeft' : 'opacity-0'}
-                            style={{ animationDelay: '1.8s' }}
-                        >
-                            <Link
-                                href="/defect-management"
-                                onClick={handleLinkClick}
-                                className={`group flex items-center rounded-lg p-2 transition-all ${
-                                    currentPage === 'defect-management'
-                                        ? 'bg-gradient-to-r from-teal-50 to-teal-100 text-stone-900 shadow-sm'
-                                        : 'text-stone-600 hover:bg-gradient-to-r hover:from-stone-50 hover:to-stone-100'
-                                }`}
-                            >
-                                <div
-                                    className={`float mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 shadow-md transition-transform group-hover:scale-110`}
-                                    style={{ animationDelay: '1.8s' }}
-                                >
-                                    <svg
-                                        className="h-3.5 w-3.5 text-white"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                                        />
-                                    </svg>
-                                </div>
-                                <span
-                                    className={`flex-1 text-xs ${currentPage === 'defect-management' ? 'font-medium text-teal-700' : ''}`}
-                                >
-                                    Defect Management
-                                </span>
-                                {currentPage === 'defect-management' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 text-purple-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                                {currentPage !== 'project-management' && (
-                                    <svg
-                                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                )}
-                            </Link>
-                        </li>
-                    </ul>
+                            </ul>
+                        </>
+                    )}
 
                     <div className="mt-auto border-t border-stone-200 pt-2">
                         <div className="rounded-lg bg-gradient-to-br from-cyan-100 to-cyan-200 p-2">

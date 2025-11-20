@@ -60,4 +60,52 @@ class User extends Authenticatable
         return $this->belongsToMany(Order::class, 'order_teams')
                     ->withTimestamps();
     }
+
+    /**
+     * Get all permissions for this user through their role
+     */
+    public function getPermissions()
+    {
+        if (!$this->role) {
+            return collect([]);
+        }
+        return $this->role->permissions;
+    }
+
+    /**
+     * Check if user has specific permission
+     */
+    public function hasPermission(string $permission): bool
+    {
+        if (!$this->role) {
+            return false;
+        }
+        return $this->role->hasPermission($permission);
+    }
+
+    /**
+     * Check if user has any of the given permissions
+     */
+    public function hasAnyPermission(array $permissions): bool
+    {
+        foreach ($permissions as $permission) {
+            if ($this->hasPermission($permission)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check if user has all of the given permissions
+     */
+    public function hasAllPermissions(array $permissions): bool
+    {
+        foreach ($permissions as $permission) {
+            if (!$this->hasPermission($permission)) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

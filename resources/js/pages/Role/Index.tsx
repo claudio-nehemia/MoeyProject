@@ -11,11 +11,24 @@ interface Divisi {
     nama_divisi: string;
 }
 
+interface Permission {
+    id: number;
+    name: string;
+    display_name: string;
+    group: string;
+}
+
+interface GroupedPermissions {
+    [group: string]: Permission[];
+}
+
 interface Role {
     id: number;
     nama_role: string;
     divisi_id: number;
     divisi: Divisi;
+    permissions_count?: number;
+    users_count?: number;
 }
 
 interface Props {
@@ -34,6 +47,8 @@ export default function Index({ roles }: Props) {
     const [selectedRole, setSelectedRole] = useState<Role | null>(null);
     const [mounted, setMounted] = useState(false);
     const [divisis, setDivisis] = useState<Divisi[]>([]);
+    const [permissions, setPermissions] = useState<GroupedPermissions>({});
+    const [rolePermissions, setRolePermissions] = useState<string[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedDivisi, setSelectedDivisi] = useState("");
     const [filteredRoles, setFilteredRoles] = useState(roles);
@@ -41,6 +56,7 @@ export default function Index({ roles }: Props) {
     const { data, setData, post, put, processing, errors, reset } = useForm({
         nama_role: "",
         divisi_id: 0,
+        permissions: [] as string[],
     });
 
     useEffect(() => {
@@ -52,7 +68,7 @@ export default function Index({ roles }: Props) {
         try {
             const response = await fetch("/role/create");
             const data = await response.json();
-            setDivisis(data);
+            setDivisis(data.divisis || []);
         } catch (error) {
             console.error("Failed to fetch divisis:", error);
         }
@@ -73,8 +89,14 @@ export default function Index({ roles }: Props) {
     const openCreateModal = async () => {
         try {
             const response = await fetch("/role/create");
-            const fetchedDivisis = await response.json();
-            setDivisis(fetchedDivisis);
+            const data = await response.json();
+            setDivisis(data.divisis || []);
+            
+            // Fetch all permissions
+            const permResponse = await fetch("/role/permissions");
+            const permData = await permResponse.json();
+            setPermissions(permData.permissions || {});
+            
             setEditMode(false);
             reset();
             setShowModal(true);
@@ -88,10 +110,22 @@ export default function Index({ roles }: Props) {
             const response = await fetch(`/role/${role.id}/edit`);
             const responseData = await response.json();
             setDivisis(responseData.divisis);
+            
+            // Fetch all permissions
+            const permResponse = await fetch("/role/permissions");
+            const permData = await permResponse.json();
+            setPermissions(permData.permissions || {});
+            
+            // Fetch role's current permissions
+            const rolePermResponse = await fetch(`/role/${role.id}/permissions`);
+            const rolePermData = await rolePermResponse.json();
+            setRolePermissions(rolePermData.permissions || []);
+            
             setSelectedRole(role);
             setData({
                 nama_role: role.nama_role,
                 divisi_id: role.divisi_id,
+                permissions: rolePermData.permissions,
             });
             setEditMode(true);
             setShowModal(true);
@@ -126,7 +160,7 @@ export default function Index({ roles }: Props) {
         }
     };
 
-    const handleDataChange = (field: string, value: string | number) => {
+    const handleDataChange = (field: string, value: string | number | string[]) => {
         setData(field as any, value);
     };
 
@@ -254,6 +288,9 @@ export default function Index({ roles }: Props) {
                                         Divisi
                                     </th>
                                     <th className="px-5 py-3 text-left text-xs font-bold text-stone-700 uppercase tracking-wider">
+                                        Permissions
+                                    </th>
+                                    <th className="px-5 py-3 text-left text-xs font-bold text-stone-700 uppercase tracking-wider">
                                         Actions
                                     </th>
                                 </tr>
@@ -287,6 +324,11 @@ export default function Index({ roles }: Props) {
                                         <td className="px-5 py-3 whitespace-nowrap">
                                             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
                                                 {role.divisi.nama_divisi}
+                                            </span>
+                                        </td>
+                                        <td className="px-5 py-3 whitespace-nowrap">
+                                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                                {role.permissions_count || 0} permissions
                                             </span>
                                         </td>
                                         <td className="px-5 py-3 whitespace-nowrap">
@@ -357,6 +399,8 @@ export default function Index({ roles }: Props) {
                 data={data}
                 errors={errors}
                 divisis={divisis}
+                permissions={permissions}
+                rolePermissions={rolePermissions}
                 onClose={closeModal}
                 onSubmit={handleSubmit}
                 onDataChange={handleDataChange}
