@@ -75,6 +75,7 @@ interface FormProduk {
 export default function Edit({ rabInternal }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [formData, setFormData] = useState<FormProduk[]>([]);
+    const [markupGeneral, setMarkupGeneral] = useState<string>(''); // 🔹 Markup General
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -108,13 +109,40 @@ export default function Edit({ rabInternal }: Props) {
         setFormData(initialData);
     }, [rabInternal]);
 
+    // 🔹 Handler Markup General: apply ke semua produk & aksesoris
+    const handleMarkupGeneralChange = (value: string) => {
+        setMarkupGeneral(value);
+
+        const num = parseFloat(value);
+        if (isNaN(num)) {
+            // Kalau bukan angka valid, jangan paksa isi ke child
+            return;
+        }
+
+        setFormData(prev =>
+            prev.map(prod => ({
+                ...prod,
+                markup_satuan: value,
+                aksesoris: prod.aksesoris.map(aks => ({
+                    ...aks,
+                    markup_aksesoris: value,
+                })),
+            }))
+        );
+    };
+
     const handleMarkupChange = (produkIndex: number, value: string) => {
         const newFormData = [...formData];
         newFormData[produkIndex].markup_satuan = value;
         setFormData(newFormData);
     };
 
-    const handleNonAksesorisChange = (produkIndex: number, itemIndex: number, field: 'nama' | 'harga_satuan', value: string | number) => {
+    const handleNonAksesorisChange = (
+        produkIndex: number,
+        itemIndex: number,
+        field: 'nama' | 'harga_satuan',
+        value: string | number
+    ) => {
         const newFormData = [...formData];
         if (field === 'nama') {
             newFormData[produkIndex].non_aksesoris_items[itemIndex].nama = value as string;
@@ -160,7 +188,12 @@ export default function Edit({ rabInternal }: Props) {
         }
     };
 
-    const handleAksesorisChange = (produkIndex: number, aksesorisIndex: number, field: 'nama_aksesoris' | 'harga_satuan_aksesoris', value: string | number) => {
+    const handleAksesorisChange = (
+        produkIndex: number,
+        aksesorisIndex: number,
+        field: 'nama_aksesoris' | 'harga_satuan_aksesoris',
+        value: string | number
+    ) => {
         const newFormData = [...formData];
         if (field === 'nama_aksesoris') {
             newFormData[produkIndex].aksesoris[aksesorisIndex].nama_aksesoris = value as string;
@@ -194,7 +227,10 @@ export default function Edit({ rabInternal }: Props) {
         }
         
         // Calculate total harga items non-aksesoris from form data
-        const totalHargaItemsNonAksesoris = formProduk.non_aksesoris_items.reduce((sum, item) => sum + (Number(item.harga_satuan) || 0), 0);
+        const totalHargaItemsNonAksesoris = formProduk.non_aksesoris_items.reduce(
+            (sum, item) => sum + (Number(item.harga_satuan) || 0),
+            0
+        );
         
         // Ensure numbers are parsed correctly
         const hargaDasar = Number(produk.harga_dasar) || 0;
@@ -203,7 +239,11 @@ export default function Edit({ rabInternal }: Props) {
     };
 
     const calculateHargaAksesoris = (aksesoris: FormAksesoris) => {
-        const markup = typeof aksesoris.markup_aksesoris === 'string' ? parseFloat(aksesoris.markup_aksesoris) || 0 : aksesoris.markup_aksesoris;
+        const markup =
+            typeof aksesoris.markup_aksesoris === 'string'
+                ? parseFloat(aksesoris.markup_aksesoris) || 0
+                : aksesoris.markup_aksesoris;
+
         return aksesoris.harga_satuan_aksesoris * aksesoris.qty_aksesoris * (1 + markup / 100);
     };
 
@@ -221,11 +261,15 @@ export default function Edit({ rabInternal }: Props) {
         if (loading) return;
 
         setLoading(true);
-        router.put(`/rab-internal/${rabInternal.id}/update`, {
-            produks: formData as any,
-        }, {
-            onFinish: () => setLoading(false),
-        });
+        router.put(
+            `/rab-internal/${rabInternal.id}/update`,
+            {
+                produks: formData as any,
+            },
+            {
+                onFinish: () => setLoading(false),
+            }
+        );
     };
 
     return (
@@ -233,85 +277,143 @@ export default function Edit({ rabInternal }: Props) {
             <Head title="Edit RAB Internal" />
             
             <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-            <Sidebar isOpen={sidebarOpen} currentPage="rab-internal" onClose={() => setSidebarOpen(false)} />
+            <Sidebar
+                isOpen={sidebarOpen}
+                currentPage="rab-internal"
+                onClose={() => setSidebarOpen(false)}
+            />
 
             <div className="p-3 lg:ml-60">
                 <div className="mt-12 p-3">
+                    {/* Header Project */}
                     <div className="mb-6 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
-                            <div className="p-6">
-                                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                                    Edit RAB Internal
-                                </h2>
-                                <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                                    <p><strong>Project:</strong> {rabInternal.itemPekerjaan.order.nama_project}</p>
-                                    <p><strong>Company:</strong> {rabInternal.itemPekerjaan.order.company_name}</p>
-                                    <p><strong>Customer:</strong> {rabInternal.itemPekerjaan.order.customer_name}</p>
-                                </div>
+                        <div className="p-6">
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                                Edit RAB Internal
+                            </h2>
+                            <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                                <p>
+                                    <strong>Project:</strong> {rabInternal.itemPekerjaan.order.nama_project}
+                                </p>
+                                <p>
+                                    <strong>Company:</strong> {rabInternal.itemPekerjaan.order.company_name}
+                                </p>
+                                <p>
+                                    <strong>Customer:</strong> {rabInternal.itemPekerjaan.order.customer_name}
+                                </p>
                             </div>
                         </div>
+                    </div>
 
-                        <form onSubmit={handleSubmit}>
-                            {rabInternal.itemPekerjaan.produks.map((produk, produkIndex) => {
-                                const formProduk = formData[produkIndex];
-                                if (!formProduk) return <div key={produk.item_pekerjaan_produk_id} />;
+                    {/* 🔹 Markup General (GLOBAL) */}
+                    <div className="mb-6 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
+                        <div className="p-6">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                Markup General
+                            </h3>
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Jika diisi, nilai ini akan di-copy ke <b>Markup Satuan</b> semua produk dan{' '}
+                                <b>Markup Aksesoris</b> semua aksesoris. Setelah itu Anda tetap bisa edit manual per produk / aksesoris.
+                            </p>
+                            <div className="mt-3 max-w-xs">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Markup General (%)
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={markupGeneral}
+                                    onChange={(e) => handleMarkupGeneralChange(e.target.value)}
+                                    placeholder="Contoh: 5"
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                />
+                            </div>
+                        </div>
+                    </div>
 
-                                const hargaSatuan = calculateHargaSatuan(produk, formProduk, formProduk.markup_satuan);
-                                const totalAksesoris = formProduk.aksesoris.reduce((sum, aks) => sum + calculateHargaAksesoris(aks), 0);
-                                const hargaAkhir = hargaSatuan + totalAksesoris;
+                    {/* FORM PRODUK */}
+                    <form onSubmit={handleSubmit}>
+                        {rabInternal.itemPekerjaan.produks.map((produk, produkIndex) => {
+                            const formProduk = formData[produkIndex];
+                            if (!formProduk) return <div key={produk.item_pekerjaan_produk_id} />;
 
-                                return (
-                                    <div key={produk.item_pekerjaan_produk_id} className="mb-6 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
-                                        <div className="bg-gradient-to-r from-amber-500 to-amber-600 p-4">
-                                            <h3 className="text-lg font-bold text-white">
-                                                {produk.nama_produk}
-                                            </h3>
-                                            <p className="text-sm text-amber-100">
-                                                Qty: {produk.qty_produk} | 
-                                                {produk.panjang && produk.lebar && produk.tinggi && 
-                                                    ` Dimensi: ${produk.panjang} × ${produk.lebar} × ${produk.tinggi} cm`
-                                                }
-                                            </p>
-                                        </div>
+                            const hargaSatuan = calculateHargaSatuan(
+                                produk,
+                                formProduk,
+                                formProduk.markup_satuan
+                            );
+                            const totalAksesoris = formProduk.aksesoris.reduce(
+                                (sum, aks) => sum + calculateHargaAksesoris(aks),
+                                0
+                            );
+                            const hargaAkhir = hargaSatuan + totalAksesoris;
 
-                                        <div className="p-6">
-                                            {/* Items Non-Aksesoris - Editable */}
-                                            <div className="mb-6">
-                                                <div className="mb-3 flex items-center justify-between">
-                                                    <h4 className="font-semibold text-gray-900 dark:text-gray-100">
-                                                        Items Non-Aksesoris
-                                                    </h4>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleAddNonAksesoris(produkIndex)}
-                                                        className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
-                                                    >
-                                                        + Tambah Item
-                                                    </button>
-                                                </div>
-                                                {formProduk.non_aksesoris_items.length > 0 ? (
-                                                    <div className="overflow-x-auto">
-                                                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                                            <thead className="bg-gray-50 dark:bg-gray-700">
-                                                                <tr>
-                                                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                                                                        Nama Item
-                                                                    </th>
-                                                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                                                                        Harga Satuan
-                                                                    </th>
-                                                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                                                                        Aksi
-                                                                    </th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
-                                                                {formProduk.non_aksesoris_items.map((item, itemIndex) => (
+                            return (
+                                <div
+                                    key={produk.item_pekerjaan_produk_id}
+                                    className="mb-6 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800"
+                                >
+                                    <div className="bg-gradient-to-r from-amber-500 to-amber-600 p-4">
+                                        <h3 className="text-lg font-bold text-white">
+                                            {produk.nama_produk}
+                                        </h3>
+                                        <p className="text-sm text-amber-100">
+                                            Qty: {produk.qty_produk} |{' '}
+                                            {produk.panjang &&
+                                                produk.lebar &&
+                                                produk.tinggi &&
+                                                ` Dimensi: ${produk.panjang} × ${produk.lebar} × ${produk.tinggi} cm`}
+                                        </p>
+                                    </div>
+
+                                    <div className="p-6">
+                                        {/* Items Non-Aksesoris - Editable */}
+                                        <div className="mb-6">
+                                            <div className="mb-3 flex items-center justify-between">
+                                                <h4 className="font-semibold text-gray-900 dark:text-gray-100">
+                                                    Items Non-Aksesoris
+                                                </h4>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleAddNonAksesoris(produkIndex)}
+                                                    className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                                                >
+                                                    + Tambah Item
+                                                </button>
+                                            </div>
+                                            {formProduk.non_aksesoris_items.length > 0 ? (
+                                                <div className="overflow-x-auto">
+                                                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                                        <thead className="bg-gray-50 dark:bg-gray-700">
+                                                            <tr>
+                                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                                                                    Nama Item
+                                                                </th>
+                                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                                                                    Harga Satuan
+                                                                </th>
+                                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                                                                    Aksi
+                                                                </th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
+                                                            {formProduk.non_aksesoris_items.map(
+                                                                (item, itemIndex) => (
                                                                     <tr key={itemIndex}>
                                                                         <td className="px-4 py-3 text-sm">
                                                                             <input
                                                                                 type="text"
                                                                                 value={item.nama}
-                                                                                onChange={(e) => handleNonAksesorisChange(produkIndex, itemIndex, 'nama', e.target.value)}
+                                                                                onChange={(e) =>
+                                                                                    handleNonAksesorisChange(
+                                                                                        produkIndex,
+                                                                                        itemIndex,
+                                                                                        'nama',
+                                                                                        e.target.value
+                                                                                    )
+                                                                                }
                                                                                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                                                                 placeholder="Nama item"
                                                                                 required
@@ -322,7 +424,14 @@ export default function Edit({ rabInternal }: Props) {
                                                                                 type="number"
                                                                                 min="0"
                                                                                 value={item.harga_satuan}
-                                                                                onChange={(e) => handleNonAksesorisChange(produkIndex, itemIndex, 'harga_satuan', e.target.value)}
+                                                                                onChange={(e) =>
+                                                                                    handleNonAksesorisChange(
+                                                                                        produkIndex,
+                                                                                        itemIndex,
+                                                                                        'harga_satuan',
+                                                                                        e.target.value
+                                                                                    )
+                                                                                }
                                                                                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                                                                 placeholder="0"
                                                                                 required
@@ -331,129 +440,183 @@ export default function Edit({ rabInternal }: Props) {
                                                                         <td className="px-4 py-3 text-sm">
                                                                             <button
                                                                                 type="button"
-                                                                                onClick={() => handleDeleteNonAksesoris(produkIndex, itemIndex)}
+                                                                                onClick={() =>
+                                                                                    handleDeleteNonAksesoris(
+                                                                                        produkIndex,
+                                                                                        itemIndex
+                                                                                    )
+                                                                                }
                                                                                 className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
                                                                             >
                                                                                 🗑️ Hapus
                                                                             </button>
                                                                         </td>
                                                                     </tr>
-                                                                ))}
-                                                                <tr className="bg-blue-50 dark:bg-blue-900/20">
-                                                                    <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                                                        Total:
-                                                                    </td>
-                                                                    <td colSpan={2} className="px-4 py-3 text-sm font-bold text-blue-600 dark:text-blue-400">
-                                                                        {formatCurrency(formProduk.non_aksesoris_items.reduce((sum, item) => sum + (Number(item.harga_satuan) || 0), 0))}
-                                                                    </td>
-                                                                </tr>
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                        Belum ada item non-aksesoris
-                                                    </p>
-                                                )}
-                                            </div>
+                                                                )
+                                                            )}
+                                                            <tr className="bg-blue-50 dark:bg-blue-900/20">
+                                                                <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                                                    Total:
+                                                                </td>
+                                                                <td
+                                                                    colSpan={2}
+                                                                    className="px-4 py-3 text-sm font-bold text-blue-600 dark:text-blue-400"
+                                                                >
+                                                                    {formatCurrency(
+                                                                        formProduk.non_aksesoris_items.reduce(
+                                                                            (sum, item) =>
+                                                                                sum +
+                                                                                (Number(
+                                                                                    item.harga_satuan
+                                                                                ) || 0),
+                                                                            0
+                                                                        )
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                    Belum ada item non-aksesoris
+                                                </p>
+                                            )}
+                                        </div>
 
-                                            {/* Harga Breakdown */}
-                                            <div className="mb-6 rounded-lg bg-gray-50 p-4 dark:bg-gray-700">
-                                                <h4 className="mb-3 font-semibold text-gray-900 dark:text-gray-100">
-                                                    Breakdown Harga
+                                        {/* Harga Breakdown */}
+                                        <div className="mb-6 rounded-lg bg-gray-50 p-4 dark:bg-gray-700">
+                                            <h4 className="mb-3 font-semibold text-gray-900 dark:text-gray-100">
+                                                Breakdown Harga
+                                            </h4>
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600 dark:text-gray-400">
+                                                        Harga Dasar:
+                                                    </span>
+                                                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                                                        {formatCurrency(produk.harga_dasar)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600 dark:text-gray-400">
+                                                        Harga Items (Non-Aksesoris):
+                                                    </span>
+                                                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                                                        {formatCurrency(
+                                                            formProduk.non_aksesoris_items.reduce(
+                                                                (sum, item) =>
+                                                                    sum +
+                                                                    (Number(
+                                                                        item.harga_satuan
+                                                                    ) || 0),
+                                                                0
+                                                            )
+                                                        )}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600 dark:text-gray-400">
+                                                        Dimensi (P×L×T×Qty):
+                                                    </span>
+                                                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                                                        {(produk.panjang || 0) *
+                                                            (produk.lebar || 0) *
+                                                            (produk.tinggi || 0) *
+                                                            produk.qty_produk}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Markup Satuan Input */}
+                                        <div className="mb-6">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Markup Satuan (%)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                value={formProduk.markup_satuan}
+                                                onChange={(e) =>
+                                                    handleMarkupChange(
+                                                        produkIndex,
+                                                        e.target.value
+                                                    )
+                                                }
+                                                placeholder="0"
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                                required
+                                            />
+                                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                                Harga Satuan = (Harga Dasar + Items Non-Aksesoris) × (1 + Markup%) × Harga Dimensi
+                                            </p>
+                                            <p className="mt-1 text-sm font-semibold text-amber-600 dark:text-amber-400">
+                                                Harga Satuan: {formatCurrency(hargaSatuan)}
+                                            </p>
+                                        </div>
+
+                                        {/* Aksesoris */}
+                                        <div className="mb-6">
+                                            <div className="mb-3 flex items-center justify-between">
+                                                <h4 className="font-semibold text-gray-900 dark:text-gray-100">
+                                                    Aksesoris
                                                 </h4>
-                                                <div className="space-y-2 text-sm">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-gray-600 dark:text-gray-400">Harga Dasar:</span>
-                                                        <span className="font-medium text-gray-900 dark:text-gray-100">
-                                                            {formatCurrency(produk.harga_dasar)}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-gray-600 dark:text-gray-400">Harga Items (Non-Aksesoris):</span>
-                                                        <span className="font-medium text-gray-900 dark:text-gray-100">
-                                                            {formatCurrency(formProduk.non_aksesoris_items.reduce((sum, item) => sum + (Number(item.harga_satuan) || 0), 0))}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-gray-600 dark:text-gray-400">Dimensi (P×L×T×Qty):</span>
-                                                        <span className="font-medium text-gray-900 dark:text-gray-100">
-                                                            {((produk.panjang || 0) * (produk.lebar || 0) * (produk.tinggi || 0) * produk.qty_produk)}
-                                                        </span>
-                                                    </div>
-                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleAddAksesoris(produkIndex)}
+                                                    className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                                                >
+                                                    + Tambah Aksesoris
+                                                </button>
                                             </div>
-
-                                            {/* Markup Satuan Input */}
-                                            <div className="mb-6">
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    Markup Satuan (%)
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    max="100"
-                                                    value={formProduk.markup_satuan}
-                                                    onChange={(e) => handleMarkupChange(produkIndex, e.target.value)}
-                                                    placeholder="0"
-                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                                                    required
-                                                />
-                                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                                    Harga Satuan = (Harga Dasar + Items Non-Aksesoris) × (1 + Markup%) × Harga Dimensi
-                                                </p>
-                                                <p className="mt-1 text-sm font-semibold text-amber-600 dark:text-amber-400">
-                                                    Harga Satuan: {formatCurrency(hargaSatuan)}
-                                                </p>
-                                            </div>
-
-                                            {/* Aksesoris */}
-                                            <div className="mb-6">
-                                                <div className="mb-3 flex items-center justify-between">
-                                                    <h4 className="font-semibold text-gray-900 dark:text-gray-100">
-                                                        Aksesoris
-                                                    </h4>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleAddAksesoris(produkIndex)}
-                                                        className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
-                                                    >
-                                                        + Tambah Aksesoris
-                                                    </button>
-                                                </div>
-                                                {formProduk.aksesoris.length > 0 ? (
-                                                    <div className="overflow-x-auto">
-                                                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                                            <thead className="bg-gray-50 dark:bg-gray-700">
-                                                                <tr>
-                                                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                                                                        Nama Aksesoris
-                                                                    </th>
-                                                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                                                                        Harga Satuan
-                                                                    </th>
-                                                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                                                                        Qty
-                                                                    </th>
-                                                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                                                                        Markup (%)
-                                                                    </th>
-                                                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                                                                        Harga Total
-                                                                    </th>
-                                                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                                                                        Aksi
-                                                                    </th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
-                                                                {formProduk.aksesoris.map((aksesoris, aksesorisIndex) => (
-                                                                    <tr key={`${produkIndex}-${aksesorisIndex}`}>
+                                            {formProduk.aksesoris.length > 0 ? (
+                                                <div className="overflow-x-auto">
+                                                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                                        <thead className="bg-gray-50 dark:bg-gray-700">
+                                                            <tr>
+                                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                                                                    Nama Aksesoris
+                                                                </th>
+                                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                                                                    Harga Satuan
+                                                                </th>
+                                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                                                                    Qty
+                                                                </th>
+                                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                                                                    Markup (%)
+                                                                </th>
+                                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                                                                    Harga Total
+                                                                </th>
+                                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                                                                    Aksi
+                                                                </th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
+                                                            {formProduk.aksesoris.map(
+                                                                (aksesoris, aksesorisIndex) => (
+                                                                    <tr
+                                                                        key={`${produkIndex}-${aksesorisIndex}`}
+                                                                    >
                                                                         <td className="px-4 py-3 text-sm">
                                                                             <input
                                                                                 type="text"
-                                                                                value={aksesoris.nama_aksesoris}
-                                                                                onChange={(e) => handleAksesorisChange(produkIndex, aksesorisIndex, 'nama_aksesoris', e.target.value)}
+                                                                                value={
+                                                                                    aksesoris.nama_aksesoris
+                                                                                }
+                                                                                onChange={(e) =>
+                                                                                    handleAksesorisChange(
+                                                                                        produkIndex,
+                                                                                        aksesorisIndex,
+                                                                                        'nama_aksesoris',
+                                                                                        e.target
+                                                                                            .value
+                                                                                    )
+                                                                                }
                                                                                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                                                                 placeholder="Nama aksesoris"
                                                                                 required
@@ -463,8 +626,18 @@ export default function Edit({ rabInternal }: Props) {
                                                                             <input
                                                                                 type="number"
                                                                                 min="0"
-                                                                                value={aksesoris.harga_satuan_aksesoris}
-                                                                                onChange={(e) => handleAksesorisChange(produkIndex, aksesorisIndex, 'harga_satuan_aksesoris', e.target.value)}
+                                                                                value={
+                                                                                    aksesoris.harga_satuan_aksesoris
+                                                                                }
+                                                                                onChange={(e) =>
+                                                                                    handleAksesorisChange(
+                                                                                        produkIndex,
+                                                                                        aksesorisIndex,
+                                                                                        'harga_satuan_aksesoris',
+                                                                                        e.target
+                                                                                            .value
+                                                                                    )
+                                                                                }
                                                                                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                                                                 placeholder="0"
                                                                                 required
@@ -474,8 +647,17 @@ export default function Edit({ rabInternal }: Props) {
                                                                             <input
                                                                                 type="number"
                                                                                 min="1"
-                                                                                value={aksesoris.qty_aksesoris}
-                                                                                onChange={(e) => handleAksesorisQtyChange(produkIndex, aksesorisIndex, e.target.value)}
+                                                                                value={
+                                                                                    aksesoris.qty_aksesoris
+                                                                                }
+                                                                                onChange={(e) =>
+                                                                                    handleAksesorisQtyChange(
+                                                                                        produkIndex,
+                                                                                        aksesorisIndex,
+                                                                                        e.target
+                                                                                            .value
+                                                                                    )
+                                                                                }
                                                                                 className="w-20 rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                                                                 required
                                                                             />
@@ -485,82 +667,107 @@ export default function Edit({ rabInternal }: Props) {
                                                                                 type="number"
                                                                                 min="0"
                                                                                 max="100"
-                                                                                value={aksesoris.markup_aksesoris}
-                                                                                onChange={(e) => handleAksesorisMarkupChange(produkIndex, aksesorisIndex, e.target.value)}
+                                                                                value={
+                                                                                    aksesoris.markup_aksesoris
+                                                                                }
+                                                                                onChange={(e) =>
+                                                                                    handleAksesorisMarkupChange(
+                                                                                        produkIndex,
+                                                                                        aksesorisIndex,
+                                                                                        e.target
+                                                                                            .value
+                                                                                    )
+                                                                                }
                                                                                 className="w-24 rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                                                                 required
                                                                             />
                                                                         </td>
                                                                         <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                                            {formatCurrency(calculateHargaAksesoris(aksesoris))}
+                                                                            {formatCurrency(
+                                                                                calculateHargaAksesoris(
+                                                                                    aksesoris
+                                                                                )
+                                                                            )}
                                                                         </td>
                                                                         <td className="px-4 py-3 text-sm">
                                                                             <button
                                                                                 type="button"
-                                                                                onClick={() => handleDeleteAksesoris(produkIndex, aksesorisIndex)}
+                                                                                onClick={() =>
+                                                                                    handleDeleteAksesoris(
+                                                                                        produkIndex,
+                                                                                        aksesorisIndex
+                                                                                    )
+                                                                                }
                                                                                 className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
                                                                             >
                                                                                 🗑️ Hapus
                                                                             </button>
                                                                         </td>
                                                                     </tr>
-                                                                ))}
-                                                                <tr className="bg-amber-50 dark:bg-amber-900/20">
-                                                                    <td colSpan={4} className="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                                                        Total Aksesoris:
-                                                                    </td>
-                                                                    <td colSpan={2} className="whitespace-nowrap px-4 py-3 text-sm font-bold text-amber-600 dark:text-amber-400">
-                                                                        {formatCurrency(totalAksesoris)}
-                                                                    </td>
-                                                                </tr>
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                        Belum ada aksesoris
-                                                    </p>
-                                                )}
-                                            </div>
-
-                                            {/* Harga Akhir */}
-                                            <div className="rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 p-4 dark:from-green-900/20 dark:to-emerald-900/20">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                                                        Harga Akhir:
-                                                    </span>
-                                                    <span className="text-2xl font-bold text-green-600 dark:text-green-400">
-                                                        {formatCurrency(hargaAkhir)}
-                                                    </span>
+                                                                )
+                                                            )}
+                                                            <tr className="bg-amber-50 dark:bg-amber-900/20">
+                                                                <td
+                                                                    colSpan={4}
+                                                                    className="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-gray-100"
+                                                                >
+                                                                    Total Aksesoris:
+                                                                </td>
+                                                                <td
+                                                                    colSpan={2}
+                                                                    className="whitespace-nowrap px-4 py-3 text-sm font-bold text-amber-600 dark:text-amber-400"
+                                                                >
+                                                                    {formatCurrency(totalAksesoris)}
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
                                                 </div>
-                                                <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                                                    Harga Akhir = Harga Satuan + Total Aksesoris
+                                            ) : (
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                    Belum ada aksesoris
                                                 </p>
+                                            )}
+                                        </div>
+
+                                        {/* Harga Akhir */}
+                                        <div className="rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 p-4 dark:from-green-900/20 dark:to-emerald-900/20">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                                                    Harga Akhir:
+                                                </span>
+                                                <span className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                                    {formatCurrency(hargaAkhir)}
+                                                </span>
                                             </div>
+                                            <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                                                Harga Akhir = Harga Satuan + Total Aksesoris
+                                            </p>
                                         </div>
                                     </div>
-                                );
-                            })}
+                                </div>
+                            );
+                        })}
 
-                            <div className="flex justify-end space-x-3">
-                                <button
-                                    type="button"
-                                    onClick={() => router.visit('/rab-internal')}
-                                    className="rounded-lg bg-gray-200 px-6 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-2 text-sm font-medium text-white hover:from-amber-600 hover:to-amber-700 disabled:opacity-50"
-                                >
-                                    {loading ? 'Menyimpan...' : 'Update RAB Internal'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                type="button"
+                                onClick={() => router.visit('/rab-internal')}
+                                className="rounded-lg bg-gray-200 px-6 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-2 text-sm font-medium text-white hover:from-amber-600 hover:to-amber-700 disabled:opacity-50"
+                            >
+                                {loading ? 'Menyimpan...' : 'Update RAB Internal'}
+                            </button>
+                        </div>
+                    </form>
                 </div>
+            </div>
         </>
     );
 }
