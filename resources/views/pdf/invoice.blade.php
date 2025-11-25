@@ -164,7 +164,7 @@
         }
 
         .grand-total {
-            background: linear-gradient(to right, #2563eb, #1e40af);
+            background: #2563eb;
             color: white;
             padding: 15px;
             border-radius: 8px;
@@ -338,6 +338,7 @@
                         Rp {{ number_format($produk['harga_akhir'], 0, ',', '.') }}
                     </td>
                 </tr>
+                
             @endforeach
         </tbody>
     </table>
@@ -352,6 +353,7 @@
             <div class="grand-total-amount">
                 Rp {{ number_format($totalAmount, 0, ',', '.') }}
             </div>
+            
         </div>
     </div>
 
