@@ -96,6 +96,10 @@ class MoodboardController extends Controller
                 'status' => 'pending',
             ]);
 
+            $order->update([
+                'tahapan_proyek' => 'moodboard',
+            ]);
+
             Log::info('Moodboard created with ID: ' . $moodboard->id);
             Log::info('=== RESPONSE MOODBOARD END ===');
 

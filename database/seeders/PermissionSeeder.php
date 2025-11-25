@@ -200,6 +200,11 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Delete Product',
                 'group' => 'Master Data - Product'
             ],
+            [
+                'name' => 'produk.delete-image',
+                'display_name' => 'Delete Product Image',
+                'group' => 'Master Data - Product'
+            ],
             
             // Termin Permissions
             [
@@ -385,7 +390,7 @@ class PermissionSeeder extends Seeder
                 'group' => 'Operations - Commitment Fee'
             ],
             
-            // Desain Final Permissions
+            // // Desain Final Permissions
             [
                 'name' => 'desain-final.index',
                 'display_name' => 'View Desain Final List',
@@ -412,7 +417,7 @@ class PermissionSeeder extends Seeder
                 'group' => 'Operations - Desain Final'
             ],
             
-            // Item Pekerjaan Permissions
+            // // Item Pekerjaan Permissions
             [
                 'name' => 'item-pekerjaan.index',
                 'display_name' => 'View Item Pekerjaan List',
@@ -439,7 +444,7 @@ class PermissionSeeder extends Seeder
                 'group' => 'Operations - Item Pekerjaan'
             ],
             
-            // RAB Internal Permissions
+            // // RAB Internal Permissions
             [
                 'name' => 'rab-internal.index',
                 'display_name' => 'View RAB Internal List',
@@ -483,6 +488,11 @@ class PermissionSeeder extends Seeder
                 'group' => 'Operations - RAB Kontrak'
             ],
             [
+                'name' => 'rab-kontrak.edit',
+                'display_name' => 'Regenerate RAB Kontrak',
+                'group' => 'Operations - RAB Kontrak'
+            ],
+            [
                 'name' => 'rab-kontrak.delete',
                 'display_name' => 'Delete RAB Kontrak',
                 'group' => 'Operations - RAB Kontrak'
@@ -505,6 +515,11 @@ class PermissionSeeder extends Seeder
                 'group' => 'Operations - RAB Vendor'
             ],
             [
+                'name' => 'rab-vendor.edit',
+                'display_name' => 'Regenerate RAB Vendor',
+                'group' => 'Operations - RAB Vendor'
+            ],
+            [
                 'name' => 'rab-vendor.delete',
                 'display_name' => 'Delete RAB Vendor',
                 'group' => 'Operations - RAB Vendor'
@@ -524,6 +539,11 @@ class PermissionSeeder extends Seeder
             [
                 'name' => 'rab-jasa.create',
                 'display_name' => 'Generate RAB Jasa',
+                'group' => 'Operations - RAB Jasa'
+            ],
+            [
+                'name' => 'rab-jasa.edit',
+                'display_name' => 'Regenerate RAB Jasa',
                 'group' => 'Operations - RAB Jasa'
             ],
             [

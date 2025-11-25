@@ -18,6 +18,9 @@ class Order extends Model
         'priority_level',
         'jenis_interior_id',
         'mom_file',
+        'tanggal_survey',
+        'payment_status',
+        'tahapan_proyek'
     ];
 
     public function jenisInterior()

@@ -4,12 +4,13 @@ namespace App\Http\Controllers;
 
 use Inertia\Inertia;
 use App\Models\RabJasa;
-use App\Models\RabJasaProduk;
+use App\Models\JenisItem;
 use App\Models\RabInternal;
 use App\Models\ItemPekerjaan;
-use App\Models\JenisItem;
-use Illuminate\Support\Facades\DB;
+use App\Models\RabJasaProduk;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class RabJasaController extends Controller
 {
@@ -231,5 +232,56 @@ class RabJasaController extends Controller
 
         return redirect()->route('rab-jasa.index')
             ->with('success', 'RAB Jasa berhasil dihapus');
+    }
+
+    public function regenerate($rabJasaId)
+    {
+        try {
+            $rabJasa = RabJasa::with([
+                'itemPekerjaan.rabInternal.rabProduks',
+            ])->findOrFail($rabJasaId);
+
+            $rabInternal = $rabJasa->itemPekerjaan->rabInternal;
+
+            if (!$rabInternal) {
+                return redirect()->back()
+                    ->with('error', 'RAB Internal tidak ditemukan.');
+            }
+
+            DB::transaction(function () use ($rabJasa, $rabInternal) {
+                // Delete old data
+                $rabJasa->rabJasaProduks()->delete();
+
+                // Regenerate from RAB Internal
+                foreach ($rabInternal->rabProduks as $rabProduk) {
+                    $hargaDasarOriginal = $rabProduk->harga_dasar;
+                    $hargaItemsOriginal = $rabProduk->harga_items_non_aksesoris;
+                    $hargaSatuanJasa = ($hargaDasarOriginal + $hargaItemsOriginal) * $rabProduk->harga_dimensi;
+
+                    RabJasaProduk::create([
+                        'rab_jasa_id' => $rabJasa->id,
+                        'item_pekerjaan_produk_id' => $rabProduk->item_pekerjaan_produk_id,
+                        'harga_dasar' => $hargaDasarOriginal,
+                        'harga_items_non_aksesoris' => $hargaItemsOriginal,
+                        'harga_dimensi' => $rabProduk->harga_dimensi,
+                        'harga_satuan' => $hargaSatuanJasa,
+                        'harga_akhir' => $hargaSatuanJasa,
+                    ]);
+                }
+
+                // Update timestamp
+                $rabJasa->update([
+                    'response_by' => auth()->user()->name ?? $rabInternal->response_by,
+                    'response_time' => now(),
+                ]);
+            });
+
+            return redirect()->route('rab-jasa.show', $rabJasaId)
+                ->with('success', 'RAB Jasa berhasil di-regenerate dengan harga terbaru.');
+        } catch (\Exception $e) {
+            Log::error('Regenerate RAB Jasa error: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Gagal regenerate RAB Jasa: ' . $e->getMessage());
+        }
     }
 }

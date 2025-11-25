@@ -24,7 +24,14 @@ class TerminController extends Controller
             'deskripsi' => 'nullable|string',
             'tahapan'   => 'required|array|min:1',
             'tahapan.*.tahapan' => 'required|string',
+            'tahapan.*.persentase' => 'required|numeric|min:0|max:100',
         ]);
+
+        // Validate total percentage = 100
+        $totalPersentase = array_sum(array_column($validated['tahapan'], 'persentase'));
+        if ($totalPersentase != 100) {
+            return redirect()->back()->withErrors(['tahapan' => 'Total persentase harus 100%']);
+        }
 
         // Transform tahapan dari frontend format ke database format
         $tahapan = [];
@@ -33,6 +40,7 @@ class TerminController extends Controller
                 $tahapan[] = [
                     'step' => $index + 1,
                     'text' => $item['tahapan'],
+                    'persentase' => (float) $item['persentase'],
                 ];
             }
         }
@@ -54,14 +62,15 @@ class TerminController extends Controller
         if ($termin->tahapan) {
             foreach ($termin->tahapan as $item) {
                 $tahapanFormatted[] = [
-                    'tahapan' => $item['text'] ?? ''
+                    'tahapan' => $item['text'] ?? '',
+                    'persentase' => $item['persentase'] ?? 0,
                 ];
             }
         }
         
         // Jika tidak ada tahapan, berikan default 1 row kosong
         if (empty($tahapanFormatted)) {
-            $tahapanFormatted = [['tahapan' => '']];
+            $tahapanFormatted = [['tahapan' => '', 'persentase' => 0]];
         }
 
         return response()->json([
@@ -81,7 +90,14 @@ class TerminController extends Controller
             'deskripsi' => 'nullable|string',
             'tahapan'   => 'required|array|min:1',
             'tahapan.*.tahapan' => 'required|string',
+            'tahapan.*.persentase' => 'required|numeric|min:0|max:100',
         ]);
+
+        // Validate total percentage = 100
+        $totalPersentase = array_sum(array_column($validated['tahapan'], 'persentase'));
+        if ($totalPersentase != 100) {
+            return redirect()->back()->withErrors(['tahapan' => 'Total persentase harus 100%']);
+        }
 
         // Transform tahapan dari frontend format ke database format
         $tahapan = [];
@@ -90,6 +106,7 @@ class TerminController extends Controller
                 $tahapan[] = [
                     'step' => $index + 1,
                     'text' => $item['tahapan'],
+                    'persentase' => (float) $item['persentase'],
                 ];
             }
         }

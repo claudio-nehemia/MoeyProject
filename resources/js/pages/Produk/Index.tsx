@@ -6,12 +6,18 @@ import Sidebar from "@/components/Sidebar";
 import ProdukModal from "@/components/ProdukModal";
 import SearchFilter from "@/components/SearchFilter";
 
+interface ProdukImage {
+    id: number;
+    image: string;
+}
+
 interface Produk {
     id: number;
     nama_produk: string;
     harga: number;
     created_at: string;
     updated_at: string;
+    produk_images: ProdukImage[];
 }
 
 interface Props {
@@ -31,10 +37,13 @@ export default function Index({ produks }: Props) {
     const [mounted, setMounted] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [filteredProduks, setFilteredProduks] = useState(produks);
+    const [selectedImages, setSelectedImages] = useState<File[]>([]);
 
-    const { data, setData, post, put, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors, reset } = useForm({
         nama_produk: "",
         harga: "",
+        produk_images: [] as File[],
+        _method: 'POST'
     });
 
     useEffect(() => {
@@ -55,15 +64,20 @@ export default function Index({ produks }: Props) {
 
     const openCreateModal = () => {
         setEditMode(false);
+        setSelectedProduk(null);
+        setSelectedImages([]);
         reset();
         setShowModal(true);
     };
 
     const openEditModal = (produk: Produk) => {
         setSelectedProduk(produk);
+        setSelectedImages([]);
         setData({
             nama_produk: produk.nama_produk,
             harga: produk.harga.toString(),
+            produk_images: [],
+            _method: 'POST'
         });
         setEditMode(true);
         setShowModal(true);
@@ -73,18 +87,36 @@ export default function Index({ produks }: Props) {
         setShowModal(false);
         setEditMode(false);
         setSelectedProduk(null);
+        setSelectedImages([]);
         reset();
     };
 
     const handleSubmit: FormEventHandler = (e) => {
         e.preventDefault();
+        
+        const formData = new FormData();
+        formData.append('nama_produk', data.nama_produk);
+        formData.append('harga', data.harga);
+        
+        // Append all selected images
+        selectedImages.forEach((file, index) => {
+            formData.append(`produk_images[${index}]`, file);
+        });
+
         if (editMode && selectedProduk) {
-            put(`/produk/${selectedProduk.id}`, {
-                onSuccess: () => closeModal(),
+            formData.append('_method', 'PUT');
+            router.post(`/produk/${selectedProduk.id}`, formData, {
+                forceFormData: true,
+                onSuccess: () => {
+                    closeModal();
+                },
             });
         } else {
-            post("/produk", {
-                onSuccess: () => closeModal(),
+            router.post("/produk", formData, {
+                forceFormData: true,
+                onSuccess: () => {
+                    closeModal();
+                },
             });
         }
     };
@@ -95,8 +127,27 @@ export default function Index({ produks }: Props) {
         }
     };
 
+    const handleDeleteImage = (imagePath: string) => {
+        if (selectedProduk) {
+            router.post(`/produk/${selectedProduk.id}/delete-image`, {
+                image_path: imagePath
+            }, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    // Refresh the page or update the state
+                    router.reload({ only: ['produks'] });
+                }
+            });
+        }
+    };
+
     const handleDataChange = (field: string, value: string) => {
         setData(field as any, value);
+    };
+
+    const handleImagesChange = (files: File[]) => {
+        setSelectedImages(files);
+        setData('produk_images', files);
     };
 
     const formatPrice = (price: number) => {
@@ -132,9 +183,10 @@ export default function Index({ produks }: Props) {
                             className="w-full sm:w-auto px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold text-white bg-gradient-to-r from-rose-400 to-rose-600 hover:from-rose-500 hover:to-rose-700 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center sm:justify-start gap-2"
                         >
                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
                             </svg>
-                            <span className="hidden sm:inline">Create</span>
+                            <span className="hidden sm:inline">Create Product</span>
+                            <span className="sm:hidden">Create</span>
                         </button>
                     </div>
                     <p className="text-xs text-stone-600">Manage and organize your products efficiently</p>
@@ -165,6 +217,7 @@ export default function Index({ produks }: Props) {
                                 <thead className="bg-gradient-to-r from-stone-50 to-stone-100 border-b border-stone-200">
                                     <tr>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">No</th>
+                                        <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Image</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Product Name</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Price</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-center font-semibold text-stone-700">Actions</th>
@@ -179,12 +232,29 @@ export default function Index({ produks }: Props) {
                                                 </span>
                                             </td>
                                             <td className="px-3 sm:px-4 py-2.5">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-gradient-to-br from-rose-400 to-rose-600 flex items-center justify-center shadow-sm flex-shrink-0">
-                                                        <span className="text-xs font-bold text-white">
-                                                            {produk.nama_produk.charAt(0).toUpperCase()}
-                                                        </span>
+                                                {produk.produk_images && produk.produk_images.length > 0 ? (
+                                                    <div className="relative group">
+                                                        <img
+                                                            src={`/storage/${produk.produk_images[0].image}`}
+                                                            alt={produk.nama_produk}
+                                                            className="w-12 h-12 object-cover rounded-lg border-2 border-stone-200"
+                                                        />
+                                                        {produk.produk_images.length > 1 && (
+                                                            <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                                                                {produk.produk_images.length}
+                                                            </span>
+                                                        )}
                                                     </div>
+                                                ) : (
+                                                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-rose-400 to-rose-600 flex items-center justify-center">
+                                                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                        </svg>
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="px-3 sm:px-4 py-2.5">
+                                                <div className="flex items-center gap-2">
                                                     <span className="font-medium text-stone-900 truncate">{produk.nama_produk}</span>
                                                 </div>
                                             </td>
@@ -224,11 +294,6 @@ export default function Index({ produks }: Props) {
                 </div>
             </main>
 
-            {/* Modal Overlay */}
-            {showModal && (
-                <div className="fixed inset-0 z-50 bg-black/30" onClick={closeModal} />
-            )}
-
             {/* Modal */}
             <ProdukModal
                 show={showModal}
@@ -236,9 +301,13 @@ export default function Index({ produks }: Props) {
                 processing={processing}
                 data={data}
                 errors={errors}
+                existingImages={selectedProduk?.produk_images || []}
+                productId={selectedProduk?.id}
                 onClose={closeModal}
                 onSubmit={handleSubmit}
                 onDataChange={handleDataChange}
+                onImagesChange={handleImagesChange}
+                onDeleteImage={handleDeleteImage}
             />
         </div>
     );

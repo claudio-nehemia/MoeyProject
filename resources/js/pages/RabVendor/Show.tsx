@@ -103,14 +103,29 @@ export default function Show({ rabVendor }: Props) {
                                 <h2 className="text-2xl font-bold text-white">
                                     RAB Vendor
                                 </h2>
-                                <button className="bg-green-600">
-                                    <a
-                                        href={`/rab-vendor/${rabVendor.id}/pdf`}
-                                        className="rounded-3xl inline-flex items-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                                <div className="flex items-center space-x-3">
+                                    <button className="bg-green-600">
+                                        <a
+                                            href={`/rab-vendor/${rabVendor.id}/pdf`}
+                                            className="rounded-3xl inline-flex items-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                                        >
+                                            Download PDF
+                                        </a>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (confirm('Regenerate RAB Vendor dengan harga terbaru dari master data?')) {
+                                                router.post(`/rab-vendor/${rabVendor.id}/regenerate`);
+                                            }
+                                        }}
+                                        className="inline-flex items-center rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 px-4 py-2 font-semibold text-white shadow-lg transition-all duration-200 hover:from-amber-600 hover:to-orange-700 hover:shadow-xl"
                                     >
-                                        Download PDF
-                                    </a>
-                                </button>
+                                        <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                        Regenerate
+                                    </button>
+                                </div>
                             </div>
                             <div className="mt-3 grid grid-cols-1 gap-3 text-sm text-blue-50 md:grid-cols-2">
                                 <div>

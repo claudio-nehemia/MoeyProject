@@ -8,7 +8,7 @@ interface TerminModalProps {
         kode_tipe: string;
         nama_tipe: string;
         deskripsi: string;
-        tahapan: { tahapan: string }[];
+        tahapan: { tahapan: string; persentase: number }[];
     };
     errors: {
         kode_tipe?: string;
@@ -19,10 +19,10 @@ interface TerminModalProps {
     onClose: () => void;
     onSubmit: FormEventHandler;
     onDataChange: (field: string, value: string) => void;
-    onTahapanChange: (index: number, value: string) => void;
+    onTahapanChange: (index: number, field: 'tahapan' | 'persentase', value: string | number) => void;
     onAddTahapan: () => void;
     onRemoveTahapan: (index: number) => void;
-    onSetTahapan?: (tahapan: { tahapan: string }[]) => void;
+    onSetTahapan?: (tahapan: { tahapan: string; persentase: number }[]) => void;
     selectedTerminId?: number | null;
 }
 
@@ -60,6 +60,10 @@ export default function TerminModal({
         }
     }, [editMode, selectedTerminId, show]);
 
+    // Calculate total percentage
+    const totalPersentase = data.tahapan.reduce((sum, item) => sum + Number(item.persentase || 0), 0);
+    const isPersentaseValid = totalPersentase === 100;
+
     if (!show) return null;
 
     return (
@@ -69,7 +73,7 @@ export default function TerminModal({
             onClick={onClose}
         >
             <div
-                className="flex w-full max-w-md flex-col rounded-2xl bg-white shadow-2xl"
+                className="flex w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl"
                 style={{
                     animation: 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
                     maxHeight: 'calc(100vh - 2rem)',
@@ -250,9 +254,15 @@ export default function TerminModal({
 
                             {/* Tahapan Pembayaran */}
                             <div>
-                                <label className="mb-1.5 block text-xs font-semibold text-stone-700 sm:text-sm">
-                                    Tahapan Pembayaran
-                                </label>
+                                <div className="mb-2 flex items-center justify-between">
+                                    <label className="block text-xs font-semibold text-stone-700 sm:text-sm">
+                                        Tahapan Pembayaran
+                                    </label>
+                                    <div className={`text-xs font-bold ${isPersentaseValid ? 'text-green-600' : 'text-red-600'}`}>
+                                        Total: {totalPersentase}%
+                                        {isPersentaseValid ? ' ✓' : ' (harus 100%)'}
+                                    </div>
+                                </div>
 
                                 <div className="space-y-2">
                                     {data.tahapan.map((item, index) => (
@@ -267,12 +277,29 @@ export default function TerminModal({
                                                 type="text"
                                                 value={item.tahapan}
                                                 onChange={(e) =>
-                                                    onTahapanChange(index, e.target.value)
+                                                    onTahapanChange(index, 'tahapan', e.target.value)
                                                 }
                                                 className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm transition-all focus:border-transparent focus:ring-2 focus:ring-rose-500"
                                                 placeholder={`Tahapan ke-${index + 1}`}
                                                 disabled={processing}
                                             />
+                                            <div className="flex items-center gap-1">
+                                                <input
+                                                    type="number"
+                                                    value={item.persentase === 0 ? '' : item.persentase}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                                                        onTahapanChange(index, 'persentase', value);
+                                                    }}
+                                                    className="w-20 rounded-lg border border-stone-300 px-2 py-2 text-sm transition-all focus:border-transparent focus:ring-2 focus:ring-rose-500"
+                                                    placeholder="%"
+                                                    min="0"
+                                                    max="100"
+                                                    step="0.1"
+                                                    disabled={processing}
+                                                />
+                                                <span className="text-sm font-medium text-stone-600">%</span>
+                                            </div>
                                             {data.tahapan.length > 1 && (
                                                 <button
                                                     type="button"
@@ -353,7 +380,7 @@ export default function TerminModal({
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={processing}
+                                    disabled={processing || !isPersentaseValid}
                                     className="flex-1 rounded-lg bg-gradient-to-r from-rose-400 to-rose-600 px-3 py-2 text-xs font-medium text-white shadow-lg shadow-rose-500/30 transition-all hover:from-rose-500 hover:to-rose-700 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:py-2.5 sm:text-sm"
                                 >
                                     {processing

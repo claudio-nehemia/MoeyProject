@@ -33,6 +33,9 @@ class SurveyResultsController extends Controller
                     'response_time' => $order->surveyResults->response_time ?? null,
                     'response_by' => $order->surveyResults->response_by ?? null,
                     'feedback' => $order->surveyResults->feedback ?? null,
+                    'tanggal_survey' => $order->tanggal_survey,
+                    'tahapan_proyek' => $order->tahapan_proyek,
+                    'payment_status' => $order->payment_status,
                     // New field: is_responded (menandakan sudah klik response)
                     'is_responded' => $order->surveyResults && $order->surveyResults->response_time !== null,
                     // Team members
@@ -68,6 +71,11 @@ class SurveyResultsController extends Controller
             'order_id' => $order->id,
             'response_time' => now(),
             'response_by' => auth()->user()->name ?? 'Admin',
+        ]);
+
+        $order->update([
+            'tahapan_proyek' => 'survey',
+            'project_status' => 'in_progress',
         ]);
 
         return back()->with('success', 'Response recorded. You can now create the survey.');

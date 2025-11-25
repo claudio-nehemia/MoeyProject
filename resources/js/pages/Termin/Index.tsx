@@ -10,7 +10,7 @@ interface Termin {
     kode_tipe: string;
     nama_tipe: string;
     deskripsi: string | null;
-    tahapan: { step: number; text: string }[];
+    tahapan: { step: number; text: string; persentase: number }[];
     created_at: string;
     updated_at: string;
 }
@@ -37,7 +37,7 @@ export default function Index({ termins }: Props) {
         kode_tipe: '',
         nama_tipe: '',
         deskripsi: '',
-        tahapan: [{ tahapan: '' }],
+        tahapan: [{ tahapan: '', persentase: 0 }],
     });
 
     useEffect(() => {
@@ -62,14 +62,22 @@ export default function Index({ termins }: Props) {
         setFilteredTermins(filtered);
     }, [searchQuery, termins]);
 
-    const handleTahapanChange = (index: number, value: string) => {
+    const handleTahapanChange = (
+        index: number,
+        field: 'tahapan' | 'persentase',
+        value: string | number,
+    ) => {
         const updated = [...data.tahapan];
-        updated[index].tahapan = value;
+        if (field === 'tahapan') {
+            updated[index].tahapan = value as string;
+        } else {
+            updated[index].persentase = value as number;
+        }
         setData('tahapan', updated);
     };
 
     const addTahapanRow = () => {
-        setData('tahapan', [...data.tahapan, { tahapan: '' }]);
+        setData('tahapan', [...data.tahapan, { tahapan: '', persentase: 0 }]);
     };
 
     const removeTahapanRow = (index: number) => {
@@ -78,7 +86,7 @@ export default function Index({ termins }: Props) {
         setData('tahapan', updated);
     };
 
-    const setTahapanData = (tahapan: { tahapan: string }[]) => {
+    const setTahapanData = (tahapan: { tahapan: string; persentase: number }[]) => {
         setData('tahapan', tahapan);
     };
 
@@ -86,7 +94,7 @@ export default function Index({ termins }: Props) {
         setEditMode(false);
         setSelectedTermin(null);
         reset();
-        setData('tahapan', [{ tahapan: '' }]);
+        setData('tahapan', [{ tahapan: '', persentase: 0 }]);
         setShowModal(true);
     };
 
@@ -278,17 +286,22 @@ export default function Index({ termins }: Props) {
                                                             (item, idx) => (
                                                                 <div
                                                                     key={idx}
-                                                                    className="flex items-center gap-2 rounded-lg bg-stone-100 px-2 py-1 text-xs"
+                                                                    className="flex items-center justify-between gap-2 rounded-lg bg-stone-100 px-2 py-1 text-xs"
                                                                 >
-                                                                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
-                                                                        {
-                                                                            item.step
-                                                                        }
-                                                                    </span>
-                                                                    <span className="text-stone-700">
-                                                                        {
-                                                                            item.text
-                                                                        }
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
+                                                                            {
+                                                                                item.step
+                                                                            }
+                                                                        </span>
+                                                                        <span className="text-stone-700">
+                                                                            {
+                                                                                item.text
+                                                                            }
+                                                                        </span>
+                                                                    </div>
+                                                                    <span className="rounded bg-rose-200 px-1.5 py-0.5 text-[10px] font-bold text-rose-700">
+                                                                        {item.persentase}%
                                                                     </span>
                                                                 </div>
                                                             ),

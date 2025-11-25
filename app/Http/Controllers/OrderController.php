@@ -8,6 +8,7 @@ use App\Models\Order;
 use Illuminate\Http\Request;
 use App\Models\JenisInterior;
 use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
 
 class OrderController extends Controller
 {
@@ -27,13 +28,13 @@ class OrderController extends Controller
      */
     public function create()
     {
-        $marketings = User::whereHas('role', function($query) {
+        $marketings = User::whereHas('role', function ($query) {
             $query->where('nama_role', 'Kepala Marketing');
         })->get();
-        $drafters = User::whereHas('role', function($query) {
+        $drafters = User::whereHas('role', function ($query) {
             $query->whereIn('nama_role', ['Surveyor', 'Drafter']);
         })->get();
-        $desainers = User::whereHas('role', function($query) {
+        $desainers = User::whereHas('role', function ($query) {
             $query->where('nama_role', 'Desainer');
         })->get();
         $jenisInteriors = JenisInterior::select('id', 'nama_interior')->get();
@@ -56,7 +57,7 @@ class OrderController extends Controller
         \Log::info('All Request Data:', $request->all());
         \Log::info('User IDs from request:', ['user_ids' => $request->input('user_ids', [])]);
         \Log::info('Has user_ids key?', ['has_user_ids' => $request->has('user_ids')]);
-        
+
         // Log each field individually for debugging
         \Log::info('Individual Fields:', [
             'nama_project' => $request->input('nama_project'),
@@ -66,7 +67,7 @@ class OrderController extends Controller
             'phone_number' => $request->input('phone_number'),
             'tanggal_masuk_customer' => $request->input('tanggal_masuk_customer'),
         ]);
-        
+
         $validated = $request->validate([
             'nama_project' => 'required|string|max:255',
             'jenis_interior_id' => 'required|exists:jenis_interiors,id',
@@ -80,17 +81,20 @@ class OrderController extends Controller
             'priority_level' => 'nullable|string|max:100',
             'mom_file' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
             'user_ids' => 'nullable|array',
+            'tanggal_survey' => 'nullable|string',
         ]);
 
         // Set defaults for nullable fields if not provided
         $validated['project_status'] = $validated['project_status'] ?? 'pending';
         $validated['priority_level'] = $validated['priority_level'] ?? 'medium';
 
+        $validated['tanggal_masuk_customer'] = now()->toDateString();
+
         \Log::info('Validated Data:', $validated);
         \Log::info('User IDs after validation:', ['user_ids' => $validated['user_ids'] ?? []]);
 
         // Handle file upload
-        if($request->hasFile('mom_file')) {
+        if ($request->hasFile('mom_file')) {
             $validated['mom_file'] = $request->file('mom_file')->store('mom_files', 'public');
             \Log::info('MOM file uploaded:', ['file' => $validated['mom_file']]);
         }
@@ -102,7 +106,7 @@ class OrderController extends Controller
         $order = Order::create($validated);
         \Log::info('Order created with ID:', ['order_id' => $order->id]);
 
-        if(!empty($userIds)) {
+        if (!empty($userIds)) {
             \Log::info('Attaching users to order:', ['user_ids' => $userIds]);
             $order->users()->attach($userIds);
             \Log::info('Users attached successfully');
@@ -129,17 +133,17 @@ class OrderController extends Controller
      */
     public function edit(Order $order)
     {
-        $marketings = User::whereHas('role', function($query) {
+        $marketings = User::whereHas('role', function ($query) {
             $query->where('nama_role', 'Kepala Marketing');
         })->get();
-        $drafters = User::whereHas('role', function($query) {
+        $drafters = User::whereHas('role', function ($query) {
             $query->whereIn('nama_role', ['Surveyor', 'Drafter']);
         })->get();
-        $desainers = User::whereHas('role', function($query) {
+        $desainers = User::whereHas('role', function ($query) {
             $query->where('nama_role', 'Desainer');
         })->get();
         $jenisInteriors = JenisInterior::select('id', 'nama_interior')->get();
-        
+
         // Get existing team members (ambil ID dari User model, bukan dari pivot)
         $existingUserIds = $order->users->pluck('id')->toArray();
 
@@ -164,7 +168,7 @@ class OrderController extends Controller
         \Log::info('All Request Data:', $request->all());
         \Log::info('User IDs from request:', ['user_ids' => $request->input('user_ids', [])]);
         \Log::info('Has user_ids key?', ['has_user_ids' => $request->has('user_ids')]);
-        
+
         $validated = $request->validate([
             'nama_project' => 'required|string|max:255',
             'jenis_interior_id' => 'required|exists:jenis_interiors,id',
@@ -178,19 +182,21 @@ class OrderController extends Controller
             'priority_level' => 'nullable|string|max:100',
             'mom_file' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
             'user_ids' => 'nullable|array',
+            'tanggal_survey' => 'nullable|string',
         ]);
 
         // Set defaults for nullable fields if not provided
         $validated['project_status'] = $validated['project_status'] ?? $order->project_status ?? 'pending';
         $validated['priority_level'] = $validated['priority_level'] ?? $order->priority_level ?? 'medium';
+        $validated['tanggal_masuk_customer'] = now()->toDateString();
 
         \Log::info('Validated Data:', $validated);
         \Log::info('User IDs after validation:', ['user_ids' => $validated['user_ids'] ?? []]);
 
         // Handle file upload - delete old file if new one is uploaded
-        if($request->hasFile('mom_file')) {
+        if ($request->hasFile('mom_file')) {
             // Delete old file if exists
-            if($order->mom_file && \Storage::disk('public')->exists($order->mom_file)) {
+            if ($order->mom_file && \Storage::disk('public')->exists($order->mom_file)) {
                 \Storage::disk('public')->delete($order->mom_file);
                 \Log::info('Old MOM file deleted:', ['file' => $order->mom_file]);
             }
@@ -207,7 +213,7 @@ class OrderController extends Controller
         \Log::info('Order updated successfully');
 
         // Sync team members (will detach all if empty array)
-        if($request->has('user_ids')) {
+        if ($request->has('user_ids')) {
             \Log::info('Syncing users to order:', ['user_ids' => $userIds]);
             $order->users()->sync($userIds);
             \Log::info('Users synced successfully');

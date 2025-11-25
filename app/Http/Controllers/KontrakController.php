@@ -88,6 +88,8 @@ class KontrakController extends Controller
             return back()->withErrors(['error' => 'Kontrak untuk Item Pekerjaan ini sudah ada.']);
         }
 
+        
+
         try {
             $kontrak = Kontrak::create($validated);
             \Log::info('Kontrak Created:', $kontrak->toArray());

@@ -3,14 +3,15 @@
 namespace App\Http\Controllers;
 
 use Inertia\Inertia;
+use App\Models\JenisItem;
 use App\Models\RabKontrak;
-use App\Models\RabKontrakProduk;
-use App\Models\RabKontrakAksesoris;
 use App\Models\RabInternal;
 use App\Models\ItemPekerjaan;
-use App\Models\JenisItem;
-use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\RabKontrakProduk;
+use Illuminate\Support\Facades\DB;
+use App\Models\RabKontrakAksesoris;
+use Illuminate\Support\Facades\Log;
 
 class RabKontrakController extends Controller
 {
@@ -289,5 +290,68 @@ class RabKontrakController extends Controller
 
         return redirect()->route('rab-kontrak.index')
             ->with('success', 'RAB Kontrak berhasil dihapus');
+    }
+
+    public function regenerate($rabKontrakId)
+    {
+        try {
+            $rabKontrak = RabKontrak::with([
+                'itemPekerjaan.rabInternal.rabProduks.rabAksesoris',
+            ])->findOrFail($rabKontrakId);
+
+            $rabInternal = $rabKontrak->itemPekerjaan->rabInternal;
+
+            if (!$rabInternal) {
+                return redirect()->back()
+                    ->with('error', 'RAB Internal tidak ditemukan.');
+            }
+
+            DB::transaction(function () use ($rabKontrak, $rabInternal) {
+                // Delete old data
+                foreach ($rabKontrak->rabKontrakProduks as $produk) {
+                    $produk->rabKontrakAksesoris()->delete();
+                }
+                $rabKontrak->rabKontrakProduks()->delete();
+
+                // Regenerate from RAB Internal (same logic as generate())
+                foreach ($rabInternal->rabProduks as $rabProduk) {
+                    $markupMultiplier = 1 + ($rabProduk->markup_satuan / 100);
+
+                    $rabKontrakProduk = RabKontrakProduk::create([
+                        'rab_kontrak_id' => $rabKontrak->id,
+                        'item_pekerjaan_produk_id' => $rabProduk->item_pekerjaan_produk_id,
+                        'harga_dasar' => $rabProduk->harga_dasar * $markupMultiplier,
+                        'harga_items_non_aksesoris' => $rabProduk->harga_items_non_aksesoris * $markupMultiplier,
+                        'harga_dimensi' => $rabProduk->harga_dimensi,
+                        'harga_satuan' => $rabProduk->harga_satuan,
+                        'harga_total_aksesoris' => $rabProduk->harga_total_aksesoris,
+                        'harga_akhir' => $rabProduk->harga_akhir,
+                    ]);
+
+                    foreach ($rabProduk->rabAksesoris as $rabAksesoris) {
+                        RabKontrakAksesoris::create([
+                            'rab_kontrak_produk_id' => $rabKontrakProduk->id,
+                            'item_pekerjaan_item_id' => $rabAksesoris->item_pekerjaan_item_id,
+                            'harga_satuan_aksesoris' => $rabAksesoris->harga_satuan_aksesoris,
+                            'qty_aksesoris' => $rabAksesoris->qty_aksesoris,
+                            'harga_total' => $rabAksesoris->harga_total,
+                        ]);
+                    }
+                }
+
+                // Update timestamp
+                $rabKontrak->update([
+                    'response_by' => auth()->user()->name ?? $rabInternal->response_by,
+                    'response_time' => now(),
+                ]);
+            });
+
+            return redirect()->route('rab-kontrak.show', $rabKontrakId)
+                ->with('success', 'RAB Kontrak berhasil di-regenerate dengan harga terbaru.');
+        } catch (\Exception $e) {
+            Log::error('Regenerate RAB Kontrak error: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Gagal regenerate RAB Kontrak: ' . $e->getMessage());
+        }
     }
 }

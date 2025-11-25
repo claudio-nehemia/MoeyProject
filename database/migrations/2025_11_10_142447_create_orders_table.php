@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('nomor_unit');
             $table->string('phone_number');
             $table->string('tanggal_masuk_customer');
-            $table->enum('project_status', ['pending', 'in_progress', 'completed'])->default('pending');
+            $table->enum('project_status', ['pending', 'in_progress', 'deal', 'cancel'])->default('pending');
             $table->enum('priority_level', ['low', 'medium', 'high'])->default('medium');
             $table->foreignId('jenis_interior_id')->constrained('jenis_interiors')->onDelete('cascade');
             $table->string('mom_file')->nullable();

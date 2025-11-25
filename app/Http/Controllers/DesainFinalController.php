@@ -48,6 +48,7 @@ class DesainFinalController extends Controller
             Log::info('Validation passed');
 
             $moodboard = Moodboard::with('commitmentFee')->findOrFail($validated['moodboard_id']);
+            $order = $moodboard->order;
             Log::info('Moodboard found: ' . $moodboard->id);
 
             // Check if moodboard is approved
@@ -85,6 +86,10 @@ class DesainFinalController extends Controller
                 // JANGAN update moodboard_final di sini
                 // Biarkan kosong sampai user pilih file untuk di-approve
             }
+
+            $order->update([
+                'tahapan_proyek' => 'desain_final',
+            ]);
 
             Log::info('Desain final uploaded successfully');
             Log::info('=== UPLOAD DESAIN FINAL END ===');

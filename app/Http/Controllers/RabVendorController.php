@@ -3,14 +3,15 @@
 namespace App\Http\Controllers;
 
 use Inertia\Inertia;
+use App\Models\JenisItem;
 use App\Models\RabVendor;
-use App\Models\RabVendorProduk;
-use App\Models\RabVendorAksesoris;
 use App\Models\RabInternal;
 use App\Models\ItemPekerjaan;
-use App\Models\JenisItem;
-use Illuminate\Support\Facades\DB;
+use App\Models\RabVendorProduk;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\RabVendorAksesoris;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class RabVendorController extends Controller
 {
@@ -292,5 +293,81 @@ class RabVendorController extends Controller
 
         return redirect()->route('rab-vendor.index')
             ->with('success', 'RAB Vendor berhasil dihapus');
+    }
+
+    public function regenerate($rabVendorId)
+    {
+        try {
+            $rabVendor = RabVendor::with([
+                'itemPekerjaan.rabInternal.rabProduks.rabAksesoris',
+            ])->findOrFail($rabVendorId);
+
+            $rabInternal = $rabVendor->itemPekerjaan->rabInternal;
+
+            if (!$rabInternal) {
+                return redirect()->back()
+                    ->with('error', 'RAB Internal tidak ditemukan.');
+            }
+
+            DB::transaction(function () use ($rabVendor, $rabInternal) {
+                // Delete old data
+                foreach ($rabVendor->rabVendorProduks as $produk) {
+                    $produk->rabVendorAksesoris()->delete();
+                }
+                $rabVendor->rabVendorProduks()->delete();
+
+                // Regenerate from RAB Internal
+                foreach ($rabInternal->rabProduks as $rabProduk) {
+                    $hargaDasarOriginal = $rabProduk->harga_dasar;
+                    $hargaItemsOriginal = $rabProduk->harga_items_non_aksesoris;
+                    $hargaSatuanVendor = ($hargaDasarOriginal + $hargaItemsOriginal) * $rabProduk->harga_dimensi;
+
+                    $rabVendorProduk = RabVendorProduk::create([
+                        'rab_vendor_id' => $rabVendor->id,
+                        'item_pekerjaan_produk_id' => $rabProduk->item_pekerjaan_produk_id,
+                        'harga_dasar' => $hargaDasarOriginal,
+                        'harga_items_non_aksesoris' => $hargaItemsOriginal,
+                        'harga_dimensi' => $rabProduk->harga_dimensi,
+                        'harga_satuan' => $hargaSatuanVendor,
+                        'harga_total_aksesoris' => 0,
+                        'harga_akhir' => $hargaSatuanVendor,
+                    ]);
+
+                    $totalAksesoris = 0;
+                    foreach ($rabProduk->rabAksesoris as $rabAksesoris) {
+                        $hargaSatuanAksOriginal = $rabAksesoris->itemPekerjaanItem->item->harga;
+                        $hargaTotalOriginal = $hargaSatuanAksOriginal * $rabAksesoris->qty_aksesoris;
+
+                        RabVendorAksesoris::create([
+                            'rab_vendor_produk_id' => $rabVendorProduk->id,
+                            'item_pekerjaan_item_id' => $rabAksesoris->item_pekerjaan_item_id,
+                            'harga_satuan_aksesoris' => $hargaSatuanAksOriginal,
+                            'qty_aksesoris' => $rabAksesoris->qty_aksesoris,
+                            'harga_total' => $hargaTotalOriginal,
+                        ]);
+
+                        $totalAksesoris += $hargaTotalOriginal;
+                    }
+
+                    $rabVendorProduk->update([
+                        'harga_total_aksesoris' => $totalAksesoris,
+                        'harga_akhir' => $hargaSatuanVendor + $totalAksesoris,
+                    ]);
+                }
+
+                // Update timestamp
+                $rabVendor->update([
+                    'response_by' => auth()->user()->name ?? $rabInternal->response_by,
+                    'response_time' => now(),
+                ]);
+            });
+
+            return redirect()->route('rab-vendor.show', $rabVendorId)
+                ->with('success', 'RAB Vendor berhasil di-regenerate dengan harga terbaru.');
+        } catch (\Exception $e) {
+            Log::error('Regenerate RAB Vendor error: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Gagal regenerate RAB Vendor: ' . $e->getMessage());
+        }
     }
 }

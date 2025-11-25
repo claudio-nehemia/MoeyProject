@@ -24,6 +24,7 @@ interface OrderData {
     nomor_unit: string | null;
     phone_number: string;
     tanggal_masuk_customer: string;
+    tanggal_survey: string;
     project_status: string;
     priority_level: string;
     mom_file: string | null;
@@ -60,6 +61,7 @@ export default function Edit({ order, marketings, drafters, desainers, jenisInte
         phone_number: order.phone_number,
         tanggal_masuk_customer: order.tanggal_masuk_customer,
         project_status: order.project_status,
+        tanggal_surveyL: order.tanggal_survey,
         priority_level: order.priority_level,
         mom_file: null as File | null,
         user_ids: [] as number[],
@@ -342,14 +344,14 @@ export default function Edit({ order, marketings, drafters, desainers, jenisInte
                                         <input
                                             type="date"
                                             value={data.tanggal_masuk_customer}
-                                            onChange={(e) => setData('tanggal_masuk_customer', e.target.value)}
+                                            readOnly
                                             className="w-full px-4 py-2.5 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
                                         />
                                         {errors.tanggal_masuk_customer && <p className="text-red-500 text-xs mt-1">{errors.tanggal_masuk_customer}</p>}
                                     </div>
 
                                     {/* Project Status */}
-                                    <div>
+                                    {/* <div>
                                         <label className="block text-sm font-semibold text-stone-700 mb-2">Project Status</label>
                                         <select
                                             value={data.project_status}
@@ -360,7 +362,7 @@ export default function Edit({ order, marketings, drafters, desainers, jenisInte
                                             <option value="in_progress">In Progress</option>
                                             <option value="completed">Completed</option>
                                         </select>
-                                    </div>
+                                    </div> */}
 
                                     {/* Priority Level */}
                                     <div>

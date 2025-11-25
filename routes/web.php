@@ -125,6 +125,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'destroy' => 'permission:produk.delete',
         ]);
 
+    Route::get('produk', [ProdukController::class, 'index'])
+        ->middleware('permission:produk.index')->name('produk.index');
+    Route::post('produk', [ProdukController::class, 'store'])
+        ->middleware('permission:produk.create')->name('produk.store');
+    Route::put('produk/{produk}', [ProdukController::class, 'update'])
+        ->middleware('permission:produk.edit')->name('produk.update');
+    Route::delete('produk/{produk}', [ProdukController::class, 'destroy'])
+        ->middleware('permission:produk.delete')->name('produk.destroy');
+    Route::delete('produk/{produk}/delete-image', [ProdukController::class, 'deleteImage'])
+        ->middleware('permission:produk.delete-image')->name('produk.delete-image');
+
     // Termin Routes
     Route::resource('termin', TerminController::class)
         ->middleware([
@@ -292,6 +303,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:rab-kontrak.show')->name('rab-kontrak.show');
         Route::post('rab-kontrak/{itemPekerjaanId}/generate', [RabKontrakController::class, 'generate'])
             ->middleware('permission:rab-kontrak.create')->name('rab-kontrak.generate');
+        Route::post('rab-kontrak/{rabKontrakId}/regenerate', [RabKontrakController::class, 'regenerate'])
+            ->middleware('permission:rab-kontrak.edit')->name('rab-kontrak.regenerate');
         Route::delete('rab-kontrak/{rabKontrakId}', [RabKontrakController::class, 'destroy'])
             ->middleware('permission:rab-kontrak.delete')->name('rab-kontrak.destroy');
     });
@@ -303,6 +316,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:rab-vendor.show')->name('rab-vendor.show');
         Route::post('rab-vendor/{itemPekerjaanId}/generate', [RabVendorController::class, 'generate'])
             ->middleware('permission:rab-vendor.create')->name('rab-vendor.generate');
+        Route::post('rab-vendor/{rabVendorId}/regenerate', [RabVendorController::class, 'regenerate'])
+            ->middleware('permission:rab-vendor.edit')->name('rab-vendor.regenerate');
         Route::delete('rab-vendor/{rabVendorId}', [RabVendorController::class, 'destroy'])
             ->middleware('permission:rab-vendor.delete')->name('rab-vendor.destroy');
     });
@@ -314,6 +329,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:rab-jasa.show')->name('rab-jasa.show');
         Route::post('rab-jasa/{itemPekerjaanId}/generate', [RabJasaController::class, 'generate'])
             ->middleware('permission:rab-jasa.create')->name('rab-jasa.generate');
+        Route::post('rab-jasa/{rabJasaId}/regenerate', [RabJasaController::class, 'regenerate'])
+            ->middleware('permission:rab-jasa.edit')->name('rab-jasa.regenerate');
         Route::delete('rab-jasa/{rabJasaId}', [RabJasaController::class, 'destroy'])
             ->middleware('permission:rab-jasa.delete')->name('rab-jasa.destroy');
     });

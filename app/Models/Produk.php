@@ -12,4 +12,9 @@ class Produk extends Model
     {
         return $this->hasMany(ItemPekerjaanProduk::class);
     }
+
+    public function produkImages()
+    {
+        return $this->hasMany(ProdukImages::class, 'produk_id');
+    }
 }

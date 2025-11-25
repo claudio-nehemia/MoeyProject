@@ -24,24 +24,24 @@ class RabInternalController extends Controller
             'moodboard.order',
             'rabInternal.rabProduks'
         ])
-        ->whereHas('produks') // Only show if has produks
-        ->get()
-        ->map(function ($itemPekerjaan) {
-            return [
-                'id' => $itemPekerjaan->id,
-                'order' => [
-                    'nama_project' => $itemPekerjaan->moodboard->order->nama_project,
-                    'company_name' => $itemPekerjaan->moodboard->order->company_name,
-                    'customer_name' => $itemPekerjaan->moodboard->order->customer_name,
-                ],
-                'rabInternal' => $itemPekerjaan->rabInternal ? [
-                    'id' => $itemPekerjaan->rabInternal->id,
-                    'response_by' => $itemPekerjaan->rabInternal->response_by,
-                    'response_time' => $itemPekerjaan->rabInternal->response_time,
-                    'total_produks' => $itemPekerjaan->rabInternal->rabProduks->count(),
-                ] : null,
-            ];
-        });
+            ->whereHas('produks') // Only show if has produks
+            ->get()
+            ->map(function ($itemPekerjaan) {
+                return [
+                    'id' => $itemPekerjaan->id,
+                    'order' => [
+                        'nama_project' => $itemPekerjaan->moodboard->order->nama_project,
+                        'company_name' => $itemPekerjaan->moodboard->order->company_name,
+                        'customer_name' => $itemPekerjaan->moodboard->order->customer_name,
+                    ],
+                    'rabInternal' => $itemPekerjaan->rabInternal ? [
+                        'id' => $itemPekerjaan->rabInternal->id,
+                        'response_by' => $itemPekerjaan->rabInternal->response_by,
+                        'response_time' => $itemPekerjaan->rabInternal->response_time,
+                        'total_produks' => $itemPekerjaan->rabInternal->rabProduks->count(),
+                    ] : null,
+                ];
+            });
 
         return Inertia::render('RabInternal/Index', [
             'itemPekerjaans' => $itemPekerjaans,
@@ -53,7 +53,7 @@ class RabInternalController extends Controller
         try {
             $itemPekerjaan = ItemPekerjaan::findOrFail($itemPekerjaanId);
 
-            if($itemPekerjaan->rabInternal) {
+            if ($itemPekerjaan->rabInternal) {
                 return back()->with('error', 'RAB Internal sudah ada untuk item pekerjaan ini.');
             }
 
@@ -62,6 +62,12 @@ class RabInternalController extends Controller
                 'response_by' => auth()->user()->name,
                 'response_time' => now(),
             ]);
+
+            $itemPekerjaan->moodboard->order->update([
+                'tahapan_proyek' => 'rab_internal',
+            ]);
+
+            Log::info('RAB Internal created with ID: ' . $rabInternal->id);
 
             return redirect()->route('rab-internal.create', $rabInternal->id)
                 ->with('success', 'RAB Internal response berhasil dibuat. Silakan input markup dan aksesoris.');
@@ -161,11 +167,11 @@ class RabInternalController extends Controller
             foreach ($validated['produks'] as $produkData) {
                 // Get item pekerjaan produk data
                 $itemProduk = ItemPekerjaanProduk::with(['produk', 'jenisItems.items.item'])->findOrFail($produkData['item_pekerjaan_produk_id']);
-                
+
                 // Calculate harga items non-aksesoris
                 $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
                 $hargaItemsNonAksesoris = 0;
-                
+
                 foreach ($itemProduk->jenisItems as $jenisItem) {
                     if ($jenisItem->jenis_item_id !== $aksesorisJenisItem->id) {
                         foreach ($jenisItem->items as $item) {
@@ -205,7 +211,7 @@ class RabInternalController extends Controller
                 if (isset($produkData['aksesoris']) && count($produkData['aksesoris']) > 0) {
                     foreach ($produkData['aksesoris'] as $aksesorisData) {
                         $itemPekerjaanItem = ItemPekerjaanItem::with('item')->findOrFail($aksesorisData['item_pekerjaan_item_id']);
-                        
+
                         // Calculate: harga_total = harga_satuan × qty × (1 + markup/100)
                         $hargaSatuanAksesoris = $itemPekerjaanItem->item->harga;
                         $qtyAksesoris = $aksesorisData['qty_aksesoris'];
@@ -246,7 +252,7 @@ class RabInternalController extends Controller
 
     public function show($rabInternalId)
     {
-                $rabInternal = RabInternal::with([
+        $rabInternal = RabInternal::with([
             'itemPekerjaan.moodboard.order',
             'rabProduks.itemPekerjaanProduk.produk',
             'rabProduks.itemPekerjaanProduk.jenisItems.jenisItem',
@@ -284,14 +290,14 @@ class RabInternalController extends Controller
                                     'harga_total' => $item->item->harga * $item->quantity,
                                 ];
                             }
-                            
+
                             $jenisItemsList[] = [
                                 'nama_jenis' => $jenisItem->jenisItem->nama_jenis_item,
                                 'items' => $itemsList,
                             ];
                         }
                     }
-                    
+
                     return [
                         'id' => $rabProduk->id,
                         'nama_produk' => $rabProduk->itemPekerjaanProduk->produk->nama_produk,
@@ -355,7 +361,7 @@ class RabInternalController extends Controller
                     'produks' => $rabInternal->itemPekerjaan->produks->map(function ($produk) use ($aksesorisJenisItem, $rabInternal) {
                         // Get existing RAB Produk
                         $rabProduk = $rabInternal->rabProduks->firstWhere('item_pekerjaan_produk_id', $produk->id);
-                        
+
                         // Hitung harga items non-aksesoris
                         $hargaItemsNonAksesoris = 0;
                         $aksesorisList = [];
@@ -367,7 +373,7 @@ class RabInternalController extends Controller
                                 foreach ($jenisItem->items as $item) {
                                     // Find existing aksesoris in RAB
                                     $existingAks = $rabProduk ? $rabProduk->rabAksesoris->firstWhere('item_pekerjaan_item_id', $item->id) : null;
-                                    
+
                                     $aksesorisList[] = [
                                         'id' => $existingAks ? $existingAks->id : null,
                                         'item_pekerjaan_item_id' => $item->id,
@@ -429,14 +435,14 @@ class RabInternalController extends Controller
             foreach ($validated['produks'] as $produkData) {
                 // Get RAB Produk
                 $rabProduk = RabProduk::findOrFail($produkData['id']);
-                
+
                 // Get item pekerjaan produk data
                 $itemProduk = ItemPekerjaanProduk::with(['produk', 'jenisItems.items.item'])->findOrFail($produkData['item_pekerjaan_produk_id']);
-                
+
                 // Calculate harga items non-aksesoris
                 $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
                 $hargaItemsNonAksesoris = 0;
-                
+
                 foreach ($itemProduk->jenisItems as $jenisItem) {
                     if ($jenisItem->jenis_item_id !== $aksesorisJenisItem->id) {
                         foreach ($jenisItem->items as $item) {
@@ -475,7 +481,7 @@ class RabInternalController extends Controller
                 if (isset($produkData['aksesoris']) && count($produkData['aksesoris']) > 0) {
                     foreach ($produkData['aksesoris'] as $aksesorisData) {
                         $itemPekerjaanItem = ItemPekerjaanItem::with('item')->findOrFail($aksesorisData['item_pekerjaan_item_id']);
-                        
+
                         // Calculate: harga_total = harga_satuan × qty × (1 + markup/100)
                         $hargaSatuanAksesoris = $itemPekerjaanItem->item->harga;
                         $qtyAksesoris = $aksesorisData['qty_aksesoris'];
@@ -526,7 +532,7 @@ class RabInternalController extends Controller
 
         // Check if all RAB types exist
         $itemPekerjaan = $rabInternal->itemPekerjaan;
-        
+
         if (!$itemPekerjaan->rabKontrak) {
             return redirect()->back()
                 ->with('error', 'RAB Kontrak belum ada. Silakan generate RAB Kontrak terlebih dahulu.');

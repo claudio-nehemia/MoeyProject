@@ -41,11 +41,11 @@ class CommitmentFeeController extends Controller
                     'moodboard_kasar' => $moodboard->moodboard_kasar,
                     'estimasi' => $moodboard->estimasi ? [
                         'id' => $moodboard->estimasi->id,
-                        'estimated_cost' => $moodboard->estimasi->estimated_cost,                
+                        'estimated_cost' => $moodboard->estimasi->estimated_cost,
                     ] : null,
                 ];
             });
-            
+
         return Inertia::render('CommitmentFee/Index', [
             'moodboards' => $moodboards,
         ]);
@@ -56,10 +56,10 @@ class CommitmentFeeController extends Controller
         try {
             Log::info('=== COMMITMENT FEE RESPONSE START ===');
             Log::info('Moodboard ID: ' . $moodboardId);
-            
+
             $moodboard = Moodboard::findOrFail($moodboardId);
 
-            if($moodboard->commitmentFee) {
+            if ($moodboard->commitmentFee) {
                 Log::warning('Commitment Fee already exists for moodboard: ' . $moodboardId);
                 return back()->with('error', 'Commitment Fee response sudah ada untuk moodboard ini.');
             }
@@ -70,7 +70,12 @@ class CommitmentFeeController extends Controller
                 'response_time' => now(),
                 'payment_status' => 'pending',
             ]);
-            
+
+            $moodboard->order->update([
+                'tahapan_proyek' => 'cm_fee',
+                'payment_status' => 'cm_fee',
+            ]);
+
             Log::info('Commitment Fee created with ID: ' . $commitmentFee->id);
             Log::info('=== COMMITMENT FEE RESPONSE END ===');
 
@@ -81,25 +86,25 @@ class CommitmentFeeController extends Controller
             return back()->with('error', 'Gagal membuat response commitment fee: ' . $e->getMessage());
         }
     }
-    
+
     public function updateFee(Request $request, $commitmentFeeId)
     {
         try {
             Log::info('=== UPDATE FEE START ===');
             Log::info('Commitment Fee ID: ' . $commitmentFeeId);
-            
+
             $commitmentFee = CommitmentFee::findOrFail($commitmentFeeId);
 
             $validated = $request->validate([
                 'total_fee' => 'required|numeric|min:0',
             ]);
-            
+
             Log::info('Validation passed, total_fee: ' . $validated['total_fee']);
 
             $commitmentFee->update([
                 'total_fee' => $validated['total_fee'],
             ]);
-            
+
             Log::info('Commitment Fee updated');
             Log::info('=== UPDATE FEE END ===');
 
@@ -116,13 +121,13 @@ class CommitmentFeeController extends Controller
         try {
             Log::info('=== UPLOAD PAYMENT PROOF START ===');
             Log::info('Commitment Fee ID: ' . $commitmentFeeId);
-            
+
             $commitmentFee = CommitmentFee::findOrFail($commitmentFeeId);
 
             $validated = $request->validate([
                 'payment_proof' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
             ]);
-            
+
             Log::info('Validation passed');
 
             if ($request->hasFile('payment_proof')) {
@@ -131,16 +136,16 @@ class CommitmentFeeController extends Controller
                     Storage::disk('public')->delete($commitmentFee->payment_proof);
                     Log::info('Old file deleted');
                 }
-                
+
                 $filePath = $request->file('payment_proof')->store('payment_proofs', 'public');
                 Log::info('File stored at: ' . $filePath);
-                
+
                 $commitmentFee->update([
                     'payment_proof' => $filePath,
                     'payment_status' => 'completed',
                 ]);
             }
-            
+
             Log::info('Payment proof uploaded, status: completed');
             Log::info('=== UPLOAD PAYMENT PROOF END ===');
 
