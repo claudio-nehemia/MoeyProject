@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Item;
 use Inertia\Inertia;
 use App\Models\Produk;
 use App\Models\ProdukImages;
@@ -12,9 +13,16 @@ class ProdukController extends Controller
 {
     public function index()
     {
-        $produks = Produk::with('produkImages')->get();
+        $produks = Produk::with(['produkImages', 'bahanBakus'])->get();
+
+        // Ambil semua items yang termasuk bahan baku
+        $bahanBakuItems = Item::whereHas('jenisItem', function ($query) {
+            $query->where('nama_jenis_item', 'Bahan Baku');
+        })->get(['id', 'nama_item']);
+
         return Inertia::render('Produk/Index', [
             'produks' => $produks,
+            'bahanBakuItems' => $bahanBakuItems,
         ]);
     }
 
@@ -25,6 +33,8 @@ class ProdukController extends Controller
             'harga' => 'required|numeric|min:0',
             'produk_images' => 'nullable|array',
             'produk_images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'bahan_baku' => 'nullable|array',
+            'bahan_baku.*' => 'integer|exists:items,id',
         ]);
 
         // 1. Buat produk
@@ -45,12 +55,16 @@ class ProdukController extends Controller
             }
         }
 
+        if ($request->filled('bahan_baku')) {
+            $produk->bahanBakus()->sync($request->bahan_baku);
+        }
+
         return redirect()->back()->with('success', 'Produk created successfully.');
     }
 
     public function edit(Produk $produk)
     {
-        $produk->load('produkImages');
+        $produk->load('produkImages', 'bahanBakus');
         return response()->json($produk);
     }
 
@@ -61,6 +75,8 @@ class ProdukController extends Controller
             'harga' => 'required|numeric|min:0',
             'produk_images' => 'nullable|array',
             'produk_images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'bahan_baku' => 'nullable|array',
+            'bahan_baku.*' => 'integer|exists:items,id',
         ]);
 
         // Update data produk
@@ -80,6 +96,11 @@ class ProdukController extends Controller
                 ]);
             }
         }
+
+        if ($request->filled('bahan_baku')) {
+            $produk->bahanBakus()->sync($request->bahan_baku);
+        }
+
 
         return redirect()->back()->with('success', 'Produk updated successfully.');
     }

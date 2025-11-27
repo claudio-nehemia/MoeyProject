@@ -17,4 +17,9 @@ class Item extends Model
     {
         return $this->hasMany(ItemPekerjaanItem::class);
     }   
+
+    public function produkBahanBakus()
+    {
+        return $this->belongsToMany(Produk::class, 'produk_items');
+    }
 }

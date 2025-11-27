@@ -17,4 +17,12 @@ class Produk extends Model
     {
         return $this->hasMany(ProdukImages::class, 'produk_id');
     }
+
+    public function bahanBakus()
+    {
+        return $this->belongsToMany(Item::class, 'produk_items')
+            ->whereHas('jenisItem', function ($query) {
+                $query->where('nama_jenis_item', 'Bahan Baku');
+            });
+    }
 }

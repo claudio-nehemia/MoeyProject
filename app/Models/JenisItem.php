@@ -19,4 +19,9 @@ class JenisItem extends Model
     {
         return $this->hasMany(ItemPekerjaanJenisItem::class);
     }
+
+    public function scopeBahanBaku($query)
+    {
+        return $query->where('nama_jenis_item', 'Bahan Baku');
+    }
 }

@@ -11,6 +11,14 @@ interface ProdukImage {
     image: string;
 }
 
+interface Item {
+    id: number;
+    nama_item: string;
+    jenis_item?: {
+        nama_jenis_item: string;
+    };
+}
+
 interface Produk {
     id: number;
     nama_produk: string;
@@ -18,13 +26,15 @@ interface Produk {
     created_at: string;
     updated_at: string;
     produk_images: ProdukImage[];
+    bahan_bakus?: Item[];
 }
 
 interface Props {
     produks: Produk[];
+    bahanBakuItems: Item[];
 }
 
-export default function Index({ produks }: Props) {
+export default function Index({ produks, bahanBakuItems = [] }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 1024;
@@ -43,6 +53,7 @@ export default function Index({ produks }: Props) {
         nama_produk: "",
         harga: "",
         produk_images: [] as File[],
+        bahan_baku: [] as number[],
         _method: 'POST'
     });
 
@@ -77,6 +88,7 @@ export default function Index({ produks }: Props) {
             nama_produk: produk.nama_produk,
             harga: produk.harga.toString(),
             produk_images: [],
+            bahan_baku: produk.bahan_bakus?.map(item => item.id) || [],
             _method: 'POST'
         });
         setEditMode(true);
@@ -101,6 +113,11 @@ export default function Index({ produks }: Props) {
         // Append all selected images
         selectedImages.forEach((file, index) => {
             formData.append(`produk_images[${index}]`, file);
+        });
+
+        // Append bahan baku
+        data.bahan_baku.forEach((itemId, index) => {
+            formData.append(`bahan_baku[${index}]`, itemId.toString());
         });
 
         if (editMode && selectedProduk) {
@@ -134,14 +151,13 @@ export default function Index({ produks }: Props) {
             }, {
                 preserveScroll: true,
                 onSuccess: () => {
-                    // Refresh the page or update the state
                     router.reload({ only: ['produks'] });
                 }
             });
         }
     };
 
-    const handleDataChange = (field: string, value: string) => {
+    const handleDataChange = (field: string, value: string | number[]) => {
         setData(field as any, value);
     };
 
@@ -220,6 +236,7 @@ export default function Index({ produks }: Props) {
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Image</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Product Name</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Price</th>
+                                        <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Bahan Baku</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-center font-semibold text-stone-700">Actions</th>
                                     </tr>
                                 </thead>
@@ -264,6 +281,24 @@ export default function Index({ produks }: Props) {
                                                 </span>
                                             </td>
                                             <td className="px-3 sm:px-4 py-2.5">
+                                                <div className="flex flex-wrap gap-1">
+                                                    {produk.bahan_bakus && produk.bahan_bakus.length > 0 ? (
+                                                        produk.bahan_bakus.slice(0, 2).map((item) => (
+                                                            <span key={item.id} className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
+                                                                {item.nama_item}
+                                                            </span>
+                                                        ))
+                                                    ) : (
+                                                        <span className="text-stone-400 text-xs">No materials</span>
+                                                    )}
+                                                    {produk.bahan_bakus && produk.bahan_bakus.length > 2 && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-stone-200 text-stone-600 text-xs font-medium">
+                                                            +{produk.bahan_bakus.length - 2}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-3 sm:px-4 py-2.5">
                                                 <div className="flex items-center justify-center gap-1">
                                                     <button
                                                         onClick={() => openEditModal(produk)}
@@ -303,6 +338,7 @@ export default function Index({ produks }: Props) {
                 errors={errors}
                 existingImages={selectedProduk?.produk_images || []}
                 productId={selectedProduk?.id}
+                bahanBakuItems={bahanBakuItems}
                 onClose={closeModal}
                 onSubmit={handleSubmit}
                 onDataChange={handleDataChange}
