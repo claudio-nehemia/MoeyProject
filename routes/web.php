@@ -385,6 +385,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/rab-jasa/{id}/pdf', [RabJasaController::class, 'exportPdf'])->name('rab-jasa.pdf');
         Route::get('/rab-kontrak/{id}/pdf', [RabKontrakController::class, 'exportPdf'])->name('rab-kontrak.pdf');
         Route::get('/rab-vendor/{id}/pdf', [RabVendorController::class, 'exportPdf'])->name('rab-vendor.pdf');
+        Route::get('/invoice/{id}/export-pdf', [InvoiceController::class, 'exportPdf'])->name('invoice.pdf');
     });
 });
 
