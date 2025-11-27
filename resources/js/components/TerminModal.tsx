@@ -1,5 +1,10 @@
 import { FormEventHandler, useEffect } from 'react';
 
+type TahapanRow = {
+    tahapan: string;
+    percentage: string;
+};
+
 interface TerminModalProps {
     show: boolean;
     editMode: boolean;
@@ -8,7 +13,7 @@ interface TerminModalProps {
         kode_tipe: string;
         nama_tipe: string;
         deskripsi: string;
-        tahapan: { tahapan: string }[];
+        tahapan: TahapanRow[];
     };
     errors: {
         kode_tipe?: string;
@@ -18,11 +23,18 @@ interface TerminModalProps {
     };
     onClose: () => void;
     onSubmit: FormEventHandler;
-    onDataChange: (field: string, value: string) => void;
-    onTahapanChange: (index: number, value: string) => void;
+    onDataChange: (
+        field: "kode_tipe" | "nama_tipe" | "deskripsi",
+        value: string
+    ) => void;
+    onTahapanChange: (
+        index: number,
+        field: 'tahapan' | 'percentage',
+        value: string,
+    ) => void;
     onAddTahapan: () => void;
     onRemoveTahapan: (index: number) => void;
-    onSetTahapan?: (tahapan: { tahapan: string }[]) => void;
+    onSetTahapan?: (tahapan: TahapanRow[]) => void;
     selectedTerminId?: number | null;
 }
 
@@ -45,18 +57,20 @@ export default function TerminModal({
     useEffect(() => {
         if (editMode && selectedTerminId && show) {
             fetch(`/termin/${selectedTerminId}/edit`)
-                .then(res => res.json())
-                .then(termin => {
+                .then((res) => res.json())
+                .then((termin) => {
                     onDataChange('kode_tipe', termin.kode_tipe);
                     onDataChange('nama_tipe', termin.nama_tipe);
                     onDataChange('deskripsi', termin.deskripsi || '');
-                    
-                    // Set tahapan data
+
+                    // Set tahapan data (sudah dalam bentuk { tahapan, percentage })
                     if (onSetTahapan && termin.tahapan) {
                         onSetTahapan(termin.tahapan);
                     }
                 })
-                .catch(err => console.error('Error fetching termin:', err));
+                .catch((err) =>
+                    console.error('Error fetching termin:', err),
+                );
         }
     }, [editMode, selectedTerminId, show]);
 
@@ -71,7 +85,8 @@ export default function TerminModal({
             <div
                 className="flex w-full max-w-md flex-col rounded-2xl bg-white shadow-2xl"
                 style={{
-                    animation: 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+                    animation:
+                        'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
                     maxHeight: 'calc(100vh - 2rem)',
                 }}
                 onClick={(e) => e.stopPropagation()}
@@ -115,7 +130,9 @@ export default function TerminModal({
                                     fontFamily: 'Playfair Display, serif',
                                 }}
                             >
-                                {editMode ? 'Edit Termin' : 'Create New Termin'}
+                                {editMode
+                                    ? 'Edit Termin'
+                                    : 'Create New Termin'}
                             </h3>
                         </div>
                         <button
@@ -141,10 +158,7 @@ export default function TerminModal({
 
                 {/* Form - Scrollable */}
                 <div className="flex-1 overflow-y-auto">
-                    <form
-                        onSubmit={onSubmit}
-                        className="flex flex-col"
-                    >
+                    <form onSubmit={onSubmit} className="flex flex-col">
                         <div className="space-y-3 p-4 sm:space-y-4 sm:p-6">
                             {/* Kode Tipe Field */}
                             <div>
@@ -155,7 +169,10 @@ export default function TerminModal({
                                     type="text"
                                     value={data.kode_tipe}
                                     onChange={(e) =>
-                                        onDataChange('kode_tipe', e.target.value)
+                                        onDataChange(
+                                            'kode_tipe',
+                                            e.target.value,
+                                        )
                                     }
                                     className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm transition-all focus:border-transparent focus:ring-2 focus:ring-rose-500 sm:px-4 sm:py-2.5"
                                     placeholder="Enter code (e.g., T30, T60)"
@@ -188,7 +205,10 @@ export default function TerminModal({
                                     type="text"
                                     value={data.nama_tipe}
                                     onChange={(e) =>
-                                        onDataChange('nama_tipe', e.target.value)
+                                        onDataChange(
+                                            'nama_tipe',
+                                            e.target.value,
+                                        )
                                     }
                                     className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm transition-all focus:border-transparent focus:ring-2 focus:ring-rose-500 sm:px-4 sm:py-2.5"
                                     placeholder="Enter type name"
@@ -223,7 +243,10 @@ export default function TerminModal({
                                 <textarea
                                     value={data.deskripsi}
                                     onChange={(e) =>
-                                        onDataChange('deskripsi', e.target.value)
+                                        onDataChange(
+                                            'deskripsi',
+                                            e.target.value,
+                                        )
                                     }
                                     className="w-full resize-none rounded-lg border border-stone-300 px-3 py-2 text-sm transition-all focus:border-transparent focus:ring-2 focus:ring-rose-500 sm:px-4 sm:py-2.5"
                                     placeholder="Enter description (optional)"
@@ -263,20 +286,54 @@ export default function TerminModal({
                                             <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-rose-100 to-rose-200 text-xs font-bold text-rose-700">
                                                 {index + 1}
                                             </div>
+
+                                            {/* Deskripsi Tahapan */}
                                             <input
                                                 type="text"
                                                 value={item.tahapan}
                                                 onChange={(e) =>
-                                                    onTahapanChange(index, e.target.value)
+                                                    onTahapanChange(
+                                                        index,
+                                                        'tahapan',
+                                                        e.target.value,
+                                                    )
                                                 }
-                                                className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm transition-all focus:border-transparent focus:ring-2 focus:ring-rose-500"
+                                                className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-xs sm:text-sm transition-all focus:border-transparent focus:ring-2 focus:ring-rose-500"
                                                 placeholder={`Tahapan ke-${index + 1}`}
                                                 disabled={processing}
                                             />
+
+                                            {/* Persentase */}
+                                            <div className="flex items-center gap-1">
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    max={100}
+                                                    value={item.percentage}
+                                                    onChange={(e) =>
+                                                        onTahapanChange(
+                                                            index,
+                                                            'percentage',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    className="w-20 rounded-lg border border-stone-300 px-2 py-2 text-xs sm:text-sm transition-all focus:border-transparent focus:ring-2 focus:ring-rose-500"
+                                                    placeholder="%"
+                                                    disabled={processing}
+                                                />
+                                                <span className="text-[11px] text-stone-500">
+                                                    %
+                                                </span>
+                                            </div>
+
                                             {data.tahapan.length > 1 && (
                                                 <button
                                                     type="button"
-                                                    onClick={() => onRemoveTahapan(index)}
+                                                    onClick={() =>
+                                                        onRemoveTahapan(
+                                                            index,
+                                                        )
+                                                    }
                                                     className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600 transition-colors hover:bg-red-100"
                                                     disabled={processing}
                                                 >

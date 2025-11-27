@@ -23,25 +23,27 @@ class TerminController extends Controller
             'nama_tipe' => 'required|string|max:255',
             'deskripsi' => 'nullable|string',
             'tahapan'   => 'required|array|min:1',
-            'tahapan.*.tahapan' => 'required|string',
+
+            // 🟩 Tambahan validasi percentage
+            'tahapan.*.tahapan'    => 'required|string',
+            'tahapan.*.percentage' => 'required|numeric|min:0|max:100',
         ]);
 
-        // Transform tahapan dari frontend format ke database format
+        // Transform FE → DB format
         $tahapan = [];
         foreach ($validated['tahapan'] as $index => $item) {
-            if (!empty($item['tahapan'])) {
-                $tahapan[] = [
-                    'step' => $index + 1,
-                    'text' => $item['tahapan'],
-                ];
-            }
+            $tahapan[] = [
+                'step'       => $index + 1,
+                'text'       => $item['tahapan'],
+                'percentage' => (float)$item['percentage'],
+            ];
         }
 
         Termin::create([
             'kode_tipe' => $validated['kode_tipe'],
             'nama_tipe' => $validated['nama_tipe'],
             'deskripsi' => $validated['deskripsi'],
-            'tahapan' => $tahapan,
+            'tahapan'   => $tahapan,
         ]);
 
         return redirect()->back()->with('success', 'Termin created successfully.');
@@ -49,27 +51,30 @@ class TerminController extends Controller
 
     public function edit(Termin $termin)
     {
-        // Transform tahapan dari database format ke frontend format
-        $tahapanFormatted = [];
+        // Transform DB → FE format
+        $formatted = [];
+
         if ($termin->tahapan) {
             foreach ($termin->tahapan as $item) {
-                $tahapanFormatted[] = [
-                    'tahapan' => $item['text'] ?? ''
+                $formatted[] = [
+                    'tahapan'    => $item['text'] ?? '',
+                    'percentage' => $item['percentage'] ?? '',
                 ];
             }
         }
-        
-        // Jika tidak ada tahapan, berikan default 1 row kosong
-        if (empty($tahapanFormatted)) {
-            $tahapanFormatted = [['tahapan' => '']];
+
+        if (empty($formatted)) {
+            $formatted = [
+                ['tahapan' => '', 'percentage' => '']
+            ];
         }
 
         return response()->json([
-            'id' => $termin->id,
-            'kode_tipe' => $termin->kode_tipe,
-            'nama_tipe' => $termin->nama_tipe,
-            'deskripsi' => $termin->deskripsi,
-            'tahapan' => $tahapanFormatted,
+            'id'         => $termin->id,
+            'kode_tipe'  => $termin->kode_tipe,
+            'nama_tipe'  => $termin->nama_tipe,
+            'deskripsi'  => $termin->deskripsi,
+            'tahapan'    => $formatted,
         ]);
     }
 
@@ -80,25 +85,26 @@ class TerminController extends Controller
             'nama_tipe' => 'required|string|max:255',
             'deskripsi' => 'nullable|string',
             'tahapan'   => 'required|array|min:1',
-            'tahapan.*.tahapan' => 'required|string',
+
+            // 🟩 Validasi baru untuk percentage
+            'tahapan.*.tahapan'    => 'required|string',
+            'tahapan.*.percentage' => 'required|numeric|min:0|max:100',
         ]);
 
-        // Transform tahapan dari frontend format ke database format
         $tahapan = [];
         foreach ($validated['tahapan'] as $index => $item) {
-            if (!empty($item['tahapan'])) {
-                $tahapan[] = [
-                    'step' => $index + 1,
-                    'text' => $item['tahapan'],
-                ];
-            }
+            $tahapan[] = [
+                'step'       => $index + 1,
+                'text'       => $item['tahapan'],
+                'percentage' => (float)$item['percentage'],
+            ];
         }
 
         $termin->update([
             'kode_tipe' => $validated['kode_tipe'],
             'nama_tipe' => $validated['nama_tipe'],
             'deskripsi' => $validated['deskripsi'],
-            'tahapan' => $tahapan,
+            'tahapan'   => $tahapan,
         ]);
 
         return redirect()->back()->with('success', 'Termin updated successfully.');

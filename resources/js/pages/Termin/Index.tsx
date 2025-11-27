@@ -5,18 +5,37 @@ import TerminModal from '@/components/TerminModal';
 import { Head, router, useForm } from '@inertiajs/react';
 import { FormEventHandler, useEffect, useState } from 'react';
 
+interface TerminStep {
+    step: number;
+    text: string;
+    // backend sekarang bisa kirim percentage
+    percentage?: number | string;
+}
+
 interface Termin {
     id: number;
     kode_tipe: string;
     nama_tipe: string;
     deskripsi: string | null;
-    tahapan: { step: number; text: string }[];
+    tahapan: TerminStep[];
     created_at: string;
     updated_at: string;
 }
 
 interface Props {
     termins: Termin[];
+}
+
+interface TahapanFormRow {
+    tahapan: string;
+    percentage: string;
+}
+
+interface TerminFormData {
+    kode_tipe: string;
+    nama_tipe: string;
+    deskripsi: string;
+    tahapan: TahapanFormRow[];
 }
 
 export default function Index({ termins }: Props) {
@@ -33,12 +52,13 @@ export default function Index({ termins }: Props) {
     const [searchQuery, setSearchQuery] = useState('');
     const [filteredTermins, setFilteredTermins] = useState(termins);
 
-    const { data, setData, post, put, processing, errors, reset } = useForm({
-        kode_tipe: '',
-        nama_tipe: '',
-        deskripsi: '',
-        tahapan: [{ tahapan: '' }],
-    });
+    const { data, setData, post, put, processing, errors, reset } =
+        useForm<TerminFormData>({
+            kode_tipe: '',
+            nama_tipe: '',
+            deskripsi: '',
+            tahapan: [{ tahapan: '', percentage: '' }],
+        });
 
     useEffect(() => {
         setMounted(true);
@@ -62,14 +82,21 @@ export default function Index({ termins }: Props) {
         setFilteredTermins(filtered);
     }, [searchQuery, termins]);
 
-    const handleTahapanChange = (index: number, value: string) => {
+    const handleTahapanChange = (
+        index: number,
+        field: keyof TahapanFormRow,
+        value: string,
+    ) => {
         const updated = [...data.tahapan];
-        updated[index].tahapan = value;
+        updated[index][field] = value;
         setData('tahapan', updated);
     };
 
     const addTahapanRow = () => {
-        setData('tahapan', [...data.tahapan, { tahapan: '' }]);
+        setData('tahapan', [
+            ...data.tahapan,
+            { tahapan: '', percentage: '' },
+        ]);
     };
 
     const removeTahapanRow = (index: number) => {
@@ -78,7 +105,7 @@ export default function Index({ termins }: Props) {
         setData('tahapan', updated);
     };
 
-    const setTahapanData = (tahapan: { tahapan: string }[]) => {
+    const setTahapanData = (tahapan: TahapanFormRow[]) => {
         setData('tahapan', tahapan);
     };
 
@@ -86,7 +113,7 @@ export default function Index({ termins }: Props) {
         setEditMode(false);
         setSelectedTermin(null);
         reset();
-        setData('tahapan', [{ tahapan: '' }]);
+        setData('tahapan', [{ tahapan: '', percentage: '' }]);
         setShowModal(true);
     };
 
@@ -122,8 +149,8 @@ export default function Index({ termins }: Props) {
         }
     };
 
-    const handleDataChange = (field: string, value: string) => {
-        setData(field as any, value);
+    const handleDataChange = (field: keyof TerminFormData, value: string) => {
+        setData(field, value as any);
     };
 
     return (
@@ -285,11 +312,24 @@ export default function Index({ termins }: Props) {
                                                                             item.step
                                                                         }
                                                                     </span>
+
                                                                     <span className="text-stone-700">
                                                                         {
                                                                             item.text
                                                                         }
                                                                     </span>
+
+                                                                    {item.percentage !==
+                                                                        undefined &&
+                                                                        item.percentage !==
+                                                                            '' && (
+                                                                            <span className="ml-auto rounded-full bg-rose-200 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
+                                                                                {
+                                                                                    item.percentage
+                                                                                }
+                                                                                %
+                                                                            </span>
+                                                                        )}
                                                                 </div>
                                                             ),
                                                         )
