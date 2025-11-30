@@ -379,7 +379,7 @@ class RabInternalController extends Controller
                                         'item_pekerjaan_item_id' => $item->id,
                                         'nama_aksesoris' => $item->item->nama_item,
                                         'harga_satuan_aksesoris' => $item->item->harga,
-                                        'qty_aksesoris' => $existingAks ? $existingAks->qty_aksesoris : 1,
+                                        'qty_aksesoris' => $existingAks ? $existingAks->qty_aksesoris : $item->quantity,
                                         'markup_aksesoris' => $existingAks ? $existingAks->markup_aksesoris : 0,
                                     ];
                                 }

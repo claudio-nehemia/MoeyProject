@@ -14,11 +14,24 @@ class ProdukController extends Controller
     public function index()
     {
         $produks = Produk::with(['produkImages', 'bahanBakus'])->get();
+        
+        // Pastikan harga di-include untuk setiap bahan baku
+        // Karena belongsToMany akan load semua field, tapi kita pastikan harga ada
+        $produks->transform(function ($produk) {
+            $produk->bahanBakus->transform(function ($item) {
+                // Pastikan harga di-include (jika null, set ke 0)
+                if (!isset($item->harga) || $item->harga === null) {
+                    $item->harga = 0;
+                }
+                return $item;
+            });
+            return $produk;
+        });
 
         // Ambil semua items yang termasuk bahan baku
         $bahanBakuItems = Item::whereHas('jenisItem', function ($query) {
             $query->where('nama_jenis_item', 'Bahan Baku');
-        })->get(['id', 'nama_item']);
+        })->get(['id', 'nama_item', 'harga']);
 
         return Inertia::render('Produk/Index', [
             'produks' => $produks,
@@ -30,17 +43,23 @@ class ProdukController extends Controller
     {
         $validated = $request->validate([
             'nama_produk' => 'required|string|max:255',
-            'harga' => 'required|numeric|min:0',
+            'harga' => 'required|numeric|min:0|max:9999999999999.99',
             'produk_images' => 'nullable|array',
             'produk_images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'harga_jasa' => 'required|numeric|min:0|max:9999999999999.99',
             'bahan_baku' => 'nullable|array',
             'bahan_baku.*' => 'integer|exists:items,id',
         ]);
 
+        // Pastikan harga tidak terlalu besar untuk decimal(15,2)
+        $harga = min($validated['harga'], 9999999999999.99);
+        $hargaJasa = min($validated['harga_jasa'], 9999999999999.99);
+
         // 1. Buat produk
         $produk = Produk::create([
             'nama_produk' => $validated['nama_produk'],
-            'harga' => $validated['harga'],
+            'harga' => $harga,
+            'harga_jasa' => $hargaJasa,
         ]);
 
         // 2. Simpan gambar ke tabel relasi
@@ -72,17 +91,23 @@ class ProdukController extends Controller
     {
         $validated = $request->validate([
             'nama_produk' => 'required|string|max:255',
-            'harga' => 'required|numeric|min:0',
+            'harga' => 'required|numeric|min:0|max:9999999999999.99',
+            'harga_jasa' => 'required|numeric|min:0|max:9999999999999.99',
             'produk_images' => 'nullable|array',
             'produk_images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'bahan_baku' => 'nullable|array',
             'bahan_baku.*' => 'integer|exists:items,id',
         ]);
 
+        // Pastikan harga tidak terlalu besar untuk decimal(15,2)
+        $harga = min($validated['harga'], 9999999999999.99);
+        $hargaJasa = min($validated['harga_jasa'], 9999999999999.99);
+
         // Update data produk
         $produk->update([
             'nama_produk' => $validated['nama_produk'],
-            'harga' => $validated['harga'],
+            'harga' => $harga,
+            'harga_jasa' => $hargaJasa,
         ]);
 
         // Tambah gambar baru

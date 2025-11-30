@@ -91,7 +91,7 @@ export default function Create({ rabInternal }: Props) {
                 nama: aks.nama,
                 harga_satuan: aks.harga_satuan,
                 qty_item_pekerjaan: aks.qty_item_pekerjaan,
-                qty_aksesoris: 1,
+                qty_aksesoris: aks.qty_item_pekerjaan, // Gunakan quantity dari item pekerjaan
                 markup_aksesoris: 5,
             })),
         }));

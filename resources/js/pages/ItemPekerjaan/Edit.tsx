@@ -3,9 +3,15 @@ import Sidebar from '@/components/Sidebar';
 import { Head, router } from '@inertiajs/react';
 import { FormEvent, useEffect, useState } from 'react';
 
+interface BahanBaku {
+    id: number;
+    nama_item: string;
+}
+
 interface Produk {
     id: number;
     nama_produk: string;
+    bahan_bakus?: BahanBaku[]; // tambahkan ini
 }
 
 interface JenisItem {
@@ -325,7 +331,7 @@ export default function Edit({
 
         setLoading(true);
 
-        // Transform data
+        // Transform data - filter out Bahan Baku
         const dataToSend = {
             produks: formProduks.map((p) => ({
                 id: p.id,
@@ -334,15 +340,21 @@ export default function Edit({
                 panjang: p.panjang ? parseFloat(p.panjang) : null,
                 lebar: p.lebar ? parseFloat(p.lebar) : null,
                 tinggi: p.tinggi ? parseFloat(p.tinggi) : null,
-                jenisItems: p.jenisItems.map((j) => ({
-                    id: j.id,
-                    jenis_item_id: parseInt(j.jenis_item_id),
-                    items: j.items.map((i) => ({
-                        id: i.id,
-                        item_id: parseInt(i.item_id),
-                        quantity: i.quantity,
-                    })),
-                })),
+                jenisItems: p.jenisItems
+                    .filter((j) => j.jenis_item_name?.toLowerCase() !== 'bahan baku')
+                    .map((j) => {
+                        const isAksesoris = j.jenis_item_name?.toLowerCase() === 'aksesoris';
+                        return {
+                            id: j.id,
+                            jenis_item_id: parseInt(j.jenis_item_id),
+                            items: j.items.map((i) => ({
+                                id: i.id,
+                                item_id: parseInt(i.item_id),
+                                // Set quantity default 1 untuk non-Aksesoris
+                                quantity: isAksesoris ? i.quantity : 1,
+                            })),
+                        };
+                    }),
             })),
         };
 
@@ -435,484 +447,419 @@ export default function Edit({
                                 </div>
                             ) : (
                                 <div className="space-y-6">
-                                    {formProduks.map((produk, pIndex) => (
-                                        <div
-                                            key={produk.temp_id}
-                                            className="rounded-lg border border-purple-200 bg-purple-50 p-4"
-                                        >
-                                            {/* Produk Header */}
-                                            <div className="mb-4 flex items-start justify-between">
-                                                <h4 className="font-semibold text-purple-900">
-                                                    Produk #{pIndex + 1}
-                                                    {produk.id && (
-                                                        <span className="ml-2 text-xs text-purple-600">
-                                                            (ID: {produk.id})
-                                                        </span>
-                                                    )}
-                                                </h4>
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        removeProduk(
-                                                            produk.temp_id,
-                                                        )
-                                                    }
-                                                    className="text-red-600 hover:text-red-800"
-                                                >
-                                                    Hapus Produk
-                                                </button>
-                                            </div>
+                                    {formProduks.map((produk, pIndex) => {
+                                        const selectedProduk = produks.find(
+                                            (pr) => pr.id.toString() === produk.produk_id,
+                                        );
 
-                                            {/* Produk Form */}
-                                            <div className="mb-4 space-y-4">
-                                                {/* Produk & Quantity */}
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label className="mb-2 block text-sm font-medium text-stone-700">
-                                                            Pilih Produk{' '}
-                                                            <span className="text-red-500">
-                                                                *
+                                        return (
+                                            <div
+                                                key={produk.temp_id}
+                                                className="rounded-lg border border-purple-200 bg-purple-50 p-4"
+                                            >
+                                                {/* Produk Header */}
+                                                <div className="mb-4 flex items-start justify-between">
+                                                    <h4 className="font-semibold text-purple-900">
+                                                        Produk #{pIndex + 1}
+                                                        {produk.id && (
+                                                            <span className="ml-2 text-xs text-purple-600">
+                                                                (ID: {produk.id})
                                                             </span>
-                                                        </label>
-                                                        <select
-                                                            value={
-                                                                produk.produk_id
-                                                            }
-                                                            onChange={(e) =>
-                                                                updateProduk(
-                                                                    produk.temp_id,
-                                                                    'produk_id',
-                                                                    e.target
-                                                                        .value,
-                                                                )
-                                                            }
-                                                            className="w-full rounded-lg border border-stone-300 px-4 py-2.5"
-                                                            required
-                                                        >
-                                                            <option value="">
-                                                                -- Pilih --
-                                                            </option>
-                                                            {produks.map(
-                                                                (p) => (
-                                                                    <option
-                                                                        key={
-                                                                            p.id
-                                                                        }
-                                                                        value={
-                                                                            p.id
-                                                                        }
-                                                                    >
-                                                                        {
-                                                                            p.nama_produk
-                                                                        }
-                                                                    </option>
-                                                                ),
-                                                            )}
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="mb-2 block text-sm font-medium text-stone-700">
-                                                            Quantity{' '}
-                                                            <span className="text-red-500">
-                                                                *
-                                                            </span>
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            min="1"
-                                                            value={
-                                                                produk.quantity
-                                                            }
-                                                            onChange={(e) =>
-                                                                updateProduk(
-                                                                    produk.temp_id,
-                                                                    'quantity',
-                                                                    parseInt(
-                                                                        e.target
-                                                                            .value,
-                                                                    ),
-                                                                )
-                                                            }
-                                                            className="w-full rounded-lg border border-stone-300 px-4 py-2.5"
-                                                            required
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {/* Dimensi */}
-                                                <div>
-                                                    <label className="mb-2 block text-sm font-medium text-stone-700">
-                                                        📏 Dimensi (cm)
-                                                    </label>
-                                                    <div className="grid grid-cols-3 gap-4">
-                                                        <div>
-                                                            <input
-                                                                type="number"
-                                                                step="any"
-                                                                min="0"
-                                                                placeholder="Panjang"
-                                                                value={
-                                                                    produk.panjang
-                                                                }
-                                                                onChange={(e) =>
-                                                                    updateProduk(
-                                                                        produk.temp_id,
-                                                                        'panjang',
-                                                                        e.target
-                                                                            .value,
-                                                                    )
-                                                                }
-                                                                className="w-full rounded-lg border border-stone-300 px-4 py-2.5"
-                                                            />
-                                                            <p className="mt-1 text-xs text-stone-500">
-                                                                Panjang
-                                                            </p>
-                                                        </div>
-                                                        <div>
-                                                            <input
-                                                                type="number"
-                                                                step="any"
-                                                                min="0"
-                                                                placeholder="Lebar"
-                                                                value={
-                                                                    produk.lebar
-                                                                }
-                                                                onChange={(e) =>
-                                                                    updateProduk(
-                                                                        produk.temp_id,
-                                                                        'lebar',
-                                                                        e.target
-                                                                            .value,
-                                                                    )
-                                                                }
-                                                                className="w-full rounded-lg border border-stone-300 px-4 py-2.5"
-                                                            />
-                                                            <p className="mt-1 text-xs text-stone-500">
-                                                                Lebar
-                                                            </p>
-                                                        </div>
-                                                        <div>
-                                                            <input
-                                                                type="number"
-                                                                step="any"
-                                                                min="0"
-                                                                placeholder="Tinggi"
-                                                                value={
-                                                                    produk.tinggi
-                                                                }
-                                                                onChange={(e) =>
-                                                                    updateProduk(
-                                                                        produk.temp_id,
-                                                                        'tinggi',
-                                                                        e.target
-                                                                            .value,
-                                                                    )
-                                                                }
-                                                                className="w-full rounded-lg border border-stone-300 px-4 py-2.5"
-                                                            />
-                                                            <p className="mt-1 text-xs text-stone-500">
-                                                                Tinggi
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Jenis Items Section */}
-                                            <div className="mt-4 rounded-lg border border-green-200 bg-white p-4">
-                                                <div className="mb-3 flex items-center justify-between">
-                                                    <h5 className="text-sm font-semibold text-green-800">
-                                                        🔧 Jenis Item & Material
-                                                    </h5>
+                                                        )}
+                                                    </h4>
                                                     <button
                                                         type="button"
                                                         onClick={() =>
-                                                            addJenisItem(
-                                                                produk.temp_id,
-                                                            )
+                                                            removeProduk(produk.temp_id)
                                                         }
-                                                        className="rounded bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                                                        className="text-red-600 hover:text-red-800"
                                                     >
-                                                        + Tambah Jenis Item
+                                                        Hapus Produk
                                                     </button>
                                                 </div>
 
-                                                {produk.jenisItems.length ===
-                                                0 ? (
-                                                    <p className="text-center text-xs text-stone-500">
-                                                        Belum ada jenis item
-                                                    </p>
-                                                ) : (
-                                                    <div className="space-y-3">
-                                                        {produk.jenisItems.map(
-                                                            (
-                                                                jenisItem,
-                                                                jIndex,
-                                                            ) => (
-                                                                <div
-                                                                    key={
-                                                                        jenisItem.temp_id
+                                                {/* Produk Form */}
+                                                <div className="mb-4 space-y-4">
+                                                    {/* Produk & Quantity */}
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label className="mb-2 block text-sm font-medium text-stone-700">
+                                                                Pilih Produk{' '}
+                                                                <span className="text-red-500">
+                                                                    *
+                                                                </span>
+                                                            </label>
+                                                            <select
+                                                                value={produk.produk_id}
+                                                                onChange={(e) =>
+                                                                    updateProduk(
+                                                                        produk.temp_id,
+                                                                        'produk_id',
+                                                                        e.target.value,
+                                                                    )
+                                                                }
+                                                                className="w-full rounded-lg border border-stone-300 px-4 py-2.5"
+                                                                required
+                                                            >
+                                                                <option value="">
+                                                                    -- Pilih --
+                                                                </option>
+                                                                {produks.map((p) => (
+                                                                    <option key={p.id} value={p.id}>
+                                                                        {p.nama_produk}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label className="mb-2 block text-sm font-medium text-stone-700">
+                                                                Quantity{' '}
+                                                                <span className="text-red-500">
+                                                                    *
+                                                                </span>
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                value={produk.quantity}
+                                                                onChange={(e) =>
+                                                                    updateProduk(
+                                                                        produk.temp_id,
+                                                                        'quantity',
+                                                                        parseInt(e.target.value),
+                                                                    )
+                                                                }
+                                                                className="w-full rounded-lg border border-stone-300 px-4 py-2.5"
+                                                                required
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Dimensi */}
+                                                    <div>
+                                                        <label className="mb-2 block text-sm font-medium text-stone-700">
+                                                            📏 Dimensi (cm)
+                                                        </label>
+                                                        <div className="grid grid-cols-3 gap-4">
+                                                            <div>
+                                                                <input
+                                                                    type="number"
+                                                                    step="any"
+                                                                    min="0"
+                                                                    placeholder="Panjang"
+                                                                    value={produk.panjang}
+                                                                    onChange={(e) =>
+                                                                        updateProduk(
+                                                                            produk.temp_id,
+                                                                            'panjang',
+                                                                            e.target.value,
+                                                                        )
                                                                     }
-                                                                    className="rounded-lg border border-blue-200 bg-blue-50 p-3"
-                                                                >
-                                                                    <div className="mb-3 flex items-start justify-between">
-                                                                        <span className="text-sm font-medium text-blue-900">
-                                                                            Jenis
-                                                                            Item
-                                                                            #
-                                                                            {jIndex +
-                                                                                1}
-                                                                            {jenisItem.id && (
-                                                                                <span className="ml-2 text-xs text-blue-600">
-                                                                                    (ID:{' '}
-                                                                                    {
-                                                                                        jenisItem.id
-                                                                                    }
-                                                                                    )
-                                                                                </span>
-                                                                            )}
-                                                                        </span>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() =>
-                                                                                removeJenisItem(
-                                                                                    produk.temp_id,
-                                                                                    jenisItem.temp_id,
-                                                                                )
-                                                                            }
-                                                                            className="text-xs text-red-600 hover:text-red-800"
-                                                                        >
-                                                                            Hapus
-                                                                        </button>
-                                                                    </div>
+                                                                    className="w-full rounded-lg border border-stone-300 px-4 py-2.5"
+                                                                />
+                                                                <p className="mt-1 text-xs text-stone-500">
+                                                                    Panjang
+                                                                </p>
+                                                            </div>
+                                                            <div>
+                                                                <input
+                                                                    type="number"
+                                                                    step="any"
+                                                                    min="0"
+                                                                    placeholder="Lebar"
+                                                                    value={produk.lebar}
+                                                                    onChange={(e) =>
+                                                                        updateProduk(
+                                                                            produk.temp_id,
+                                                                            'lebar',
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="w-full rounded-lg border border-stone-300 px-4 py-2.5"
+                                                                />
+                                                                <p className="mt-1 text-xs text-stone-500">
+                                                                    Lebar
+                                                                </p>
+                                                            </div>
+                                                            <div>
+                                                                <input
+                                                                    type="number"
+                                                                    step="any"
+                                                                    min="0"
+                                                                    placeholder="Tinggi"
+                                                                    value={produk.tinggi}
+                                                                    onChange={(e) =>
+                                                                        updateProduk(
+                                                                            produk.temp_id,
+                                                                            'tinggi',
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="w-full rounded-lg border border-stone-300 px-4 py-2.5"
+                                                                />
+                                                                <p className="mt-1 text-xs text-stone-500">
+                                                                    Tinggi
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
 
-                                                                    <div className="mb-3">
-                                                                        <select
-                                                                            value={
-                                                                                jenisItem.jenis_item_id
-                                                                            }
-                                                                            onChange={(
-                                                                                e,
-                                                                            ) =>
-                                                                                updateJenisItem(
-                                                                                    produk.temp_id,
-                                                                                    jenisItem.temp_id,
-                                                                                    'jenis_item_id',
-                                                                                    e
-                                                                                        .target
-                                                                                        .value,
-                                                                                )
-                                                                            }
-                                                                            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm"
-                                                                            required
-                                                                        >
-                                                                            <option value="">
-                                                                                --
-                                                                                Pilih
-                                                                                Jenis
-                                                                                Item
-                                                                                --
-                                                                            </option>
-                                                                            {jenisItems
-                                                                                .filter(
-                                                                                    (
-                                                                                        j,
-                                                                                    ) =>
-                                                                                        !getUsedJenisItemIds(
-                                                                                            produk.temp_id,
-                                                                                        ).includes(
-                                                                                            j.id.toString(),
-                                                                                        ) ||
-                                                                                        j.id.toString() ===
-                                                                                            jenisItem.jenis_item_id,
-                                                                                )
-                                                                                .map(
-                                                                                    (
-                                                                                        j,
-                                                                                    ) => (
-                                                                                        <option
-                                                                                            key={
-                                                                                                j.id
-                                                                                            }
-                                                                                            value={
-                                                                                                j.id
-                                                                                            }
-                                                                                        >
-                                                                                            {
-                                                                                                j.nama_jenis_item
-                                                                                            }
-                                                                                        </option>
-                                                                                    ),
-                                                                                )}
-                                                                        </select>
-                                                                    </div>
+                                                {/* Bahan Baku (Read-only, auto from produk) */}
+                                                {(() => {
+                                                    // Get bahan baku from master produk
+                                                    const masterBahanBakus = selectedProduk?.bahan_bakus || [];
+                                                    
+                                                    // Get bahan baku from existing data (jenisItems with jenis_item_name === 'Bahan Baku')
+                                                    const existingBahanBaku = produk.jenisItems.find(
+                                                        (j) => j.jenis_item_name?.toLowerCase() === 'bahan baku'
+                                                    );
+                                                    
+                                                    // Combine both sources for display
+                                                    const allBahanBakus = existingBahanBaku?.items || [];
+                                                    
+                                                    if (masterBahanBakus.length > 0 || allBahanBakus.length > 0) {
+                                                        return (
+                                                            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+                                                                <h5 className="font-semibold text-sm mb-2 text-blue-800">
+                                                                    📦 Bahan Baku (Auto dari Produk)
+                                                                </h5>
+                                                                {allBahanBakus.length > 0 ? (
+                                                                    <ul className="list-disc list-inside text-sm text-gray-700">
+                                                                        {allBahanBakus.map((item) => {
+                                                                            const itemData = items.find(i => i.id.toString() === item.item_id);
+                                                                            return (
+                                                                                <li key={item.temp_id || item.id}>
+                                                                                    {itemData?.nama_item || `Item ID: ${item.item_id}`} 
+                                                                                    {item.quantity > 1 && ` (Qty: ${item.quantity})`}
+                                                                                </li>
+                                                                            );
+                                                                        })}
+                                                                    </ul>
+                                                                ) : (
+                                                                    <ul className="list-disc list-inside text-sm text-gray-700">
+                                                                        {masterBahanBakus.map((bb: BahanBaku) => (
+                                                                            <li key={bb.id}>{bb.nama_item}</li>
+                                                                        ))}
+                                                                    </ul>
+                                                                )}
+                                                                <p className="text-xs text-gray-500 mt-2">
+                                                                    * Bahan baku otomatis dari master produk, tidak bisa diubah manual
+                                                                </p>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()}
 
-                                                                    {/* Items */}
-                                                                    {jenisItem.jenis_item_id && (
-                                                                        <div className="mt-3 rounded bg-white p-3">
-                                                                            <div className="mb-2 flex items-center justify-between">
-                                                                                <span className="text-xs font-medium text-stone-700">
-                                                                                    Item
-                                                                                    Material
-                                                                                </span>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={() =>
-                                                                                        addItem(
-                                                                                            produk.temp_id,
-                                                                                            jenisItem.temp_id,
+                                                {/* Jenis Items Section (Exclude Bahan Baku) */}
+                                                <div className="mt-4 rounded-lg border border-green-200 bg-white p-4">
+                                                    <div className="mb-3 flex items-center justify-between">
+                                                        <h5 className="text-sm font-semibold text-green-800">
+                                                            🔧 Jenis Item & Material
+                                                        </h5>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => addJenisItem(produk.temp_id)}
+                                                            className="rounded bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                                                        >
+                                                            + Tambah Jenis Item
+                                                        </button>
+                                                    </div>
+
+                                                    {(() => {
+                                                        // Filter out Bahan Baku from editable jenisItems
+                                                        const editableJenisItems = produk.jenisItems.filter(
+                                                            (j) => j.jenis_item_name?.toLowerCase() !== 'bahan baku'
+                                                        );
+                                                        
+                                                        return editableJenisItems.length === 0 ? (
+                                                            <p className="text-center text-xs text-stone-500">
+                                                                Belum ada jenis item
+                                                            </p>
+                                                        ) : (
+                                                            <div className="space-y-3">
+                                                                {editableJenisItems.map(
+                                                                    (jenisItem, jIndex) => (
+                                                                    <div
+                                                                        key={jenisItem.temp_id}
+                                                                        className="rounded-lg border border-blue-200 bg-blue-50 p-3"
+                                                                    >
+                                                                        <div className="mb-3 flex items-start justify-between">
+                                                                            <span className="text-sm font-medium text-blue-900">
+                                                                                Jenis Item
+                                                                                #{jIndex + 1}
+                                                                                {jenisItem.id && (
+                                                                                    <span className="ml-2 text-xs text-blue-600">
+                                                                                        (ID:{' '}
+                                                                                        {jenisItem.id}
                                                                                         )
-                                                                                    }
-                                                                                    className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700"
-                                                                                >
-                                                                                    +
-                                                                                    Tambah
-                                                                                    Item
-                                                                                </button>
-                                                                            </div>
+                                                                                    </span>
+                                                                                )}
+                                                                            </span>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() =>
+                                                                                    removeJenisItem(
+                                                                                        produk.temp_id,
+                                                                                        jenisItem.temp_id,
+                                                                                    )
+                                                                                }
+                                                                                className="text-xs text-red-600 hover:text-red-800"
+                                                                            >
+                                                                                Hapus
+                                                                            </button>
+                                                                        </div>
 
-                                                                            {jenisItem
-                                                                                .items
-                                                                                .length ===
-                                                                            0 ? (
-                                                                                <p className="text-center text-xs text-stone-400">
-                                                                                    Belum
-                                                                                    ada
-                                                                                    item
-                                                                                </p>
-                                                                            ) : (
-                                                                                <div className="space-y-2">
-                                                                                    {jenisItem.items.map(
-                                                                                        (
-                                                                                            item,
-                                                                                            iIndex,
-                                                                                        ) => (
-                                                                                            <div
-                                                                                                key={
-                                                                                                    item.temp_id
-                                                                                                }
-                                                                                                className="flex items-center gap-2"
-                                                                                            >
-                                                                                                <select
-                                                                                                    value={
-                                                                                                        item.item_id
-                                                                                                    }
-                                                                                                    onChange={(
-                                                                                                        e,
-                                                                                                    ) =>
-                                                                                                        updateItem(
-                                                                                                            produk.temp_id,
-                                                                                                            jenisItem.temp_id,
-                                                                                                            item.temp_id,
-                                                                                                            'item_id',
-                                                                                                            e
-                                                                                                                .target
-                                                                                                                .value,
-                                                                                                        )
-                                                                                                    }
-                                                                                                    className="flex-1 rounded border border-stone-300 px-2 py-1.5 text-xs"
-                                                                                                    required
+                                                                        <div className="mb-3">
+                                                                            <select
+                                                                                value={jenisItem.jenis_item_id}
+                                                                                onChange={(e) =>
+                                                                                    updateJenisItem(
+                                                                                        produk.temp_id,
+                                                                                        jenisItem.temp_id,
+                                                                                        'jenis_item_id',
+                                                                                        e.target.value,
+                                                                                    )
+                                                                                }
+                                                                                className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm"
+                                                                                required
+                                                                            >
+                                                                                <option value="">
+                                                                                    -- Pilih Jenis Item --
+                                                                                </option>
+                                                                                {jenisItems.map((j) => (
+                                                                                    <option key={j.id} value={j.id}>
+                                                                                        {j.nama_jenis_item}
+                                                                                    </option>
+                                                                                ))}
+                                                                            </select>
+                                                                        </div>
+
+                                                                        {/* Items */}
+                                                                        {jenisItem.jenis_item_id && (
+                                                                            <div className="mt-3 rounded bg-white p-3">
+                                                                                <div className="mb-2 flex items-center justify-between">
+                                                                                    <span className="text-xs font-medium text-stone-700">
+                                                                                        Item Material
+                                                                                    </span>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() =>
+                                                                                            addItem(
+                                                                                                produk.temp_id,
+                                                                                                jenisItem.temp_id,
+                                                                                            )
+                                                                                        }
+                                                                                        className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700"
+                                                                                    >
+                                                                                        +
+                                                                                        Tambah
+                                                                                        Item
+                                                                                    </button>
+                                                                                </div>
+
+                                                                                {jenisItem.items.length === 0 ? (
+                                                                                    <p className="text-center text-xs text-stone-400">
+                                                                                        Belum ada item
+                                                                                    </p>
+                                                                                ) : (
+                                                                                    <div className="space-y-2">
+                                                                                        {jenisItem.items.map(
+                                                                                            (item, iIndex) => (
+                                                                                                <div
+                                                                                                    key={item.temp_id}
+                                                                                                    className="flex items-center gap-2"
                                                                                                 >
-                                                                                                    <option value="">
-                                                                                                        --
-                                                                                                        Pilih
-                                                                                                        Item
-                                                                                                        --
-                                                                                                    </option>
-                                                                                                    {getAvailableItems(
-                                                                                                        jenisItem.jenis_item_id,
-                                                                                                    ).map(
-                                                                                                        (
-                                                                                                            i,
-                                                                                                        ) => (
-                                                                                                            <option
-                                                                                                                key={
-                                                                                                                    i.id
-                                                                                                                }
-                                                                                                                value={
-                                                                                                                    i.id
-                                                                                                                }
-                                                                                                            >
-                                                                                                                {
-                                                                                                                    i.nama_item
-                                                                                                                }
-                                                                                                            </option>
-                                                                                                        ),
-                                                                                                    )}
-                                                                                                </select>
-
-                                                                                                {/* Hanya tampilkan quantity jika jenis item Aksesoris */}
-                                                                                                {jenisItem.jenis_item_name?.toLowerCase() ===
-                                                                                                    'aksesoris' && (
-                                                                                                    <input
-                                                                                                        type="number"
-                                                                                                        min="1"
-                                                                                                        value={
-                                                                                                            item.quantity
-                                                                                                        }
-                                                                                                        onChange={(
-                                                                                                            e,
-                                                                                                        ) =>
+                                                                                                    <select
+                                                                                                        value={item.item_id}
+                                                                                                        onChange={(e) =>
                                                                                                             updateItem(
                                                                                                                 produk.temp_id,
                                                                                                                 jenisItem.temp_id,
                                                                                                                 item.temp_id,
-                                                                                                                'quantity',
-                                                                                                                parseInt(
-                                                                                                                    e
-                                                                                                                        .target
-                                                                                                                        .value,
-                                                                                                                ),
+                                                                                                                'item_id',
+                                                                                                                e.target.value,
                                                                                                             )
                                                                                                         }
-                                                                                                        className="w-20 rounded border border-stone-300 px-2 py-1.5 text-xs"
-                                                                                                        placeholder="Qty"
+                                                                                                        className="flex-1 rounded border border-stone-300 px-2 py-1.5 text-xs"
                                                                                                         required
-                                                                                                    />
-                                                                                                )}
-
-                                                                                                <button
-                                                                                                    type="button"
-                                                                                                    onClick={() =>
-                                                                                                        removeItem(
-                                                                                                            produk.temp_id,
-                                                                                                            jenisItem.temp_id,
-                                                                                                            item.temp_id,
-                                                                                                        )
-                                                                                                    }
-                                                                                                    className="text-red-600 hover:text-red-800"
-                                                                                                >
-                                                                                                    <svg
-                                                                                                        className="h-4 w-4"
-                                                                                                        fill="none"
-                                                                                                        stroke="currentColor"
-                                                                                                        viewBox="0 0 24 24"
                                                                                                     >
-                                                                                                        <path
-                                                                                                            strokeLinecap="round"
-                                                                                                            strokeLinejoin="round"
-                                                                                                            strokeWidth={
-                                                                                                                2
+                                                                                                        <option value="">
+                                                                                                            -- Pilih Item --
+                                                                                                        </option>
+                                                                                                        {getAvailableItems(
+                                                                                                            jenisItem.jenis_item_id,
+                                                                                                        ).map((i) => (
+                                                                                                            <option key={i.id} value={i.id}>
+                                                                                                                {i.nama_item}
+                                                                                                            </option>
+                                                                                                        ))}
+                                                                                                    </select>
+
+                                                                                                    {/* Hanya tampilkan quantity jika jenis item adalah Aksesoris */}
+                                                                                                    {jenisItem.jenis_item_name?.toLowerCase() === 'aksesoris' && (
+                                                                                                        <input
+                                                                                                            type="number"
+                                                                                                            min="1"
+                                                                                                            value={item.quantity}
+                                                                                                            onChange={(e) =>
+                                                                                                                updateItem(
+                                                                                                                    produk.temp_id,
+                                                                                                                    jenisItem.temp_id,
+                                                                                                                    item.temp_id,
+                                                                                                                    'quantity',
+                                                                                                                    parseInt(e.target.value),
+                                                                                                                )
                                                                                                             }
-                                                                                                            d="M6 18L18 6M6 6l12 12"
+                                                                                                            className="w-20 rounded border border-stone-300 px-2 py-1.5 text-xs"
+                                                                                                            placeholder="Qty"
+                                                                                                            required
                                                                                                         />
-                                                                                                    </svg>
-                                                                                                </button>
-                                                                                            </div>
-                                                                                        ),
-                                                                                    )}
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
                                                                     )}
-                                                                </div>
-                                                            ),
-                                                        )}
-                                                    </div>
-                                                )}
+
+                                                                                                    <button
+                                                                                                        type="button"
+                                                                                                        onClick={() =>
+                                                                                                            removeItem(
+                                                                                                                produk.temp_id,
+                                                                                                                jenisItem.temp_id,
+                                                                                                                item.temp_id,
+                                                                                                            )
+                                                                                                        }
+                                                                                                        className="text-red-600 hover:text-red-800"
+                                                                                                    >
+                                                                                                        <svg
+                                                                                                            className="h-4 w-4"
+                                                                                                            fill="none"
+                                                                                                            stroke="currentColor"
+                                                                                                            viewBox="0 0 24 24"
+                                                                                                        >
+                                                                                                            <path
+                                                                                                                strokeLinecap="round"
+                                                                                                                strokeLinejoin="round"
+                                                                                                                strokeWidth={2}
+                                                                                                                d="M6 18L18 6M6 6l12 12"
+                                                                                                            />
+                                                                                                        </svg>
+                                                                                                    </button>
+                                                                                                </div>
+                                                                                            ),
+                                                                                        )}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    ),
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

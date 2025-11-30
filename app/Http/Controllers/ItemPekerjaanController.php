@@ -112,8 +112,10 @@ class ItemPekerjaanController extends Controller
         $itemPekerjaan = ItemPekerjaan::with('moodboard.order')->findOrFail($itemPekerjaanId);
         
         // Get master data
-        $produks = Produk::select('id', 'nama_produk')->get();
-        $jenisItems = JenisItem::select('id', 'nama_jenis_item')->get();
+        $produks = Produk::with('bahanBakus')->select('id', 'nama_produk')->get();
+        $jenisItems = JenisItem::where('nama_jenis_item', '!=', 'Bahan Baku')
+            ->select('id', 'nama_jenis_item')
+            ->get();
         $items = Item::select('id', 'nama_item', 'jenis_item_id')->get();
 
         return Inertia::render('ItemPekerjaan/Create', [
@@ -127,7 +129,19 @@ class ItemPekerjaanController extends Controller
                     ],
                 ],
             ],
-            'produks' => $produks,
+            'produks' => $produks->map(function ($produk) {
+                return [
+                    'id' => $produk->id,
+                    'nama_produk' => $produk->nama_produk,
+                    'bahan_bakus' => $produk->bahanBakus->map(function ($item) {
+                        return [
+                            'id' => $item->id,
+                            'nama_item' => $item->nama_item,
+                            'harga' => $item->harga,
+                        ];
+                    }),
+                ];
+            }),
             'jenisItems' => $jenisItems,
             'items' => $items,
         ]);
@@ -151,18 +165,52 @@ class ItemPekerjaanController extends Controller
                 'produks.*.jenisItems.*.items.*.quantity' => 'required|integer|min:1',
             ]);
 
+            // Get jenis item "Bahan Baku"
+            $bahanBakuJenisItem = JenisItem::where('nama_jenis_item', 'Bahan Baku')->first();
+
             // Save produks and nested data
             foreach ($validated['produks'] as $produkData) {
+                // Set default 1 untuk dimensi jika null, 0, atau empty
+                $panjang = isset($produkData['panjang']) && $produkData['panjang'] !== '' && $produkData['panjang'] > 0 
+                    ? $produkData['panjang'] 
+                    : 1;
+                $lebar = isset($produkData['lebar']) && $produkData['lebar'] !== '' && $produkData['lebar'] > 0 
+                    ? $produkData['lebar'] 
+                    : 1;
+                $tinggi = isset($produkData['tinggi']) && $produkData['tinggi'] !== '' && $produkData['tinggi'] > 0 
+                    ? $produkData['tinggi'] 
+                    : 1;
+
                 $produk = ItemPekerjaanProduk::create([
                     'item_pekerjaan_id' => $validated['item_pekerjaan_id'],
                     'produk_id' => $produkData['produk_id'],
                     'quantity' => $produkData['quantity'],
-                    'panjang' => $produkData['panjang'] ?? null,
-                    'lebar' => $produkData['lebar'] ?? null,
-                    'tinggi' => $produkData['tinggi'] ?? null,
+                    'panjang' => $panjang,
+                    'lebar' => $lebar,
+                    'tinggi' => $tinggi,
                 ]);
 
-                // Save jenis items
+                // Auto-create bahan baku dari produk
+                if ($bahanBakuJenisItem) {
+                    $masterProduk = Produk::with('bahanBakus')->find($produkData['produk_id']);
+                    if ($masterProduk && $masterProduk->bahanBakus->count() > 0) {
+                        $jenisItemBahanBaku = ItemPekerjaanJenisItem::create([
+                            'item_pekerjaan_produk_id' => $produk->id,
+                            'jenis_item_id' => $bahanBakuJenisItem->id,
+                        ]);
+
+                        // Save semua bahan baku dari produk
+                        foreach ($masterProduk->bahanBakus as $bahanBaku) {
+                            ItemPekerjaanItem::create([
+                                'item_pekerjaan_jenis_item_id' => $jenisItemBahanBaku->id,
+                                'item_id' => $bahanBaku->id,
+                                'quantity' => 1, // Default quantity untuk bahan baku
+                            ]);
+                        }
+                    }
+                }
+
+                // Save jenis items lainnya (Finishing Dalam, Finishing Luar, Aksesoris, dll)
                 if (isset($produkData['jenisItems']) && count($produkData['jenisItems']) > 0) {
                     foreach ($produkData['jenisItems'] as $jenisItemData) {
                         $jenisItem = ItemPekerjaanJenisItem::create([
@@ -202,8 +250,10 @@ class ItemPekerjaanController extends Controller
         ])->findOrFail($itemPekerjaanId);
         
         // Get master data
-        $produks = Produk::select('id', 'nama_produk')->get();
-        $jenisItems = JenisItem::select('id', 'nama_jenis_item')->get();
+        $produks = Produk::with('bahanBakus')->select('id', 'nama_produk')->get();
+        $jenisItems = JenisItem::where('nama_jenis_item', '!=', 'Bahan Baku')
+            ->select('id', 'nama_jenis_item')
+            ->get();
         $items = Item::select('id', 'nama_item', 'jenis_item_id')->get();
 
         return Inertia::render('ItemPekerjaan/Edit', [
@@ -243,7 +293,19 @@ class ItemPekerjaanController extends Controller
                     ];
                 }),
             ],
-            'produks' => $produks,
+            'produks' => $produks->map(function ($produk) {
+                return [
+                    'id' => $produk->id,
+                    'nama_produk' => $produk->nama_produk,
+                    'bahan_bakus' => $produk->bahanBakus->map(function ($item) {
+                        return [
+                            'id' => $item->id,
+                            'nama_item' => $item->nama_item,
+                            'harga' => $item->harga,
+                        ];
+                    }),
+                ];
+            }),
             'jenisItems' => $jenisItems,
             'items' => $items,
         ]);
@@ -322,41 +384,109 @@ class ItemPekerjaanController extends Controller
 
             $itemPekerjaan = ItemPekerjaan::findOrFail($itemPekerjaanId);
 
+            // Get jenis item "Bahan Baku"
+            $bahanBakuJenisItem = JenisItem::where('nama_jenis_item', 'Bahan Baku')->first();
+
             // Get existing IDs for deletion
             $existingProdukIds = $itemPekerjaan->produks->pluck('id')->toArray();
             $submittedProdukIds = [];
 
             // Update or create produks
             foreach ($validated['produks'] as $produkData) {
+                $produkIdChanged = false;
                 if (isset($produkData['id'])) {
                     // Update existing
                     $produk = ItemPekerjaanProduk::find($produkData['id']);
+                    $oldProdukId = $produk->produk_id;
+                    // Set default 1 untuk dimensi jika null, 0, atau empty
+                    $panjang = isset($produkData['panjang']) && $produkData['panjang'] !== '' && $produkData['panjang'] > 0 
+                        ? $produkData['panjang'] 
+                        : 1;
+                    $lebar = isset($produkData['lebar']) && $produkData['lebar'] !== '' && $produkData['lebar'] > 0 
+                        ? $produkData['lebar'] 
+                        : 1;
+                    $tinggi = isset($produkData['tinggi']) && $produkData['tinggi'] !== '' && $produkData['tinggi'] > 0 
+                        ? $produkData['tinggi'] 
+                        : 1;
+
                     $produk->update([
+                        'produk_id' => $produkData['produk_id'],
                         'quantity' => $produkData['quantity'],
-                        'panjang' => $produkData['panjang'] ?? null,
-                        'lebar' => $produkData['lebar'] ?? null,
-                        'tinggi' => $produkData['tinggi'] ?? null,
+                        'panjang' => $panjang,
+                        'lebar' => $lebar,
+                        'tinggi' => $tinggi,
                     ]);
+                    $produkIdChanged = ($oldProdukId != $produkData['produk_id']);
                     $submittedProdukIds[] = $produk->id;
                 } else {
                     // Create new
+                    // Set default 1 untuk dimensi jika null, 0, atau empty
+                    $panjang = isset($produkData['panjang']) && $produkData['panjang'] !== '' && $produkData['panjang'] > 0 
+                        ? $produkData['panjang'] 
+                        : 1;
+                    $lebar = isset($produkData['lebar']) && $produkData['lebar'] !== '' && $produkData['lebar'] > 0 
+                        ? $produkData['lebar'] 
+                        : 1;
+                    $tinggi = isset($produkData['tinggi']) && $produkData['tinggi'] !== '' && $produkData['tinggi'] > 0 
+                        ? $produkData['tinggi'] 
+                        : 1;
+
                     $produk = ItemPekerjaanProduk::create([
                         'item_pekerjaan_id' => $itemPekerjaanId,
                         'produk_id' => $produkData['produk_id'],
                         'quantity' => $produkData['quantity'],
-                        'panjang' => $produkData['panjang'] ?? null,
-                        'lebar' => $produkData['lebar'] ?? null,
-                        'tinggi' => $produkData['tinggi'] ?? null,
+                        'panjang' => $panjang,
+                        'lebar' => $lebar,
+                        'tinggi' => $tinggi,
                     ]);
+                    $produkIdChanged = true; // New produk, need to create bahan baku
                     $submittedProdukIds[] = $produk->id;
                 }
 
-                // Handle jenis items
+                // Auto-create/update bahan baku dari produk jika produk_id berubah atau produk baru
+                if ($produkIdChanged && $bahanBakuJenisItem) {
+                    // Hapus bahan baku lama jika ada
+                    $existingBahanBakuJenisItem = $produk->jenisItems()
+                        ->where('jenis_item_id', $bahanBakuJenisItem->id)
+                        ->first();
+                    
+                    if ($existingBahanBakuJenisItem) {
+                        $existingBahanBakuJenisItem->items()->delete();
+                        $existingBahanBakuJenisItem->delete();
+                    }
+
+                    // Create bahan baku baru dari produk
+                    $masterProduk = Produk::with('bahanBakus')->find($produkData['produk_id']);
+                    if ($masterProduk && $masterProduk->bahanBakus->count() > 0) {
+                        $jenisItemBahanBaku = ItemPekerjaanJenisItem::create([
+                            'item_pekerjaan_produk_id' => $produk->id,
+                            'jenis_item_id' => $bahanBakuJenisItem->id,
+                        ]);
+
+                        // Save semua bahan baku dari produk
+                        foreach ($masterProduk->bahanBakus as $bahanBaku) {
+                            ItemPekerjaanItem::create([
+                                'item_pekerjaan_jenis_item_id' => $jenisItemBahanBaku->id,
+                                'item_id' => $bahanBaku->id,
+                                'quantity' => 1, // Default quantity untuk bahan baku
+                            ]);
+                        }
+                    }
+                }
+
+                // Handle jenis items (skip Bahan Baku karena sudah di-handle otomatis)
                 if (isset($produkData['jenisItems'])) {
-                    $existingJenisIds = $produk->jenisItems->pluck('id')->toArray();
+                    $existingJenisIds = $produk->jenisItems()
+                        ->where('jenis_item_id', '!=', $bahanBakuJenisItem?->id)
+                        ->pluck('id')
+                        ->toArray();
                     $submittedJenisIds = [];
 
                     foreach ($produkData['jenisItems'] as $jenisItemData) {
+                        // Skip Bahan Baku
+                        if ($jenisItemData['jenis_item_id'] == $bahanBakuJenisItem?->id) {
+                            continue;
+                        }
                         if (isset($jenisItemData['id'])) {
                             // Update existing
                             $jenisItem = ItemPekerjaanJenisItem::find($jenisItemData['id']);

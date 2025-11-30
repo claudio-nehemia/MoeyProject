@@ -49,7 +49,7 @@ class RabJasaController extends Controller
     public function generate($itemPekerjaanId)
     {
         $itemPekerjaan = ItemPekerjaan::with([
-            'rabInternal.rabProduks',
+            'rabInternal.rabProduks.itemPekerjaanProduk.produk',
         ])->findOrFail($itemPekerjaanId);
 
         if (!$itemPekerjaan->rabInternal) {
@@ -72,19 +72,22 @@ class RabJasaController extends Controller
             ]);
 
             foreach ($rabInternal->rabProduks as $rabProduk) {
-                // RAB Internal already stores ORIGINAL prices (before markup)
-                // So we just copy them directly - NO need to divide by markup
-                $hargaDasarOriginal = $rabProduk->harga_dasar;
+                // Get harga_jasa from produk (not harga)
+                $itemPekerjaanProduk = $rabProduk->itemPekerjaanProduk;
+                $hargaJasa = $itemPekerjaanProduk->produk->harga_jasa ?? 0;
+                
+                // Keep harga_items_non_aksesoris from RAB Internal
                 $hargaItemsOriginal = $rabProduk->harga_items_non_aksesoris;
 
-                // Calculate harga_satuan WITHOUT markup
-                $hargaSatuanJasa = ($hargaDasarOriginal + $hargaItemsOriginal) * $rabProduk->harga_dimensi;
+                // Calculate harga_satuan using harga_jasa instead of harga
+                // Formula: (harga_jasa + harga_items_non_aksesoris) * harga_dimensi
+                $hargaSatuanJasa = ($hargaJasa + $hargaItemsOriginal) * $rabProduk->harga_dimensi;
 
                 // NO AKSESORIS - harga_akhir = harga_satuan only
                 RabJasaProduk::create([
                     'rab_jasa_id' => $rabJasa->id,
                     'item_pekerjaan_produk_id' => $rabProduk->item_pekerjaan_produk_id,
-                    'harga_dasar' => $hargaDasarOriginal,
+                    'harga_dasar' => $hargaJasa, // Store harga_jasa as harga_dasar
                     'harga_items_non_aksesoris' => $hargaItemsOriginal,
                     'harga_dimensi' => $rabProduk->harga_dimensi,
                     'harga_satuan' => $hargaSatuanJasa,
@@ -238,7 +241,7 @@ class RabJasaController extends Controller
     {
         try {
             $rabJasa = RabJasa::with([
-                'itemPekerjaan.rabInternal.rabProduks',
+                'itemPekerjaan.rabInternal.rabProduks.itemPekerjaanProduk.produk',
             ])->findOrFail($rabJasaId);
 
             $rabInternal = $rabJasa->itemPekerjaan->rabInternal;
@@ -254,14 +257,21 @@ class RabJasaController extends Controller
 
                 // Regenerate from RAB Internal
                 foreach ($rabInternal->rabProduks as $rabProduk) {
-                    $hargaDasarOriginal = $rabProduk->harga_dasar;
+                    // Get harga_jasa from produk (not harga)
+                    $itemPekerjaanProduk = $rabProduk->itemPekerjaanProduk;
+                    $hargaJasa = $itemPekerjaanProduk->produk->harga_jasa ?? 0;
+                    
+                    // Keep harga_items_non_aksesoris from RAB Internal
                     $hargaItemsOriginal = $rabProduk->harga_items_non_aksesoris;
-                    $hargaSatuanJasa = ($hargaDasarOriginal + $hargaItemsOriginal) * $rabProduk->harga_dimensi;
+                    
+                    // Calculate harga_satuan using harga_jasa instead of harga
+                    // Formula: (harga_jasa + harga_items_non_aksesoris) * harga_dimensi
+                    $hargaSatuanJasa = ($hargaJasa + $hargaItemsOriginal) * $rabProduk->harga_dimensi;
 
                     RabJasaProduk::create([
                         'rab_jasa_id' => $rabJasa->id,
                         'item_pekerjaan_produk_id' => $rabProduk->item_pekerjaan_produk_id,
-                        'harga_dasar' => $hargaDasarOriginal,
+                        'harga_dasar' => $hargaJasa, // Store harga_jasa as harga_dasar
                         'harga_items_non_aksesoris' => $hargaItemsOriginal,
                         'harga_dimensi' => $rabProduk->harga_dimensi,
                         'harga_satuan' => $hargaSatuanJasa,

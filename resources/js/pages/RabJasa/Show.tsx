@@ -188,202 +188,116 @@ export default function Show({ rabJasa }: Props) {
                             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                 <thead className="bg-gray-100 dark:bg-gray-700">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-bold tracking-wider text-gray-700 uppercase dark:text-gray-300">
-                                            Komponen
+                                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                                            Produk
                                         </th>
-                                        <th className="px-6 py-3 text-center text-xs font-bold tracking-wider text-gray-700 uppercase dark:text-gray-300">
+                                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                                            Bahan Baku
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                                            Finishing Dalam
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                                            Finishing Luar
+                                        </th>
+                                        <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Qty
                                         </th>
-                                        <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-700 uppercase dark:text-gray-300">
-                                            Harga Satuan
-                                        </th>
-                                        <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-700 uppercase dark:text-gray-300">
-                                            Harga Total
-                                        </th>
-                                        <th className="bg-green-100 px-6 py-3 text-right text-xs font-bold tracking-wider text-green-800 uppercase dark:bg-green-900/30 dark:text-green-400">
+                                        <th className="bg-green-100 px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-green-800 dark:bg-green-900/30 dark:text-green-400">
                                             Grand Total
                                         </th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
-                                    {rabJasa.produks.map(
-                                        (produk, produkIndex) => {
-                                            const totalItemsCount =
-                                                produk.jenis_items.reduce(
-                                                    (sum, jenis) =>
-                                                        sum +
-                                                        jenis.items.length,
-                                                    0,
-                                                );
-                                            const totalRows =
-                                                1 + totalItemsCount + 1;
-
-                                            // Calculate subtotal (harga_dasar + items - NO MARKUP for RAB Jasa)
-                                            const subtotal =
-                                                Number(produk.harga_dasar) +
-                                                Number(
-                                                    produk.harga_items_non_aksesoris,
-                                                );
-
-                                            return (
-                                                <>
-                                                    {/* Produk Header Row */}
-                                                    <tr
-                                                        key={`produk-header-${produk.id}`}
-                                                        className="bg-gradient-to-r from-green-600 to-green-700"
-                                                    >
-                                                        <td
-                                                            colSpan={5}
-                                                            className="px-6 py-3"
-                                                        >
-                                                            <div className="text-lg font-bold text-white">
-                                                                {produkIndex +
-                                                                    1}
-                                                                .{' '}
-                                                                {
-                                                                    produk.nama_produk
-                                                                }
-                                                            </div>
-                                                            <div className="text-sm text-purple-100">
-                                                                Qty:{' '}
-                                                                {
-                                                                    produk.qty_produk
-                                                                }
-                                                                {produk.panjang &&
-                                                                    produk.lebar &&
-                                                                    produk.tinggi &&
-                                                                    ` | Dimensi: ${produk.panjang} × ${produk.lebar} × ${produk.tinggi} cm`}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-
-                                                    {/* Harga Dasar Row */}
-                                                    <tr
-                                                        key={`harga-dasar-${produk.id}`}
-                                                        className="bg-purple-50 dark:bg-purple-900/10"
-                                                    >
-                                                        <td className="px-6 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                                            Harga Dasar
-                                                        </td>
-                                                        <td className="px-6 py-3 text-center text-sm text-gray-700 dark:text-gray-300">
-                                                            {produk.qty_produk}
-                                                        </td>
-                                                        <td className="px-6 py-3 text-right text-sm text-gray-700 dark:text-gray-300">
-                                                            {formatCurrency(
-                                                                produk.harga_dasar /
-                                                                    produk.qty_produk,
-                                                            )}
-                                                        </td>
-                                                        <td className="px-6 py-3 text-right text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                            {formatCurrency(
-                                                                produk.harga_dasar,
-                                                            )}
-                                                        </td>
-                                                        <td
-                                                            rowSpan={totalRows}
-                                                            className="bg-gradient-to-b from-green-50 to-green-100 px-6 py-3 align-middle dark:from-green-900/20 dark:to-green-900/30"
-                                                        >
-                                                            <div className="text-center">
-                                                                <div className="text-2xl font-bold text-green-700 dark:text-green-400">
-                                                                    {formatCurrency(
-                                                                        produk.harga_akhir,
-                                                                    )}
+                                    {rabJasa.produks.map((produk, produkIndex) => {
+                                        // Group items by jenis
+                                        const bahanBakuItems: string[] = [];
+                                        const finishingDalamItems: string[] = [];
+                                        const finishingLuarItems: string[] = [];
+                                        
+                                        produk.jenis_items.forEach((jenisItem) => {
+                                            const namaJenis = jenisItem.nama_jenis.toLowerCase();
+                                            if (namaJenis === 'bahan baku') {
+                                                jenisItem.items.forEach(item => {
+                                                    bahanBakuItems.push(item.nama_item);
+                                                });
+                                            } else if (namaJenis === 'finishing dalam') {
+                                                jenisItem.items.forEach(item => {
+                                                    finishingDalamItems.push(item.nama_item);
+                                                });
+                                            } else if (namaJenis === 'finishing luar') {
+                                                jenisItem.items.forEach(item => {
+                                                    finishingLuarItems.push(item.nama_item);
+                                                });
+                                            }
+                                        });
+                                        
+                                        const maxRows = Math.max(
+                                            bahanBakuItems.length,
+                                            finishingDalamItems.length,
+                                            finishingLuarItems.length,
+                                            1
+                                        );
+                                        
+                                        return (
+                                            <>
+                                                {Array.from({ length: maxRows }).map((_, rowIndex) => (
+                                                    <tr key={`${produk.id}-${rowIndex}`} className={rowIndex === 0 ? "bg-green-50 dark:bg-green-900/10" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}>
+                                                        {/* Produk Column */}
+                                                        {rowIndex === 0 && (
+                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top border-r border-gray-200 dark:border-gray-700">
+                                                                <div className="font-bold text-gray-900 dark:text-gray-100">
+                                                                    {produkIndex + 1}. {produk.nama_produk}
                                                                 </div>
-                                                                <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                                                                    Harga Akhir
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-
-                                                    {/* Jenis Items & Items Rows */}
-                                                    {produk.jenis_items.map(
-                                                        (
-                                                            jenisItem,
-                                                            jenisIndex,
-                                                        ) =>
-                                                            jenisItem.items.map(
-                                                                (
-                                                                    item,
-                                                                    itemIndex,
-                                                                ) => (
-                                                                    <tr
-                                                                        key={`${produk.id}-${jenisIndex}-${itemIndex}`}
-                                                                        className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                                                                    >
-                                                                        <td className="px-6 py-3">
-                                                                            {itemIndex ===
-                                                                                0 && (
-                                                                                <div className="mb-1 text-xs font-semibold text-purple-600 uppercase dark:text-purple-400">
-                                                                                    {
-                                                                                        jenisItem.nama_jenis
-                                                                                    }
-                                                                                </div>
-                                                                            )}
-                                                                            <div className="pl-4 text-sm text-gray-900 dark:text-gray-100">
-                                                                                •{' '}
-                                                                                {
-                                                                                    item.nama_item
-                                                                                }
-                                                                            </div>
-                                                                        </td>
-                                                                        <td className="px-6 py-3 text-center text-sm text-gray-700 dark:text-gray-300">
-                                                                            {
-                                                                                item.qty
-                                                                            }
-                                                                        </td>
-                                                                        <td className="px-6 py-3 text-right text-sm text-gray-700 dark:text-gray-300">
-                                                                            {formatCurrency(
-                                                                                item.harga_satuan,
-                                                                            )}
-                                                                        </td>
-                                                                        <td className="px-6 py-3 text-right text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                                            {formatCurrency(
-                                                                                item.harga_total,
-                                                                            )}
-                                                                        </td>
-                                                                    </tr>
-                                                                ),
-                                                            ),
-                                                    )}
-
-                                                    {/* Subtotal × Dimensi Row */}
-                                                    <tr
-                                                        key={`subtotal-${produk.id}`}
-                                                        className="bg-blue-50 dark:bg-blue-900/20"
-                                                    >
-                                                        <td className="px-6 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">
-                                                            Subtotal × Dimensi
-                                                        </td>
-                                                        <td className="px-6 py-3 text-center text-sm text-gray-500 dark:text-gray-400">
-                                                            -
-                                                        </td>
-                                                        <td className="px-6 py-3 text-right text-sm">
-                                                            <div className="text-xs text-gray-600 dark:text-gray-400">
-                                                                Subtotal:{' '}
-                                                                {formatCurrency(
-                                                                    subtotal,
+                                                                {produk.panjang && produk.lebar && produk.tinggi && (
+                                                                    <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                                                                        {produk.panjang} × {produk.lebar} × {produk.tinggi} cm
+                                                                    </div>
                                                                 )}
-                                                            </div>
-                                                            <div className="text-xs text-gray-600 dark:text-gray-400">
-                                                                Dimensi:{' '}
-                                                                {produk.harga_dimensi.toLocaleString(
-                                                                    'id-ID',
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-3 text-right text-sm font-bold text-blue-600 dark:text-blue-400">
-                                                            {formatCurrency(
-                                                                produk.harga_satuan,
+                                                            </td>
+                                                        )}
+                                                        
+                                                        {/* Bahan Baku Column */}
+                                                        <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
+                                                            {bahanBakuItems[rowIndex] && (
+                                                                <div>• {bahanBakuItems[rowIndex]}</div>
                                                             )}
                                                         </td>
+                                                        
+                                                        {/* Finishing Dalam Column */}
+                                                        <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
+                                                            {finishingDalamItems[rowIndex] && (
+                                                                <div>• {finishingDalamItems[rowIndex]}</div>
+                                                            )}
+                                                        </td>
+                                                        
+                                                        {/* Finishing Luar Column */}
+                                                        <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
+                                                            {finishingLuarItems[rowIndex] && (
+                                                                <div>• {finishingLuarItems[rowIndex]}</div>
+                                                            )}
+                                                        </td>
+                                                        
+                                                        {/* Qty Column */}
+                                                        {rowIndex === 0 && (
+                                                            <td rowSpan={maxRows} className="px-4 py-3 text-center align-top text-sm font-medium text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
+                                                                {produk.qty_produk}
+                                                            </td>
+                                                        )}
+                                                        
+                                                        {/* Grand Total Column */}
+                                                        {rowIndex === 0 && (
+                                                            <td rowSpan={maxRows} className="bg-gradient-to-b from-green-50 to-green-100 px-4 py-3 align-top text-right dark:from-green-900/20 dark:to-green-900/30">
+                                                                <div className="text-xl font-bold text-green-700 dark:text-green-400">
+                                                                    {formatCurrency(produk.harga_akhir)}
+                                                                </div>
+                                                            </td>
+                                                        )}
                                                     </tr>
-
-                                                    {/* NO AKSESORIS for RAB Jasa */}
-                                                </>
-                                            );
-                                        },
-                                    )}
+                                                ))}
+                                            </>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>

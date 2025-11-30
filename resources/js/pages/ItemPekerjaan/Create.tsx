@@ -1,11 +1,18 @@
-import { useState, FormEvent } from 'react';
-import { router, Head } from '@inertiajs/react';
-import Sidebar from '@/components/Sidebar';
+import React, { useState } from 'react';
+import { Head, router } from '@inertiajs/react';
 import Navbar from '@/components/Navbar';
+import Sidebar from '@/components/Sidebar';
+
+interface BahanBaku {
+    id: number;
+    nama_item: string;
+    harga: number;
+}
 
 interface Produk {
     id: number;
     nama_produk: string;
+    bahan_bakus: BahanBaku[];
 }
 
 interface JenisItem {
@@ -19,541 +26,500 @@ interface Item {
     jenis_item_id: number;
 }
 
-interface ItemPekerjaan {
-    id: number;
-    moodboard: {
-        order: {
-            nama_project: string;
-            company_name: string;
-            customer_name: string;
-        };
-    };
+interface ItemData {
+    temp_id: number;
+    item_id: string | number;
+    quantity: number;
+}
+
+interface JenisItemData {
+    temp_id: number;
+    jenis_item_id: string | number;
+    items: ItemData[];
+}
+
+interface ProdukData {
+    temp_id: number;
+    produk_id: string | number;
+    quantity: number;
+    panjang: string | number;
+    lebar: string | number;
+    tinggi: string | number;
+    jenisItems: JenisItemData[];
 }
 
 interface Props {
-    itemPekerjaan: ItemPekerjaan;
+    auth: {
+        user: any;
+    };
+    itemPekerjaan: {
+        id: number;
+        moodboard: {
+            order: {
+                nama_project: string;
+                company_name: string;
+                customer_name: string;
+            };
+        };
+    };
     produks: Produk[];
     jenisItems: JenisItem[];
     items: Item[];
 }
 
-interface FormItem {
-    temp_id: string;
-    item_id: string;
-    quantity: number;
-}
-
-interface FormJenisItem {
-    temp_id: string;
-    jenis_item_id: string;
-    items: FormItem[];
-}
-
-interface FormProduk {
-    temp_id: string;
-    produk_id: string;
-    quantity: number;
-    panjang: string;
-    lebar: string;
-    tinggi: string;
-    jenisItems: FormJenisItem[];
-}
-
-export default function Create({ itemPekerjaan, produks, jenisItems, items }: Props) {
-    const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
-    const [loading, setLoading] = useState(false);
-    const [formProduks, setFormProduks] = useState<FormProduk[]>([]);
-
-    // Get default jenis items (Bahan Baku, Finishing Dalam, Finishing Luar)
-    const getDefaultJenisItems = () => {
-        const defaultNames = ['Bahan Baku', 'Finishing Dalam', 'Finishing Luar'];
-        return jenisItems
-            .filter(ji => defaultNames.includes(ji.nama_jenis_item))
-            .map(ji => ({
-                temp_id: `default_${ji.id}_${Date.now()}`,
-                jenis_item_id: ji.id.toString(),
-                items: [],
-            }));
-    };
+export default function Create({ auth, itemPekerjaan, produks, jenisItems, items }: Props) {
+    const [processing, setProcessing] = useState(false);
+    const [errors, setErrors] = useState<any>({});
+    const [selectedProduks, setSelectedProduks] = useState<ProdukData[]>([]);
 
     const addProduk = () => {
-        setFormProduks([...formProduks, {
-            temp_id: Date.now().toString(),
+        const newProduk: ProdukData = {
+            temp_id: Date.now(),
             produk_id: '',
             quantity: 1,
             panjang: '',
             lebar: '',
             tinggi: '',
-            jenisItems: getDefaultJenisItems(), // Auto-add 3 default jenis items
-        }]);
+            jenisItems: [],
+        };
+        setSelectedProduks([...selectedProduks, newProduk]);
     };
 
-    const removeProduk = (tempId: string) => {
-        setFormProduks(formProduks.filter(p => p.temp_id !== tempId));
+    const removeProduk = (tempId: number) => {
+        setSelectedProduks(selectedProduks.filter(p => p.temp_id !== tempId));
     };
 
-    const updateProduk = (tempId: string, field: string, value: any) => {
-        setFormProduks(formProduks.map(p =>
+    const updateProduk = (tempId: number, field: keyof ProdukData, value: any) => {
+        setSelectedProduks(selectedProduks.map(p => 
             p.temp_id === tempId ? { ...p, [field]: value } : p
         ));
     };
 
-    const addJenisItem = (produkTempId: string) => {
-        setFormProduks(formProduks.map(p =>
-            p.temp_id === produkTempId
-                ? {
+    const addJenisItem = (produkTempId: number) => {
+        setSelectedProduks(selectedProduks.map(p => {
+            if (p.temp_id === produkTempId) {
+                return {
                     ...p,
                     jenisItems: [...p.jenisItems, {
-                        temp_id: Date.now().toString(),
+                        temp_id: Date.now(),
                         jenis_item_id: '',
-                        items: [],
+                        items: []
                     }]
-                }
-                : p
-        ));
+                };
+            }
+            return p;
+        }));
     };
 
-    const removeJenisItem = (produkTempId: string, jenisItemTempId: string) => {
-        setFormProduks(formProduks.map(p =>
-            p.temp_id === produkTempId
-                ? { ...p, jenisItems: p.jenisItems.filter(j => j.temp_id !== jenisItemTempId) }
-                : p
-        ));
-    };
-
-    const updateJenisItem = (produkTempId: string, jenisItemTempId: string, field: string, value: any) => {
-        setFormProduks(formProduks.map(p =>
-            p.temp_id === produkTempId
-                ? {
+    const removeJenisItem = (produkTempId: number, jenisTempId: number) => {
+        setSelectedProduks(selectedProduks.map(p => {
+            if (p.temp_id === produkTempId) {
+                return {
                     ...p,
-                    jenisItems: p.jenisItems.map(j =>
-                        j.temp_id === jenisItemTempId ? { ...j, [field]: value } : j
+                    jenisItems: p.jenisItems.filter(j => j.temp_id !== jenisTempId)
+                };
+            }
+            return p;
+        }));
+    };
+
+    const updateJenisItem = (produkTempId: number, jenisTempId: number, value: string | number) => {
+        setSelectedProduks(selectedProduks.map(p => {
+            if (p.temp_id === produkTempId) {
+                return {
+                    ...p,
+                    jenisItems: p.jenisItems.map(j => 
+                        j.temp_id === jenisTempId ? { ...j, jenis_item_id: value, items: [] } : j
                     )
-                }
-                : p
-        ));
+                };
+            }
+            return p;
+        }));
     };
 
-    const addItem = (produkTempId: string, jenisItemTempId: string) => {
-        setFormProduks(formProduks.map(p =>
-            p.temp_id === produkTempId
-                ? {
+    const addItem = (produkTempId: number, jenisTempId: number) => {
+        setSelectedProduks(selectedProduks.map(p => {
+            if (p.temp_id === produkTempId) {
+                return {
                     ...p,
-                    jenisItems: p.jenisItems.map(j =>
-                        j.temp_id === jenisItemTempId
-                            ? {
+                    jenisItems: p.jenisItems.map(j => {
+                        if (j.temp_id === jenisTempId) {
+                            return {
                                 ...j,
                                 items: [...j.items, {
-                                    temp_id: Date.now().toString(),
+                                    temp_id: Date.now(),
                                     item_id: '',
-                                    quantity: 1,
+                                    quantity: 1
                                 }]
-                            }
-                            : j
-                    )
-                }
-                : p
-        ));
+                            };
+                        }
+                        return j;
+                    })
+                };
+            }
+            return p;
+        }));
     };
 
-    const removeItem = (produkTempId: string, jenisItemTempId: string, itemTempId: string) => {
-        setFormProduks(formProduks.map(p =>
-            p.temp_id === produkTempId
-                ? {
+    const removeItem = (produkTempId: number, jenisTempId: number, itemTempId: number) => {
+        setSelectedProduks(selectedProduks.map(p => {
+            if (p.temp_id === produkTempId) {
+                return {
                     ...p,
-                    jenisItems: p.jenisItems.map(j =>
-                        j.temp_id === jenisItemTempId
-                            ? { ...j, items: j.items.filter(i => i.temp_id !== itemTempId) }
-                            : j
-                    )
-                }
-                : p
-        ));
-    };
-
-    const updateItem = (produkTempId: string, jenisItemTempId: string, itemTempId: string, field: string, value: any) => {
-        setFormProduks(formProduks.map(p =>
-            p.temp_id === produkTempId
-                ? {
-                    ...p,
-                    jenisItems: p.jenisItems.map(j =>
-                        j.temp_id === jenisItemTempId
-                            ? {
+                    jenisItems: p.jenisItems.map(j => {
+                        if (j.temp_id === jenisTempId) {
+                            return {
                                 ...j,
-                                items: j.items.map(i =>
+                                items: j.items.filter(i => i.temp_id !== itemTempId)
+                            };
+                        }
+                        return j;
+                    })
+                };
+            }
+            return p;
+        }));
+    };
+
+    const updateItem = (produkTempId: number, jenisTempId: number, itemTempId: number, field: keyof ItemData, value: any) => {
+        setSelectedProduks(selectedProduks.map(p => {
+            if (p.temp_id === produkTempId) {
+                return {
+                    ...p,
+                    jenisItems: p.jenisItems.map(j => {
+                        if (j.temp_id === jenisTempId) {
+                            return {
+                                ...j,
+                                items: j.items.map(i => 
                                     i.temp_id === itemTempId ? { ...i, [field]: value } : i
                                 )
-                            }
-                            : j
-                    )
-                }
-                : p
-        ));
-    };
-
-    const getAvailableItems = (jenisItemId: string) => {
-        return items.filter(item => item.jenis_item_id === parseInt(jenisItemId));
-    };
-
-    const getUsedJenisItemIds = (produkTempId: string) => {
-        const produk = formProduks.find(p => p.temp_id === produkTempId);
-        return produk ? produk.jenisItems.map(j => j.jenis_item_id) : [];
-    };
-
-    const isDefaultJenisItem = (jenisItemId: string) => {
-        const defaultNames = ['Bahan Baku', 'Finishing Dalam', 'Finishing Luar'];
-        const jenisItem = jenisItems.find(j => j.id.toString() === jenisItemId);
-        return jenisItem ? defaultNames.includes(jenisItem.nama_jenis_item) : false;
-    };
-
-    const getJenisItemName = (jenisItemId: string) => {
-        const jenisItem = jenisItems.find(j => j.id.toString() === jenisItemId);
-        return jenisItem ? jenisItem.nama_jenis_item : '';
-    };
-
-    const handleSubmit = (e: FormEvent) => {
-        e.preventDefault();
-
-        if (formProduks.length === 0) {
-            alert('Tambahkan minimal 1 produk');
-            return;
-        }
-
-        // Validate
-        for (const produk of formProduks) {
-            if (!produk.produk_id) {
-                alert('Semua produk harus dipilih');
-                return;
+                            };
+                        }
+                        return j;
+                    })
+                };
             }
-        }
+            return p;
+        }));
+    };
 
-        setLoading(true);
+    const getAvailableItems = (jenisItemId: string | number): Item[] => {
+        return items.filter(item => item.jenis_item_id == jenisItemId);
+    };
 
-        // Transform data - set qty = 1 for default jenis items
-        const dataToSend = {
+    const getSelectedProduk = (produkId: string | number): Produk | undefined => {
+        return produks.find(p => p.id == produkId);
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        const formData = {
             item_pekerjaan_id: itemPekerjaan.id,
-            produks: formProduks.map(p => ({
-                produk_id: parseInt(p.produk_id),
+            produks: selectedProduks.map(p => ({
+                produk_id: p.produk_id,
                 quantity: p.quantity,
-                panjang: p.panjang ? parseFloat(p.panjang) : null,
-                lebar: p.lebar ? parseFloat(p.lebar) : null,
-                tinggi: p.tinggi ? parseFloat(p.tinggi) : null,
-                jenisItems: p.jenisItems.map(j => ({
-                    jenis_item_id: parseInt(j.jenis_item_id),
-                    items: j.items.map(i => ({
-                        item_id: parseInt(i.item_id),
-                        // Force qty = 1 for default jenis items (Bahan Baku, Finishing Dalam, Finishing Luar)
-                        quantity: isDefaultJenisItem(j.jenis_item_id) ? 1 : i.quantity,
-                    })),
-                })),
-            })),
+                panjang: p.panjang || null,
+                lebar: p.lebar || null,
+                tinggi: p.tinggi || null,
+                jenisItems: p.jenisItems.map(j => {
+                    // Cek apakah jenis item adalah Aksesoris
+                    const selectedJenisItem = jenisItems.find(ji => ji.id.toString() === j.jenis_item_id.toString());
+                    const isAksesoris = selectedJenisItem?.nama_jenis_item?.toLowerCase() === 'aksesoris';
+                    
+                    return {
+                        jenis_item_id: j.jenis_item_id,
+                        items: j.items.map(i => ({
+                            item_id: i.item_id,
+                            // Set quantity default 1 untuk non-Aksesoris
+                            quantity: isAksesoris ? i.quantity : 1
+                        }))
+                    };
+                })
+            }))
         };
-
-        router.post('/item-pekerjaan/store', dataToSend, {
+        
+        // Use router.post directly
+        setProcessing(true);
+        router.post(route('item-pekerjaan.store'), formData, {
             onSuccess: () => {
-                setLoading(false);
+                setProcessing(false);
             },
             onError: (errors) => {
-                console.error(errors);
-                alert('Gagal menyimpan data');
-                setLoading(false);
+                setErrors(errors);
+                setProcessing(false);
             },
         });
     };
 
+    // Sidebar state
+    const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
+
     return (
         <>
-            <Head title="Input Item Pekerjaan" />
-            
+            <Head title="Tambah Item Pekerjaan" />
             <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-            <Sidebar isOpen={sidebarOpen} currentPage="item-pekerjaan" onClose={() => setSidebarOpen(false)} />
+            <Sidebar
+                isOpen={sidebarOpen}
+                currentPage="item-pekerjaan"
+                onClose={() => setSidebarOpen(false)}
+            />
 
-            <div className="p-3 lg:ml-60">
-                <div className="mt-12 p-3">
-                    {/* Header */}
-                    <div className="mb-8">
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => router.visit('/item-pekerjaan')}
-                                className="flex h-10 w-10 items-center justify-center rounded-lg border border-stone-200 text-stone-600 transition-colors hover:bg-stone-50"
-                            >
-                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                </svg>
-                            </button>
-                            <div>
-                                <h1 className="text-3xl font-light text-stone-800" style={{ fontFamily: "'Playfair Display', serif" }}>
-                                    Input Item Pekerjaan
-                                </h1>
-                                <p className="text-sm text-stone-500">
-                                    {itemPekerjaan.moodboard.order.nama_project} • {itemPekerjaan.moodboard.order.company_name}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+            <div className={`p-3 pt-16 transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : 'ml-0'}`}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                        <div className="p-6">
+                            <h2 className="text-2xl font-bold mb-6">Tambah Item Pekerjaan</h2>
 
-                    {/* Form */}
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Produks */}
-                        <div className="rounded-lg border border-stone-200 bg-white p-6">
-                            <div className="mb-4 flex items-center justify-between">
-                                <h3 className="text-lg font-semibold text-stone-800">📦 Produk</h3>
-                                <button
-                                    type="button"
-                                    onClick={addProduk}
-                                    className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700"
-                                >
-                                    + Tambah Produk
-                                </button>
+                            {/* Project Info */}
+                            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                                <h3 className="font-semibold mb-2">Informasi Project</h3>
+                                <p><strong>Project:</strong> {itemPekerjaan.moodboard.order.nama_project}</p>
+                                <p><strong>Company:</strong> {itemPekerjaan.moodboard.order.company_name}</p>
+                                <p><strong>Customer:</strong> {itemPekerjaan.moodboard.order.customer_name}</p>
                             </div>
 
-                            {formProduks.length === 0 ? (
-                                <div className="rounded-lg border-2 border-dashed border-stone-200 bg-stone-50 p-8 text-center">
-                                    <p className="text-sm text-stone-500">Klik "Tambah Produk" untuk memulai</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-6">
-                                    {formProduks.map((produk, pIndex) => (
-                                        <div key={produk.temp_id} className="rounded-lg border border-purple-200 bg-purple-50 p-4">
-                                            {/* Produk Header */}
-                                            <div className="mb-4 flex items-start justify-between">
-                                                <h4 className="font-semibold text-purple-900">Produk #{pIndex + 1}</h4>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeProduk(produk.temp_id)}
-                                                    className="text-red-600 hover:text-red-800"
-                                                >
-                                                    Hapus Produk
-                                                </button>
-                                            </div>
+                            <form onSubmit={handleSubmit}>
+                                {/* Produks */}
+                                <div className="mb-6">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="text-lg font-semibold">Produk</h3>
+                                        <button
+                                            type="button"
+                                            onClick={addProduk}
+                                            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                                        >
+                                            + Tambah Produk
+                                        </button>
+                                    </div>
 
-                                            {/* Produk Form */}
-                                            <div className="mb-4 space-y-4">
-                                                {/* Produk & Quantity */}
-                                                <div className="grid grid-cols-2 gap-4">
+                                    {selectedProduks.map((produk, produkIndex) => {
+                                        const selectedProdukData = getSelectedProduk(produk.produk_id);
+                                        
+                                        return (
+                                            <div key={produk.temp_id} className="border rounded-lg p-4 mb-4 bg-gray-50">
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <h4 className="font-semibold">Produk #{produkIndex + 1}</h4>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeProduk(produk.temp_id)}
+                                                        className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600"
+                                                    >
+                                                        Hapus Produk
+                                                    </button>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4 mb-4">
                                                     <div>
-                                                        <label className="mb-2 block text-sm font-medium text-stone-700">
-                                                            Pilih Produk <span className="text-red-500">*</span>
-                                                        </label>
+                                                        <label className="block text-sm font-medium mb-1">Nama Produk *</label>
                                                         <select
                                                             value={produk.produk_id}
                                                             onChange={(e) => updateProduk(produk.temp_id, 'produk_id', e.target.value)}
-                                                            className="w-full rounded-lg border border-stone-300 px-4 py-2.5"
+                                                            className="w-full border rounded px-3 py-2"
                                                             required
                                                         >
-                                                            <option value="">-- Pilih --</option>
+                                                            <option value="">Pilih Produk</option>
                                                             {produks.map(p => (
                                                                 <option key={p.id} value={p.id}>{p.nama_produk}</option>
                                                             ))}
                                                         </select>
                                                     </div>
                                                     <div>
-                                                        <label className="mb-2 block text-sm font-medium text-stone-700">
-                                                            Quantity <span className="text-red-500">*</span>
-                                                        </label>
+                                                        <label className="block text-sm font-medium mb-1">Quantity *</label>
                                                         <input
                                                             type="number"
-                                                            min="1"
                                                             value={produk.quantity}
-                                                            onChange={(e) => updateProduk(produk.temp_id, 'quantity', parseInt(e.target.value))}
-                                                            className="w-full rounded-lg border border-stone-300 px-4 py-2.5"
+                                                            onChange={(e) => updateProduk(produk.temp_id, 'quantity', e.target.value)}
+                                                            className="w-full border rounded px-3 py-2"
+                                                            min="1"
                                                             required
                                                         />
                                                     </div>
                                                 </div>
 
-                                                {/* Dimensi */}
-                                                <div>
-                                                    <label className="mb-2 block text-sm font-medium text-stone-700">
-                                                        📏 Dimensi (cm)
-                                                    </label>
-                                                    <div className="grid grid-cols-3 gap-4">
-                                                        <div>
-                                                            <input
-                                                                type="number"
-                                                                step="any"
-                                                                min="0"
-                                                                placeholder="Panjang"
-                                                                value={produk.panjang}
-                                                                onChange={(e) => updateProduk(produk.temp_id, 'panjang', e.target.value)}
-                                                                className="w-full rounded-lg border border-stone-300 px-4 py-2.5"
-                                                            />
-                                                            <p className="mt-1 text-xs text-stone-500">Panjang</p>
-                                                        </div>
-                                                        <div>
-                                                            <input
-                                                                type="number"
-                                                                step="any"
-                                                                min="0"
-                                                                placeholder="Lebar"
-                                                                value={produk.lebar}
-                                                                onChange={(e) => updateProduk(produk.temp_id, 'lebar', e.target.value)}
-                                                                className="w-full rounded-lg border border-stone-300 px-4 py-2.5"
-                                                            />
-                                                            <p className="mt-1 text-xs text-stone-500">Lebar</p>
-                                                        </div>
-                                                        <div>
-                                                            <input
-                                                                type="number"
-                                                                step="any"
-                                                                min="0"
-                                                                placeholder="Tinggi"
-                                                                value={produk.tinggi}
-                                                                onChange={(e) => updateProduk(produk.temp_id, 'tinggi', e.target.value)}
-                                                                className="w-full rounded-lg border border-stone-300 px-4 py-2.5"
-                                                            />
-                                                            <p className="mt-1 text-xs text-stone-500">Tinggi</p>
-                                                        </div>
+                                                <div className="grid grid-cols-3 gap-4 mb-4">
+                                                    <div>
+                                                        <label className="block text-sm font-medium mb-1">Panjang (cm)</label>
+                                                        <input
+                                                            type="number"
+                                                            value={produk.panjang}
+                                                            onChange={(e) => updateProduk(produk.temp_id, 'panjang', e.target.value)}
+                                                            className="w-full border rounded px-3 py-2"
+                                                            step="0.01"
+                                                            min="0"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium mb-1">Lebar (cm)</label>
+                                                        <input
+                                                            type="number"
+                                                            value={produk.lebar}
+                                                            onChange={(e) => updateProduk(produk.temp_id, 'lebar', e.target.value)}
+                                                            className="w-full border rounded px-3 py-2"
+                                                            step="0.01"
+                                                            min="0"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium mb-1">Tinggi (cm)</label>
+                                                        <input
+                                                            type="number"
+                                                            value={produk.tinggi}
+                                                            onChange={(e) => updateProduk(produk.temp_id, 'tinggi', e.target.value)}
+                                                            className="w-full border rounded px-3 py-2"
+                                                            step="0.01"
+                                                            min="0"
+                                                        />
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            {/* Jenis Items Section */}
-                                            <div className="mt-4 rounded-lg border border-green-200 bg-white p-4">
-                                                <div className="mb-3 flex items-center justify-between">
-                                                    <h5 className="text-sm font-semibold text-green-800">🔧 Jenis Item & Material</h5>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => addJenisItem(produk.temp_id)}
-                                                        className="rounded bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
-                                                    >
-                                                        + Tambah Aksesoris
-                                                    </button>
-                                                </div>
-
-                                                {produk.jenisItems.length === 0 ? (
-                                                    <p className="text-center text-xs text-stone-500">Belum ada jenis item</p>
-                                                ) : (
-                                                    <div className="space-y-3">
-                                                        {produk.jenisItems.map((jenisItem, jIndex) => {
-                                                            const isDefault = isDefaultJenisItem(jenisItem.jenis_item_id);
-                                                            return (
-                                                            <div key={jenisItem.temp_id} className={`rounded-lg border p-3 ${isDefault ? 'border-purple-200 bg-purple-50' : 'border-blue-200 bg-blue-50'}`}>
-                                                                <div className="mb-3 flex items-start justify-between">
-                                                                    <span className={`text-sm font-medium ${isDefault ? 'text-purple-900' : 'text-blue-900'}`}>
-                                                                        {isDefault ? '📌 ' : ''}Jenis Item #{jIndex + 1}
-                                                                    </span>
-                                                                    {!isDefault && (
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => removeJenisItem(produk.temp_id, jenisItem.temp_id)}
-                                                                            className="text-xs text-red-600 hover:text-red-800"
-                                                                        >
-                                                                            Hapus
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-
-                                                                <div className="mb-3">
-                                                                    {isDefault ? (
-                                                                        <div className="rounded-lg border border-purple-300 bg-purple-100 px-3 py-2 text-sm font-semibold text-purple-900">
-                                                                            {getJenisItemName(jenisItem.jenis_item_id)}
-                                                                        </div>
-                                                                    ) : (
-                                                                        <select
-                                                                            value={jenisItem.jenis_item_id}
-                                                                            onChange={(e) => updateJenisItem(produk.temp_id, jenisItem.temp_id, 'jenis_item_id', e.target.value)}
-                                                                            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm"
-                                                                            required
-                                                                        >
-                                                                            <option value="">-- Pilih Jenis Item --</option>
-                                                                            {jenisItems.filter(j => {
-                                                                                const defaultNames = ['Bahan Baku', 'Finishing Dalam', 'Finishing Luar'];
-                                                                                return !defaultNames.includes(j.nama_jenis_item) && (!getUsedJenisItemIds(produk.temp_id).includes(j.id.toString()) || j.id.toString() === jenisItem.jenis_item_id);
-                                                                            }).map(j => (
-                                                                                <option key={j.id} value={j.id}>{j.nama_jenis_item}</option>
-                                                                            ))}
-                                                                        </select>
-                                                                    )}
-                                                                </div>
-
-                                                                {/* Items */}
-                                                                {jenisItem.jenis_item_id && (
-                                                                    <div className="mt-3 rounded bg-white p-3">
-                                                                        <div className="mb-2 flex items-center justify-between">
-                                                                            <span className="text-xs font-medium text-stone-700">Item Material</span>
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => addItem(produk.temp_id, jenisItem.temp_id)}
-                                                                                className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700"
-                                                                            >
-                                                                                + Tambah Item
-                                                                            </button>
-                                                                        </div>
-
-                                                                        {jenisItem.items.length === 0 ? (
-                                                                            <p className="text-center text-xs text-stone-400">Belum ada item</p>
-                                                                        ) : (
-                                                                            <div className="space-y-2">
-                                                                                {jenisItem.items.map((item, iIndex) => (
-                                                                                    <div key={item.temp_id} className="flex items-center gap-2">
-                                                                                        <select
-                                                                                            value={item.item_id}
-                                                                                            onChange={(e) => updateItem(produk.temp_id, jenisItem.temp_id, item.temp_id, 'item_id', e.target.value)}
-                                                                                            className="flex-1 rounded border border-stone-300 px-2 py-1.5 text-xs"
-                                                                                            required
-                                                                                        >
-                                                                                            <option value="">-- Pilih Item --</option>
-                                                                                            {getAvailableItems(jenisItem.jenis_item_id).map(i => (
-                                                                                                <option key={i.id} value={i.id}>{i.nama_item}</option>
-                                                                                            ))}
-                                                                                        </select>
-                                                                                        {!isDefault && (
-                                                                                            <input
-                                                                                                type="number"
-                                                                                                min="1"
-                                                                                                value={item.quantity}
-                                                                                                onChange={(e) => updateItem(produk.temp_id, jenisItem.temp_id, item.temp_id, 'quantity', parseInt(e.target.value))}
-                                                                                                className="w-20 rounded border border-stone-300 px-2 py-1.5 text-xs"
-                                                                                                placeholder="Qty"
-                                                                                                required
-                                                                                            />
-                                                                                        )}
-                                                                                        <button
-                                                                                            type="button"
-                                                                                            onClick={() => removeItem(produk.temp_id, jenisItem.temp_id, item.temp_id)}
-                                                                                            className="text-red-600 hover:text-red-800"
-                                                                                        >
-                                                                                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                                                            </svg>
-                                                                                        </button>
-                                                                                    </div>
-                                                                                ))}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            );
-                                                        })}
+                                                {/* Bahan Baku (Read-only) */}
+                                                {selectedProdukData && selectedProdukData.bahan_bakus.length > 0 && (
+                                                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+                                                        <h5 className="font-semibold text-sm mb-2 text-blue-800">
+                                                            📦 Bahan Baku (Auto-generated dari Produk)
+                                                        </h5>
+                                                        <ul className="list-disc list-inside text-sm text-gray-700">
+                                                            {selectedProdukData.bahan_bakus.map(bb => (
+                                                                <li key={bb.id}>{bb.nama_item}</li>
+                                                            ))}
+                                                        </ul>
+                                                        <p className="text-xs text-gray-500 mt-2">
+                                                            * Bahan baku tidak perlu diinput manual, akan otomatis tersimpan
+                                                        </p>
                                                     </div>
                                                 )}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
 
-                        {/* Submit Button */}
-                        <div className="flex items-center justify-end gap-3">
-                            <button
-                                type="button"
-                                onClick={() => router.visit('/item-pekerjaan')}
-                                className="rounded-lg border border-stone-300 px-6 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-50"
-                            >
-                                Batal
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={loading || formProduks.length === 0}
-                                className="rounded-lg bg-purple-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-purple-700 disabled:bg-stone-300"
-                            >
-                                {loading ? 'Menyimpan...' : 'Simpan Semua'}
-                            </button>
+                                                {/* Jenis Items (Exclude Bahan Baku) */}
+                                                <div className="mt-4">
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <h5 className="font-semibold text-sm">Finishing & Aksesoris</h5>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => addJenisItem(produk.temp_id)}
+                                                            className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
+                                                        >
+                                                            + Tambah Kategori
+                                                        </button>
+                                                    </div>
+
+                                                    {produk.jenisItems.map((jenisItem) => (
+                                                        <div key={jenisItem.temp_id} className="border rounded p-3 mb-3 bg-white">
+                                                            <div className="flex justify-between items-start mb-2">
+                                                                <label className="block text-sm font-medium">Kategori Item</label>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeJenisItem(produk.temp_id, jenisItem.temp_id)}
+                                                                    className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600"
+                                                                >
+                                                                    Hapus
+                                                                </button>
+                                                            </div>
+                                                            
+                                                            <select
+                                                                value={jenisItem.jenis_item_id}
+                                                                onChange={(e) => updateJenisItem(produk.temp_id, jenisItem.temp_id, e.target.value)}
+                                                                className="w-full border rounded px-3 py-2 mb-2"
+                                                                required
+                                                            >
+                                                                <option value="">Pilih Kategori</option>
+                                                                {jenisItems.map(ji => (
+                                                                    <option key={ji.id} value={ji.id}>{ji.nama_jenis_item}</option>
+                                                                ))}
+                                                            </select>
+
+                                                            {jenisItem.jenis_item_id && (
+                                                                <div className="mt-2">
+                                                                    <div className="flex justify-between items-center mb-2">
+                                                                        <label className="block text-sm font-medium">Items</label>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => addItem(produk.temp_id, jenisItem.temp_id)}
+                                                                            className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600"
+                                                                        >
+                                                                            + Tambah Item
+                                                                        </button>
+                                                                    </div>
+
+                                                                    {jenisItem.items.map((item) => {
+                                                                        // Cek apakah jenis item adalah Aksesoris
+                                                                        const selectedJenisItem = jenisItems.find(ji => ji.id.toString() === jenisItem.jenis_item_id.toString());
+                                                                        const isAksesoris = selectedJenisItem?.nama_jenis_item?.toLowerCase() === 'aksesoris';
+                                                                        
+                                                                        return (
+                                                                            <div key={item.temp_id} className="flex gap-2 mb-2">
+                                                                                <select
+                                                                                    value={item.item_id}
+                                                                                    onChange={(e) => updateItem(produk.temp_id, jenisItem.temp_id, item.temp_id, 'item_id', e.target.value)}
+                                                                                    className="flex-1 border rounded px-3 py-1 text-sm"
+                                                                                    required
+                                                                                >
+                                                                                    <option value="">Pilih Item</option>
+                                                                                    {getAvailableItems(jenisItem.jenis_item_id).map(i => (
+                                                                                        <option key={i.id} value={i.id}>{i.nama_item}</option>
+                                                                                    ))}
+                                                                                </select>
+                                                                                {/* Hanya tampilkan quantity jika jenis item adalah Aksesoris */}
+                                                                                {isAksesoris && (
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        value={item.quantity}
+                                                                                        onChange={(e) => updateItem(produk.temp_id, jenisItem.temp_id, item.temp_id, 'quantity', e.target.value)}
+                                                                                        className="w-24 border rounded px-3 py-1 text-sm"
+                                                                                        min="1"
+                                                                                        placeholder="Qty"
+                                                                                        required
+                                                                                    />
+                                                                                )}
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => removeItem(produk.temp_id, jenisItem.temp_id, item.temp_id)}
+                                                                                    className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600"
+                                                                                >
+                                                                                    ×
+                                                                                </button>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {errors && Object.keys(errors).length > 0 && (
+                                    <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded">
+                                        <p className="text-red-800 font-semibold mb-2">Terdapat error:</p>
+                                        <ul className="list-disc list-inside text-sm text-red-700">
+                                            {Object.values(errors).map((error, idx) => (
+                                                <li key={idx}>{String(error)}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                <div className="flex gap-4">
+                                    <button
+                                        type="submit"
+                                        disabled={processing || selectedProduks.length === 0}
+                                        className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
+                                    >
+                                        {processing ? 'Menyimpan...' : 'Simpan'}
+                                    </button>
+                                    <a
+                                        href={route('item-pekerjaan.index')}
+                                        className="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600"
+                                    >
+                                        Batal
+                                    </a>
+                                </div>
+                            </form>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </div>
         </>

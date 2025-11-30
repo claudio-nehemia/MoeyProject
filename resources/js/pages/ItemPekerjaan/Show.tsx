@@ -294,9 +294,16 @@ export default function Show({ itemPekerjaan }: Props) {
                                                                                 {jIndex + 1}
                                                                             </div>
                                                                             <div>
-                                                                                <h5 className="font-semibold text-green-900">
-                                                                                    {jenisItem.jenis_item_name}
-                                                                                </h5>
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <h5 className="font-semibold text-green-900">
+                                                                                        {jenisItem.jenis_item_name}
+                                                                                    </h5>
+                                                                                    {jenisItem.jenis_item_name === 'Bahan Baku' && (
+                                                                                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">
+                                                                                            Auto-load
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
                                                                                 <p className="text-xs text-green-600">
                                                                                     {jenisItem.items.length} Item
                                                                                 </p>

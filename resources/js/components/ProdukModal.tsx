@@ -8,6 +8,7 @@ interface ProdukImage {
 interface Item {
     id: number;
     nama_item: string;
+    harga?: number;
 }
 
 interface ProdukModalProps {
@@ -16,12 +17,15 @@ interface ProdukModalProps {
     processing: boolean;
     data: {
         nama_produk: string;
+        harga_dasar: string;
         harga: string;
+        harga_jasa: string;
         bahan_baku: number[];
     };
     errors: {
         nama_produk?: string;
         harga?: string;
+        harga_jasa?: string;
         produk_images?: string;
         bahan_baku?: string;
     };
@@ -55,6 +59,35 @@ export default function ProdukModal({
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [currentExistingIndex, setCurrentExistingIndex] = useState(0);
     const [searchBahan, setSearchBahan] = useState("");
+
+    // Helper function untuk parse angka dengan aman
+    const safeParseFloat = (value: string | number | undefined): number => {
+        if (typeof value === 'number') {
+            return isNaN(value) || !isFinite(value) ? 0 : value;
+        }
+        if (typeof value === 'string') {
+            const cleaned = value.replace(/[^\d.-]/g, '');
+            const parsed = parseFloat(cleaned);
+            return isNaN(parsed) || !isFinite(parsed) ? 0 : parsed;
+        }
+        return 0;
+    };
+
+    // Hitung total harga bahan baku
+    const calculateTotalBahanBaku = (): number => {
+        return (data.bahan_baku || []).reduce((sum: number, id: number) => {
+            const item = bahanBakuItems.find(b => b.id === id);
+            const harga = safeParseFloat(item?.harga);
+            return sum + harga;
+        }, 0);
+    };
+
+    // Hitung total harga
+    const calculateTotalHarga = (): number => {
+        const hargaDasar = safeParseFloat(data.harga_dasar);
+        const totalBahanBaku = calculateTotalBahanBaku();
+        return hargaDasar + totalBahanBaku;
+    };
 
     if (!show) return null;
 
@@ -193,18 +226,26 @@ export default function ProdukModal({
 
                     <div>
                         <label className="block text-xs sm:text-sm font-semibold text-stone-700 mb-1.5">
-                            Harga
+                            Harga Dasar Produk
                         </label>
                         <div className="relative">
                             <span className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-stone-500 font-medium text-sm">Rp</span>
                             <input
                                 type="number"
-                                value={data.harga}
-                                onChange={(e) => onDataChange('harga', e.target.value)}
+                                value={data.harga_dasar}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    // Hanya izinkan angka, titik, dan minus di awal
+                                    if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
+                                        onDataChange('harga_dasar', value);
+                                    }
+                                }}
                                 className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm border border-stone-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all"
                                 placeholder="0"
                                 disabled={processing}
                                 step="0.01"
+                                min="0"
+                                max="9999999999999.99"
                             />
                         </div>
                         {errors.harga && (
@@ -213,6 +254,40 @@ export default function ProdukModal({
                                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                                 </svg>
                                 {errors.harga}
+                            </div>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="block text-xs sm:text-sm font-semibold text-stone-700 mb-1.5">
+                            Harga Jasa
+                        </label>
+                        <div className="relative">
+                            <span className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-stone-500 font-medium text-sm">Rp</span>
+                            <input
+                                type="number"
+                                value={data.harga_jasa || ''}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    // Hanya izinkan angka, titik, dan minus di awal
+                                    if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
+                                        onDataChange('harga_jasa', value);
+                                    }
+                                }}
+                                className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm border border-stone-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all"
+                                placeholder="0"
+                                disabled={processing}
+                                step="0.01"
+                                min="0"
+                                max="9999999999999.99"
+                            />
+                        </div>
+                        {errors.harga_jasa && (
+                            <div className="flex items-center gap-1.5 mt-1 text-red-600 text-xs">
+                                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                                {errors.harga_jasa}
                             </div>
                         )}
                     </div>
@@ -238,16 +313,23 @@ export default function ProdukModal({
                                     {filteredBahanBaku.map((item) => (
                                         <label
                                             key={item.id}
-                                            className="flex items-center gap-3 p-3 hover:bg-stone-50 cursor-pointer transition-colors"
+                                            className="flex items-center justify-between gap-3 p-3 hover:bg-stone-50 cursor-pointer transition-colors"
                                         >
-                                            <input
-                                                type="checkbox"
-                                                checked={data.bahan_baku?.includes(item.id) || false}
-                                                onChange={() => toggleBahanBaku(item.id)}
-                                                className="w-4 h-4 text-rose-600 border-stone-300 rounded focus:ring-rose-500"
-                                                disabled={processing}
-                                            />
-                                            <span className="text-sm text-stone-700">{item.nama_item}</span>
+                                            <div className="flex items-center gap-3 flex-1">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={data.bahan_baku?.includes(item.id) || false}
+                                                    onChange={() => toggleBahanBaku(item.id)}
+                                                    className="w-4 h-4 text-rose-600 border-stone-300 rounded focus:ring-rose-500"
+                                                    disabled={processing}
+                                                />
+                                                <span className="text-sm text-stone-700">{item.nama_item}</span>
+                                            </div>
+                                            {item.harga !== undefined && (
+                                                <span className="text-xs font-semibold text-rose-600 whitespace-nowrap">
+                                                    Rp {new Intl.NumberFormat('id-ID').format(item.harga)}
+                                                </span>
+                                            )}
                                         </label>
                                     ))}
                                 </div>
@@ -258,11 +340,33 @@ export default function ProdukModal({
                             )}
                         </div>
 
-                        {data.bahan_baku && data.bahan_baku.length > 0 && (
-                            <div className="mt-2 text-xs text-stone-600">
-                                {data.bahan_baku.length} material{data.bahan_baku.length !== 1 ? 's' : ''} selected
+                        <div className="mt-3 space-y-2">
+                            {data.bahan_baku && data.bahan_baku.length > 0 && (
+                                <div className="text-xs text-stone-600">
+                                    {data.bahan_baku.length} material{data.bahan_baku.length !== 1 ? 's' : ''} selected
+                                </div>
+                            )}
+                            <div className="bg-stone-50 rounded-lg p-3 space-y-1.5">
+                                <div className="flex justify-between text-xs">
+                                    <span className="text-stone-600">Harga Dasar:</span>
+                                    <span className="font-semibold text-stone-700">
+                                        Rp {new Intl.NumberFormat('id-ID').format(safeParseFloat(data.harga_dasar))}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between text-xs">
+                                    <span className="text-stone-600">Total Bahan Baku:</span>
+                                    <span className="font-semibold text-stone-700">
+                                        Rp {new Intl.NumberFormat('id-ID').format(calculateTotalBahanBaku())}
+                                    </span>
+                                </div>
+                                <div className="border-t border-stone-200 pt-1.5 flex justify-between text-sm">
+                                    <span className="font-semibold text-stone-700">Total Harga:</span>
+                                    <span className="font-bold text-rose-600">
+                                        Rp {new Intl.NumberFormat('id-ID').format(calculateTotalHarga())}
+                                    </span>
+                                </div>
                             </div>
-                        )}
+                        </div>
 
                         {errors.bahan_baku && (
                             <div className="flex items-center gap-1.5 mt-2 text-red-600 text-xs">

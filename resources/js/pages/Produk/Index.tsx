@@ -14,6 +14,7 @@ interface ProdukImage {
 interface Item {
     id: number;
     nama_item: string;
+    harga?: number;
     jenis_item?: {
         nama_jenis_item: string;
     };
@@ -23,6 +24,7 @@ interface Produk {
     id: number;
     nama_produk: string;
     harga: number;
+    harga_jasa: number;
     created_at: string;
     updated_at: string;
     produk_images: ProdukImage[];
@@ -51,7 +53,9 @@ export default function Index({ produks, bahanBakuItems = [] }: Props) {
 
     const { data, setData, post, processing, errors, reset } = useForm({
         nama_produk: "",
+        harga_dasar: "",
         harga: "",
+        harga_jasa: "",
         produk_images: [] as File[],
         bahan_baku: [] as number[],
         _method: 'POST'
@@ -84,11 +88,38 @@ export default function Index({ produks, bahanBakuItems = [] }: Props) {
     const openEditModal = (produk: Produk) => {
         setSelectedProduk(produk);
         setSelectedImages([]);
+        
+        // Helper function untuk parse angka dengan aman
+        const safeParseFloat = (value: number | string | undefined): number => {
+            if (typeof value === 'number') {
+                return isNaN(value) || !isFinite(value) ? 0 : value;
+            }
+            if (typeof value === 'string') {
+                const parsed = parseFloat(value);
+                return isNaN(parsed) || !isFinite(parsed) ? 0 : parsed;
+            }
+            return 0;
+        };
+        
+        // Hitung total harga bahan baku yang sudah dipilih
+        // Gunakan harga dari produk.bahan_bakus yang sudah di-include dari backend
+        const selectedBahanBakuIds = produk.bahan_bakus?.map(item => item.id) || [];
+        const totalBahanBaku = (produk.bahan_bakus || []).reduce((sum, item) => {
+            const harga = safeParseFloat(item.harga);
+            return sum + harga;
+        }, 0);
+        
+        // Harga dasar = total harga - total bahan baku
+        const produkHarga = safeParseFloat(produk.harga);
+        const hargaDasar = Math.max(0, produkHarga - totalBahanBaku);
+        
         setData({
             nama_produk: produk.nama_produk,
+            harga_dasar: hargaDasar.toString(),
             harga: produk.harga.toString(),
+            harga_jasa: (produk.harga_jasa || 0).toString(),
             produk_images: [],
-            bahan_baku: produk.bahan_bakus?.map(item => item.id) || [],
+            bahan_baku: selectedBahanBakuIds,
             _method: 'POST'
         });
         setEditMode(true);
@@ -106,9 +137,39 @@ export default function Index({ produks, bahanBakuItems = [] }: Props) {
     const handleSubmit: FormEventHandler = (e) => {
         e.preventDefault();
         
+        // Helper function untuk parse angka dengan aman
+        const safeParseFloat = (value: string | number | undefined): number => {
+            if (typeof value === 'number') {
+                return isNaN(value) || !isFinite(value) ? 0 : value;
+            }
+            if (typeof value === 'string') {
+                const parsed = parseFloat(value.replace(/[^\d.-]/g, ''));
+                return isNaN(parsed) || !isFinite(parsed) ? 0 : parsed;
+            }
+            return 0;
+        };
+        
+        // Hitung total harga bahan baku yang dipilih
+        const totalBahanBaku = (data.bahan_baku || []).reduce((sum: number, itemId: number) => {
+            const item = bahanBakuItems.find(b => b.id === itemId);
+            const harga = safeParseFloat(item?.harga);
+            return sum + harga;
+        }, 0);
+        
+        // Total harga = harga dasar + total bahan baku
+        const hargaDasar = safeParseFloat(data.harga_dasar as string);
+        const totalHarga = hargaDasar + totalBahanBaku;
+        
+        // Validasi: pastikan total harga tidak terlalu besar (max 9999999999999.99 untuk decimal 15,2)
+        if (totalHarga > 9999999999999.99) {
+            alert('Total harga terlalu besar. Maksimal: Rp 9.999.999.999.999,99');
+            return;
+        }
+        
         const formData = new FormData();
         formData.append('nama_produk', data.nama_produk);
-        formData.append('harga', data.harga);
+        formData.append('harga', totalHarga.toString());
+        formData.append('harga_jasa', (data.harga_jasa as string) || '0');
         
         // Append all selected images
         selectedImages.forEach((file, index) => {
@@ -236,6 +297,7 @@ export default function Index({ produks, bahanBakuItems = [] }: Props) {
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Image</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Product Name</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Price</th>
+                                        <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Harga Jasa</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Bahan Baku</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-center font-semibold text-stone-700">Actions</th>
                                     </tr>
@@ -276,8 +338,55 @@ export default function Index({ produks, bahanBakuItems = [] }: Props) {
                                                 </div>
                                             </td>
                                             <td className="px-3 sm:px-4 py-2.5">
-                                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-gradient-to-r from-rose-100 to-rose-200 text-rose-700 font-semibold text-xs whitespace-nowrap">
-                                                    {formatPrice(produk.harga)}
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="inline-flex items-center px-2 py-1 rounded-full bg-gradient-to-r from-rose-100 to-rose-200 text-rose-700 font-semibold text-xs whitespace-nowrap">
+                                                        {formatPrice(produk.harga)}
+                                                    </span>
+                                                    {produk.bahan_bakus && produk.bahan_bakus.length > 0 && (() => {
+                                                        // Helper function untuk parse angka dengan aman
+                                                        const safeParseFloat = (value: number | string | undefined): number => {
+                                                            if (typeof value === 'number') {
+                                                                return isNaN(value) || !isFinite(value) ? 0 : value;
+                                                            }
+                                                            if (typeof value === 'string') {
+                                                                const parsed = parseFloat(value);
+                                                                return isNaN(parsed) || !isFinite(parsed) ? 0 : parsed;
+                                                            }
+                                                            return 0;
+                                                        };
+                                                        
+                                                        // Hitung total harga bahan baku langsung dari produk.bahan_bakus
+                                                        const totalBahanBaku = produk.bahan_bakus.reduce((sum, item) => {
+                                                            const harga = safeParseFloat(item.harga);
+                                                            return sum + harga;
+                                                        }, 0);
+                                                        
+                                                        // Harga dasar = total harga produk - total bahan baku
+                                                        const produkHarga = safeParseFloat(produk.harga);
+                                                        const hargaDasar = Math.max(0, produkHarga - totalBahanBaku);
+                                                        
+                                                        return (
+                                                            <div className="text-xs text-stone-500 space-y-0.5">
+                                                                <div className="flex items-center gap-1">
+                                                                    <span>Dasar:</span>
+                                                                    <span className="font-medium text-stone-700">
+                                                                        {formatPrice(hargaDasar)}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex items-center gap-1">
+                                                                    <span>Bahan Baku:</span>
+                                                                    <span className="font-medium text-stone-700">
+                                                                        {formatPrice(totalBahanBaku)}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </div>
+                                            </td>
+                                            <td className="px-3 sm:px-4 py-2.5">
+                                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-gradient-to-r from-green-100 to-green-200 text-green-700 font-semibold text-xs whitespace-nowrap">
+                                                    {formatPrice(produk.harga_jasa || 0)}
                                                 </span>
                                             </td>
                                             <td className="px-3 sm:px-4 py-2.5">
