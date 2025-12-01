@@ -158,16 +158,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // SURVEY RESULTS ROUTES
     Route::middleware(['permission:survey-results.index'])->group(function () {
         Route::get('survey-results', [SurveyResultsController::class, 'index'])->name('survey-results.index');
-        Route::get('survey-results/{surveyResult}', [SurveyResultsController::class, 'show'])
-            ->middleware('permission:survey-results.show')->name('survey-results.show');
     });
     Route::middleware(['permission:survey-results.create'])->group(function () {
         Route::post('survey-results', [SurveyResultsController::class, 'store'])->name('survey-results.store');
         Route::post('survey-results/{orderId}/mark-response', [SurveyResultsController::class, 'markResponse'])
             ->name('survey-results.mark-response');
     });
+    Route::get('survey-results/{surveyResult}/edit', [SurveyResultsController::class, 'edit'])
+        ->middleware('permission:survey-results.edit')->name('survey-results.edit');
     Route::put('survey-results/{surveyResult}', [SurveyResultsController::class, 'update'])
         ->middleware('permission:survey-results.edit')->name('survey-results.update');
+    Route::get('survey-results/{surveyResult}', [SurveyResultsController::class, 'show'])
+        ->middleware('permission:survey-results.show')->name('survey-results.show');
 
     // MOODBOARD ROUTES
     Route::get('moodboard', [MoodboardController::class, 'index'])
