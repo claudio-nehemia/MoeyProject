@@ -5,6 +5,14 @@ import { useEffect, useState } from 'react';
 
 type StageMap = Record<string, number>;
 
+type StageEvidence = {
+    id: number;
+    evidence_path: string;
+    notes: string | null;
+    uploaded_by: string;
+    created_at: string;
+};
+
 type Produk = {
     id: number;
     nama_produk: string;
@@ -17,7 +25,14 @@ type Produk = {
     actual_contribution: number;
     can_report_defect: boolean;
     has_active_defect: boolean;
+    has_pending_approval: boolean;
     defect_id: number | null;
+    is_completed: boolean;
+    has_bast: boolean;
+    bast_number: string | null;
+    bast_date: string | null;
+    bast_pdf_path: string | null;
+    stage_evidences: Record<string, StageEvidence[]>;
 };
 
 type Item = {
@@ -36,11 +51,22 @@ type Order = {
     item_pekerjaans: Item[];
 };
 
+type KontrakInfo = {
+    id: number;
+    durasi_kontrak: number;
+    tanggal_mulai: string | null;
+    tanggal_selesai: string | null;
+    sisa_hari: number | null;
+    deadline_status: 'overdue' | 'urgent' | 'warning' | 'normal' | null;
+} | null;
+
 export default function Detail({
     order,
+    kontrak,
     stages,
 }: {
     order: Order;
+    kontrak: KontrakInfo;
     stages: StageMap;
 }) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
@@ -52,8 +78,17 @@ export default function Detail({
     const [showDefectModal, setShowDefectModal] = useState<number | null>(null);
     const [selectedProduk, setSelectedProduk] = useState<Produk | null>(null);
     const [defectItems, setDefectItems] = useState([
-        { photo: null, notes: '' },
+        { photo: null as File | null, notes: '' },
     ]);
+    
+    // State for stage update with evidence
+    const [showStageUpdateModal, setShowStageUpdateModal] = useState<{produkId: number; targetStage: string} | null>(null);
+    const [stageEvidence, setStageEvidence] = useState<File | null>(null);
+    const [stageNotes, setStageNotes] = useState('');
+    const [generatingBast, setGeneratingBast] = useState<number | null>(null);
+    
+    // State for evidence viewer modal
+    const [showEvidenceModal, setShowEvidenceModal] = useState<{stage: string; evidences: StageEvidence[]} | null>(null);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -68,20 +103,50 @@ export default function Detail({
         return () => clearTimeout(timer);
     }, [order]);
 
-    const updateStage = (produkId: number, stage: string) => {
-        setUpdatingProduk(produkId);
-        setShowStageModal(null);
+    const openStageUpdateModal = (produkId: number, targetStage: string) => {
+        setShowStageUpdateModal({ produkId, targetStage });
+        setStageEvidence(null);
+        setStageNotes('');
+    };
+
+    const handleStageUpdate = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!showStageUpdateModal || !stageEvidence) return;
+
+        setUpdatingProduk(showStageUpdateModal.produkId);
+        
+        const formData = new FormData();
+        formData.append('current_stage', showStageUpdateModal.targetStage);
+        formData.append('evidence', stageEvidence);
+        formData.append('notes', stageNotes);
+
         router.post(
-            `/produk/${produkId}/update-stage`,
-            {
-                current_stage: stage,
-            },
+            `/produk/${showStageUpdateModal.produkId}/update-stage`,
+            formData,
             {
                 onFinish: () => {
                     setTimeout(() => setUpdatingProduk(null), 500);
+                    setShowStageUpdateModal(null);
+                    setStageEvidence(null);
+                    setStageNotes('');
                 },
             },
         );
+    };
+
+    const handleGenerateBast = (produkId: number) => {
+        if (confirm('Generate BAST untuk produk ini?')) {
+            setGeneratingBast(produkId);
+            router.post(
+                `/produk/${produkId}/generate-bast`,
+                {},
+                {
+                    onFinish: () => {
+                        setGeneratingBast(null);
+                    },
+                },
+            );
+        }
     };
 
         const addDefectItem = () => {
@@ -169,6 +234,43 @@ export default function Detail({
         }).format(amount);
     };
 
+    const getDeadlineStatusColor = (status: string | null) => {
+        switch (status) {
+            case 'overdue':
+                return 'bg-red-100 text-red-800 border-red-300';
+            case 'urgent':
+                return 'bg-orange-100 text-orange-800 border-orange-300';
+            case 'warning':
+                return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+            case 'normal':
+                return 'bg-green-100 text-green-800 border-green-300';
+            default:
+                return 'bg-gray-100 text-gray-800 border-gray-300';
+        }
+    };
+
+    const getDeadlineIcon = (status: string | null) => {
+        switch (status) {
+            case 'overdue':
+                return '⚠️';
+            case 'urgent':
+                return '🔴';
+            case 'warning':
+                return '🟡';
+            case 'normal':
+                return '🟢';
+            default:
+                return '⏳';
+        }
+    };
+
+    const getDeadlineText = (status: string | null, sisaHari: number | null) => {
+        if (sisaHari === null) return 'Belum ditentukan';
+        if (status === 'overdue') return `Terlambat ${Math.abs(sisaHari)} hari`;
+        if (sisaHari === 0) return 'Deadline hari ini!';
+        return `${sisaHari} hari lagi`;
+    };
+
     return (
         <div className="min-h-screen bg-gray-50">
             <Head title={`Detail Project - ${order.nama_project}`} />
@@ -222,7 +324,7 @@ export default function Detail({
                                             {order.nama_project}
                                         </h1>
                                     </div>
-                                    <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+                                    <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
                                         <div className="rounded-xl bg-white/70 p-4 shadow-md backdrop-blur-sm">
                                             <p className="mb-2 text-xs font-semibold tracking-wide text-gray-600 uppercase">
                                                 Perusahaan
@@ -239,6 +341,27 @@ export default function Detail({
                                                 {order.customer_name}
                                             </p>
                                         </div>
+                                        
+                                        {/* Kontrak Info */}
+                                        {kontrak && (
+                                            <div className={`rounded-xl p-4 shadow-md backdrop-blur-sm border-2 ${getDeadlineStatusColor(kontrak.deadline_status)}`}>
+                                                <p className="mb-2 text-xs font-semibold tracking-wide uppercase">
+                                                    📅 Durasi Kontrak
+                                                </p>
+                                                <p className="text-lg font-bold">
+                                                    {kontrak.durasi_kontrak} Hari
+                                                </p>
+                                                <div className="mt-2 text-xs">
+                                                    <p>Mulai: {kontrak.tanggal_mulai || '-'}</p>
+                                                    <p>Deadline: {kontrak.tanggal_selesai || '-'}</p>
+                                                </div>
+                                                <div className="mt-2 flex items-center gap-1 font-bold">
+                                                    <span>{getDeadlineIcon(kontrak.deadline_status)}</span>
+                                                    <span>{getDeadlineText(kontrak.deadline_status, kontrak.sisa_hari)}</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                        
                                         <div className="rounded-xl bg-white/70 p-4 shadow-md backdrop-blur-sm">
                                             <p className="mb-3 text-xs font-semibold tracking-wide text-gray-600 uppercase">
                                                 Total Progress
@@ -463,6 +586,66 @@ export default function Detail({
                                                                             </span>
                                                                         </div>
                                                                     </div>
+
+                                                                    {/* BAST Section */}
+                                                                    {produk.is_completed && (
+                                                                        <div className="mt-4 border-t border-gray-200 pt-4">
+                                                                            {produk.has_bast ? (
+                                                                                <div className="rounded-xl bg-gradient-to-r from-green-100 to-emerald-100 p-4 border border-green-200">
+                                                                                    <div className="flex items-center mb-2">
+                                                                                        <span className="text-green-600 text-xl mr-2">✅</span>
+                                                                                        <span className="font-bold text-green-800">BAST Sudah Dibuat</span>
+                                                                                    </div>
+                                                                                    <p className="text-sm text-green-700 mb-1">No: {produk.bast_number}</p>
+                                                                                    <p className="text-sm text-green-700 mb-3">Tanggal: {produk.bast_date}</p>
+                                                                                    <a
+                                                                                        href={`/produk/${produk.id}/download-bast`}
+                                                                                        className="inline-flex items-center rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                                                                                    >
+                                                                                        📥 Download BAST
+                                                                                    </a>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <button
+                                                                                    onClick={() => handleGenerateBast(produk.id)}
+                                                                                    disabled={generatingBast === produk.id}
+                                                                                    className="w-full rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4 text-white font-bold shadow-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 transition-all"
+                                                                                >
+                                                                                    {generatingBast === produk.id ? (
+                                                                                        <span className="flex items-center justify-center">
+                                                                                            <svg className="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                                                                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                                                                            </svg>
+                                                                                            Generating BAST...
+                                                                                        </span>
+                                                                                    ) : (
+                                                                                        <span className="flex items-center justify-center">
+                                                                                            📋 CREATE BAST
+                                                                                        </span>
+                                                                                    )}
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Stage Evidences */}
+                                                                    {produk.stage_evidences && Object.keys(produk.stage_evidences).length > 0 && (
+                                                                        <div className="mt-4 border-t border-gray-200 pt-4">
+                                                                            <p className="text-sm font-semibold text-gray-700 mb-2">📸 Bukti Tahapan (Klik untuk lihat):</p>
+                                                                            <div className="flex flex-wrap gap-2">
+                                                                                {Object.entries(produk.stage_evidences).map(([stage, evidences]) => (
+                                                                                    <button 
+                                                                                        key={stage} 
+                                                                                        onClick={() => setShowEvidenceModal({ stage, evidences })}
+                                                                                        className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800 hover:bg-blue-200 transition-colors cursor-pointer"
+                                                                                    >
+                                                                                        ✓ {stage} ({evidences.length})
+                                                                                    </button>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
 
                                                                 {/* Progress */}
@@ -694,81 +877,21 @@ export default function Detail({
                                                                             )}
                                                                         </div>
 
-                                                                        {/* Navigation Buttons */}
-                                                                        <div className="grid grid-cols-2 gap-2">
-                                                                            {/* Previous Button */}
-                                                                            <button
-                                                                                disabled={
-                                                                                    isUpdating ||
-                                                                                    !produk.current_stage ||
-                                                                                    Object.keys(
-                                                                                        stages,
-                                                                                    ).indexOf(
-                                                                                        produk.current_stage,
-                                                                                    ) ===
-                                                                                        0
-                                                                                }
-                                                                                onClick={() => {
-                                                                                    const currentIndex =
-                                                                                        produk.current_stage
-                                                                                            ? Object.keys(
-                                                                                                  stages,
-                                                                                              ).indexOf(
-                                                                                                  produk.current_stage,
-                                                                                              )
-                                                                                            : -1;
-                                                                                    if (
-                                                                                        currentIndex >
-                                                                                        0
-                                                                                    ) {
-                                                                                        const prevStage =
-                                                                                            Object.keys(
-                                                                                                stages,
-                                                                                            )[
-                                                                                                currentIndex -
-                                                                                                    1
-                                                                                            ];
-                                                                                        updateStage(
-                                                                                            produk.id,
-                                                                                            prevStage,
-                                                                                        );
-                                                                                    }
-                                                                                }}
-                                                                                className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 ${
-                                                                                    isUpdating ||
-                                                                                    !produk.current_stage ||
-                                                                                    Object.keys(
-                                                                                        stages,
-                                                                                    ).indexOf(
-                                                                                        produk.current_stage,
-                                                                                    ) ===
-                                                                                        0
-                                                                                        ? 'cursor-not-allowed bg-gray-100 text-gray-400'
-                                                                                        : 'bg-gradient-to-r from-orange-400 to-red-500 text-white shadow-md hover:scale-105 hover:from-orange-500 hover:to-red-600 hover:shadow-lg'
-                                                                                }`}
-                                                                            >
-                                                                                <svg
-                                                                                    className="h-4 w-4"
-                                                                                    fill="none"
-                                                                                    stroke="currentColor"
-                                                                                    viewBox="0 0 24 24"
-                                                                                >
-                                                                                    <path
-                                                                                        strokeLinecap="round"
-                                                                                        strokeLinejoin="round"
-                                                                                        strokeWidth={
-                                                                                            2
-                                                                                        }
-                                                                                        d="M15 19l-7-7 7-7"
-                                                                                    />
-                                                                                </svg>
-                                                                                Previous
-                                                                            </button>
-
+                                                                        {/* Next Button Only - No Previous */}
+                                                                        <div className="space-y-2">
+                                                                            {/* Warning jika ada pending approval */}
+                                                                            {produk.has_pending_approval && (
+                                                                                <div className="rounded-lg bg-orange-100 border border-orange-300 p-3 text-sm text-orange-800">
+                                                                                    ⚠️ Ada perbaikan defect yang menunggu approval. Tidak dapat melanjutkan ke tahap berikutnya.
+                                                                                </div>
+                                                                            )}
+                                                                            
                                                                             {/* Next Button */}
                                                                             <button
                                                                                 disabled={
                                                                                     isUpdating ||
+                                                                                    produk.has_active_defect ||
+                                                                                    produk.has_pending_approval ||
                                                                                     (!!produk.current_stage &&
                                                                                         Object.keys(
                                                                                             stages,
@@ -797,13 +920,15 @@ export default function Detail({
                                                                                             currentIndex +
                                                                                                 1
                                                                                         ];
-                                                                                    updateStage(
+                                                                                    openStageUpdateModal(
                                                                                         produk.id,
                                                                                         nextStage,
                                                                                     );
                                                                                 }}
-                                                                                className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 ${
+                                                                                className={`w-full flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 ${
                                                                                     isUpdating ||
+                                                                                    produk.has_active_defect ||
+                                                                                    produk.has_pending_approval ||
                                                                                     (produk.current_stage &&
                                                                                         Object.keys(
                                                                                             stages,
@@ -819,7 +944,7 @@ export default function Detail({
                                                                                         : 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-md hover:scale-105 hover:from-green-500 hover:to-emerald-600 hover:shadow-lg'
                                                                                 }`}
                                                                             >
-                                                                                Next
+                                                                                {!produk.current_stage ? 'Mulai Produksi' : 'Next Stage'}
                                                                                 <svg
                                                                                     className="h-4 w-4"
                                                                                     fill="none"
@@ -1110,7 +1235,7 @@ export default function Detail({
                                                                                                         stage
                                                                                                     }
                                                                                                     onClick={() =>
-                                                                                                        updateStage(
+                                                                                                        openStageUpdateModal(
                                                                                                             produk.id,
                                                                                                             stage,
                                                                                                         )
@@ -1227,6 +1352,152 @@ export default function Detail({
                     </div>
                 </div>
             </div>
+
+            {/* Stage Update Modal with Evidence */}
+            {showStageUpdateModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+                        <div className="p-6">
+                            <div className="mb-4 flex items-center justify-between">
+                                <h2 className="text-xl font-bold text-gray-900">
+                                    📸 Upload Bukti Tahapan
+                                </h2>
+                                <button
+                                    onClick={() => setShowStageUpdateModal(null)}
+                                    className="text-gray-400 hover:text-gray-600"
+                                >
+                                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <div className="mb-4 rounded-lg bg-blue-50 p-4">
+                                <p className="text-sm text-blue-700">
+                                    Update ke tahap: <strong>{showStageUpdateModal.targetStage}</strong>
+                                </p>
+                            </div>
+
+                            <form onSubmit={handleStageUpdate}>
+                                <div className="mb-4">
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                                        Foto Bukti Tahapan <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        required
+                                        onChange={(e) => setStageEvidence(e.target.files?.[0] || null)}
+                                        className="w-full rounded-lg border border-gray-300 p-2"
+                                    />
+                                    {stageEvidence && (
+                                        <p className="mt-2 text-sm text-green-600">
+                                            ✓ {stageEvidence.name}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="mb-6">
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                                        Catatan (Opsional)
+                                    </label>
+                                    <textarea
+                                        value={stageNotes}
+                                        onChange={(e) => setStageNotes(e.target.value)}
+                                        className="w-full rounded-lg border border-gray-300 p-2"
+                                        rows={3}
+                                        placeholder="Tambahkan catatan jika diperlukan..."
+                                    />
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowStageUpdateModal(null)}
+                                        className="flex-1 rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 hover:bg-gray-50"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={!stageEvidence}
+                                        className="flex-1 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 font-medium text-white hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50"
+                                    >
+                                        Update Tahap
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Evidence Viewer Modal */}
+            {showEvidenceModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
+                        <div className="p-6">
+                            <div className="mb-6 flex items-center justify-between">
+                                <h2 className="text-2xl font-bold text-gray-900">
+                                    📸 Bukti Tahapan: {showEvidenceModal.stage}
+                                </h2>
+                                <button
+                                    onClick={() => setShowEvidenceModal(null)}
+                                    className="text-gray-400 hover:text-gray-600"
+                                >
+                                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {showEvidenceModal.evidences.map((evidence) => (
+                                    <div key={evidence.id} className="rounded-xl border-2 border-gray-200 overflow-hidden shadow-md">
+                                        <div className="aspect-video bg-gray-100 relative">
+                                            <img
+                                                src={`/storage/${evidence.evidence_path}`}
+                                                alt={`Bukti ${showEvidenceModal.stage}`}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                        <div className="p-4 bg-white">
+                                            <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                </svg>
+                                                <span className="font-medium">{evidence.uploaded_by}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                <span>{evidence.created_at}</span>
+                                            </div>
+                                            {evidence.notes && (
+                                                <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                                                    <p className="text-sm text-gray-700">
+                                                        <span className="font-semibold">Catatan:</span> {evidence.notes}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-6 flex justify-end">
+                                <button
+                                    onClick={() => setShowEvidenceModal(null)}
+                                    className="rounded-lg bg-gray-100 px-6 py-2 font-medium text-gray-700 hover:bg-gray-200"
+                                >
+                                    Tutup
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <style>{`
                 @keyframes shimmer {

@@ -363,6 +363,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:project-management.show');
         Route::post('/produk/{id}/update-stage', [ProjectManagementController::class, 'updateStage'])
             ->middleware('permission:project-management.update-stage');
+        Route::post('/produk/{id}/generate-bast', [ProjectManagementController::class, 'generateBast'])
+            ->middleware('permission:project-management.bast');
+        Route::get('/produk/{id}/download-bast', [ProjectManagementController::class, 'downloadBast'])
+            ->middleware('permission:project-management.bast');
     });
 
     // DEFECT ROUTES
@@ -378,6 +382,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:defect.delete')->name('defect.repair.delete');
         Route::patch('/defects/{id}/status', [DefectController::class, 'updateStatus'])
             ->middleware('permission:defect.edit')->name('defect.status.update');
+        
+        // Approve & Reject Repair Routes
+        Route::post('/defect-repairs/{id}/approve', [DefectController::class, 'approveRepair'])
+            ->middleware('permission:defect.approve')->name('defect.repair.approve');
+        Route::post('/defect-repairs/{id}/reject', [DefectController::class, 'rejectRepair'])
+            ->middleware('permission:defect.approve')->name('defect.repair.reject');
     });
 
     // PDF ROUTES

@@ -73,7 +73,6 @@ class CommitmentFeeController extends Controller
 
             $moodboard->order->update([
                 'tahapan_proyek' => 'cm_fee',
-                'payment_status' => 'cm_fee',
             ]);
 
             Log::info('Commitment Fee created with ID: ' . $commitmentFee->id);
@@ -143,6 +142,10 @@ class CommitmentFeeController extends Controller
                 $commitmentFee->update([
                     'payment_proof' => $filePath,
                     'payment_status' => 'completed',
+                ]);
+
+                $commitmentFee->moodboard->order->update([
+                    'payment_status' => 'Commitment Fee',
                 ]);
             }
 

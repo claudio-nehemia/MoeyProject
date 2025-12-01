@@ -12,10 +12,15 @@ class DefectRepair extends Model
         'notes',
         'repaired_by',
         'repaired_at',
+        'is_approved',
+        'approved_by',
+        'approved_at',
     ];
 
     protected $casts = [
         'repaired_at' => 'datetime',
+        'approved_at' => 'datetime',
+        'is_approved' => 'boolean',
     ];
 
     public function defectItem()

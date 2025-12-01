@@ -28,11 +28,19 @@ class Defect extends Model
         return $this->hasMany(DefectItem::class);
     }
 
-    // Accessor: Cek apakah semua defect items sudah diperbaiki
+    // Accessor: Cek apakah semua defect items sudah diperbaiki DAN di-approve
     public function getIsAllRepairedAttribute()
     {
         return $this->defectItems->every(function ($item) {
-            return $item->repairs->count() > 0;
+            return $item->repairs->count() > 0 && $item->repairs->every(fn($r) => $r->is_approved);
+        });
+    }
+
+    // Accessor: Cek apakah ada repair yang pending approval
+    public function getHasPendingApprovalAttribute()
+    {
+        return $this->defectItems->contains(function ($item) {
+            return $item->repairs->contains(fn($r) => !$r->is_approved);
         });
     }
 }

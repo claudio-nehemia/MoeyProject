@@ -40,9 +40,24 @@ interface InvoiceItem {
     aksesoris: Aksesoris[];
 }
 
+interface PaymentSummary {
+    harga_kontrak: number;
+    commitment_fee: {
+        amount: number;
+        paid: boolean;
+    };
+    sisa_pembayaran: number;
+    total_paid: number;
+    remaining_to_pay: number;
+}
+
 interface Invoice {
     id: number;
     invoice_number: string;
+    termin_step: number;
+    termin_text: string;
+    termin_persentase: number;
+    total_steps: number;
     total_amount: number;
     status: 'pending' | 'paid' | 'cancelled';
     bukti_bayar: string | null;
@@ -50,6 +65,16 @@ interface Invoice {
     notes: string | null;
     created_at: string;
     order: Order;
+    payment_summary: PaymentSummary;
+    termin_nama: string | null;
+    all_invoices: Array<{
+        id: number;
+        termin_step: number;
+        termin_text: string;
+        total_amount: number;
+        status: string;
+        paid_at: string | null;
+    }>;
     items: InvoiceItem[];
 }
 
@@ -94,7 +119,7 @@ export default function Show({ invoice }: Props) {
                 bg: 'bg-gradient-to-r from-green-400 to-emerald-500',
                 text: 'text-white',
                 icon: '✓',
-                label: 'Lunas',
+                label: 'Terbayar',
                 pulse: false
             },
             cancelled: {
@@ -190,6 +215,19 @@ export default function Show({ invoice }: Props) {
                                         </div>
                                         <p className="text-xl font-bold text-blue-100">{invoice.invoice_number}</p>
                                         <p className="text-sm text-blue-200 mt-1">Issue Date: {formatDate(invoice.created_at)}</p>
+                                        
+                                        {/* Termin Info */}
+                                        <div className="mt-3 flex items-center gap-2">
+                                            <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-semibold backdrop-blur-sm">
+                                                📋 {invoice.termin_nama || 'Termin'}
+                                            </span>
+                                            <span className="px-3 py-1 bg-amber-400 text-amber-900 rounded-full text-sm font-bold">
+                                                Tahap {invoice.termin_step} / {invoice.total_steps}
+                                            </span>
+                                        </div>
+                                        <div className="mt-2 text-sm text-blue-200">
+                                            {invoice.termin_text} ({invoice.termin_persentase}% dari sisa pembayaran)
+                                        </div>
                                     </div>
                                     <div className="text-right flex flex-col items-end gap-3">
                                         {getStatusBadge(invoice.status)}
@@ -207,6 +245,72 @@ export default function Show({ invoice }: Props) {
                                                 💰 Paid: {formatDate(invoice.paid_at)}
                                             </p>
                                         )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* All Invoices Navigation */}
+                            {invoice.all_invoices && invoice.all_invoices.length > 1 && (
+                                <div className="px-8 py-4 bg-gray-50 border-b border-gray-200">
+                                    <p className="text-sm font-semibold text-gray-600 mb-3">Semua Tahap Pembayaran:</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {invoice.all_invoices.map((inv) => (
+                                            <button
+                                                key={inv.id}
+                                                onClick={() => router.get(`/invoice/${inv.id}/show`)}
+                                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                                                    inv.id === invoice.id
+                                                        ? 'bg-blue-600 text-white shadow-md'
+                                                        : inv.status === 'paid'
+                                                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                        : inv.status === 'pending'
+                                                        ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                }`}
+                                            >
+                                                <span className="w-6 h-6 rounded-full bg-white/30 flex items-center justify-center text-xs font-bold">
+                                                    {inv.termin_step}
+                                                </span>
+                                                {inv.termin_text}
+                                                {inv.status === 'paid' && <span>✓</span>}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Payment Summary Section */}
+                            <div className="px-8 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100">
+                                <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                    <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                    Ringkasan Pembayaran
+                                </p>
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                    <div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
+                                        <div className="text-xs text-gray-500">Harga Kontrak</div>
+                                        <div className="text-sm font-bold text-gray-900">{formatRupiah(invoice.payment_summary?.harga_kontrak || 0)}</div>
+                                    </div>
+                                    <div className={`rounded-lg p-3 border shadow-sm ${invoice.payment_summary?.commitment_fee?.paid ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+                                        <div className={`text-xs ${invoice.payment_summary?.commitment_fee?.paid ? 'text-green-600' : 'text-amber-600'}`}>
+                                            Commitment Fee {invoice.payment_summary?.commitment_fee?.paid ? '✓' : ''}
+                                        </div>
+                                        <div className={`text-sm font-bold ${invoice.payment_summary?.commitment_fee?.paid ? 'text-green-700' : 'text-amber-700'}`}>
+                                            {formatRupiah(invoice.payment_summary?.commitment_fee?.amount || 0)}
+                                        </div>
+                                    </div>
+                                    <div className="bg-blue-50 rounded-lg p-3 border border-blue-200 shadow-sm">
+                                        <div className="text-xs text-blue-600">Sisa Pembayaran</div>
+                                        <div className="text-sm font-bold text-blue-700">{formatRupiah(invoice.payment_summary?.sisa_pembayaran || 0)}</div>
+                                    </div>
+                                    <div className="bg-green-50 rounded-lg p-3 border border-green-200 shadow-sm">
+                                        <div className="text-xs text-green-600">Sudah Dibayar</div>
+                                        <div className="text-sm font-bold text-green-700">{formatRupiah(invoice.payment_summary?.total_paid || 0)}</div>
+                                    </div>
+                                    <div className="bg-orange-50 rounded-lg p-3 border border-orange-200 shadow-sm">
+                                        <div className="text-xs text-orange-600">Belum Dibayar</div>
+                                        <div className="text-sm font-bold text-orange-700">{formatRupiah(invoice.payment_summary?.remaining_to_pay || 0)}</div>
                                     </div>
                                 </div>
                             </div>
@@ -539,38 +643,40 @@ export default function Show({ invoice }: Props) {
                             </div>
                         )}
 
-                        {/* Delete Button */}
-                        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-                            <div className="bg-gradient-to-r from-red-600 to-pink-600 px-8 py-4">
-                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                    </svg>
-                                    Danger Zone
-                                </h3>
-                            </div>
-                            <div className="p-8">
-                                <div className="bg-red-50 rounded-xl p-6 border border-red-200">
-                                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                                        <div>
-                                            <h4 className="text-lg font-bold text-red-900 mb-2">Delete This Invoice</h4>
-                                            <p className="text-sm text-red-700">
-                                                Once deleted, this invoice cannot be recovered. Please be certain.
-                                            </p>
+                        {/* Delete Button - Only for pending invoices */}
+                        {invoice.status === 'pending' && (
+                            <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+                                <div className="bg-gradient-to-r from-red-600 to-pink-600 px-8 py-4">
+                                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                        Danger Zone
+                                    </h3>
+                                </div>
+                                <div className="p-8">
+                                    <div className="bg-red-50 rounded-xl p-6 border border-red-200">
+                                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                                            <div>
+                                                <h4 className="text-lg font-bold text-red-900 mb-2">Delete This Invoice</h4>
+                                                <p className="text-sm text-red-700">
+                                                    Once deleted, this invoice cannot be recovered. Please be certain.
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={handleDelete}
+                                                className="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-600 to-pink-600 border border-transparent rounded-xl font-bold text-sm text-white uppercase tracking-wider shadow-lg hover:shadow-xl hover:from-red-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105 active:scale-95"
+                                            >
+                                                <svg className="w-5 h-5 transform group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                                Delete Invoice
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={handleDelete}
-                                            className="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-600 to-pink-600 border border-transparent rounded-xl font-bold text-sm text-white uppercase tracking-wider shadow-lg hover:shadow-xl hover:from-red-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105 active:scale-95"
-                                        >
-                                            <svg className="w-5 h-5 transform group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                            Delete Invoice
-                                        </button>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             </div>

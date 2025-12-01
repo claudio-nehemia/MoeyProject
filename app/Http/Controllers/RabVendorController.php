@@ -267,6 +267,9 @@ class RabVendorController extends Controller
             ];
         });
 
+        // Calculate total semua produk
+        $totalSemuaProduk = $produks->sum('harga_akhir');
+
         // FINAL PDF DATA
         $data = [
             'rabVendor' => $rabVendor, 
@@ -279,9 +282,10 @@ class RabVendorController extends Controller
                 'customer_name' => $rabVendor->itemPekerjaan->moodboard->order->customer_name,
             ],
             'produks' => $produks,
+            'totalSemuaProduk' => $totalSemuaProduk,
         ];
 
-        $pdf = Pdf::loadView('pdf.rab-vendor', $data)->setPaper('a4', 'portrait');
+        $pdf = Pdf::loadView('pdf.rab-vendor', $data)->setPaper('a4', 'landscape');
 
         return $pdf->stream("RAB-Vendor-{$rabVendor->id}.pdf");
     }

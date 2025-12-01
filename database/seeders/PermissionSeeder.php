@@ -622,6 +622,11 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Update Project Stage',
                 'group' => 'Operations - Project Management'
             ],
+            [
+                'name' => 'project-management.bast',
+                'display_name' => 'Generate & Download BAST',
+                'group' => 'Operations - Project Management'
+            ],
             
             // Defect Management Permissions
             [
@@ -647,6 +652,11 @@ class PermissionSeeder extends Seeder
             [
                 'name' => 'defect.delete',
                 'display_name' => 'Delete Defect',
+                'group' => 'Operations - Defect Management'
+            ],
+            [
+                'name' => 'defect.approve',
+                'display_name' => 'Approve Defect Repair',
                 'group' => 'Operations - Defect Management'
             ],
             

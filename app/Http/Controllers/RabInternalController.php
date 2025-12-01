@@ -64,7 +64,7 @@ class RabInternalController extends Controller
             ]);
 
             $itemPekerjaan->moodboard->order->update([
-                'tahapan_proyek' => 'rab_internal',
+                'tahapan_proyek' => 'rab',
             ]);
 
             Log::info('RAB Internal created with ID: ' . $rabInternal->id);

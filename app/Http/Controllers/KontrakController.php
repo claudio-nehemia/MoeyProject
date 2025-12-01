@@ -19,13 +19,23 @@ class KontrakController extends Controller
             'moodboard.order',
             'moodboard.commitmentFee',
             'rabInternal',
+            'rabKontrak.rabKontrakProduks',
             'kontrak.termin'
         ])
         ->whereHas('rabInternal', function ($query) {
             $query->where('is_submitted', true);
         })
+        ->whereHas('rabKontrak') // Must have RAB Kontrak
         ->get()
         ->map(function ($itemPekerjaan) {
+            // Calculate grand total from RAB Kontrak
+            $grandTotalRabKontrak = $itemPekerjaan->rabKontrak 
+                ? $itemPekerjaan->rabKontrak->rabKontrakProduks->sum('harga_akhir')
+                : 0;
+            
+            $commitmentFee = $itemPekerjaan->moodboard->commitmentFee?->total_fee ?? 0;
+            $sisaPembayaran = $grandTotalRabKontrak - $commitmentFee;
+
             return [
                 'id' => $itemPekerjaan->id,
                 'order' => [
@@ -38,11 +48,17 @@ class KontrakController extends Controller
                     'jumlah' => $itemPekerjaan->moodboard->commitmentFee->total_fee,
                     'status' => $itemPekerjaan->moodboard->commitmentFee->payment_status === 'completed' ? 'Paid' : 'Pending',
                 ] : null,
+                'rab_kontrak' => [
+                    'id' => $itemPekerjaan->rabKontrak->id,
+                    'grand_total' => $grandTotalRabKontrak,
+                ],
+                'sisa_pembayaran' => $sisaPembayaran,
                 'kontrak' => $itemPekerjaan->kontrak ? [
                     'id' => $itemPekerjaan->kontrak->id,
                     'durasi_kontrak' => $itemPekerjaan->kontrak->durasi_kontrak,
                     'harga_kontrak' => $itemPekerjaan->kontrak->harga_kontrak,
                     'termin' => [
+                        'id' => $itemPekerjaan->kontrak->termin->id ?? null,
                         'nama' => $itemPekerjaan->kontrak->termin->nama_tipe ?? null,
                         'tahapan' => $itemPekerjaan->kontrak->termin->tahapan ?? [],
                     ],
@@ -68,7 +84,6 @@ class KontrakController extends Controller
             'item_pekerjaan_id' => 'required|exists:item_pekerjaans,id',
             'durasi_kontrak' => 'required|integer|min:1',
             'termin_id' => 'required|integer|exists:termins,id',
-            'harga_kontrak' => 'required|numeric|min:0',
         ], [
             'item_pekerjaan_id.required' => 'Item Pekerjaan harus dipilih.',
             'durasi_kontrak.required' => 'Durasi kontrak harus diisi.',
@@ -77,9 +92,6 @@ class KontrakController extends Controller
             'termin_id.required' => 'Termin harus dipilih.',
             'termin_id.integer' => 'Termin tidak valid.',
             'termin_id.exists' => 'Termin yang dipilih tidak ditemukan.',
-            'harga_kontrak.required' => 'Harga kontrak harus diisi.',
-            'harga_kontrak.numeric' => 'Harga kontrak harus berupa angka.',
-            'harga_kontrak.min' => 'Harga kontrak tidak boleh negatif.',
         ]);
 
         // Check if kontrak already exists
@@ -88,11 +100,27 @@ class KontrakController extends Controller
             return back()->withErrors(['error' => 'Kontrak untuk Item Pekerjaan ini sudah ada.']);
         }
 
+        // Get harga_kontrak from RAB Kontrak grand total
+        $itemPekerjaan = ItemPekerjaan::with('rabKontrak.rabKontrakProduks')->find($validated['item_pekerjaan_id']);
+        if (!$itemPekerjaan->rabKontrak) {
+            return back()->withErrors(['error' => 'RAB Kontrak belum ada untuk Item Pekerjaan ini.']);
+        }
         
+        $hargaKontrak = $itemPekerjaan->rabKontrak->rabKontrakProduks->sum('harga_akhir');
+        $validated['harga_kontrak'] = $hargaKontrak;
+        
+        // Set tanggal mulai dan tanggal selesai berdasarkan durasi kontrak
+        $validated['tanggal_mulai'] = now();
+        $validated['tanggal_selesai'] = now()->addDays($validated['durasi_kontrak']);
 
         try {
             $kontrak = Kontrak::create($validated);
             \Log::info('Kontrak Created:', $kontrak->toArray());
+
+            // Update tahapan_proyek to 'kontrak'
+            $itemPekerjaan->moodboard->order->update([
+                'tahapan_proyek' => 'kontrak',
+            ]);
             
             return redirect()->route('kontrak.index')->with('success', 'Kontrak berhasil dibuat!');
         } catch (\Exception $e) {

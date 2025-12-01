@@ -42,6 +42,11 @@ interface Produk {
     aksesoris: Aksesoris[];
 }
 
+// Helper function to calculate total harga for a jenis item
+const calculateJenisTotal = (items: Item[]): number => {
+    return items.reduce((sum, item) => sum + item.harga_total, 0);
+};
+
 interface RabInternal {
     id: number;
     response_by: string;
@@ -173,11 +178,20 @@ export default function Show({ rabInternal }: Props) {
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Bahan Baku
                                         </th>
+                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20">
+                                            Harga BB
+                                        </th>
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Finishing Dalam
                                         </th>
+                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20">
+                                            Harga FD
+                                        </th>
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Finishing Luar
+                                        </th>
+                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20">
+                                            Harga FL
                                         </th>
                                         <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Qty
@@ -185,8 +199,14 @@ export default function Show({ rabInternal }: Props) {
                                         <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Markup
                                         </th>
+                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20">
+                                            Total Non-Aks
+                                        </th>
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Aksesoris
+                                        </th>
+                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20">
+                                            Harga Aks
                                         </th>
                                         <th className="bg-green-100 px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-green-800 dark:bg-green-900/30 dark:text-green-400">
                                             Grand Total
@@ -195,27 +215,43 @@ export default function Show({ rabInternal }: Props) {
                                 </thead>
                                 <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
                                     {rabInternal.produks.map((produk, produkIndex) => {
-                                        // Group items by jenis
-                                        const bahanBakuItems: string[] = [];
-                                        const finishingDalamItems: string[] = [];
-                                        const finishingLuarItems: string[] = [];
+                                        // Group items by jenis with prices
+                                        const bahanBakuItems: { nama: string; harga: number }[] = [];
+                                        const finishingDalamItems: { nama: string; harga: number }[] = [];
+                                        const finishingLuarItems: { nama: string; harga: number }[] = [];
+                                        
+                                        let bahanBakuTotal = 0;
+                                        let finishingDalamTotal = 0;
+                                        let finishingLuarTotal = 0;
                                         
                                         produk.jenis_items.forEach((jenisItem) => {
                                             const namaJenis = jenisItem.nama_jenis.toLowerCase();
                                             if (namaJenis === 'bahan baku') {
                                                 jenisItem.items.forEach(item => {
-                                                    bahanBakuItems.push(item.nama_item);
+                                                    const harga = Number(item.harga_total) || 0;
+                                                    bahanBakuItems.push({ nama: item.nama_item, harga });
+                                                    bahanBakuTotal += harga;
                                                 });
                                             } else if (namaJenis === 'finishing dalam') {
                                                 jenisItem.items.forEach(item => {
-                                                    finishingDalamItems.push(item.nama_item);
+                                                    const harga = Number(item.harga_total) || 0;
+                                                    finishingDalamItems.push({ nama: item.nama_item, harga });
+                                                    finishingDalamTotal += harga;
                                                 });
                                             } else if (namaJenis === 'finishing luar') {
                                                 jenisItem.items.forEach(item => {
-                                                    finishingLuarItems.push(item.nama_item);
+                                                    const harga = Number(item.harga_total) || 0;
+                                                    finishingLuarItems.push({ nama: item.nama_item, harga });
+                                                    finishingLuarTotal += harga;
                                                 });
                                             }
                                         });
+
+                                        // Calculate total non-aksesoris (sum of all jenis items)
+                                        const totalNonAksesoris = bahanBakuTotal + finishingDalamTotal + finishingLuarTotal;
+
+                                        // Calculate total aksesoris (use Number() to handle null/undefined)
+                                        const totalAksesoris = produk.aksesoris.reduce((sum, aks) => sum + (Number(aks.harga_total) || 0), 0);
                                         
                                         const maxRows = Math.max(
                                             bahanBakuItems.length,
@@ -246,23 +282,44 @@ export default function Show({ rabInternal }: Props) {
                                                         {/* Bahan Baku Column */}
                                                         <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
                                                             {bahanBakuItems[rowIndex] && (
-                                                                <div>• {bahanBakuItems[rowIndex]}</div>
+                                                                <div>• {bahanBakuItems[rowIndex].nama}</div>
                                                             )}
                                                         </td>
+                                                        
+                                                        {/* Harga Bahan Baku Column */}
+                                                        {rowIndex === 0 && (
+                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10 border-r border-gray-200 dark:border-gray-700">
+                                                                {formatCurrency(bahanBakuTotal)}
+                                                            </td>
+                                                        )}
                                                         
                                                         {/* Finishing Dalam Column */}
                                                         <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
                                                             {finishingDalamItems[rowIndex] && (
-                                                                <div>• {finishingDalamItems[rowIndex]}</div>
+                                                                <div>• {finishingDalamItems[rowIndex].nama}</div>
                                                             )}
                                                         </td>
+                                                        
+                                                        {/* Harga Finishing Dalam Column */}
+                                                        {rowIndex === 0 && (
+                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10 border-r border-gray-200 dark:border-gray-700">
+                                                                {formatCurrency(finishingDalamTotal)}
+                                                            </td>
+                                                        )}
                                                         
                                                         {/* Finishing Luar Column */}
                                                         <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
                                                             {finishingLuarItems[rowIndex] && (
-                                                                <div>• {finishingLuarItems[rowIndex]}</div>
+                                                                <div>• {finishingLuarItems[rowIndex].nama}</div>
                                                             )}
                                                         </td>
+                                                        
+                                                        {/* Harga Finishing Luar Column */}
+                                                        {rowIndex === 0 && (
+                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10 border-r border-gray-200 dark:border-gray-700">
+                                                                {formatCurrency(finishingLuarTotal)}
+                                                            </td>
+                                                        )}
                                                         
                                                         {/* Qty Column */}
                                                         {rowIndex === 0 && (
@@ -278,6 +335,13 @@ export default function Show({ rabInternal }: Props) {
                                                             </td>
                                                         )}
                                                         
+                                                        {/* Total Non-Aksesoris Column */}
+                                                        {rowIndex === 0 && (
+                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-bold text-purple-700 dark:text-purple-400 bg-purple-50/50 dark:bg-purple-900/10 border-r border-gray-200 dark:border-gray-700">
+                                                                {formatCurrency(totalNonAksesoris)}
+                                                            </td>
+                                                        )}
+                                                        
                                                         {/* Aksesoris Column */}
                                                         <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
                                                             {produk.aksesoris[rowIndex] && (
@@ -289,6 +353,13 @@ export default function Show({ rabInternal }: Props) {
                                                                 </div>
                                                             )}
                                                         </td>
+                                                        
+                                                        {/* Harga Aksesoris Column */}
+                                                        {rowIndex === 0 && (
+                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-orange-700 dark:text-orange-400 bg-orange-50/50 dark:bg-orange-900/10 border-r border-gray-200 dark:border-gray-700">
+                                                                {formatCurrency(totalAksesoris)}
+                                                            </td>
+                                                        )}
                                                         
                                                         {/* Grand Total Column */}
                                                         {rowIndex === 0 && (

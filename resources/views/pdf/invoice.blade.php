@@ -36,6 +36,18 @@
             font-weight: bold;
         }
 
+        .termin-badge {
+            display: inline-block;
+            padding: 6px 15px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 11px;
+            margin-top: 8px;
+            background: #fef3c7;
+            color: #92400e;
+            border: 2px solid #f59e0b;
+        }
+
         .status-badge {
             display: inline-block;
             padding: 8px 20px;
@@ -87,6 +99,160 @@
         .info-value {
             color: #333;
             flex: 1;
+        }
+
+        /* Payment Summary Section */
+        .payment-summary {
+            margin-bottom: 20px;
+            background: #f0f9ff;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #bfdbfe;
+        }
+
+        .payment-summary-title {
+            font-weight: bold;
+            font-size: 12px;
+            color: #1e40af;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 5px;
+        }
+
+        .payment-summary-grid {
+            display: table;
+            width: 100%;
+        }
+
+        .payment-summary-row {
+            display: table-row;
+        }
+
+        .payment-summary-cell {
+            display: table-cell;
+            padding: 8px 10px;
+            text-align: center;
+            width: 20%;
+        }
+
+        .payment-summary-label {
+            font-size: 8px;
+            color: #6b7280;
+            text-transform: uppercase;
+            margin-bottom: 3px;
+        }
+
+        .payment-summary-value {
+            font-size: 11px;
+            font-weight: bold;
+            color: #1e40af;
+        }
+
+        /* Termin Steps Section */
+        .termin-steps {
+            margin-bottom: 20px;
+            background: #fefce8;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #fde047;
+        }
+
+        .termin-steps-title {
+            font-weight: bold;
+            font-size: 12px;
+            color: #854d0e;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #eab308;
+            padding-bottom: 5px;
+        }
+
+        .termin-step-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            background: white;
+            border: 1px solid #e5e7eb;
+        }
+
+        .termin-step-item.current {
+            background: #dbeafe;
+            border: 2px solid #2563eb;
+        }
+
+        .termin-step-item.paid {
+            background: #dcfce7;
+            border: 1px solid #16a34a;
+        }
+
+        .termin-step-number {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 10px;
+            margin-right: 10px;
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+
+        .termin-step-item.current .termin-step-number {
+            background: #2563eb;
+            color: white;
+        }
+
+        .termin-step-item.paid .termin-step-number {
+            background: #16a34a;
+            color: white;
+        }
+
+        .termin-step-info {
+            flex: 1;
+        }
+
+        .termin-step-text {
+            font-weight: bold;
+            font-size: 10px;
+            color: #333;
+        }
+
+        .termin-step-persentase {
+            font-size: 9px;
+            color: #6b7280;
+        }
+
+        .termin-step-amount {
+            text-align: right;
+            font-weight: bold;
+            font-size: 10px;
+            color: #1e40af;
+        }
+
+        .termin-step-status {
+            margin-left: 10px;
+            font-size: 8px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .termin-step-status.paid {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .termin-step-status.current {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .termin-step-status.pending {
+            background: #f3f4f6;
+            color: #6b7280;
         }
 
         table {
@@ -187,6 +353,12 @@
             font-weight: bold;
         }
 
+        .invoice-tahap-info {
+            font-size: 10px;
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+
         .payment-info {
             margin-top: 25px;
             padding: 15px;
@@ -225,8 +397,12 @@
     <div class="header">
         <h1>INVOICE</h1>
         <h2>MOEY INTERIOR</h2>
+        <div class="termin-badge">
+            {{ $terminInfo['termin_nama'] ?? 'Termin' }} - Tahap {{ $invoice->termin_step }} dari {{ $terminInfo['total_steps'] ?? 1 }}
+        </div>
+        <br>
         <div class="status-badge status-{{ $invoice->status === 'paid' ? 'paid' : 'pending' }}">
-            {{ $invoice->status === 'paid' ? 'LUNAS' : 'BELUM BAYAR' }}
+            {{ $invoice->status === 'paid' ? 'TERBAYAR' : 'BELUM BAYAR' }}
         </div>
     </div>
 
@@ -241,6 +417,12 @@
                 <div class="info-row">
                     <div class="info-label">Tanggal:</div>
                     <div class="info-value">{{ \Carbon\Carbon::parse($invoice->created_at)->format('d F Y') }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Tahap Pembayaran:</div>
+                    <div class="info-value" style="font-weight: bold; color: #2563eb;">
+                        {{ $invoice->termin_text }} ({{ $invoice->termin_persentase }}%)
+                    </div>
                 </div>
                 @if($invoice->status === 'paid' && $invoice->paid_at)
                     <div class="info-row">
@@ -267,6 +449,65 @@
             </div>
         </div>
     </div>
+
+    <!-- Payment Summary -->
+    <div class="payment-summary">
+        <div class="payment-summary-title">RINGKASAN PEMBAYARAN PROJECT</div>
+        <div class="payment-summary-grid">
+            <div class="payment-summary-row">
+                <div class="payment-summary-cell">
+                    <div class="payment-summary-label">Harga Kontrak</div>
+                    <div class="payment-summary-value">Rp {{ number_format($paymentSummary['harga_kontrak'] ?? 0, 0, ',', '.') }}</div>
+                </div>
+                <div class="payment-summary-cell">
+                    <div class="payment-summary-label">Commitment Fee {{ ($paymentSummary['commitment_fee_paid'] ?? false) ? '✓' : '' }}</div>
+                    <div class="payment-summary-value" style="color: {{ ($paymentSummary['commitment_fee_paid'] ?? false) ? '#16a34a' : '#92400e' }};">
+                        Rp {{ number_format($paymentSummary['commitment_fee'] ?? 0, 0, ',', '.') }}
+                    </div>
+                </div>
+                <div class="payment-summary-cell">
+                    <div class="payment-summary-label">Sisa Pembayaran</div>
+                    <div class="payment-summary-value">Rp {{ number_format($paymentSummary['sisa_pembayaran'] ?? 0, 0, ',', '.') }}</div>
+                </div>
+                <div class="payment-summary-cell">
+                    <div class="payment-summary-label">Sudah Dibayar</div>
+                    <div class="payment-summary-value" style="color: #16a34a;">Rp {{ number_format($paymentSummary['total_paid'] ?? 0, 0, ',', '.') }}</div>
+                </div>
+                <div class="payment-summary-cell">
+                    <div class="payment-summary-label">Belum Dibayar</div>
+                    <div class="payment-summary-value" style="color: #dc2626;">Rp {{ number_format($paymentSummary['remaining_to_pay'] ?? 0, 0, ',', '.') }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Termin Steps -->
+    @if(isset($allInvoices) && count($allInvoices) > 0)
+    <div class="termin-steps">
+        <div class="termin-steps-title">TAHAPAN PEMBAYARAN ({{ $terminInfo['termin_nama'] ?? 'Termin' }})</div>
+        @foreach($allInvoices as $inv)
+            <div class="termin-step-item {{ $inv['id'] == $invoice->id ? 'current' : ($inv['status'] === 'paid' ? 'paid' : '') }}">
+                <div class="termin-step-number">{{ $inv['termin_step'] }}</div>
+                <div class="termin-step-info">
+                    <div class="termin-step-text">{{ $inv['termin_text'] }}</div>
+                    <div class="termin-step-persentase">{{ $inv['termin_persentase'] ?? 0 }}% dari sisa pembayaran</div>
+                </div>
+                <div class="termin-step-amount">
+                    Rp {{ number_format($inv['total_amount'] ?? 0, 0, ',', '.') }}
+                </div>
+                <div class="termin-step-status {{ $inv['id'] == $invoice->id ? 'current' : ($inv['status'] === 'paid' ? 'paid' : 'pending') }}">
+                    @if($inv['id'] == $invoice->id)
+                        INVOICE INI
+                    @elseif($inv['status'] === 'paid')
+                        TERBAYAR
+                    @else
+                        PENDING
+                    @endif
+                </div>
+            </div>
+        @endforeach
+    </div>
+    @endif
 
     <!-- Items Table -->
     <table>
@@ -347,13 +588,12 @@
     <div class="grand-total">
         <div class="grand-total-content">
             <div>
-                <div class="grand-total-label">TOTAL INVOICE</div>
-                <div style="font-size: 10px; margin-top: 3px;">{{ count($produks) }} Produk</div>
+                <div class="grand-total-label">TOTAL INVOICE TAHAP {{ $invoice->termin_step }}</div>
+                <div class="invoice-tahap-info">{{ $invoice->termin_text }} ({{ $invoice->termin_persentase }}% dari Rp {{ number_format($paymentSummary['sisa_pembayaran'] ?? 0, 0, ',', '.') }})</div>
             </div>
             <div class="grand-total-amount">
                 Rp {{ number_format($totalAmount, 0, ',', '.') }}
             </div>
-            
         </div>
     </div>
 
@@ -361,14 +601,14 @@
     @if($invoice->status === 'pending')
         <div class="payment-info">
             <div class="payment-info-title">INFORMASI PEMBAYARAN</div>
-            <div>Silakan melakukan pembayaran sesuai nominal invoice dan upload bukti pembayaran melalui sistem.</div>
+            <div>Silakan melakukan pembayaran sesuai nominal invoice tahap ini dan upload bukti pembayaran melalui sistem.</div>
             <div style="margin-top: 8px; font-style: italic; color: #92400e;">
-                Status: <strong>Menunggu Pembayaran</strong>
+                Status: <strong>Menunggu Pembayaran Tahap {{ $invoice->termin_step }}</strong>
             </div>
         </div>
     @else
         <div class="payment-info" style="background: #f0fdf4; border-left-color: #16a34a;">
-            <div class="payment-info-title" style="color: #16a34a;">PEMBAYARAN TELAH DITERIMA</div>
+            <div class="payment-info-title" style="color: #16a34a;">PEMBAYARAN TAHAP {{ $invoice->termin_step }} TELAH DITERIMA</div>
             <div>Invoice ini telah dibayar pada: <strong>{{ \Carbon\Carbon::parse($invoice->paid_at)->format('d F Y H:i') }}</strong></div>
             @if($invoice->notes)
                 <div style="margin-top: 5px;">Catatan: {{ $invoice->notes }}</div>
@@ -380,7 +620,7 @@
     <div class="footer-note">
         Dokumen ini digenerate secara otomatis oleh sistem MOEY Interior Management<br>
         Dicetak pada: {{ \Carbon\Carbon::now()->format('d F Y H:i:s') }}<br>
-        <strong>{{ $invoice->status === 'paid' ? 'Invoice Lunas' : 'Invoice Belum Lunas' }}</strong>
+        <strong>Invoice Tahap {{ $invoice->termin_step }} - {{ $invoice->status === 'paid' ? 'Terbayar' : 'Belum Bayar' }}</strong>
     </div>
 </body>
 </html>

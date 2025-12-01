@@ -11,6 +11,6 @@ return [
         'Trap' => 10,
         'Install' => 5,
         'Install QC' => 5,
-        'BAST' => 0,
+        // BAST dikeluarkan dari stage, menjadi fitur terpisah
     ]
 ];

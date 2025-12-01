@@ -17,6 +17,9 @@ interface Repair {
     notes: string;
     repaired_by: string;
     repaired_at: string;
+    is_approved: boolean;
+    approved_by: string | null;
+    approved_at: string | null;
 }
 interface Defect {
     nama_project: string;
@@ -26,6 +29,7 @@ interface Defect {
     qc_stage: string;
     status: string;
     defect_items: DefectItem[];
+    has_pending_approval: boolean;
 }
 
 export default function Show({ defect }: { defect: Defect }) {
@@ -34,6 +38,7 @@ export default function Show({ defect }: { defect: Defect }) {
     const [repairPhoto, setRepairPhoto] = useState<File | null>(null);
     const [repairNotes, setRepairNotes] = useState('');
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+    const [approvingRepair, setApprovingRepair] = useState<number | null>(null);
     
     const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -60,6 +65,24 @@ export default function Show({ defect }: { defect: Defect }) {
                 setPhotoPreview(null);
             }
         });
+    };
+
+    const handleApproveRepair = (repairId: number) => {
+        if (confirm('Apakah Anda yakin ingin menyetujui perbaikan ini?')) {
+            setApprovingRepair(repairId);
+            router.post(`/defect-repairs/${repairId}/approve`, {}, {
+                onFinish: () => setApprovingRepair(null)
+            });
+        }
+    };
+
+    const handleRejectRepair = (repairId: number) => {
+        if (confirm('Apakah Anda yakin ingin menolak perbaikan ini? Foto perbaikan akan dihapus dan harus diupload ulang.')) {
+            setApprovingRepair(repairId);
+            router.post(`/defect-repairs/${repairId}/reject`, {}, {
+                onFinish: () => setApprovingRepair(null)
+            });
+        }
     };
 
     const getStatusColor = (status: string) => {
@@ -124,6 +147,21 @@ export default function Show({ defect }: { defect: Defect }) {
                                         {getStatusLabel(defect.status)}
                                     </span>
                                 </div>
+                                
+                                {/* Pending Approval Warning */}
+                                {defect.has_pending_approval && (
+                                    <div className="mb-4 rounded-xl bg-yellow-100 border-2 border-yellow-300 p-4 shadow-md">
+                                        <div className="flex items-center">
+                                            <svg className="h-6 w-6 text-yellow-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                            </svg>
+                                            <div>
+                                                <p className="font-bold text-yellow-800">Ada perbaikan yang menunggu approval</p>
+                                                <p className="text-sm text-yellow-700">Silakan review dan approve/tolak perbaikan yang sudah diupload agar proses produksi dapat dilanjutkan.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                                 
                                 <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div className="rounded-xl bg-white/70 p-4 shadow-md backdrop-blur-sm">
@@ -195,15 +233,19 @@ export default function Show({ defect }: { defect: Defect }) {
                                                 {item.repairs.length > 0 ? (
                                                     <div className="space-y-4">
                                                         {item.repairs.map(repair => (
-                                                            <div key={repair.id} className="rounded-lg border-2 border-green-300 bg-white p-4 shadow-sm">
+                                                            <div key={repair.id} className={`rounded-lg border-2 ${repair.is_approved ? 'border-green-400 bg-green-50' : 'border-yellow-400 bg-yellow-50'} p-4 shadow-sm`}>
                                                                 <div className="relative overflow-hidden rounded-lg shadow-lg mb-3">
                                                                     <img 
                                                                         src={repair.photo_url} 
                                                                         alt="Repair" 
-                                                                        className="w-full rounded-lg border-2 border-green-300 transition-transform duration-300 hover:scale-105"
+                                                                        className={`w-full rounded-lg border-2 ${repair.is_approved ? 'border-green-300' : 'border-yellow-300'} transition-transform duration-300 hover:scale-105`}
                                                                     />
+                                                                    {/* Approval Status Badge */}
+                                                                    <div className={`absolute top-2 right-2 px-3 py-1 rounded-full text-xs font-bold ${repair.is_approved ? 'bg-green-500 text-white' : 'bg-yellow-500 text-white'}`}>
+                                                                        {repair.is_approved ? '✓ Approved' : '⏳ Pending Approval'}
+                                                                    </div>
                                                                 </div>
-                                                                <div className="rounded-lg bg-green-50 p-3">
+                                                                <div className={`rounded-lg ${repair.is_approved ? 'bg-white' : 'bg-white/80'} p-3`}>
                                                                     <p className="mb-2 text-sm"><strong className="text-green-700">Catatan:</strong> <span className="text-gray-700">{repair.notes}</span></p>
                                                                     <p className="text-xs text-gray-600 flex items-center">
                                                                         <svg className="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -217,16 +259,69 @@ export default function Show({ defect }: { defect: Defect }) {
                                                                         </svg>
                                                                         {new Date(repair.repaired_at).toLocaleString('id-ID')}
                                                                     </p>
+                                                                    
+                                                                    {/* Approval Info */}
+                                                                    {repair.is_approved && repair.approved_by && (
+                                                                        <div className="mt-3 pt-3 border-t border-green-200">
+                                                                            <p className="text-xs text-green-700 flex items-center">
+                                                                                <svg className="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                                </svg>
+                                                                                Disetujui oleh: <strong className="ml-1">{repair.approved_by}</strong>
+                                                                            </p>
+                                                                            {repair.approved_at && (
+                                                                                <p className="text-xs text-green-600 ml-5">
+                                                                                    {new Date(repair.approved_at).toLocaleString('id-ID')}
+                                                                                </p>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
-                                                                <button
-                                                                    onClick={() => router.delete(`/defect-repairs/${repair.id}`)}
-                                                                    className="mt-3 flex items-center text-sm font-semibold text-red-600 transition-colors hover:text-red-800"
-                                                                >
-                                                                    <svg className="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                    </svg>
-                                                                    Hapus Perbaikan
-                                                                </button>
+                                                                
+                                                                {/* Action Buttons */}
+                                                                <div className="mt-3 flex gap-2">
+                                                                    {!repair.is_approved && (
+                                                                        <>
+                                                                            <button
+                                                                                onClick={() => handleApproveRepair(repair.id)}
+                                                                                disabled={approvingRepair === repair.id}
+                                                                                className="flex-1 flex items-center justify-center rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:scale-105 hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 disabled:hover:scale-100"
+                                                                            >
+                                                                                {approvingRepair === repair.id ? (
+                                                                                    <svg className="animate-spin h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24">
+                                                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                                                                    </svg>
+                                                                                ) : (
+                                                                                    <svg className="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                                                    </svg>
+                                                                                )}
+                                                                                Approve
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => handleRejectRepair(repair.id)}
+                                                                                disabled={approvingRepair === repair.id}
+                                                                                className="flex items-center justify-center rounded-lg border-2 border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition-all duration-200 hover:bg-red-50 disabled:opacity-50"
+                                                                                title="Tolak perbaikan - harus upload ulang"
+                                                                            >
+                                                                                <svg className="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                                                </svg>
+                                                                                Tolak & Hapus
+                                                                            </button>
+                                                                        </>
+                                                                    )}
+                                                                    <button
+                                                                        onClick={() => router.delete(`/defect-repairs/${repair.id}`)}
+                                                                        className="flex items-center text-sm font-semibold text-red-600 transition-colors hover:text-red-800"
+                                                                    >
+                                                                        <svg className="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                        </svg>
+                                                                        Hapus
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                         ))}
                                                     </div>

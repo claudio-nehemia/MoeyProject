@@ -4,256 +4,356 @@
     <meta charset="utf-8">
     <title>RAB Vendor - {{ $rabVendor->itemPekerjaan->moodboard->order->nama_project }}</title>
     <style>
-        @page { margin: 15mm; }
+        @page {
+            margin: 10mm;
+            size: landscape;
+        }
+        
         body {
             font-family: Arial, sans-serif;
-            font-size: 10px;
+            font-size: 9px;
+            line-height: 1.2;
             color: #333;
-            line-height: 1.3;
         }
-
+        
         .header {
             text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 3px solid #9333ea;
-            padding-bottom: 15px;
-        }
-        .header h1 { margin: 0; font-size: 18px; color: #9333ea; font-weight: bold; }
-        .header h2 { margin: 5px 0 0; font-size: 16px; color: #333; font-weight: bold; }
-
-        .info-section {
             margin-bottom: 15px;
+            border-bottom: 3px solid #9333ea;
+            padding-bottom: 10px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 16px;
+            color: #9333ea;
+            font-weight: bold;
+        }
+        
+        .header h2 {
+            margin: 3px 0 0 0;
+            font-size: 14px;
+            color: #333;
+            font-weight: bold;
+        }
+        
+        .info-section {
+            margin-bottom: 10px;
             background: #f9fafb;
-            padding: 10px;
+            padding: 8px;
             border-radius: 5px;
         }
-        .info-row { display: flex; margin-bottom: 3px; }
-        .info-label { font-weight: bold; width: 120px; color: #9333ea; }
-
+        
+        .info-row {
+            display: inline-block;
+            margin-right: 20px;
+            margin-bottom: 2px;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #9333ea;
+        }
+        
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
+        
         table th {
             background: #e5e7eb;
             color: #374151;
             font-weight: bold;
-            padding: 8px 6px;
+            text-align: left;
+            padding: 6px 4px;
             border: 1px solid #d1d5db;
-            text-transform: uppercase;
-            font-size: 9px;
-        }
-        table td {
-            padding: 6px;
-            border: 1px solid #d1d5db;
-        }
-
-        .produk-header {
-            background: #16a34a;
-            color: white;
-            font-weight: bold;
-            font-size: 11px;
-            padding: 6px;
-        }
-        .produk-info { font-size: 9px; color: #e9d5ff; margin-top: 2px; }
-
-        .harga-dasar-row { background: #f3e8ff; }
-        .harga-dasar-row td { font-weight: 600; }
-
-        .jenis-item-header {
             font-size: 8px;
-            font-weight: bold;
-            color: #9333ea;
             text-transform: uppercase;
         }
-        .item-name { padding-left: 15px; }
-
-        .subtotal-row { background: #dbeafe; }
-        .subtotal-row td { font-weight: bold; }
-        .subtotal-detail { font-size: 8px; color: #4b5563; }
-
-        .aksesoris-row { background: #faf5ff; }
-        .aksesoris-header {
-            font-size: 8px;
-            font-weight: bold;
-            color: #7c3aed;
-            text-transform: uppercase;
-        }
-        .total-aksesoris-row { background: #e9d5ff; }
-        .total-aksesoris-row td { font-weight: bold; color: #7c3aed; }
-
-        .grand-total-cell {
-            background: linear-gradient(to bottom, #dcfce7, #bbf7d0);
+        
+        table th.text-center {
             text-align: center;
         }
-        .grand-total-amount {
-            font-size: 14px;
-            font-weight: bold;
+        
+        table th.text-right {
+            text-align: right;
+        }
+        
+        table th.harga-col {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        table th.total-non-aks {
+            background: #f3e8ff;
+            color: #7c3aed;
+        }
+        
+        table th.harga-aks {
+            background: #ffedd5;
+            color: #c2410c;
+        }
+        
+        table th.grand-total-header {
+            background: #dcfce7;
             color: #166534;
         }
-        .grand-total-label {
-            font-size: 8px;
-            color: #4b5563;
-            margin-top: 2px;
+        
+        table td {
+            padding: 4px;
+            border: 1px solid #d1d5db;
+            vertical-align: top;
         }
-
+        
+        .produk-row {
+            background: #faf5ff;
+        }
+        
+        .produk-name {
+            font-weight: bold;
+            color: #7c3aed;
+        }
+        
+        .produk-dim {
+            font-size: 7px;
+            color: #6b7280;
+        }
+        
+        .harga-col-cell {
+            background: #eff6ff;
+            color: #1e40af;
+            text-align: right;
+        }
+        
+        .total-non-aks-cell {
+            background: #faf5ff;
+            color: #7c3aed;
+            font-weight: bold;
+            text-align: right;
+        }
+        
+        .harga-aks-cell {
+            background: #fff7ed;
+            color: #c2410c;
+            text-align: right;
+        }
+        
+        .grand-total-cell {
+            background: #dcfce7;
+            text-align: right;
+            font-weight: bold;
+            color: #166534;
+            font-size: 11px;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
         .final-total {
             background: linear-gradient(to right, #16a34a, #15803d);
             color: white;
-            padding: 12px;
+            padding: 10px;
             border-radius: 5px;
+            margin-top: 8px;
         }
+        
         .final-total-content {
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .final-total-label { font-size: 14px; font-weight: bold; }
-        .final-total-amount { font-size: 18px; font-weight: bold; }
-
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
+        
+        .final-total-label {
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .final-total-amount {
+            font-size: 16px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
-
     <!-- Header -->
     <div class="header">
         <h1>RANCANGAN ANGGARAN BIAYA VENDOR</h1>
         <h2>MOEY INTERIOR</h2>
     </div>
 
-    <!-- Info -->
+    <!-- Info Section -->
     <div class="info-section">
-        <div class="info-row"><div class="info-label">Project:</div><div>{{ $rabVendor->itemPekerjaan->moodboard->order->nama_project }}</div></div>
-        <div class="info-row"><div class="info-label">Company:</div><div>{{ $rabVendor->itemPekerjaan->moodboard->order->company_name }}</div></div>
-        <div class="info-row"><div class="info-label">Customer:</div><div>{{ $rabVendor->itemPekerjaan->moodboard->order->nama_project }}</div></div>
-        <div class="info-row"><div class="info-label">Response By:</div><div>{{ $rabVendor->response_by }}</div></div>
         <div class="info-row">
-            <div class="info-label">Response Time:</div>
-            <div>{{ \Carbon\Carbon::parse($rabVendor->response_time)->format('d F Y H:i') }}</div>
+            <span class="info-label">Project:</span>
+            {{ $rabVendor->itemPekerjaan->moodboard->order->nama_project }}
+        </div>
+        <div class="info-row">
+            <span class="info-label">Company:</span>
+            {{ $rabVendor->itemPekerjaan->moodboard->order->company_name }}
+        </div>
+        <div class="info-row">
+            <span class="info-label">Customer:</span>
+            {{ $rabVendor->itemPekerjaan->moodboard->order->customer_name }}
+        </div>
+        <div class="info-row">
+            <span class="info-label">Response By:</span>
+            {{ $rabVendor->response_by }}
+        </div>
+        <div class="info-row">
+            <span class="info-label">Response Time:</span>
+            {{ \Carbon\Carbon::parse($rabVendor->response_time)->format('d F Y H:i') }}
         </div>
     </div>
 
-    <!-- Table -->
+    <!-- Table - Same layout as Show.tsx -->
     <table>
         <thead>
             <tr>
-                <th style="width:35%;">Komponen</th>
-                <th class="text-center" style="width:10%;">Qty</th>
-                <th class="text-right" style="width:18%;">Harga Satuan</th>
-                <th class="text-right" style="width:18%;">Harga Total</th>
-                <th class="grand-total-header text-right" style="width:19%;">Grand Total</th>
+                <th style="width: 12%;">Produk</th>
+                <th style="width: 10%;">Bahan Baku</th>
+                <th class="harga-col text-right" style="width: 7%;">Harga BB</th>
+                <th style="width: 10%;">Finishing Dalam</th>
+                <th class="harga-col text-right" style="width: 7%;">Harga FD</th>
+                <th style="width: 10%;">Finishing Luar</th>
+                <th class="harga-col text-right" style="width: 7%;">Harga FL</th>
+                <th class="text-center" style="width: 4%;">Qty</th>
+                <th class="total-non-aks text-right" style="width: 8%;">Total Non-Aks</th>
+                <th style="width: 10%;">Aksesoris</th>
+                <th class="harga-aks text-right" style="width: 7%;">Harga Aks</th>
+                <th class="grand-total-header text-right" style="width: 9%;">Grand Total</th>
             </tr>
         </thead>
-
         <tbody>
-            @foreach($produks as $i => $p)
+            @foreach($produks as $index => $produk)
                 @php
-                    $totalItems = collect($p['jenis_items'])->sum(fn($j) => count($j['items']));
-                    $totalAks = count($p['aksesoris']);
-                    $totalRows = 1 + $totalItems + 1 + ($totalAks > 0 ? $totalAks + 1 : 0);
-                    $subtotal = $p['harga_dasar'] + $p['harga_items_non_aksesoris'];
+                    // Group items by jenis
+                    $bahanBakuItems = [];
+                    $finishingDalamItems = [];
+                    $finishingLuarItems = [];
+                    $bahanBakuTotal = 0;
+                    $finishingDalamTotal = 0;
+                    $finishingLuarTotal = 0;
+
+                    foreach ($produk['jenis_items'] as $jenisItem) {
+                        $namaJenis = strtolower($jenisItem['nama_jenis']);
+                        foreach ($jenisItem['items'] as $item) {
+                            $harga = $item['harga_total'] ?? 0;
+                            if ($namaJenis === 'bahan baku') {
+                                $bahanBakuItems[] = $item['nama_item'];
+                                $bahanBakuTotal += $harga;
+                            } elseif ($namaJenis === 'finishing dalam') {
+                                $finishingDalamItems[] = $item['nama_item'];
+                                $finishingDalamTotal += $harga;
+                            } elseif ($namaJenis === 'finishing luar') {
+                                $finishingLuarItems[] = $item['nama_item'];
+                                $finishingLuarTotal += $harga;
+                            }
+                        }
+                    }
+
+                    $totalNonAksesoris = $bahanBakuTotal + $finishingDalamTotal + $finishingLuarTotal;
+                    
+                    // Aksesoris
+                    $aksesorisItems = [];
+                    $totalAksesoris = 0;
+                    foreach ($produk['aksesoris'] ?? [] as $aks) {
+                        $aksesorisItems[] = $aks['nama_aksesoris'] . ' (Qty: ' . $aks['qty_aksesoris'] . ')';
+                        $totalAksesoris += $aks['harga_total'] ?? 0;
+                    }
+
+                    $maxRows = max(count($bahanBakuItems), count($finishingDalamItems), count($finishingLuarItems), count($aksesorisItems), 1);
                 @endphp
 
-                <!-- Produk Header -->
-                <tr>
-                    <td colspan="5" class="produk-header">
-                        {{ $i + 1 }}. {{ $p['nama_produk'] }}
-                        <div class="produk-info">
-                            Qty: {{ $p['qty_produk'] }}
-                            @if($p['panjang'] && $p['lebar'] && $p['tinggi'])
-                                | Dimensi: {{ $p['panjang'] }} × {{ $p['lebar'] }} × {{ $p['tinggi'] }} cm
+                @for($rowIndex = 0; $rowIndex < $maxRows; $rowIndex++)
+                    <tr class="{{ $rowIndex === 0 ? 'produk-row' : '' }}">
+                        @if($rowIndex === 0)
+                            <td rowspan="{{ $maxRows }}">
+                                <div class="produk-name">{{ $index + 1 }}. {{ $produk['nama_produk'] }}</div>
+                                @if($produk['panjang'] && $produk['lebar'] && $produk['tinggi'])
+                                    <div class="produk-dim">{{ $produk['panjang'] }} × {{ $produk['lebar'] }} × {{ $produk['tinggi'] }} cm</div>
+                                @endif
+                            </td>
+                        @endif
+
+                        <td>
+                            @if(isset($bahanBakuItems[$rowIndex]))
+                                • {{ $bahanBakuItems[$rowIndex] }}
                             @endif
-                        </div>
-                    </td>
-                </tr>
-
-                <!-- Harga Dasar -->
-                <tr class="harga-dasar-row">
-                    <td>Harga Dasar</td>
-                    <td class="text-center">{{ $p['qty_produk'] }}</td>
-                    <td class="text-right">Rp {{ number_format($p['harga_dasar'] / $p['qty_produk'], 0, ',', '.') }}</td>
-                    <td class="text-right">Rp {{ number_format($p['harga_dasar'], 0, ',', '.') }}</td>
-
-                    <td rowspan="{{ $totalRows }}" class="grand-total-cell">
-                        <div class="grand-total-amount">
-                            Rp {{ number_format($p['harga_akhir'], 0, ',', '.') }}
-                        </div>
-                        <div class="grand-total-label">Harga Akhir</div>
-                    </td>
-                </tr>
-
-                <!-- Items -->
-                @foreach($p['jenis_items'] as $jenis)
-                    @foreach($jenis['items'] as $idx => $item)
-                        <tr>
-                            <td>
-                                @if($idx === 0)
-                                    <div class="jenis-item-header">{{ $jenis['nama_jenis'] }}</div>
-                                @endif
-                                <div class="item-name">• {{ $item['nama_item'] }}</div>
-                            </td>
-                            <td class="text-center">{{ $item['qty'] }}</td>
-                            <td class="text-right">Rp {{ number_format($item['harga_satuan'], 0, ',', '.') }}</td>
-                            <td class="text-right">Rp {{ number_format($item['harga_total'], 0, ',', '.') }}</td>
-                        </tr>
-                    @endforeach
-                @endforeach
-
-                <!-- Subtotal × Dimensi -->
-                <tr class="subtotal-row">
-                    <td>Subtotal × Dimensi</td>
-                    <td class="text-center">-</td>
-                    <td class="text-right">
-                        <div class="subtotal-detail">Subtotal: Rp {{ number_format($subtotal, 0, ',', '.') }}</div>
-                        <div class="subtotal-detail">Dimensi: Rp {{ number_format($p['harga_dimensi'], 0, ',', '.') }}</div>
-                    </td>
-                    <td class="text-right" style="color:#2563eb;">
-                        Rp {{ number_format($p['harga_satuan'], 0, ',', '.') }}
-                    </td>
-                </tr>
-
-                <!-- Aksesoris -->
-                @if(count($p['aksesoris']) > 0)
-                    @foreach($p['aksesoris'] as $aIdx => $aks)
-                        <tr class="aksesoris-row">
-                            <td>
-                                @if($aIdx === 0)
-                                    <div class="aksesoris-header">Aksesoris</div>
-                                @endif
-                                <div class="item-name">• {{ $aks['nama_aksesoris'] }}</div>
-                            </td>
-                            <td class="text-center">{{ $aks['qty_aksesoris'] }}</td>
-                            <td class="text-right">Rp {{ number_format($aks['harga_satuan_aksesoris'], 0, ',', '.') }}</td>
-                            <td class="text-right">Rp {{ number_format($aks['harga_total'], 0, ',', '.') }}</td>
-                        </tr>
-                    @endforeach
-
-                    <tr class="total-aksesoris-row">
-                        <td colspan="3" class="text-right">Total Aksesoris:</td>
-                        <td class="text-right">
-                            Rp {{ number_format($p['harga_total_aksesoris'], 0, ',', '.') }}
                         </td>
+
+                        @if($rowIndex === 0)
+                            <td rowspan="{{ $maxRows }}" class="harga-col-cell">
+                                Rp {{ number_format($bahanBakuTotal, 0, ',', '.') }}
+                            </td>
+                        @endif
+
+                        <td>
+                            @if(isset($finishingDalamItems[$rowIndex]))
+                                • {{ $finishingDalamItems[$rowIndex] }}
+                            @endif
+                        </td>
+
+                        @if($rowIndex === 0)
+                            <td rowspan="{{ $maxRows }}" class="harga-col-cell">
+                                Rp {{ number_format($finishingDalamTotal, 0, ',', '.') }}
+                            </td>
+                        @endif
+
+                        <td>
+                            @if(isset($finishingLuarItems[$rowIndex]))
+                                • {{ $finishingLuarItems[$rowIndex] }}
+                            @endif
+                        </td>
+
+                        @if($rowIndex === 0)
+                            <td rowspan="{{ $maxRows }}" class="harga-col-cell">
+                                Rp {{ number_format($finishingLuarTotal, 0, ',', '.') }}
+                            </td>
+                            <td rowspan="{{ $maxRows }}" class="text-center">
+                                {{ $produk['qty_produk'] }}
+                            </td>
+                            <td rowspan="{{ $maxRows }}" class="total-non-aks-cell">
+                                Rp {{ number_format($totalNonAksesoris, 0, ',', '.') }}
+                            </td>
+                        @endif
+
+                        <td>
+                            @if(isset($aksesorisItems[$rowIndex]))
+                                • {{ $aksesorisItems[$rowIndex] }}
+                            @endif
+                        </td>
+
+                        @if($rowIndex === 0)
+                            <td rowspan="{{ $maxRows }}" class="harga-aks-cell">
+                                Rp {{ number_format($totalAksesoris, 0, ',', '.') }}
+                            </td>
+                            <td rowspan="{{ $maxRows }}" class="grand-total-cell">
+                                Rp {{ number_format($produk['harga_akhir'] ?? 0, 0, ',', '.') }}
+                            </td>
+                        @endif
                     </tr>
-                @endif
+                @endfor
             @endforeach
         </tbody>
     </table>
 
-    <!-- GRAND TOTAL -->
+    <!-- Grand Total -->
     <div class="final-total">
         <div class="final-total-content">
             <div>
                 <div class="final-total-label">GRAND TOTAL</div>
-                <div style="font-size: 9px;">Total semua produk ({{ count($produks) }} produk)</div>
+                <div style="font-size: 8px; margin-top: 2px;">Total semua produk ({{ count($produks) }} produk)</div>
             </div>
             <div class="final-total-amount">
-                Rp {{ number_format(collect($produks)->sum('harga_akhir'), 0, ',', '.') }}
+                Rp {{ number_format($totalSemuaProduk, 0, ',', '.') }}
             </div>
         </div>
     </div>
-
 </body>
 </html>

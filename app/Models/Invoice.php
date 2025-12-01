@@ -10,6 +10,9 @@ class Invoice extends Model
         'item_pekerjaan_id',
         'rab_kontrak_id',
         'invoice_number',
+        'termin_step',
+        'termin_text',
+        'termin_persentase',
         'total_amount',
         'status',
         'bukti_bayar',
@@ -19,6 +22,7 @@ class Invoice extends Model
 
     protected $casts = [
         'total_amount' => 'decimal:2',
+        'termin_persentase' => 'decimal:2',
         'paid_at' => 'datetime',
     ];
 

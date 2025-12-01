@@ -14,6 +14,13 @@ class ItemPekerjaanProduk extends Model
         'lebar',
         'tinggi',
         'current_stage',
+        'bast_number',
+        'bast_date',
+        'bast_pdf_path',
+    ];
+
+    protected $casts = [
+        'bast_date' => 'datetime',
     ];
 
     public function itemPekerjaan()
@@ -29,6 +36,11 @@ class ItemPekerjaanProduk extends Model
     public function jenisItems()
     {
         return $this->hasMany(ItemPekerjaanJenisItem::class);
+    }
+
+    public function stageEvidences()
+    {
+        return $this->hasMany(StageEvidence::class);
     }
 
     public static function stageWeights()
@@ -49,6 +61,17 @@ class ItemPekerjaanProduk extends Model
             ->exists();
     }
 
+    // Accessor: Cek apakah produk sudah selesai (Install QC = tahap terakhir)
+    public function getIsCompletedAttribute()
+    {
+        return $this->current_stage === 'Install QC';
+    }
+
+    // Accessor: Cek apakah BAST sudah dibuat
+    public function getHasBastAttribute()
+    {
+        return !empty($this->bast_number);
+    }
 
     public function getProgressAttribute()
     {

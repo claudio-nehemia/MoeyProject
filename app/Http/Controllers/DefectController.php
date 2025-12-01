@@ -80,10 +80,14 @@ class DefectController extends Controller
                                 'notes' => $repair->notes,
                                 'repaired_by' => $repair->repaired_by,
                                 'repaired_at' => $repair->repaired_at,
+                                'is_approved' => $repair->is_approved,
+                                'approved_by' => $repair->approved_by,
+                                'approved_at' => $repair->approved_at,
                             ];
                         }),
                     ];
                 }),
+                'has_pending_approval' => $defect->has_pending_approval,
             ],
         ]);
     }
@@ -185,5 +189,52 @@ class DefectController extends Controller
         $defect->update(['status' => $request->status]);
 
         return redirect()->back()->with('success', 'Status defect berhasil diupdate');
+    }
+
+    // Approve Repair - ACC perbaikan
+    public function approveRepair($repairId)
+    {
+        $repair = DefectRepair::findOrFail($repairId);
+
+        $repair->update([
+            'is_approved' => true,
+            'approved_by' => Auth::user()->name,
+            'approved_at' => now(),
+        ]);
+
+        // Cek apakah semua defect items sudah diperbaiki DAN di-approve
+        $defect = $repair->defectItem->defect;
+        if ($defect->is_all_repaired) {
+            $defect->update(['status' => 'completed']);
+        }
+
+        return redirect()->back()->with('success', 'Perbaikan berhasil di-approve');
+    }
+
+    // Reject Repair - Tolak perbaikan (hapus repair, harus upload ulang)
+    public function rejectRepair(Request $request, $repairId)
+    {
+        $request->validate([
+            'rejection_notes' => 'nullable|string|max:500',
+        ]);
+
+        $repair = DefectRepair::findOrFail($repairId);
+        $defect = $repair->defectItem->defect;
+
+        // Hapus foto dari storage
+        Storage::disk('public')->delete($repair->photo_path);
+
+        // Hapus repair record - user harus upload ulang
+        $repair->delete();
+
+        // Update status defect back to pending atau in_repair
+        $remainingRepairs = $defect->defectItems->flatMap->repairs->count();
+        if ($remainingRepairs === 0) {
+            $defect->update(['status' => 'pending']);
+        } else {
+            $defect->update(['status' => 'in_repair']);
+        }
+
+        return redirect()->back()->with('success', 'Perbaikan ditolak. Silakan upload ulang foto perbaikan.');
     }
 }
