@@ -26,6 +26,7 @@ use App\Http\Controllers\ItemPekerjaanController;
 use App\Http\Controllers\JenisInteriorController;
 use App\Http\Controllers\SurveyResultsController;
 use App\Http\Controllers\ProjectManagementController;
+use App\Http\Controllers\WorkplanItemController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -346,7 +347,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:project-management.show');
         Route::post('/produk/{id}/update-stage', [ProjectManagementController::class, 'updateStage'])
             ->middleware('permission:project-management.update-stage');
+        Route::post('/project-management/produk/{produk}/workplan',[WorkplanItemController::class, 'store'])->name('project-management.workplan.store');
+        Route::post('/workplan/{workplan}/update-status', [WorkplanItemController::class, 'updateStatus'])
+            ->name('workplan.update.status');
     });
+
+    
 
     // DEFECT ROUTES
     Route::middleware(['permission:defect.index'])->group(function () {

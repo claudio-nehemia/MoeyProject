@@ -14,6 +14,7 @@ interface Kontrak {
     id: number;
     durasi_kontrak: number;
     harga_kontrak: number;
+    nilai_project?: number;
     termin: {
         nama: string;
         tahapan: Array<{
@@ -43,6 +44,7 @@ interface Termin {
     tahapan: Array<{
         step: number;
         text: string;
+        percentage: number;
     }>;
 }
 

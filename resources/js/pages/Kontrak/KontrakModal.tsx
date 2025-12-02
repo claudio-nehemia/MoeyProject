@@ -25,6 +25,7 @@ interface KontrakModalProps {
         tahapan: Array<{
             step: number;
             text: string;
+            percentage: number;
         }>;
     }>;
 }
