@@ -8,8 +8,8 @@ import { FormEventHandler, useEffect, useState } from 'react';
 interface TerminStep {
     step: number;
     text: string;
-    // backend sekarang bisa kirim percentage
-    percentage?: number | string;
+    // backend sekarang bisa kirim persentase
+    persentase?: number | string;
 }
 
 interface Termin {
@@ -18,7 +18,6 @@ interface Termin {
     nama_tipe: string;
     deskripsi: string | null;
     tahapan: { step: number; text: string; persentase: number }[];
-    tahapan: TerminStep[];
     created_at: string;
     updated_at: string;
 }
@@ -29,7 +28,7 @@ interface Props {
 
 interface TahapanFormRow {
     tahapan: string;
-    percentage: string;
+    persentase: number;
 }
 
 interface TerminFormData {
@@ -53,19 +52,14 @@ export default function Index({ termins }: Props) {
     const [searchQuery, setSearchQuery] = useState('');
     const [filteredTermins, setFilteredTermins] = useState(termins);
 
-    const { data, setData, post, put, processing, errors, reset } = useForm({
+    const { data, setData, post, put, processing, errors, reset } = useForm<TerminFormData>({
         kode_tipe: '',
         nama_tipe: '',
         deskripsi: '',
-        tahapan: [{ tahapan: '', persentase: 0 }],
+        tahapan: [
+            { tahapan: '', persentase: 0 }
+        ],
     });
-    const { data, setData, post, put, processing, errors, reset } =
-        useForm<TerminFormData>({
-            kode_tipe: '',
-            nama_tipe: '',
-            deskripsi: '',
-            tahapan: [{ tahapan: '', percentage: '' }],
-        });
 
     useEffect(() => {
         setMounted(true);
@@ -112,7 +106,7 @@ export default function Index({ termins }: Props) {
         setData('tahapan', [...data.tahapan, { tahapan: '', persentase: 0 }]);
         setData('tahapan', [
             ...data.tahapan,
-            { tahapan: '', percentage: '' },
+            { tahapan: '', persentase: '' },
         ]);
     };
 
@@ -132,7 +126,7 @@ export default function Index({ termins }: Props) {
         setSelectedTermin(null);
         reset();
         setData('tahapan', [{ tahapan: '', persentase: 0 }]);
-        setData('tahapan', [{ tahapan: '', percentage: '' }]);
+        setData('tahapan', [{ tahapan: '', persentase: '' }]);
         setShowModal(true);
     };
 
@@ -352,13 +346,13 @@ export default function Index({ termins }: Props) {
                                                                         }
                                                                     </span>
 
-                                                                    {item.percentage !==
+                                                                    {item.persentase !==
                                                                         undefined &&
-                                                                        item.percentage !==
+                                                                        item.persentase !==
                                                                             '' && (
                                                                             <span className="ml-auto rounded-full bg-rose-200 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
                                                                                 {
-                                                                                    item.percentage
+                                                                                    item.persentase
                                                                                 }
                                                                                 %
                                                                             </span>

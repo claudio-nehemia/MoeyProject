@@ -1,48 +1,60 @@
 import { FormEventHandler, useEffect } from 'react';
 
-type TahapanRow = {
-    tahapan: string;
-    percentage: string;
-};
+// type TahapanRow = {
+//     tahapan: string;
+//     persentase: string;
+// };
 
-interface TerminModalProps {
+// Definisi baris tahapan
+export interface TahapanRow {
+    tahapan: string;
+    persentase: number;
+}
+
+export interface TerminModalProps {
     show: boolean;
     editMode: boolean;
     processing: boolean;
+
     data: {
         kode_tipe: string;
         nama_tipe: string;
         deskripsi: string;
-        tahapan: { tahapan: string; persentase: number }[];
         tahapan: TahapanRow[];
     };
+
     errors: {
         kode_tipe?: string;
         nama_tipe?: string;
         deskripsi?: string;
         tahapan?: string;
     };
+
     onClose: () => void;
     onSubmit: FormEventHandler;
-    onDataChange: (field: string, value: string) => void;
-    onTahapanChange: (index: number, field: 'tahapan' | 'persentase', value: string | number) => void;
-    onAddTahapan: () => void;
-    onRemoveTahapan: (index: number) => void;
-    onSetTahapan?: (tahapan: { tahapan: string; persentase: number }[]) => void;
+
+    /** Untuk field input biasa */
     onDataChange: (
         field: "kode_tipe" | "nama_tipe" | "deskripsi",
         value: string
     ) => void;
+
+    /** Untuk update per-row tahapan */
     onTahapanChange: (
         index: number,
-        field: 'tahapan' | 'percentage',
-        value: string,
+        field: keyof TahapanRow,   // "tahapan" | "persentase"
+        value: string | number
     ) => void;
+
     onAddTahapan: () => void;
     onRemoveTahapan: (index: number) => void;
+
+    /** Optional: Set ulang list tahapan secara full */
     onSetTahapan?: (tahapan: TahapanRow[]) => void;
+
     selectedTerminId?: number | null;
 }
+
 
 export default function TerminModal({
     show,
@@ -69,7 +81,7 @@ export default function TerminModal({
                     onDataChange('nama_tipe', termin.nama_tipe);
                     onDataChange('deskripsi', termin.deskripsi || '');
 
-                    // Set tahapan data (sudah dalam bentuk { tahapan, percentage })
+                    // Set tahapan data (sudah dalam bentuk { tahapan, persentase })
                     if (onSetTahapan && termin.tahapan) {
                         onSetTahapan(termin.tahapan);
                     }
@@ -80,7 +92,7 @@ export default function TerminModal({
         }
     }, [editMode, selectedTerminId, show]);
 
-    // Calculate total percentage
+    // Calculate total persentase
     const totalPersentase = data.tahapan.reduce((sum, item) => sum + Number(item.persentase || 0), 0);
     const isPersentaseValid = totalPersentase === 100;
 
@@ -293,83 +305,58 @@ export default function TerminModal({
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
+                                <div className="space-y-3">
                                     {data.tahapan.map((item, index) => (
                                         <div
                                             key={index}
-                                            className="flex items-center gap-2"
+                                            className="flex items-center gap-3 p-3 rounded-lg border border-stone-300 bg-white"
                                         >
-                                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-rose-100 to-rose-200 text-xs font-bold text-rose-700">
+                                            {/* Nomor urut */}
+                                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-700 font-bold">
                                                 {index + 1}
                                             </div>
 
-                                            {/* Deskripsi Tahapan */}
+                                            {/* Input Nama Tahapan */}
                                             <input
                                                 type="text"
                                                 value={item.tahapan}
                                                 onChange={(e) =>
-                                                    onTahapanChange(index, 'tahapan', e.target.value)
-                                                    onTahapanChange(
-                                                        index,
-                                                        'tahapan',
-                                                        e.target.value,
-                                                    )
+                                                    onTahapanChange(index, "tahapan", e.target.value)
                                                 }
-                                                className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-xs sm:text-sm transition-all focus:border-transparent focus:ring-2 focus:ring-rose-500"
+                                                className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm focus:ring-2 focus:ring-rose-500 focus:border-transparent"
                                                 placeholder={`Tahapan ke-${index + 1}`}
                                                 disabled={processing}
                                             />
-                                            <div className="flex items-center gap-1">
-                                                <input
-                                                    type="number"
-                                                    value={item.persentase === 0 ? '' : item.persentase}
-                                                    onChange={(e) => {
-                                                        const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                                                        onTahapanChange(index, 'persentase', value);
-                                                    }}
-                                                    className="w-20 rounded-lg border border-stone-300 px-2 py-2 text-sm transition-all focus:border-transparent focus:ring-2 focus:ring-rose-500"
-                                                    placeholder="%"
-                                                    min="0"
-                                                    max="100"
-                                                    step="0.1"
-                                                    disabled={processing}
-                                                />
-                                                <span className="text-sm font-medium text-stone-600">%</span>
-                                            </div>
 
-                                            {/* Persentase */}
-                                            <div className="flex items-center gap-1">
+                                            {/* Input Persentase */}
+                                            <div className="flex items-center gap-2">
                                                 <input
                                                     type="number"
                                                     min={0}
                                                     max={100}
-                                                    value={item.percentage}
+                                                    step="0.1"
+                                                    value={item.persentase || ""}
                                                     onChange={(e) =>
                                                         onTahapanChange(
                                                             index,
-                                                            'percentage',
-                                                            e.target.value,
+                                                            "persentase",
+                                                            e.target.value === "" ? 0 : parseFloat(e.target.value)
                                                         )
                                                     }
-                                                    className="w-20 rounded-lg border border-stone-300 px-2 py-2 text-xs sm:text-sm transition-all focus:border-transparent focus:ring-2 focus:ring-rose-500"
+                                                    className="w-20 rounded-lg border border-stone-300 px-2 py-2 text-sm focus:ring-2 focus:ring-rose-500 focus:border-transparent"
                                                     placeholder="%"
                                                     disabled={processing}
                                                 />
-                                                <span className="text-[11px] text-stone-500">
-                                                    %
-                                                </span>
+                                                <span className="text-xs font-medium text-stone-600">%</span>
                                             </div>
 
+                                            {/* Tombol Hapus */}
                                             {data.tahapan.length > 1 && (
                                                 <button
                                                     type="button"
-                                                    onClick={() =>
-                                                        onRemoveTahapan(
-                                                            index,
-                                                        )
-                                                    }
-                                                    className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600 transition-colors hover:bg-red-100"
+                                                    onClick={() => onRemoveTahapan(index)}
                                                     disabled={processing}
+                                                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
                                                 >
                                                     <svg
                                                         className="h-4 w-4"
