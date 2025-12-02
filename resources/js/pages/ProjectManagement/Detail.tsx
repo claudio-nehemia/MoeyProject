@@ -33,7 +33,9 @@ type Produk = {
     bast_date: string | null;
     bast_pdf_path: string | null;
     stage_evidences: Record<string, StageEvidence[]>;
+    workplan_items: WorkplanItem[]; // 🔥 NEW
 };
+
 
 type Item = {
     id: number;
@@ -59,6 +61,16 @@ type KontrakInfo = {
     sisa_hari: number | null;
     deadline_status: 'overdue' | 'urgent' | 'warning' | 'normal' | null;
 } | null;
+type WorkplanItem = {
+    id: number;
+    nama_tahapan: string;
+    start_date: string | null;
+    end_date: string | null;
+    duration_days: number | null;
+    urutan: number;
+    status: 'planned' | 'in_progress' | 'done' | 'cancelled' | string;
+    catatan: string | null;
+};
 
 export default function Detail({
     order,
@@ -71,6 +83,7 @@ export default function Detail({
 }) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [updatingProduk, setUpdatingProduk] = useState<number | null>(null);
+    const [showWorkplanModal, setShowWorkplanModal] = useState<number | null>(null);
     const [animatedProgress, setAnimatedProgress] = useState<{
         [key: number]: number;
     }>({});
@@ -89,6 +102,94 @@ export default function Detail({
     
     // State for evidence viewer modal
     const [showEvidenceModal, setShowEvidenceModal] = useState<{stage: string; evidences: StageEvidence[]} | null>(null);
+
+    // =========================
+    // WORKPLAN STATES & METHODS
+    // =========================
+
+    const [workplanItems, setWorkplanItems] = useState<WorkplanItem[]>([]);
+    const [loadingWorkplan, setLoadingWorkplan] = useState(false);
+
+    // Ketika buka modal → load data workplan dari produk
+    useEffect(() => {
+        if (selectedProduk) {
+            setWorkplanItems(selectedProduk.workplan_items || []);
+        }
+    }, [showWorkplanModal, selectedProduk]);
+
+    // Tambah baris baru
+    const addWorkplanItem = () => {
+        setWorkplanItems([
+            ...workplanItems,
+            {
+                id: 0,
+                nama_tahapan: "",
+                start_date: null,
+                end_date: null,
+                duration_days: null,
+                urutan: workplanItems.length + 1,
+                status: "planned",
+                catatan: "",
+            },
+        ]);
+    };
+
+    // Hapus baris
+    const removeWorkplanItem = (index: number) => {
+        const updated = workplanItems.filter((_, i) => i !== index)
+            .map((row, idx) => ({ ...row, urutan: idx + 1 }));
+        setWorkplanItems(updated);
+    };
+
+    // Update field
+    const updateWorkplanItem = (
+        index: number,
+        field: keyof WorkplanItem,
+        value: any
+    ) => {
+        const updated = [...workplanItems];
+        updated[index] = { ...updated[index], [field]: value };
+
+        // Hitung ulang durasi
+        if (field === "start_date" || field === "end_date") {
+            const start = new Date(updated[index].start_date || "");
+            const end = new Date(updated[index].end_date || "");
+            if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                const diff =
+                    (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24) + 1;
+                updated[index].duration_days = diff > 0 ? diff : null;
+            }
+        }
+
+        setWorkplanItems(updated);
+    };
+
+    // Submit ke backend
+    const handleSubmitWorkplan = (e: React.FormEvent, produkId: number) => {
+        e.preventDefault();
+        setLoadingWorkplan(true);
+
+        router.post(
+            `/project-management/produk/${produkId}/workplan`,
+            { items: workplanItems },
+            {
+                onFinish: () => {
+                    setLoadingWorkplan(false);
+                    setShowWorkplanModal(null);
+                },
+            }
+        );
+    };
+
+    // update status workplan
+    const updateWorkplanStatus = (id: number, status: string) => {
+        router.post(
+            `/workplan/${id}/update-status`,
+            { status },
+            { preserveScroll: true }
+        );
+    };
+
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -1157,6 +1258,9 @@ export default function Detail({
                                                                             </div>
                                                                         )}
                                                                     </div>
+                                                                    
+                                                                   
+
 
                                                                     {/* Stage Progress Modal */}
                                                                     {showStageModal ===
@@ -1315,6 +1419,221 @@ export default function Detail({
                                                                         </div>
                                                                     )}
                                                                 </div>
+
+                                                                {/* Workplan Section */}
+                                                                <div className="lg:col-span-4 mt-4 border-t border-gray-300 pt-4">
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setSelectedProduk(produk);
+                                                                            setShowWorkplanModal(produk.id);
+                                                                        }}
+                                                                        className="w-full rounded-lg bg-gradient-to-r from-teal-500 to-cyan-600 px-4 py-2 text-white font-semibold shadow-lg hover:from-teal-600 hover:to-cyan-700 transition-all"
+                                                                    >
+                                                                        📅 Kelola Timeline Workplan
+                                                                    </button>
+
+                                                                    {/* Ringkasan Workplan */}
+                                                                    {produk.workplan_items?.length > 0 && (
+                                                                        <div className="mt-3 space-y-2">
+                                                                            {produk.workplan_items.map((wp) => {
+                                                                                const statusClass = {
+                                                                                    done: 'bg-green-600',
+                                                                                    in_progress: 'bg-blue-600',
+                                                                                    cancelled: 'bg-red-600',
+                                                                                    planned: 'bg-gray-500',
+                                                                                }[wp.status];
+
+                                                                                return (
+                                                                                    <div
+                                                                                        key={wp.id || `${wp.nama_tahapan}-${wp.urutan}`}
+                                                                                        className="rounded-lg border border-gray-200 bg-white px-3 py-3 text-xs"
+                                                                                    >
+                                                                                        <div className="flex justify-between items-center">
+                                                                                            <div>
+                                                                                                <p className="font-semibold text-gray-800">{wp.nama_tahapan}</p>
+                                                                                                <p className="text-gray-500">
+                                                                                                    {wp.start_date ?? '-'} → {wp.end_date ?? '-'}
+                                                                                                    {' • '}
+                                                                                                    {wp.duration_days ?? 0} hari
+                                                                                                </p>
+                                                                                            </div>
+
+                                                                                            <span className={`px-2 py-1 rounded text-white text-[10px] font-bold ${statusClass}`}>
+                                                                                                {wp.status}
+                                                                                            </span>
+                                                                                        </div>
+
+                                                                                        {/* 🔥 Tombol Aksi */}
+                                                                                        <div className="mt-2 flex flex-wrap gap-1">
+                                                                                            
+                                                                                            {/* In Progress */}
+                                                                                            <button
+                                                                                                onClick={() => updateWorkplanStatus(wp.id, 'in_progress')}
+                                                                                                className="px-2 py-1 rounded bg-blue-600 text-white text-[10px] font-bold hover:bg-blue-700"
+                                                                                            >
+                                                                                                In Progress
+                                                                                            </button>
+
+                                                                                            {/* Complete */}
+                                                                                            <button
+                                                                                                onClick={() => updateWorkplanStatus(wp.id, 'done')}
+                                                                                                className="px-2 py-1 rounded bg-green-600 text-white text-[10px] font-bold hover:bg-green-700"
+                                                                                            >
+                                                                                                Complete
+                                                                                            </button>
+
+                                                                                            {/* Extend */}
+                                                                                            <button
+                                                                                                onClick={() => updateWorkplanStatus(wp.id, 'planned')}
+                                                                                                className="px-2 py-1 rounded bg-yellow-500 text-white text-[10px] font-bold hover:bg-yellow-600"
+                                                                                            >
+                                                                                                Extend
+                                                                                            </button>
+
+                                                                                            {/* Cancel */}
+                                                                                            <button
+                                                                                                onClick={() => updateWorkplanStatus(wp.id, 'cancelled')}
+                                                                                                className="px-2 py-1 rounded bg-red-600 text-white text-[10px] font-bold hover:bg-red-700"
+                                                                                            >
+                                                                                                Cancel
+                                                                                            </button>
+
+                                                                                        </div>
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    )}
+
+
+                                                                </div>
+
+                                                                {/* Workplan Modal */}
+                                                                {showWorkplanModal === produk.id && selectedProduk && (
+                                                                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+                                                                        <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-xl p-6">
+                                                                            <h2 className="text-2xl font-bold mb-4">
+                                                                                Timeline Workplan – {selectedProduk.nama_produk}
+                                                                            </h2>
+
+                                                                            <form
+                                                                                onSubmit={(e) => handleSubmitWorkplan(e, selectedProduk.id)}
+                                                                                className="space-y-4"
+                                                                            >
+                                                                                {workplanItems.map((wp, index) => (
+                                                                                    <div key={index} className="border-2 border-gray-200 rounded-lg p-4">
+                                                                                        <div className="flex justify-between mb-2">
+                                                                                            <h3 className="font-semibold text-gray-700">
+                                                                                                Tahapan #{index + 1}
+                                                                                            </h3>
+
+                                                                                            {workplanItems.length > 1 && (
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    onClick={() => removeWorkplanItem(index)}
+                                                                                                    className="text-red-600 hover:text-red-800"
+                                                                                                >
+                                                                                                    🗑️ Hapus
+                                                                                                </button>
+                                                                                            )}
+                                                                                        </div>
+
+                                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                                                            <div>
+                                                                                                <label className="text-sm font-medium">Nama Tahapan</label>
+                                                                                                <input
+                                                                                                    type="text"
+                                                                                                    className="w-full border rounded-lg p-2"
+                                                                                                    required
+                                                                                                    value={wp.nama_tahapan}
+                                                                                                    onChange={(e) =>
+                                                                                                        updateWorkplanItem(index, 'nama_tahapan', e.target.value)
+                                                                                                    }
+                                                                                                />
+                                                                                            </div>
+
+                                                                                            <div>
+                                                                                                <label className="text-sm font-medium">Status</label>
+                                                                                                <select
+                                                                                                    className="w-full border rounded-lg p-2"
+                                                                                                    value={wp.status}
+                                                                                                    onChange={(e) =>
+                                                                                                        updateWorkplanItem(index, 'status', e.target.value)
+                                                                                                    }
+                                                                                                >
+                                                                                                    <option value="planned">Planned</option>
+                                                                                                    <option value="in_progress">In Progress</option>
+                                                                                                    <option value="done">Done</option>
+                                                                                                    <option value="cancelled">Cancelled</option>
+                                                                                                </select>
+                                                                                            </div>
+
+                                                                                            <div>
+                                                                                                <label className="text-sm font-medium">Tanggal Mulai</label>
+                                                                                                <input
+                                                                                                    type="date"
+                                                                                                    className="w-full border rounded-lg p-2"
+                                                                                                    value={wp.start_date || ''}
+                                                                                                    onChange={(e) =>
+                                                                                                        updateWorkplanItem(index, 'start_date', e.target.value)
+                                                                                                    }
+                                                                                                />
+                                                                                            </div>
+
+                                                                                            <div>
+                                                                                                <label className="text-sm font-medium">Tanggal Selesai</label>
+                                                                                                <input
+                                                                                                    type="date"
+                                                                                                    className="w-full border rounded-lg p-2"
+                                                                                                    value={wp.end_date || ''}
+                                                                                                    onChange={(e) =>
+                                                                                                        updateWorkplanItem(index, 'end_date', e.target.value)
+                                                                                                    }
+                                                                                                />
+                                                                                            </div>
+                                                                                        </div>
+
+                                                                                        <div className="mt-3">
+                                                                                            <label className="text-sm font-medium">Catatan</label>
+                                                                                            <textarea
+                                                                                                className="w-full border rounded-lg p-2"
+                                                                                                rows={3}
+                                                                                                value={wp.catatan || ''}
+                                                                                                onChange={(e) =>
+                                                                                                    updateWorkplanItem(index, 'catatan', e.target.value)
+                                                                                                }
+                                                                                            />
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ))}
+
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={addWorkplanItem}
+                                                                                    className="w-full border-2 border-dashed rounded-lg p-3 text-gray-600 hover:border-teal-500 hover:text-teal-600"
+                                                                                >
+                                                                                    + Tambah Tahapan Workplan
+                                                                                </button>
+
+                                                                                <div className="flex gap-3 mt-4">
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => setShowWorkplanModal(null)}
+                                                                                        className="flex-1 border rounded-lg py-2 hover:bg-gray-50"
+                                                                                    >
+                                                                                        Batal
+                                                                                    </button>
+                                                                                    <button
+                                                                                        type="submit"
+                                                                                        className="flex-1 bg-teal-600 text-white rounded-lg py-2 hover:bg-teal-700"
+                                                                                    >
+                                                                                        Simpan Workplan
+                                                                                    </button>
+                                                                                </div>
+                                                                            </form>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     );

@@ -5,18 +5,38 @@ import TerminModal from '@/components/TerminModal';
 import { Head, router, useForm } from '@inertiajs/react';
 import { FormEventHandler, useEffect, useState } from 'react';
 
+interface TerminStep {
+    step: number;
+    text: string;
+    // backend sekarang bisa kirim percentage
+    percentage?: number | string;
+}
+
 interface Termin {
     id: number;
     kode_tipe: string;
     nama_tipe: string;
     deskripsi: string | null;
     tahapan: { step: number; text: string; persentase: number }[];
+    tahapan: TerminStep[];
     created_at: string;
     updated_at: string;
 }
 
 interface Props {
     termins: Termin[];
+}
+
+interface TahapanFormRow {
+    tahapan: string;
+    percentage: string;
+}
+
+interface TerminFormData {
+    kode_tipe: string;
+    nama_tipe: string;
+    deskripsi: string;
+    tahapan: TahapanFormRow[];
 }
 
 export default function Index({ termins }: Props) {
@@ -39,6 +59,13 @@ export default function Index({ termins }: Props) {
         deskripsi: '',
         tahapan: [{ tahapan: '', persentase: 0 }],
     });
+    const { data, setData, post, put, processing, errors, reset } =
+        useForm<TerminFormData>({
+            kode_tipe: '',
+            nama_tipe: '',
+            deskripsi: '',
+            tahapan: [{ tahapan: '', percentage: '' }],
+        });
 
     useEffect(() => {
         setMounted(true);
@@ -73,11 +100,20 @@ export default function Index({ termins }: Props) {
         } else {
             updated[index].persentase = value as number;
         }
+        field: keyof TahapanFormRow,
+        value: string,
+    ) => {
+        const updated = [...data.tahapan];
+        updated[index][field] = value;
         setData('tahapan', updated);
     };
 
     const addTahapanRow = () => {
         setData('tahapan', [...data.tahapan, { tahapan: '', persentase: 0 }]);
+        setData('tahapan', [
+            ...data.tahapan,
+            { tahapan: '', percentage: '' },
+        ]);
     };
 
     const removeTahapanRow = (index: number) => {
@@ -87,6 +123,7 @@ export default function Index({ termins }: Props) {
     };
 
     const setTahapanData = (tahapan: { tahapan: string; persentase: number }[]) => {
+    const setTahapanData = (tahapan: TahapanFormRow[]) => {
         setData('tahapan', tahapan);
     };
 
@@ -95,6 +132,7 @@ export default function Index({ termins }: Props) {
         setSelectedTermin(null);
         reset();
         setData('tahapan', [{ tahapan: '', persentase: 0 }]);
+        setData('tahapan', [{ tahapan: '', percentage: '' }]);
         setShowModal(true);
     };
 
@@ -130,8 +168,8 @@ export default function Index({ termins }: Props) {
         }
     };
 
-    const handleDataChange = (field: string, value: string) => {
-        setData(field as any, value);
+    const handleDataChange = (field: keyof TerminFormData, value: string) => {
+        setData(field, value as any);
     };
 
     return (
@@ -302,7 +340,29 @@ export default function Index({ termins }: Props) {
                                                                     </div>
                                                                     <span className="rounded bg-rose-200 px-1.5 py-0.5 text-[10px] font-bold text-rose-700">
                                                                         {item.persentase}%
+                                                                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
+                                                                        {
+                                                                            item.step
+                                                                        }
                                                                     </span>
+
+                                                                    <span className="text-stone-700">
+                                                                        {
+                                                                            item.text
+                                                                        }
+                                                                    </span>
+
+                                                                    {item.percentage !==
+                                                                        undefined &&
+                                                                        item.percentage !==
+                                                                            '' && (
+                                                                            <span className="ml-auto rounded-full bg-rose-200 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
+                                                                                {
+                                                                                    item.percentage
+                                                                                }
+                                                                                %
+                                                                            </span>
+                                                                        )}
                                                                 </div>
                                                             ),
                                                         )

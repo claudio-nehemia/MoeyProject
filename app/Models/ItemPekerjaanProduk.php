@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ItemPekerjaanProduk extends Model
 {
@@ -101,5 +102,10 @@ class ItemPekerjaanProduk extends Model
 
 
         return $vendorProduk?->harga_akhir ?? 0;
+    }
+
+    public function workplanItems(): HasMany
+    {
+        return $this->hasMany(WorkplanItem::class)->orderBy('urutan');
     }
 }
