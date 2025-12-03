@@ -59,6 +59,7 @@ interface FormProduk {
     lebar: string;
     tinggi: string;
     jenisItems: FormJenisItem[];
+    selected_bahan_bakus: number[]; // IDs of selected bahan baku
 }
 
 interface ExistingItem {
@@ -85,6 +86,7 @@ interface ExistingProduk {
     lebar: number | null;
     tinggi: number | null;
     jenisItems: ExistingJenisItem[];
+    selected_bahan_bakus?: number[]; // IDs of selected bahan baku
 }
 
 interface ItemPekerjaan {
@@ -158,6 +160,7 @@ export default function Edit({
             panjang: p.panjang?.toString() || '',
             lebar: p.lebar?.toString() || '',
             tinggi: p.tinggi?.toString() || '',
+            selected_bahan_bakus: p.selected_bahan_bakus || [],
             jenisItems: p.jenisItems.map((j) => ({
                 id: j.id,
                 temp_id: `existing_${j.id}`,
@@ -186,8 +189,43 @@ export default function Edit({
                 lebar: '',
                 tinggi: '',
                 jenisItems: getDefaultJenisItems(),
+                selected_bahan_bakus: [],
             },
         ]);
+    };
+
+    const toggleBahanBaku = (produkTempId: string, bahanBakuId: number) => {
+        setFormProduks(formProduks.map(p => {
+            if (p.temp_id === produkTempId) {
+                const selected = p.selected_bahan_bakus || [];
+                const isSelected = selected.includes(bahanBakuId);
+                return {
+                    ...p,
+                    selected_bahan_bakus: isSelected 
+                        ? selected.filter(id => id !== bahanBakuId)
+                        : [...selected, bahanBakuId]
+                };
+            }
+            return p;
+        }));
+    };
+
+    const selectAllBahanBaku = (produkTempId: string, bahanBakuIds: number[]) => {
+        setFormProduks(formProduks.map(p => {
+            if (p.temp_id === produkTempId) {
+                return { ...p, selected_bahan_bakus: bahanBakuIds };
+            }
+            return p;
+        }));
+    };
+
+    const clearAllBahanBaku = (produkTempId: string) => {
+        setFormProduks(formProduks.map(p => {
+            if (p.temp_id === produkTempId) {
+                return { ...p, selected_bahan_bakus: [] };
+            }
+            return p;
+        }));
     };
 
     const removeProduk = (tempId: string) => {
@@ -383,6 +421,7 @@ export default function Edit({
                 panjang: p.panjang ? parseFloat(p.panjang) : null,
                 lebar: p.lebar ? parseFloat(p.lebar) : null,
                 tinggi: p.tinggi ? parseFloat(p.tinggi) : null,
+                bahan_bakus: p.selected_bahan_bakus || [], // Send selected bahan baku IDs
                 jenisItems: p.jenisItems
                     .filter((j) => j.jenis_item_name?.toLowerCase() !== 'bahan baku')
                     .map((j) => {
@@ -557,7 +596,7 @@ return (
                                                         <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                                                         </svg>
-                                                        Dimensi (cm)
+                                                        Dimensi (m)
                                                     </label>
                                                     <div className="grid grid-cols-3 gap-4">
                                                         <div>
@@ -599,77 +638,83 @@ return (
                                                     </div>
                                                 </div>
 
-                                                {/* Bahan Baku Card */}
+                                                {/* Bahan Baku Card - Selectable */}
                                                 {(() => {
                                                     const masterBahanBakus = selectedProduk?.bahan_bakus || [];
-                                                    const existingBahanBaku = produk.jenisItems.find(
-                                                        (j) => j.jenis_item_name?.toLowerCase() === 'bahan baku'
-                                                    );
-                                                    const allBahanBakus = existingBahanBaku?.items || [];
                                                     
-                                                    if (masterBahanBakus.length > 0 || allBahanBakus.length > 0) {
+                                                    if (masterBahanBakus.length > 0) {
                                                         return (
                                                             <div className="mb-6 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl overflow-hidden">
                                                                 <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3">
-                                                                    <h4 className="text-white font-semibold flex items-center gap-2">
-                                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                                                        </svg>
-                                                                        Bahan Baku (Auto dari Produk)
-                                                                    </h4>
+                                                                    <div className="flex justify-between items-center">
+                                                                        <h4 className="text-white font-semibold flex items-center gap-2">
+                                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                                                            </svg>
+                                                                            Pilih Bahan Baku <span className="text-amber-200 text-xs font-normal ml-2">({produk.selected_bahan_bakus?.length || 0} dipilih)</span>
+                                                                        </h4>
+                                                                        <div className="flex gap-2">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => selectAllBahanBaku(produk.temp_id, masterBahanBakus.map((bb: BahanBaku) => bb.id))}
+                                                                                className="bg-white/20 text-white px-3 py-1 rounded-lg text-xs font-medium hover:bg-white/30 transition-colors"
+                                                                            >
+                                                                                Pilih Semua
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => clearAllBahanBaku(produk.temp_id)}
+                                                                                className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-medium hover:bg-white/20 transition-colors"
+                                                                            >
+                                                                                Clear
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                                 <div className="p-4">
-                                                                    {allBahanBakus.length > 0 ? (
-                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                                            {allBahanBakus.map((item) => {
-                                                                                const itemData = items.find(i => i.id.toString() === item.item_id);
-                                                                                return (
-                                                                                    <div key={item.temp_id || item.id} className="bg-white rounded-lg p-3 border border-amber-100 flex items-center gap-3">
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                                        {masterBahanBakus.map((bb: BahanBaku) => {
+                                                                            const isSelected = produk.selected_bahan_bakus?.includes(bb.id) || false;
+                                                                            return (
+                                                                                <div 
+                                                                                    key={bb.id} 
+                                                                                    onClick={() => toggleBahanBaku(produk.temp_id, bb.id)}
+                                                                                    className={`rounded-lg p-3 border-2 flex items-center justify-between cursor-pointer transition-all ${
+                                                                                        isSelected 
+                                                                                            ? 'bg-amber-100 border-amber-400 shadow-sm' 
+                                                                                            : 'bg-white border-slate-200 hover:border-amber-300'
+                                                                                    }`}
+                                                                                >
+                                                                                    <div className="flex items-center gap-3">
+                                                                                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                                                                                            isSelected 
+                                                                                                ? 'bg-amber-500 border-amber-500' 
+                                                                                                : 'border-slate-300'
+                                                                                        }`}>
+                                                                                            {isSelected && (
+                                                                                                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                                                                </svg>
+                                                                                            )}
+                                                                                        </div>
                                                                                         <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
                                                                                             <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                                                                                             </svg>
                                                                                         </div>
                                                                                         <div>
-                                                                                            <p className="font-medium text-slate-800">
-                                                                                                {itemData?.nama_item || `Item ID: ${item.item_id}`}
-                                                                                            </p>
-                                                                                            {item.quantity > 1 && (
-                                                                                                <p className="text-xs text-slate-500">Qty: {item.quantity}</p>
-                                                                                            )}
+                                                                                            <p className="font-medium text-slate-800">{bb.nama_item}</p>
                                                                                         </div>
                                                                                     </div>
-                                                                                );
-                                                                            })}
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                                            {masterBahanBakus.map((bb: BahanBaku) => (
-                                                                                <div key={bb.id} className="bg-white rounded-lg p-3 border border-amber-100 flex items-center gap-3">
-                                                                                    <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                                                                                        <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                                                                                        </svg>
-                                                                                    </div>
-                                                                                    <div>
-                                                                                        <p className="font-medium text-slate-800">{bb.nama_item}</p>
-                                                                                        {bb.pivot && (
-                                                                                            <div className="text-xs text-slate-500 space-x-2">
-                                                                                                <span>Dasar: {formatCurrency(bb.pivot.harga_dasar)}</span>
-                                                                                                <span>•</span>
-                                                                                                <span>Jasa: {formatCurrency(bb.pivot.harga_jasa)}</span>
-                                                                                            </div>
-                                                                                        )}
-                                                                                    </div>
                                                                                 </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    )}
+                                                                            );
+                                                                        })}
+                                                                    </div>
                                                                     <p className="text-xs text-amber-700 mt-3 flex items-center gap-1">
                                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                                         </svg>
-                                                                        Bahan baku otomatis dari master produk, tidak bisa diubah manual
+                                                                        Klik untuk memilih/membatalkan bahan baku.
                                                                     </p>
                                                                 </div>
                                                             </div>

@@ -28,6 +28,7 @@ interface Produk {
     harga_dasar: number;
     harga_items_non_aksesoris: number;
     non_aksesoris_items: NonAksesorisItem[];
+    bahan_baku_names: string[]; // Nama bahan baku saja (tanpa harga)
     aksesoris: Aksesoris[];
 }
 
@@ -195,12 +196,12 @@ export default function Create({ rabInternal }: Props) {
     const calculateHargaSatuan = (produk: Produk, formProduk: FormProduk, markupSatuan: string | number) => {
         const markup = typeof markupSatuan === 'string' ? parseFloat(markupSatuan) || 0 : markupSatuan;
 
-        let hargaDimensi = 1;
-        if (produk.panjang && produk.lebar && produk.tinggi) {
-            hargaDimensi = produk.panjang * produk.lebar * produk.tinggi * produk.qty_produk;
-        } else {
-            hargaDimensi = produk.qty_produk;
-        }
+        // Use Math.max(1, value) to match backend calculation logic
+        // Values are stored as-is (e.g., 0.8), but minimum 1 is used for calculation
+        const panjang = Math.max(1, produk.panjang || 1);
+        const lebar = Math.max(1, produk.lebar || 1);
+        const tinggi = Math.max(1, produk.tinggi || 1);
+        const hargaDimensi = panjang * lebar * tinggi * produk.qty_produk;
 
         const totalHargaItemsNonAksesoris = formProduk.non_aksesoris_items.reduce((sum, item) => sum + (Number(item.harga_satuan) || 0), 0);
 
@@ -300,14 +301,36 @@ export default function Create({ rabInternal }: Props) {
                                         <p className="text-sm text-amber-100">
                                             Qty: {produk.qty_produk} | 
                                             {produk.panjang && produk.lebar && produk.tinggi && 
-                                                ` Dimensi: ${produk.panjang} × ${produk.lebar} × ${produk.tinggi} cm`
+                                                ` Dimensi: ${produk.panjang} × ${produk.lebar} × ${produk.tinggi} m`
                                             }
                                         </p>
                                     </div>
 
                                     <div className="p-6">
 
-                                        {/* ITEMS NON AKSESORIS */}
+                                        {/* BAHAN BAKU (nama saja, tanpa harga) */}
+                                        {produk.bahan_baku_names && produk.bahan_baku_names.length > 0 && (
+                                            <div className="mb-6">
+                                                <h4 className="mb-3 font-semibold text-gray-900 dark:text-gray-100">
+                                                    Bahan Baku
+                                                </h4>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {produk.bahan_baku_names.map((nama, idx) => (
+                                                        <span
+                                                            key={idx}
+                                                            className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200"
+                                                        >
+                                                            {nama}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                                    * Harga bahan baku sudah termasuk dalam Harga Dasar produk
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* ITEMS NON AKSESORIS (Finishing Dalam/Luar) */}
                                         <div className="mb-6">
                                             <div className="mb-3 flex items-center justify-between">
                                                 <h4 className="font-semibold text-gray-900 dark:text-gray-100">

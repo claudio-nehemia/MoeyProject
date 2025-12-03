@@ -11,19 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('produk_items', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('produk_id')->constrained('produks')->onDelete('cascade');
-            $table->foreignId('item_id')->constrained('items')->onDelete('cascade');
-            $table->timestamps();
+        Schema::table('item_pekerjaan_produk_bahan_bakus', function (Blueprint $table) {
+            $table->decimal('harga_jasa', 18, 2)->default(0)->after('harga_dasar');
         });
     }
-    
+
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('table_produk_items');
+        Schema::table('item_pekerjaan_produk_bahan_bakus', function (Blueprint $table) {
+            $table->dropColumn('harga_jasa');
+        });
     }
 };

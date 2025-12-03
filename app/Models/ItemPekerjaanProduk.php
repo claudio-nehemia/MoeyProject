@@ -39,6 +39,11 @@ class ItemPekerjaanProduk extends Model
         return $this->hasMany(ItemPekerjaanJenisItem::class);
     }
 
+    public function bahanBakus()
+    {
+        return $this->hasMany(ItemPekerjaanProdukBahanBaku::class);
+    }
+
     public function stageEvidences()
     {
         return $this->hasMany(StageEvidence::class);

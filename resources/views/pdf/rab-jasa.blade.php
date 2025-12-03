@@ -158,27 +158,38 @@
         }
 
         .final-total {
-            background: linear-gradient(to right, #16a34a, #15803d);
+            background: #16a34a;
             color: white;
-            padding: 10px;
+            padding: 15px;
             border-radius: 5px;
-            margin-top: 8px;
+            margin-top: 15px;
         }
 
-        .final-total-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .final-total-table {
+            width: 100%;
+            border: none;
+        }
+
+        .final-total-table td {
+            border: none;
+            padding: 0;
+            vertical-align: middle;
         }
 
         .final-total-label {
-            font-size: 12px;
+            font-size: 14px;
             font-weight: bold;
         }
 
+        .final-total-sublabel {
+            font-size: 9px;
+            margin-top: 3px;
+        }
+
         .final-total-amount {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: bold;
+            text-align: right;
         }
     </style>
 </head>
@@ -220,12 +231,11 @@
             <tr>
                 <th style="width: 14%;">Produk</th>
                 <th class="harga-jasa text-right" style="width: 9%;">Harga Jasa</th>
-                <th style="width: 12%;">Bahan Baku</th>
-                <th class="harga-col text-right" style="width: 8%;">Harga BB</th>
+                <th style="width: 14%;">Bahan Baku</th>
                 <th style="width: 12%;">Finishing Dalam</th>
-                <th class="harga-col text-right" style="width: 8%;">Harga FD</th>
+                <th class="harga-col text-right" style="width: 9%;">Harga FD</th>
                 <th style="width: 12%;">Finishing Luar</th>
-                <th class="harga-col text-right" style="width: 8%;">Harga FL</th>
+                <th class="harga-col text-right" style="width: 9%;">Harga FL</th>
                 <th class="text-center" style="width: 5%;">Qty</th>
                 <th class="total-items text-right" style="width: 9%;">Total Items</th>
                 <th class="grand-total-header text-right" style="width: 10%;">Grand Total</th>
@@ -234,11 +244,12 @@
         <tbody>
             @foreach($produks as $index => $produk)
                 @php
-                    // Group items by jenis
-                    $bahanBakuItems = [];
+                    // Get bahan baku names from selected bahan baku
+                    $bahanBakuNames = $produk['bahan_baku_names'] ?? [];
+                    
+                    // Group items by jenis (only for finishing)
                     $finishingDalamItems = [];
                     $finishingLuarItems = [];
-                    $bahanBakuTotal = 0;
                     $finishingDalamTotal = 0;
                     $finishingLuarTotal = 0;
 
@@ -246,10 +257,7 @@
                         $namaJenis = strtolower($jenisItem['nama_jenis']);
                         foreach ($jenisItem['items'] as $item) {
                             $harga = $item['harga_total'] ?? 0;
-                            if ($namaJenis === 'bahan baku') {
-                                $bahanBakuItems[] = $item['nama_item'];
-                                $bahanBakuTotal += $harga;
-                            } elseif ($namaJenis === 'finishing dalam') {
+                            if ($namaJenis === 'finishing dalam') {
                                 $finishingDalamItems[] = $item['nama_item'];
                                 $finishingDalamTotal += $harga;
                             } elseif ($namaJenis === 'finishing luar') {
@@ -259,8 +267,8 @@
                         }
                     }
 
-                    $totalItems = $bahanBakuTotal + $finishingDalamTotal + $finishingLuarTotal;
-                    $maxRows = max(count($bahanBakuItems), count($finishingDalamItems), count($finishingLuarItems), 1);
+                    $totalItems = $finishingDalamTotal + $finishingLuarTotal;
+                    $maxRows = max(count($bahanBakuNames), count($finishingDalamItems), count($finishingLuarItems), 1);
                 @endphp
 
                 @for($rowIndex = 0; $rowIndex < $maxRows; $rowIndex++)
@@ -278,16 +286,10 @@
                         @endif
 
                         <td>
-                            @if(isset($bahanBakuItems[$rowIndex]))
-                                • {{ $bahanBakuItems[$rowIndex] }}
+                            @if(isset($bahanBakuNames[$rowIndex]))
+                                • {{ $bahanBakuNames[$rowIndex] }}
                             @endif
                         </td>
-
-                        @if($rowIndex === 0)
-                            <td rowspan="{{ $maxRows }}" class="harga-col-cell">
-                                Rp {{ number_format($bahanBakuTotal, 0, ',', '.') }}
-                            </td>
-                        @endif
 
                         <td>
                             @if(isset($finishingDalamItems[$rowIndex]))
@@ -329,15 +331,17 @@
 
     <!-- Grand Total -->
     <div class="final-total">
-        <div class="final-total-content">
-            <div>
-                <div class="final-total-label">GRAND TOTAL</div>
-                <div style="font-size: 8px; margin-top: 2px;">Total semua produk ({{ count($produks) }} produk)</div>
-            </div>
-            <div class="final-total-amount">
-                Rp {{ number_format($totalSemuaProduk, 0, ',', '.') }}
-            </div>
-        </div>
+        <table class="final-total-table">
+            <tr>
+                <td style="width: 60%;">
+                    <div class="final-total-label">GRAND TOTAL</div>
+                    <div class="final-total-sublabel">Total semua produk ({{ count($produks) }} produk)</div>
+                </td>
+                <td style="width: 40%;" class="final-total-amount">
+                    Rp {{ number_format($totalSemuaProduk, 0, ',', '.') }}
+                </td>
+            </tr>
+        </table>
     </div>
 </body>
 

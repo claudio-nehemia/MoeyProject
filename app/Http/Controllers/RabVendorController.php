@@ -127,12 +127,14 @@ class RabVendorController extends Controller
         $rabVendor = RabVendor::with([
             'itemPekerjaan.moodboard.order',
             'rabVendorProduks.itemPekerjaanProduk.produk',
+            'rabVendorProduks.itemPekerjaanProduk.bahanBakus.item', // Selected bahan baku
             'rabVendorProduks.itemPekerjaanProduk.jenisItems.jenisItem',
             'rabVendorProduks.itemPekerjaanProduk.jenisItems.items.item',
             'rabVendorProduks.rabVendorAksesoris.itemPekerjaanItem.item'
         ])->findOrFail($rabVendorId);
 
         $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
+        $bahanBakuJenisItem = JenisItem::where('nama_jenis_item', 'Bahan Baku')->first();
 
         return Inertia::render('RabVendor/Show', [
             'rabVendor' => [
@@ -144,12 +146,17 @@ class RabVendorController extends Controller
                     'company_name' => $rabVendor->itemPekerjaan->moodboard->order->company_name,
                     'customer_name' => $rabVendor->itemPekerjaan->moodboard->order->customer_name,
                 ],
-                'produks' => $rabVendor->rabVendorProduks->map(function ($rabProduk) use ($aksesorisJenisItem) {
+                'produks' => $rabVendor->rabVendorProduks->map(function ($rabProduk) use ($aksesorisJenisItem, $bahanBakuJenisItem) {
+                    // Get selected bahan baku names
+                    $selectedBahanBakus = $rabProduk->itemPekerjaanProduk->bahanBakus;
+                    $bahanBakuNames = $selectedBahanBakus->map(fn($bb) => $bb->item->nama_item)->toArray();
+
+                    // Collect jenis items (Finishing only, exclude Aksesoris & Bahan Baku)
                     $jenisItemsList = [];
                     $jenisItems = $rabProduk->itemPekerjaanProduk->jenisItems ?? collect([]);
                     
                     foreach ($jenisItems as $jenisItem) {
-                        if ($jenisItem->jenis_item_id !== $aksesorisJenisItem->id) {
+                        if ($jenisItem->jenis_item_id !== $aksesorisJenisItem?->id && $jenisItem->jenis_item_id !== $bahanBakuJenisItem?->id) {
                             $itemsList = [];
                             $items = $jenisItem->items ?? collect([]);
                             
@@ -182,6 +189,7 @@ class RabVendorController extends Controller
                         'harga_satuan' => $rabProduk->harga_satuan,
                         'harga_total_aksesoris' => $rabProduk->harga_total_aksesoris,
                         'harga_akhir' => $rabProduk->harga_akhir,
+                        'bahan_baku_names' => $bahanBakuNames,
                         'jenis_items' => $jenisItemsList,
                         'aksesoris' => $rabProduk->rabVendorAksesoris->map(function ($aksesoris) {
                             return [
@@ -205,20 +213,29 @@ class RabVendorController extends Controller
             'rabVendorProduks.itemPekerjaanProduk.produk',
             'rabVendorProduks.itemPekerjaanProduk.jenisItems.jenisItem',
             'rabVendorProduks.itemPekerjaanProduk.jenisItems.items.item',
+            'rabVendorProduks.itemPekerjaanProduk.bahanBakus.item',
             'rabVendorProduks.rabVendorAksesoris.itemPekerjaanItem.item'
         ])->findOrFail($rabVendorId);
 
         $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
+        $bahanBakuJenisItem = JenisItem::where('nama_jenis_item', 'Bahan Baku')->first();
 
         // Prepare data for PDF
-        $produks = $rabVendor->rabVendorProduks->map(function ($rabProduk) use ($aksesorisJenisItem) {
+        $produks = $rabVendor->rabVendorProduks->map(function ($rabProduk) use ($aksesorisJenisItem, $bahanBakuJenisItem) {
 
-            // NON AKSESORIS
+            // Get bahan baku names from selected bahan baku
+            $bahanBakuNames = $rabProduk->itemPekerjaanProduk->bahanBakus
+                ->map(fn($bb) => $bb->item->nama_item)
+                ->toArray();
+
+            // NON AKSESORIS - Exclude Bahan Baku jenis
             $jenisItemsList = [];
             $jenisItems = $rabProduk->itemPekerjaanProduk->jenisItems ?? collect([]);
             
             foreach ($jenisItems as $jenisItem) {
-                if ($jenisItem->jenis_item_id !== $aksesorisJenisItem->id) {
+                // Exclude Aksesoris and Bahan Baku jenis
+                if ($jenisItem->jenis_item_id !== $aksesorisJenisItem->id &&
+                    ($bahanBakuJenisItem === null || $jenisItem->jenis_item_id !== $bahanBakuJenisItem->id)) {
 
                     $itemsList = [];
                     $items = $jenisItem->items ?? collect([]);
@@ -263,6 +280,7 @@ class RabVendorController extends Controller
                 'harga_total_aksesoris' => $rabProduk->harga_total_aksesoris,
                 'harga_akhir' => $rabProduk->harga_akhir,
                 'jenis_items' => $jenisItemsList,
+                'bahan_baku_names' => $bahanBakuNames,
                 'aksesoris' => $aksesorisList,
             ];
         });
