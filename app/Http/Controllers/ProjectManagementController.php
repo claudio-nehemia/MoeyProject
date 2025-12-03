@@ -41,6 +41,7 @@ class ProjectManagementController extends Controller
             'moodboard.itemPekerjaans.produks.produk',
             'moodboard.itemPekerjaans.produks.stageEvidences',
             'moodboard.itemPekerjaans.produks.defects.defectItems.repairs',
+            'moodboard.itemPekerjaans.produks.workplanItems',
             'moodboard.itemPekerjaans.rabVendor.rabVendorProduks',
             'moodboard.itemPekerjaans.kontrak'
         ])->findOrFail($id);
@@ -61,9 +62,6 @@ class ProjectManagementController extends Controller
                 break;
             }
         }
-            'moodboard.itemPekerjaans.produks.workplanItems', // 🔥 eager load workplan
-            'moodboard.itemPekerjaans.rabVendor.rabVendorProduks',
-        ])->findOrFail($id);
 
         $itemPekerjaans = $order->moodboard->itemPekerjaans->map(function ($itemPekerjaan) {
             // Total harga untuk 1 item pekerjaan
@@ -149,21 +147,16 @@ class ProjectManagementController extends Controller
                     'current_stage'       => $produk->current_stage,
                     'weight_percentage'   => round($weightPercentage, 2),
                     'actual_contribution' => round($actualContribution, 2),
-                    'can_report_defect' => $canReportDefect,
-                    'has_active_defect' => $hasActiveDefect,
-                    'has_pending_approval' => $hasPendingApproval,
-                    'defect_id' => $hasActiveDefect ? $produk->defects()
-                        ->whereIn('status', ['pending', 'in_repair'])
-                        ->first()->id : null,
-                    'is_completed' => $produk->is_completed,
-                    'has_bast' => $produk->has_bast,
-                    'bast_number' => $produk->bast_number,
-                    'bast_date' => $produk->bast_date?->format('d M Y'),
-                    'bast_pdf_path' => $produk->bast_pdf_path,
-                    'stage_evidences' => $stageEvidences,
                     'can_report_defect'   => $canReportDefect,
                     'has_active_defect'   => $hasActiveDefect,
+                    'has_pending_approval' => $hasPendingApproval,
                     'defect_id'           => $activeDefect?->id,
+                    'is_completed'        => $produk->is_completed,
+                    'has_bast'            => $produk->has_bast,
+                    'bast_number'         => $produk->bast_number,
+                    'bast_date'           => $produk->bast_date?->format('d M Y'),
+                    'bast_pdf_path'       => $produk->bast_pdf_path,
+                    'stage_evidences'     => $stageEvidences,
 
                     // 🔥 kirim workplan ke FE dalam format bersih
                     'workplan_items' => $workplan->map(function ($wp) {
@@ -178,7 +171,6 @@ class ProjectManagementController extends Controller
                             'urutan' => $wp->urutan,
                         ];
                     }),
-
                 ];
             });
 
@@ -200,7 +192,6 @@ class ProjectManagementController extends Controller
                 'item_pekerjaans' => $itemPekerjaans,
             ],
             'kontrak' => $kontrakInfo,
-            'stages' => config('stage.stages')
             'stages' => config('stage.stages'),
         ]);
     }
@@ -217,9 +208,6 @@ class ProjectManagementController extends Controller
             'itemPekerjaan.moodboard.order',
             'defects.defectItems.repairs'
         ])->findOrFail($id);
-        $request->validate(['current_stage' => 'required|string']);
-
-        $produk = ItemPekerjaanProduk::findOrFail($id);
 
         $allowed = array_keys(config('stage.stages'));
         if (!in_array($request->current_stage, $allowed)) {
@@ -336,6 +324,5 @@ class ProjectManagementController extends Controller
         $filePath = storage_path('app/public/' . $produk->bast_pdf_path);
         
         return response()->download($filePath);
-        return back()->with('success', 'Tahap berhasil diperbarui');
     }
 }

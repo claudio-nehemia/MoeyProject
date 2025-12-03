@@ -21,6 +21,7 @@ class Produk extends Model
     public function bahanBakus()
     {
         return $this->belongsToMany(Item::class, 'produk_items')
+            ->withPivot('harga_dasar', 'harga_jasa')
             ->whereHas('jenisItem', function ($query) {
                 $query->where('nama_jenis_item', 'Bahan Baku');
             });

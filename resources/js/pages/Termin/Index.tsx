@@ -94,20 +94,11 @@ export default function Index({ termins }: Props) {
         } else {
             updated[index].persentase = value as number;
         }
-        field: keyof TahapanFormRow,
-        value: string,
-    ) => {
-        const updated = [...data.tahapan];
-        updated[index][field] = value;
         setData('tahapan', updated);
     };
 
     const addTahapanRow = () => {
         setData('tahapan', [...data.tahapan, { tahapan: '', persentase: 0 }]);
-        setData('tahapan', [
-            ...data.tahapan,
-            { tahapan: '', persentase: '' },
-        ]);
     };
 
     const removeTahapanRow = (index: number) => {
@@ -116,7 +107,6 @@ export default function Index({ termins }: Props) {
         setData('tahapan', updated);
     };
 
-    const setTahapanData = (tahapan: { tahapan: string; persentase: number }[]) => {
     const setTahapanData = (tahapan: TahapanFormRow[]) => {
         setData('tahapan', tahapan);
     };
@@ -126,7 +116,6 @@ export default function Index({ termins }: Props) {
         setSelectedTermin(null);
         reset();
         setData('tahapan', [{ tahapan: '', persentase: 0 }]);
-        setData('tahapan', [{ tahapan: '', persentase: '' }]);
         setShowModal(true);
     };
 
@@ -334,29 +323,7 @@ export default function Index({ termins }: Props) {
                                                                     </div>
                                                                     <span className="rounded bg-rose-200 px-1.5 py-0.5 text-[10px] font-bold text-rose-700">
                                                                         {item.persentase}%
-                                                                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
-                                                                        {
-                                                                            item.step
-                                                                        }
                                                                     </span>
-
-                                                                    <span className="text-stone-700">
-                                                                        {
-                                                                            item.text
-                                                                        }
-                                                                    </span>
-
-                                                                    {item.persentase !==
-                                                                        undefined &&
-                                                                        item.persentase !==
-                                                                            '' && (
-                                                                            <span className="ml-auto rounded-full bg-rose-200 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
-                                                                                {
-                                                                                    item.persentase
-                                                                                }
-                                                                                %
-                                                                            </span>
-                                                                        )}
                                                                 </div>
                                                             ),
                                                         )

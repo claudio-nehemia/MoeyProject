@@ -133,11 +133,17 @@ class ItemPekerjaanController extends Controller
                 return [
                     'id' => $produk->id,
                     'nama_produk' => $produk->nama_produk,
+                    'harga_dasar' => $produk->harga_dasar,
+                    'harga_jasa' => $produk->harga_jasa,
                     'bahan_bakus' => $produk->bahanBakus->map(function ($item) {
                         return [
                             'id' => $item->id,
                             'nama_item' => $item->nama_item,
                             'harga' => $item->harga,
+                            'pivot' => [
+                                'harga_dasar' => $item->pivot->harga_dasar ?? 0,
+                                'harga_jasa' => $item->pivot->harga_jasa ?? 0,
+                            ],
                         ];
                     }),
                 ];
@@ -225,6 +231,7 @@ class ItemPekerjaanController extends Controller
                                     'item_pekerjaan_jenis_item_id' => $jenisItem->id,
                                     'item_id' => $itemData['item_id'],
                                     'quantity' => $itemData['quantity'],
+                                    'notes' => $itemData['notes'] ?? null,
                                 ]);
                             }
                         }
@@ -286,6 +293,7 @@ class ItemPekerjaanController extends Controller
                                         'item_id' => $item->item_id,
                                         'item_name' => $item->item->nama_item,
                                         'quantity' => $item->quantity,
+                                        'notes' => $item->notes,
                                     ];
                                 }),
                             ];
@@ -297,11 +305,17 @@ class ItemPekerjaanController extends Controller
                 return [
                     'id' => $produk->id,
                     'nama_produk' => $produk->nama_produk,
+                    'harga_dasar' => $produk->harga_dasar,
+                    'harga_jasa' => $produk->harga_jasa,
                     'bahan_bakus' => $produk->bahanBakus->map(function ($item) {
                         return [
                             'id' => $item->id,
                             'nama_item' => $item->nama_item,
                             'harga' => $item->harga,
+                            'pivot' => [
+                                'harga_dasar' => $item->pivot->harga_dasar ?? 0,
+                                'harga_jasa' => $item->pivot->harga_jasa ?? 0,
+                            ],
                         ];
                     }),
                 ];
@@ -380,6 +394,7 @@ class ItemPekerjaanController extends Controller
                 'produks.*.jenisItems.*.items.*.id' => 'nullable|exists:item_pekerjaan_items,id',
                 'produks.*.jenisItems.*.items.*.item_id' => 'required|exists:items,id',
                 'produks.*.jenisItems.*.items.*.quantity' => 'required|integer|min:1',
+                'produks.*.jenisItems.*.items.*.notes' => 'nullable|string',
             ]);
 
             $itemPekerjaan = ItemPekerjaan::findOrFail($itemPekerjaanId);
@@ -511,6 +526,7 @@ class ItemPekerjaanController extends Controller
                                     $item = ItemPekerjaanItem::find($itemData['id']);
                                     $item->update([
                                         'quantity' => $itemData['quantity'],
+                                        'notes' => $itemData['notes'] ?? null,
                                     ]);
                                     $submittedItemIds[] = $item->id;
                                 } else {
@@ -519,6 +535,7 @@ class ItemPekerjaanController extends Controller
                                         'item_pekerjaan_jenis_item_id' => $jenisItem->id,
                                         'item_id' => $itemData['item_id'],
                                         'quantity' => $itemData['quantity'],
+                                        'notes' => $itemData['notes'] ?? null,
                                     ]);
                                     $submittedItemIds[] = $item->id;
                                 }
