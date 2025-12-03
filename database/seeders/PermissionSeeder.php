@@ -659,6 +659,49 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Approve Defect Repair',
                 'group' => 'Operations - Defect Management'
             ],
+
+            // Survey Ulang
+            [
+                'name' => 'survey-ulang.index',
+                'display_name' => 'View Survey Ulang List',
+                'group' => 'Operations - Survey Ulang'
+            ],
+
+            [
+                'name' => 'survey-ulang.start',
+                'display_name' => 'Start Survey Ulang',
+                'group' => 'Operations - Survey Ulang'
+            ],
+
+            [
+                'name' => 'survey-ulang.create',
+                'display_name' => 'Create Survey Ulang',
+                'group' => 'Operations - Survey Ulang'
+            ],
+
+            [
+                'name' => 'survey-ulang.store',
+                'display_name' => 'Store Survey Ulang',
+                'group' => 'Operations - Survey Ulang'
+            ],
+
+            [
+                'name' => 'survey-ulang.show',
+                'display_name' => 'Show Survey Ulang',
+                'group' => 'Operations - Survey Ulang'
+            ],
+
+            [
+                'name' => 'survey-ulang.edit',
+                'display_name' => 'Edit Survey Ulang',
+                'group' => 'Operations - Survey Ulang'
+            ],
+
+            [
+                'name' => 'survey-ulang.update',
+                'display_name' => 'Update Survey Ulang',
+                'group' => 'Operations - Survey Ulang'
+            ],
             
             // PDF Export Permissions
             [
