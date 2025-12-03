@@ -43,7 +43,9 @@ class ProjectManagementController extends Controller
             'moodboard.itemPekerjaans.produks.defects.defectItems.repairs',
             'moodboard.itemPekerjaans.produks.workplanItems',
             'moodboard.itemPekerjaans.rabVendor.rabVendorProduks',
-            'moodboard.itemPekerjaans.kontrak'
+            'moodboard.itemPekerjaans.kontrak.termin',
+            'moodboard.itemPekerjaans.invoices',
+            'moodboard.commitmentFee',
         ])->findOrFail($id);
 
         // Get kontrak info from the first itemPekerjaan that has kontrak
@@ -63,9 +65,20 @@ class ProjectManagementController extends Controller
             }
         }
 
-        $itemPekerjaans = $order->moodboard->itemPekerjaans->map(function ($itemPekerjaan) {
+        $itemPekerjaans = $order->moodboard->itemPekerjaans->map(function ($itemPekerjaan) use ($order) {
             // Total harga untuk 1 item pekerjaan
             $totalHargaItem = $itemPekerjaan->produks->sum('total_harga');
+
+            // Calculate workplan duration if both dates exist
+            $workplanDuration = null;
+            if ($itemPekerjaan->workplan_start_date && $itemPekerjaan->workplan_end_date) {
+                $workplanDuration = $itemPekerjaan->workplan_start_date->diffInDays($itemPekerjaan->workplan_end_date) + 1;
+            }
+
+            // ================================
+            // 💰 Payment Info for this Item Pekerjaan
+            // ================================
+            $paymentInfo = $this->getPaymentInfo($itemPekerjaan, $order);
 
             $produks = $itemPekerjaan->produks->map(function ($produk) use ($totalHargaItem) {
                 // ================================
@@ -152,10 +165,6 @@ class ProjectManagementController extends Controller
                     'has_pending_approval' => $hasPendingApproval,
                     'defect_id'           => $activeDefect?->id,
                     'is_completed'        => $produk->is_completed,
-                    'has_bast'            => $produk->has_bast,
-                    'bast_number'         => $produk->bast_number,
-                    'bast_date'           => $produk->bast_date?->format('d M Y'),
-                    'bast_pdf_path'       => $produk->bast_pdf_path,
                     'stage_evidences'     => $stageEvidences,
 
                     // 🔥 kirim workplan ke FE dalam format bersih
@@ -175,10 +184,20 @@ class ProjectManagementController extends Controller
             });
 
             return [
-                'id'          => $itemPekerjaan->id,
-                'produks'     => $produks,
-                'progress'    => $itemPekerjaan->progress,
-                'total_harga' => $totalHargaItem,
+                'id'                   => $itemPekerjaan->id,
+                'produks'              => $produks,
+                'progress'             => $itemPekerjaan->progress,
+                'total_harga'          => $totalHargaItem,
+                'workplan_start_date'  => $itemPekerjaan->workplan_start_date?->format('Y-m-d'),
+                'workplan_end_date'    => $itemPekerjaan->workplan_end_date?->format('Y-m-d'),
+                'workplan_duration'    => $workplanDuration,
+                'payment_info'         => $paymentInfo,
+                // BAST per Item Pekerjaan (bukan per produk)
+                'is_completed'         => $itemPekerjaan->is_completed,
+                'has_bast'             => $itemPekerjaan->has_bast,
+                'bast_number'          => $itemPekerjaan->bast_number,
+                'bast_date'            => $itemPekerjaan->bast_date?->format('d M Y'),
+                'bast_pdf_path'        => $itemPekerjaan->bast_pdf_path,
             ];
         });
 
@@ -261,50 +280,64 @@ class ProjectManagementController extends Controller
         return back()->with('success', 'Tahap berhasil diperbarui dengan bukti');
     }
 
-    public function generateBast($id)
+    public function generateBast($itemPekerjaanId)
     {
-        $produk = ItemPekerjaanProduk::with([
-            'produk',
-            'itemPekerjaan.moodboard.order',
-            'stageEvidences'
-        ])->findOrFail($id);
+        $itemPekerjaan = \App\Models\ItemPekerjaan::with([
+            'moodboard.order',
+            'produks.produk',
+            'produks.stageEvidences',
+        ])->findOrFail($itemPekerjaanId);
 
-        // Check if already completed (Install QC)
-        if ($produk->current_stage !== 'Install QC') {
-            return back()->withErrors(['bast' => 'Produk belum selesai Install QC']);
+        // Check if all produks completed Install QC
+        $allCompleted = $itemPekerjaan->produks->every(fn($p) => $p->current_stage === 'Install QC');
+        if (!$allCompleted) {
+            return back()->withErrors(['bast' => 'Semua produk harus selesai Install QC terlebih dahulu']);
         }
 
         // Check if BAST already exists
-        if ($produk->has_bast) {
+        if ($itemPekerjaan->has_bast) {
             return back()->withErrors(['bast' => 'BAST sudah dibuat sebelumnya']);
         }
 
         // Generate BAST number
-        $bastNumber = 'BAST/' . date('Y') . '/' . str_pad($produk->id, 5, '0', STR_PAD_LEFT);
+        $bastNumber = 'BAST/' . date('Y') . '/' . str_pad($itemPekerjaan->id, 5, '0', STR_PAD_LEFT);
 
         // Get order info
-        $order = $produk->itemPekerjaan->moodboard->order;
+        $order = $itemPekerjaan->moodboard->order;
+
+        // Get all stage evidences from all produks
+        $allStageEvidences = collect();
+        foreach ($itemPekerjaan->produks as $produk) {
+            $grouped = $produk->stageEvidences->groupBy('stage');
+            foreach ($grouped as $stage => $evidences) {
+                if (!$allStageEvidences->has($stage)) {
+                    $allStageEvidences[$stage] = collect();
+                }
+                $allStageEvidences[$stage] = $allStageEvidences[$stage]->merge($evidences);
+            }
+        }
 
         // Generate PDF
         $data = [
             'bast_number' => $bastNumber,
             'bast_date' => now()->format('d F Y'),
             'order' => $order,
-            'produk' => $produk,
-            'stage_evidences' => $produk->stageEvidences->groupBy('stage'),
+            'item_pekerjaan' => $itemPekerjaan,
+            'produks' => $itemPekerjaan->produks,
+            'stage_evidences' => $allStageEvidences,
         ];
 
         $pdf = PDF::loadView('pdf.bast', $data);
         $pdf->setPaper('a4', 'portrait');
 
-        $filename = 'BAST-' . $bastNumber . '-' . date('YmdHis') . '.pdf';
+        $filename = 'BAST-' . str_replace('/', '-', $bastNumber) . '-' . date('YmdHis') . '.pdf';
         $pdfPath = 'bast/' . $filename;
 
         // Save PDF to storage
         Storage::disk('public')->put($pdfPath, $pdf->output());
 
-        // Update produk with BAST info
-        $produk->update([
+        // Update item pekerjaan with BAST info
+        $itemPekerjaan->update([
             'bast_number' => $bastNumber,
             'bast_date' => now(),
             'bast_pdf_path' => $pdfPath,
@@ -313,16 +346,207 @@ class ProjectManagementController extends Controller
         return back()->with('success', 'BAST berhasil dibuat');
     }
 
-    public function downloadBast($id)
+    public function downloadBast($itemPekerjaanId)
     {
-        $produk = ItemPekerjaanProduk::findOrFail($id);
+        $itemPekerjaan = \App\Models\ItemPekerjaan::findOrFail($itemPekerjaanId);
 
-        if (!$produk->bast_pdf_path) {
+        if (!$itemPekerjaan->bast_pdf_path) {
             return back()->withErrors(['bast' => 'BAST belum dibuat']);
         }
 
-        $filePath = storage_path('app/public/' . $produk->bast_pdf_path);
+        $filePath = storage_path('app/public/' . $itemPekerjaan->bast_pdf_path);
         
         return response()->download($filePath);
+    }
+
+    /**
+     * Get payment info for an item pekerjaan
+     */
+    private function getPaymentInfo($itemPekerjaan, $order)
+    {
+        $kontrak = $itemPekerjaan->kontrak;
+        if (!$kontrak) {
+            return null;
+        }
+
+        $termin = $kontrak->termin;
+        if (!$termin) {
+            return null;
+        }
+
+        $tahapan = $termin->tahapan ?? [];
+        $totalSteps = count($tahapan);
+
+        if ($totalSteps === 0) {
+            return null;
+        }
+
+        // Get harga kontrak
+        $hargaKontrak = (float) ($kontrak->harga_kontrak ?? 0);
+
+        // Get commitment fee from moodboard
+        $commitmentFee = $order->moodboard?->commitmentFee;
+        $commitmentFeeAmount = (float) ($commitmentFee?->total_fee ?? 0);
+        $commitmentFeePaid = $commitmentFee?->payment_status === 'completed';
+
+        // Sisa pembayaran = Harga Kontrak - Commitment Fee (if paid)
+        $sisaPembayaran = $commitmentFeePaid ? max(0, $hargaKontrak - $commitmentFeeAmount) : $hargaKontrak;
+
+        // Get invoices
+        $allInvoices = $itemPekerjaan->invoices;
+        $paidInvoices = $allInvoices->where('status', 'paid')->sortBy('termin_step');
+        $lastPaidStep = $paidInvoices->max('termin_step') ?? 0;
+        $totalPaid = (float) $paidInvoices->sum('total_amount');
+
+        // Get unlocked step (default 1 if not set)
+        $unlockedStep = $itemPekerjaan->unlocked_step ?? 1;
+
+        // Check if item pekerjaan has BAST (now at item level, not per product)
+        $hasBast = $itemPekerjaan->has_bast;
+
+        // Build steps info
+        $stepsInfo = [];
+        foreach ($tahapan as $index => $tahap) {
+            $step = $index + 1;
+            $invoice = $allInvoices->firstWhere('termin_step', $step);
+            $persentase = (float) ($tahap['persentase'] ?? 0);
+            $nominal = $sisaPembayaran * ($persentase / 100);
+            $isLastStep = $step === $totalSteps;
+
+            // Determine status
+            $status = 'locked';
+            $canPay = false;
+            $lockedReason = null;
+
+            if ($invoice && $invoice->status === 'paid') {
+                $status = 'paid';
+            } elseif ($invoice && $invoice->status === 'pending') {
+                $status = 'pending';
+            } elseif ($isLastStep) {
+                // TAHAP TERAKHIR: Otomatis available jika BAST sudah ada & tahap sebelumnya sudah dibayar
+                if (!$hasBast) {
+                    $status = 'waiting_bast';
+                    $lockedReason = 'Menunggu BAST Item Pekerjaan dibuat';
+                } elseif ($lastPaidStep < $totalSteps - 1) {
+                    // Previous steps not all paid
+                    $status = 'locked';
+                    $lockedReason = 'Bayar tahap sebelumnya dulu';
+                } else {
+                    // BAST ada & semua tahap sebelumnya sudah dibayar
+                    $status = 'available';
+                    $canPay = true;
+                }
+            } elseif ($step <= $unlockedStep) {
+                // Step is unlocked (tahap 1 sampai n-1)
+                if ($step > 1 && $lastPaidStep < $step - 1) {
+                    // Previous step not paid yet
+                    $status = 'locked';
+                    $lockedReason = 'Bayar tahap sebelumnya dulu';
+                } else {
+                    $status = 'available';
+                    $canPay = true;
+                }
+            } else {
+                // Step is still locked
+                $lockedReason = 'Belum di-unlock';
+            }
+
+            $stepsInfo[] = [
+                'step' => $step,
+                'text' => $tahap['text'] ?? "Tahap $step",
+                'persentase' => $persentase,
+                'nominal' => $nominal,
+                'status' => $status,
+                'can_pay' => $canPay,
+                'is_last_step' => $isLastStep,
+                'locked_reason' => $lockedReason,
+                'invoice' => $invoice ? [
+                    'id' => $invoice->id,
+                    'invoice_number' => $invoice->invoice_number,
+                    'total_amount' => (float) $invoice->total_amount,
+                    'status' => $invoice->status,
+                    'paid_at' => $invoice->paid_at?->format('d M Y'),
+                ] : null,
+            ];
+        }
+
+        // Determine next step to unlock
+        // Tahap terakhir TIDAK perlu di-unlock manual (otomatis setelah BAST)
+        $canUnlockNext = false;
+        $nextStepToUnlock = null;
+        
+        // Can unlock next if current unlocked step is paid and next step is NOT the last step
+        if ($lastPaidStep >= $unlockedStep && $unlockedStep < $totalSteps - 1) {
+            // Next step bukan tahap terakhir, bisa di-unlock manual
+            $canUnlockNext = true;
+            $nextStepToUnlock = $unlockedStep + 1;
+        }
+
+        return [
+            'termin_nama' => $termin->nama_tipe ?? 'Termin',
+            'total_steps' => $totalSteps,
+            'unlocked_step' => $unlockedStep,
+            'last_paid_step' => $lastPaidStep,
+            'harga_kontrak' => $hargaKontrak,
+            'sisa_pembayaran' => $sisaPembayaran,
+            'total_paid' => $totalPaid,
+            'remaining' => max(0, $sisaPembayaran - $totalPaid),
+            'is_fully_paid' => $lastPaidStep >= $totalSteps,
+            'has_bast' => $hasBast,
+            'can_unlock_next' => $canUnlockNext,
+            'next_step_to_unlock' => $nextStepToUnlock,
+            'steps' => $stepsInfo,
+        ];
+    }
+
+    /**
+     * Unlock the next payment step (Tagih Pembayaran Selanjutnya)
+     */
+    public function unlockNextStep(Request $request, $itemPekerjaanId)
+    {
+        $itemPekerjaan = \App\Models\ItemPekerjaan::with([
+            'kontrak.termin',
+            'invoices',
+            'produks'
+        ])->findOrFail($itemPekerjaanId);
+
+        $kontrak = $itemPekerjaan->kontrak;
+        if (!$kontrak || !$kontrak->termin) {
+            return back()->withErrors(['error' => 'Kontrak atau termin tidak ditemukan']);
+        }
+
+        $tahapan = $kontrak->termin->tahapan ?? [];
+        $totalSteps = count($tahapan);
+        $currentUnlockedStep = $itemPekerjaan->unlocked_step ?? 1;
+
+        // Check if we can unlock next
+        if ($currentUnlockedStep >= $totalSteps) {
+            return back()->withErrors(['error' => 'Semua tahap sudah di-unlock']);
+        }
+
+        // Check if current step is paid
+        $paidInvoices = $itemPekerjaan->invoices->where('status', 'paid');
+        $lastPaidStep = $paidInvoices->max('termin_step') ?? 0;
+
+        if ($lastPaidStep < $currentUnlockedStep) {
+            return back()->withErrors(['error' => 'Tahap saat ini belum dibayar']);
+        }
+
+        $nextStep = $currentUnlockedStep + 1;
+        $isNextLastStep = $nextStep === $totalSteps;
+
+        // For last step, require BAST (now at item level)
+        if ($isNextLastStep) {
+            if (!$itemPekerjaan->has_bast) {
+                return back()->withErrors(['error' => 'Tahap terakhir memerlukan BAST Item Pekerjaan']);
+            }
+        }
+
+        // Unlock next step
+        $itemPekerjaan->update(['unlocked_step' => $nextStep]);
+
+        $stepText = $tahapan[$nextStep - 1]['text'] ?? "Tahap $nextStep";
+
+        return back()->with('success', "Pembayaran \"$stepText\" berhasil dibuka!");
     }
 }

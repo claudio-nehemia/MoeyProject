@@ -15,13 +15,13 @@ class ItemPekerjaanProduk extends Model
         'lebar',
         'tinggi',
         'current_stage',
-        'bast_number',
-        'bast_date',
-        'bast_pdf_path',
+        'workplan_start_date',
+        'workplan_end_date',
     ];
 
     protected $casts = [
-        'bast_date' => 'datetime',
+        'workplan_start_date' => 'date',
+        'workplan_end_date' => 'date',
     ];
 
     public function itemPekerjaan()
@@ -71,12 +71,6 @@ class ItemPekerjaanProduk extends Model
     public function getIsCompletedAttribute()
     {
         return $this->current_stage === 'Install QC';
-    }
-
-    // Accessor: Cek apakah BAST sudah dibuat
-    public function getHasBastAttribute()
-    {
-        return !empty($this->bast_number);
     }
 
     public function getProgressAttribute()

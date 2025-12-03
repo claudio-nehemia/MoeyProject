@@ -281,6 +281,18 @@ export default function Sidebar({
             gradient: 'from-purple-400 to-purple-600',
         },
         {
+            name: 'Workplan',
+            href: '/workplan',
+            page: 'workplan',
+            permission: 'workplan.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+            ),
+            gradient: 'from-sky-400 to-sky-600',
+        },
+        {
             name: 'Project Management',
             href: '/project-management',
             page: 'project-management',
@@ -292,6 +304,7 @@ export default function Sidebar({
             ),
             gradient: 'from-teal-400 to-teal-600',
         },
+        
         {
             name: 'Defect Management',
             href: '/defect-management',

@@ -627,6 +627,38 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Generate & Download BAST',
                 'group' => 'Operations - Project Management'
             ],
+            [
+                'name' => 'project-management.unlock-payment',
+                'display_name' => 'Unlock Next Payment Step',
+                'group' => 'Operations - Project Management'
+            ],
+            
+            // Workplan Permissions
+            [
+                'name' => 'workplan.index',
+                'display_name' => 'View Workplan List',
+                'group' => 'Operations - Workplan'
+            ],
+            [
+                'name' => 'workplan.show',
+                'display_name' => 'View Workplan Detail',
+                'group' => 'Operations - Workplan'
+            ],
+            [
+                'name' => 'workplan.create',
+                'display_name' => 'Create Workplan',
+                'group' => 'Operations - Workplan'
+            ],
+            [
+                'name' => 'workplan.edit',
+                'display_name' => 'Edit Workplan',
+                'group' => 'Operations - Workplan'
+            ],
+            [
+                'name' => 'workplan.delete',
+                'display_name' => 'Delete Workplan',
+                'group' => 'Operations - Workplan'
+            ],
             
             // Defect Management Permissions
             [

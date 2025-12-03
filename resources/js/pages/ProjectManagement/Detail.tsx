@@ -13,6 +13,17 @@ type StageEvidence = {
     created_at: string;
 };
 
+type WorkplanItem = {
+    id: number | null;
+    nama_tahapan: string;
+    start_date: string | null;
+    end_date: string | null;
+    duration_days: number | null;
+    status: string;
+    catatan: string | null;
+    urutan: number;
+};
+
 type Produk = {
     id: number;
     nama_produk: string;
@@ -28,20 +39,58 @@ type Produk = {
     has_pending_approval: boolean;
     defect_id: number | null;
     is_completed: boolean;
-    has_bast: boolean;
-    bast_number: string | null;
-    bast_date: string | null;
-    bast_pdf_path: string | null;
     stage_evidences: Record<string, StageEvidence[]>;
-    workplan_items: WorkplanItem[]; // 🔥 NEW
+    workplan_items: WorkplanItem[];
 };
 
+type PaymentStep = {
+    step: number;
+    text: string;
+    persentase: number;
+    nominal: number;
+    status: 'locked' | 'available' | 'pending' | 'paid' | 'waiting_bast';
+    can_pay: boolean;
+    is_last_step: boolean;
+    locked_reason: string | null;
+    invoice: {
+        id: number;
+        invoice_number: string;
+        total_amount: number;
+        status: string;
+        paid_at: string | null;
+    } | null;
+};
+
+type PaymentInfo = {
+    termin_nama: string;
+    total_steps: number;
+    unlocked_step: number;
+    last_paid_step: number;
+    harga_kontrak: number;
+    sisa_pembayaran: number;
+    total_paid: number;
+    remaining: number;
+    is_fully_paid: boolean;
+    can_unlock_next: boolean;
+    next_step_to_unlock: number | null;
+    steps: PaymentStep[];
+} | null;
 
 type Item = {
     id: number;
     produks: Produk[];
     progress: number;
     total_harga: number;
+    workplan_start_date: string | null;
+    workplan_end_date: string | null;
+    workplan_duration: number | null;
+    payment_info: PaymentInfo;
+    // BAST per Item Pekerjaan
+    is_completed: boolean;
+    has_bast: boolean;
+    bast_number: string | null;
+    bast_date: string | null;
+    bast_pdf_path: string | null;
 };
 
 type Order = {
@@ -61,16 +110,6 @@ type KontrakInfo = {
     sisa_hari: number | null;
     deadline_status: 'overdue' | 'urgent' | 'warning' | 'normal' | null;
 } | null;
-type WorkplanItem = {
-    id: number;
-    nama_tahapan: string;
-    start_date: string | null;
-    end_date: string | null;
-    duration_days: number | null;
-    urutan: number;
-    status: 'planned' | 'in_progress' | 'done' | 'cancelled' | string;
-    catatan: string | null;
-};
 
 export default function Detail({
     order,
@@ -83,7 +122,6 @@ export default function Detail({
 }) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [updatingProduk, setUpdatingProduk] = useState<number | null>(null);
-    const [showWorkplanModal, setShowWorkplanModal] = useState<number | null>(null);
     const [animatedProgress, setAnimatedProgress] = useState<{
         [key: number]: number;
     }>({});
@@ -103,92 +141,8 @@ export default function Detail({
     // State for evidence viewer modal
     const [showEvidenceModal, setShowEvidenceModal] = useState<{stage: string; evidences: StageEvidence[]} | null>(null);
 
-    // =========================
-    // WORKPLAN STATES & METHODS
-    // =========================
-
-    const [workplanItems, setWorkplanItems] = useState<WorkplanItem[]>([]);
-    const [loadingWorkplan, setLoadingWorkplan] = useState(false);
-
-    // Ketika buka modal → load data workplan dari produk
-    useEffect(() => {
-        if (selectedProduk) {
-            setWorkplanItems(selectedProduk.workplan_items || []);
-        }
-    }, [showWorkplanModal, selectedProduk]);
-
-    // Tambah baris baru
-    const addWorkplanItem = () => {
-        setWorkplanItems([
-            ...workplanItems,
-            {
-                id: 0,
-                nama_tahapan: "",
-                start_date: null,
-                end_date: null,
-                duration_days: null,
-                urutan: workplanItems.length + 1,
-                status: "planned",
-                catatan: "",
-            },
-        ]);
-    };
-
-    // Hapus baris
-    const removeWorkplanItem = (index: number) => {
-        const updated = workplanItems.filter((_, i) => i !== index)
-            .map((row, idx) => ({ ...row, urutan: idx + 1 }));
-        setWorkplanItems(updated);
-    };
-
-    // Update field
-    const updateWorkplanItem = (
-        index: number,
-        field: keyof WorkplanItem,
-        value: any
-    ) => {
-        const updated = [...workplanItems];
-        updated[index] = { ...updated[index], [field]: value };
-
-        // Hitung ulang durasi
-        if (field === "start_date" || field === "end_date") {
-            const start = new Date(updated[index].start_date || "");
-            const end = new Date(updated[index].end_date || "");
-            if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-                const diff =
-                    (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24) + 1;
-                updated[index].duration_days = diff > 0 ? diff : null;
-            }
-        }
-
-        setWorkplanItems(updated);
-    };
-
-    // Submit ke backend
-    const handleSubmitWorkplan = (e: React.FormEvent, produkId: number) => {
-        e.preventDefault();
-        setLoadingWorkplan(true);
-
-        router.post(
-            `/project-management/produk/${produkId}/workplan`,
-            { items: workplanItems },
-            {
-                onFinish: () => {
-                    setLoadingWorkplan(false);
-                    setShowWorkplanModal(null);
-                },
-            }
-        );
-    };
-
-    // update status workplan
-    const updateWorkplanStatus = (id: number, status: string) => {
-        router.post(
-            `/workplan/${id}/update-status`,
-            { status },
-            { preserveScroll: true }
-        );
-    };
+    // State for unlocking next payment step
+    const [unlockingPayment, setUnlockingPayment] = useState<number | null>(null);
 
 
     useEffect(() => {
@@ -235,15 +189,30 @@ export default function Detail({
         );
     };
 
-    const handleGenerateBast = (produkId: number) => {
-        if (confirm('Generate BAST untuk produk ini?')) {
-            setGeneratingBast(produkId);
+    const handleGenerateBast = (itemPekerjaanId: number) => {
+        if (confirm('Generate BAST untuk Item Pekerjaan ini?')) {
+            setGeneratingBast(itemPekerjaanId);
             router.post(
-                `/produk/${produkId}/generate-bast`,
+                `/item-pekerjaan/${itemPekerjaanId}/generate-bast`,
                 {},
                 {
                     onFinish: () => {
                         setGeneratingBast(null);
+                    },
+                },
+            );
+        }
+    };
+
+    const handleUnlockNextPayment = (itemPekerjaanId: number, nextStepText: string) => {
+        if (confirm(`Buka tagihan pembayaran "${nextStepText}"? Customer akan diminta membayar tahap selanjutnya.`)) {
+            setUnlockingPayment(itemPekerjaanId);
+            router.post(
+                `/item-pekerjaan/${itemPekerjaanId}/unlock-next-step`,
+                {},
+                {
+                    onFinish: () => {
+                        setUnlockingPayment(null);
                     },
                 },
             );
@@ -509,8 +478,7 @@ export default function Detail({
                                         <div className="relative z-10 flex items-center justify-between">
                                             <div>
                                                 <h2 className="text-xl font-bold text-gray-900">
-                                                    Item Pekerjaan #
-                                                    {itemIndex + 1}
+                                                    PROJECT WORKING
                                                 </h2>
                                                 <p className="mt-1 text-sm text-gray-600">
                                                     {item.produks.length} Produk
@@ -544,6 +512,211 @@ export default function Detail({
                                                 </div>
                                             </div>
                                         </div>
+                                        
+                                        {/* Timeline Project */}
+                                        {(item.workplan_start_date || item.workplan_end_date) && (
+                                            <div className="relative z-10 mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                                <div className="flex items-center rounded-lg bg-white/50 px-3 py-2">
+                                                    <svg className="mr-2 h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                    <div>
+                                                        <p className="text-xs text-gray-500">Mulai</p>
+                                                        <p className="font-semibold text-gray-900">
+                                                            {item.workplan_start_date 
+                                                                ? new Date(item.workplan_start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                                                                : '-'
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center rounded-lg bg-white/50 px-3 py-2">
+                                                    <svg className="mr-2 h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                    <div>
+                                                        <p className="text-xs text-gray-500">Deadline</p>
+                                                        <p className="font-semibold text-gray-900">
+                                                            {item.workplan_end_date 
+                                                                ? new Date(item.workplan_end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                                                                : '-'
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center rounded-lg bg-white/50 px-3 py-2">
+                                                    <svg className="mr-2 h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                    <div>
+                                                        <p className="text-xs text-gray-500">Durasi</p>
+                                                        <p className="font-semibold text-gray-900">
+                                                            {item.workplan_duration ? `${item.workplan_duration} hari` : '-'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Payment Info & Tagih Pembayaran Section */}
+                                        {item.payment_info && (
+                                            <div className="relative z-10 mt-4 rounded-xl bg-white/60 p-4 border border-gray-200">
+                                                <div className="flex items-center justify-between flex-wrap gap-4">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm font-semibold text-gray-700">💰 Pembayaran:</span>
+                                                            <span className="px-2 py-1 rounded-lg bg-blue-100 text-blue-800 text-xs font-bold">
+                                                                {item.payment_info.termin_nama} ({item.payment_info.total_steps} tahap)
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            {item.payment_info.steps.map((step) => (
+                                                                <div 
+                                                                    key={step.step}
+                                                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 ${
+                                                                        step.status === 'paid' 
+                                                                            ? 'bg-green-500 text-white border-green-600' 
+                                                                            : step.status === 'pending'
+                                                                                ? 'bg-yellow-400 text-yellow-900 border-yellow-500'
+                                                                                : step.status === 'available'
+                                                                                    ? 'bg-blue-500 text-white border-blue-600 animate-pulse'
+                                                                                    : step.status === 'waiting_bast'
+                                                                                        ? 'bg-purple-400 text-white border-purple-500'
+                                                                                        : 'bg-gray-200 text-gray-500 border-gray-300'
+                                                                    }`}
+                                                                    title={`${step.text}: ${step.status === 'paid' ? 'Terbayar' : step.status === 'pending' ? 'Menunggu Pembayaran' : step.status === 'available' ? 'Siap Bayar' : step.status === 'waiting_bast' ? 'Tunggu BAST' : step.locked_reason || 'Terkunci'}`}
+                                                                >
+                                                                    {step.status === 'paid' ? '✓' : step.status === 'waiting_bast' ? '📋' : step.step}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {/* Tagih Pembayaran Button */}
+                                                    {item.payment_info.can_unlock_next && item.payment_info.next_step_to_unlock && (
+                                                        <button
+                                                            onClick={() => {
+                                                                const nextStep = item.payment_info!.steps.find(s => s.step === item.payment_info!.next_step_to_unlock);
+                                                                handleUnlockNextPayment(item.id, nextStep?.text || `Tahap ${item.payment_info!.next_step_to_unlock}`);
+                                                            }}
+                                                            disabled={unlockingPayment === item.id}
+                                                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold rounded-lg shadow-lg hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 transition-all transform hover:scale-105"
+                                                        >
+                                                            {unlockingPayment === item.id ? (
+                                                                <>
+                                                                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                                                    </svg>
+                                                                    <span>Membuka...</span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                    </svg>
+                                                                    <span>Tagih Pembayaran Selanjutnya</span>
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    )}
+
+                                                    {/* Show message if waiting for BAST on last step */}
+                                                    {!item.payment_info.can_unlock_next && 
+                                                     !item.payment_info.is_fully_paid && 
+                                                     item.payment_info.unlocked_step === item.payment_info.total_steps - 1 &&
+                                                     !item.has_bast && (
+                                                        <div className="flex items-center gap-2 px-3 py-2 bg-purple-100 text-purple-800 rounded-lg text-sm">
+                                                            <span>📋</span>
+                                                            <span>Tahap terakhir perlu BAST terlebih dahulu</span>
+                                                        </div>
+                                                    )}
+
+                                                    {item.payment_info.is_fully_paid && (
+                                                        <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg font-bold">
+                                                            <span>✅</span>
+                                                            <span>Pembayaran Lunas</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Payment Progress */}
+                                                <div className="mt-3 flex items-center gap-4">
+                                                    <div className="flex-1">
+                                                        <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                                                            <div
+                                                                className="h-full bg-gradient-to-r from-green-400 to-emerald-500 transition-all duration-500"
+                                                                style={{
+                                                                    width: `${item.payment_info.sisa_pembayaran > 0 ? (item.payment_info.total_paid / item.payment_info.sisa_pembayaran) * 100 : 0}%`,
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-sm font-semibold text-gray-700">
+                                                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(item.payment_info.total_paid)} / {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(item.payment_info.sisa_pembayaran)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* BAST Section - Per Item Pekerjaan */}
+                                        {item.is_completed && (
+                                            <div className="relative z-10 mt-4 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 p-4 border-2 border-purple-200">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
+                                                            <span className="text-xl">📋</span>
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-bold text-purple-900">Berita Acara Serah Terima (BAST)</h4>
+                                                            <p className="text-sm text-purple-700">Semua produk telah selesai (Install QC)</p>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {item.has_bast ? (
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="text-right">
+                                                                <p className="text-xs text-green-600 font-medium">✅ BAST Sudah Dibuat</p>
+                                                                <p className="text-sm font-bold text-green-800">{item.bast_number}</p>
+                                                                <p className="text-xs text-green-700">{item.bast_date}</p>
+                                                            </div>
+                                                            <a
+                                                                href={`/item-pekerjaan/${item.id}/download-bast`}
+                                                                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 shadow-lg transition-all"
+                                                            >
+                                                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                                </svg>
+                                                                Download BAST
+                                                            </a>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleGenerateBast(item.id)}
+                                                            disabled={generatingBast === item.id}
+                                                            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-3 text-white font-bold shadow-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 transition-all transform hover:scale-105"
+                                                        >
+                                                            {generatingBast === item.id ? (
+                                                                <>
+                                                                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                                                    </svg>
+                                                                    <span>Generating BAST...</span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                                    </svg>
+                                                                    <span>Generate BAST</span>
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Produk List */}
@@ -601,7 +774,7 @@ export default function Detail({
                                                             <div className="relative z-10 grid grid-cols-1 gap-6 lg:grid-cols-12">
                                                                 {/* Produk Info */}
                                                                 <div className="lg:col-span-5">
-                                                                    <h3 className="mb-3 flex items-center text-lg font-bold text-gray-900">
+                                                                    <h3 className="mb-1 flex items-center text-lg font-bold text-gray-900">
                                                                         <span
                                                                             className={`mr-2 h-2 w-2 rounded-full ${produk.progress > 0 ? 'animate-pulse bg-green-500' : 'bg-gray-400'}`}
                                                                         />
@@ -609,6 +782,38 @@ export default function Detail({
                                                                             produk.nama_produk
                                                                         }
                                                                     </h3>
+                                                                    {/* Deadline Produk */}
+                                                                    {(() => {
+                                                                        const lastWorkplan = produk.workplan_items
+                                                                            ?.filter(wp => wp.end_date)
+                                                                            ?.sort((a, b) => new Date(b.end_date!).getTime() - new Date(a.end_date!).getTime())[0];
+                                                                        if (lastWorkplan?.end_date) {
+                                                                            const deadline = new Date(lastWorkplan.end_date);
+                                                                            const today = new Date();
+                                                                            today.setHours(0, 0, 0, 0);
+                                                                            const diffDays = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                                                                            const isOverdue = diffDays < 0;
+                                                                            const isUrgent = diffDays >= 0 && diffDays <= 3;
+                                                                            const isWarning = diffDays > 3 && diffDays <= 7;
+                                                                            
+                                                                            return (
+                                                                                <div className={`mb-3 inline-flex items-center rounded-lg px-2 py-1 text-xs font-medium ${
+                                                                                    isOverdue ? 'bg-red-100 text-red-800' :
+                                                                                    isUrgent ? 'bg-orange-100 text-orange-800' :
+                                                                                    isWarning ? 'bg-yellow-100 text-yellow-800' :
+                                                                                    'bg-green-100 text-green-800'
+                                                                                }`}>
+                                                                                    <svg className="mr-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                                    </svg>
+                                                                                    Deadline: {deadline.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                                                    {isOverdue && <span className="ml-1">({Math.abs(diffDays)} hari terlewat)</span>}
+                                                                                    {isUrgent && !isOverdue && <span className="ml-1">({diffDays} hari lagi)</span>}
+                                                                                </div>
+                                                                            );
+                                                                        }
+                                                                        return null;
+                                                                    })()}
                                                                     <div className="space-y-2">
                                                                         <div className="flex items-center rounded-lg bg-white/50 px-3 py-2 text-gray-700">
                                                                             <svg
@@ -688,48 +893,6 @@ export default function Detail({
                                                                         </div>
                                                                     </div>
 
-                                                                    {/* BAST Section */}
-                                                                    {produk.is_completed && (
-                                                                        <div className="mt-4 border-t border-gray-200 pt-4">
-                                                                            {produk.has_bast ? (
-                                                                                <div className="rounded-xl bg-gradient-to-r from-green-100 to-emerald-100 p-4 border border-green-200">
-                                                                                    <div className="flex items-center mb-2">
-                                                                                        <span className="text-green-600 text-xl mr-2">✅</span>
-                                                                                        <span className="font-bold text-green-800">BAST Sudah Dibuat</span>
-                                                                                    </div>
-                                                                                    <p className="text-sm text-green-700 mb-1">No: {produk.bast_number}</p>
-                                                                                    <p className="text-sm text-green-700 mb-3">Tanggal: {produk.bast_date}</p>
-                                                                                    <a
-                                                                                        href={`/produk/${produk.id}/download-bast`}
-                                                                                        className="inline-flex items-center rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-                                                                                    >
-                                                                                        📥 Download BAST
-                                                                                    </a>
-                                                                                </div>
-                                                                            ) : (
-                                                                                <button
-                                                                                    onClick={() => handleGenerateBast(produk.id)}
-                                                                                    disabled={generatingBast === produk.id}
-                                                                                    className="w-full rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4 text-white font-bold shadow-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 transition-all"
-                                                                                >
-                                                                                    {generatingBast === produk.id ? (
-                                                                                        <span className="flex items-center justify-center">
-                                                                                            <svg className="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
-                                                                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                                                                            </svg>
-                                                                                            Generating BAST...
-                                                                                        </span>
-                                                                                    ) : (
-                                                                                        <span className="flex items-center justify-center">
-                                                                                            📋 CREATE BAST
-                                                                                        </span>
-                                                                                    )}
-                                                                                </button>
-                                                                            )}
-                                                                        </div>
-                                                                    )}
-
                                                                     {/* Stage Evidences */}
                                                                     {produk.stage_evidences && Object.keys(produk.stage_evidences).length > 0 && (
                                                                         <div className="mt-4 border-t border-gray-200 pt-4">
@@ -744,6 +907,65 @@ export default function Detail({
                                                                                         ✓ {stage} ({evidences.length})
                                                                                     </button>
                                                                                 ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Workplan Timeline per Produk */}
+                                                                    {produk.workplan_items && produk.workplan_items.length > 0 && produk.workplan_items.some(wp => wp.start_date || wp.end_date) && (
+                                                                        <div className="mt-4 border-t border-gray-200 pt-4">
+                                                                            <p className="text-sm font-semibold text-gray-700 mb-3">📅 Jadwal Tahapan:</p>
+                                                                            <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                                                                                {produk.workplan_items
+                                                                                    .filter(wp => wp.start_date || wp.end_date)
+                                                                                    .sort((a, b) => a.urutan - b.urutan)
+                                                                                    .map((wp, wpIndex) => {
+                                                                                        const isCurrentStage = produk.current_stage === wp.nama_tahapan;
+                                                                                        const isPast = produk.current_stage && 
+                                                                                            produk.workplan_items.findIndex(w => w.nama_tahapan === produk.current_stage) > wpIndex;
+                                                                                        
+                                                                                        return (
+                                                                                            <div 
+                                                                                                key={wpIndex}
+                                                                                                className={`flex items-center justify-between rounded-lg px-3 py-2 text-xs ${
+                                                                                                    isCurrentStage 
+                                                                                                        ? 'bg-blue-100 border border-blue-300' 
+                                                                                                        : isPast
+                                                                                                            ? 'bg-green-50 border border-green-200'
+                                                                                                            : 'bg-gray-50 border border-gray-200'
+                                                                                                }`}
+                                                                                            >
+                                                                                                <div className="flex items-center gap-2">
+                                                                                                    <span className={`h-2 w-2 rounded-full ${
+                                                                                                        isCurrentStage 
+                                                                                                            ? 'bg-blue-500 animate-pulse' 
+                                                                                                            : isPast 
+                                                                                                                ? 'bg-green-500' 
+                                                                                                                : 'bg-gray-400'
+                                                                                                    }`} />
+                                                                                                    <span className={`font-medium ${isCurrentStage ? 'text-blue-800' : isPast ? 'text-green-800' : 'text-gray-700'}`}>
+                                                                                                        {wp.nama_tahapan}
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                                <div className="flex items-center gap-2 text-gray-600">
+                                                                                                    {wp.start_date && (
+                                                                                                        <span>
+                                                                                                            {new Date(wp.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                                                                                                        </span>
+                                                                                                    )}
+                                                                                                    {wp.start_date && wp.end_date && <span>→</span>}
+                                                                                                    {wp.end_date && (
+                                                                                                        <span className="font-semibold text-red-600">
+                                                                                                            {new Date(wp.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                                                                                                        </span>
+                                                                                                    )}
+                                                                                                    {wp.duration_days && (
+                                                                                                        <span className="text-gray-500">({wp.duration_days}h)</span>
+                                                                                                    )}
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        );
+                                                                                    })}
                                                                             </div>
                                                                         </div>
                                                                     )}
@@ -1258,382 +1480,7 @@ export default function Detail({
                                                                             </div>
                                                                         )}
                                                                     </div>
-                                                                    
-                                                                   
-
-
-                                                                    {/* Stage Progress Modal */}
-                                                                    {showStageModal ===
-                                                                        produk.id && (
-                                                                        <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border-2 border-gray-200 bg-white shadow-2xl lg:w-96">
-                                                                            <div className="max-h-[800px] overflow-y-auto p-4">
-                                                                                <div className="mb-4 flex items-center justify-between border-b border-gray-200 pb-3">
-                                                                                    <h4 className="text-sm font-bold text-gray-900">
-                                                                                        Pilih
-                                                                                        Tahapan
-                                                                                    </h4>
-                                                                                    <button
-                                                                                        onClick={() =>
-                                                                                            setShowStageModal(
-                                                                                                null,
-                                                                                            )
-                                                                                        }
-                                                                                        className="text-gray-400 transition-colors hover:text-gray-600"
-                                                                                    >
-                                                                                        <svg
-                                                                                            className="h-5 w-5"
-                                                                                            fill="none"
-                                                                                            stroke="currentColor"
-                                                                                            viewBox="0 0 24 24"
-                                                                                        >
-                                                                                            <path
-                                                                                                strokeLinecap="round"
-                                                                                                strokeLinejoin="round"
-                                                                                                strokeWidth={
-                                                                                                    2
-                                                                                                }
-                                                                                                d="M6 18L18 6M6 6l12 12"
-                                                                                            />
-                                                                                        </svg>
-                                                                                    </button>
-                                                                                </div>
-
-                                                                                <div className="space-y-2 pb-2">
-                                                                                    {Object.entries(
-                                                                                        stages,
-                                                                                    ).map(
-                                                                                        (
-                                                                                            [
-                                                                                                stage,
-                                                                                                weight,
-                                                                                            ],
-                                                                                            index,
-                                                                                        ) => {
-                                                                                            const isActive =
-                                                                                                produk.current_stage ===
-                                                                                                stage;
-                                                                                            const stageProgress =
-                                                                                                Object.keys(
-                                                                                                    stages,
-                                                                                                ).indexOf(
-                                                                                                    stage,
-                                                                                                );
-                                                                                            const currentProgress =
-                                                                                                produk.current_stage
-                                                                                                    ? Object.keys(
-                                                                                                          stages,
-                                                                                                      ).indexOf(
-                                                                                                          produk.current_stage,
-                                                                                                      )
-                                                                                                    : -1;
-                                                                                            const isPassed =
-                                                                                                stageProgress <
-                                                                                                currentProgress;
-                                                                                            const isFinalStage =
-                                                                                                weight ===
-                                                                                                0; // BAST
-
-                                                                                            return (
-                                                                                                <button
-                                                                                                    key={
-                                                                                                        stage
-                                                                                                    }
-                                                                                                    onClick={() =>
-                                                                                                        openStageUpdateModal(
-                                                                                                            produk.id,
-                                                                                                            stage,
-                                                                                                        )
-                                                                                                    }
-                                                                                                    className={`w-full transform rounded-xl p-3 text-left transition-all duration-200 hover:scale-[1.02] ${
-                                                                                                        isFinalStage
-                                                                                                            ? isActive
-                                                                                                                ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg ring-2 ring-purple-300'
-                                                                                                                : 'border-2 border-dashed border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 text-purple-700 hover:shadow-md'
-                                                                                                            : isActive
-                                                                                                              ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg'
-                                                                                                              : isPassed
-                                                                                                                ? 'border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 hover:shadow-md'
-                                                                                                                : 'bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-md'
-                                                                                                    }`}
-                                                                                                >
-                                                                                                    <div className="flex items-center justify-between">
-                                                                                                        <div className="flex items-center space-x-3">
-                                                                                                            <div
-                                                                                                                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
-                                                                                                                    isFinalStage
-                                                                                                                        ? isActive
-                                                                                                                            ? 'bg-white text-purple-600'
-                                                                                                                            : 'bg-purple-200 text-purple-700'
-                                                                                                                        : isActive
-                                                                                                                          ? 'bg-white text-blue-600'
-                                                                                                                          : isPassed
-                                                                                                                            ? 'bg-green-500 text-white'
-                                                                                                                            : 'bg-gray-200 text-gray-600'
-                                                                                                                }`}
-                                                                                                            >
-                                                                                                                {isFinalStage
-                                                                                                                    ? '🏁'
-                                                                                                                    : isPassed
-                                                                                                                      ? '✓'
-                                                                                                                      : index +
-                                                                                                                        1}
-                                                                                                            </div>
-                                                                                                            <div className="flex flex-col">
-                                                                                                                <span className="font-semibold">
-                                                                                                                    {
-                                                                                                                        stage
-                                                                                                                    }
-                                                                                                                </span>
-                                                                                                                {isFinalStage && (
-                                                                                                                    <span className="text-xs opacity-75">
-                                                                                                                        Serah
-                                                                                                                        Terima
-                                                                                                                    </span>
-                                                                                                                )}
-                                                                                                            </div>
-                                                                                                        </div>
-                                                                                                        <div
-                                                                                                            className={`rounded-full px-3 py-1 text-xs font-bold ${
-                                                                                                                isFinalStage
-                                                                                                                    ? isActive
-                                                                                                                        ? 'bg-white/20 text-white'
-                                                                                                                        : 'bg-purple-200 text-purple-800'
-                                                                                                                    : isActive
-                                                                                                                      ? 'bg-white/20 text-white'
-                                                                                                                      : isPassed
-                                                                                                                        ? 'bg-green-200 text-green-800'
-                                                                                                                        : 'bg-gray-200 text-gray-600'
-                                                                                                            }`}
-                                                                                                        >
-                                                                                                            {isFinalStage
-                                                                                                                ? '✓ Selesai'
-                                                                                                                : `${weight}%`}
-                                                                                                        </div>
-                                                                                                    </div>
-                                                                                                </button>
-                                                                                            );
-                                                                                        },
-                                                                                    )}
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
                                                                 </div>
-
-                                                                {/* Workplan Section */}
-                                                                <div className="lg:col-span-4 mt-4 border-t border-gray-300 pt-4">
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            setSelectedProduk(produk);
-                                                                            setShowWorkplanModal(produk.id);
-                                                                        }}
-                                                                        className="w-full rounded-lg bg-gradient-to-r from-teal-500 to-cyan-600 px-4 py-2 text-white font-semibold shadow-lg hover:from-teal-600 hover:to-cyan-700 transition-all"
-                                                                    >
-                                                                        📅 Kelola Timeline Workplan
-                                                                    </button>
-
-                                                                    {/* Ringkasan Workplan */}
-                                                                    {produk.workplan_items?.length > 0 && (
-                                                                        <div className="mt-3 space-y-2">
-                                                                            {produk.workplan_items.map((wp) => {
-                                                                                const statusClass = {
-                                                                                    done: 'bg-green-600',
-                                                                                    in_progress: 'bg-blue-600',
-                                                                                    cancelled: 'bg-red-600',
-                                                                                    planned: 'bg-gray-500',
-                                                                                }[wp.status];
-
-                                                                                return (
-                                                                                    <div
-                                                                                        key={wp.id || `${wp.nama_tahapan}-${wp.urutan}`}
-                                                                                        className="rounded-lg border border-gray-200 bg-white px-3 py-3 text-xs"
-                                                                                    >
-                                                                                        <div className="flex justify-between items-center">
-                                                                                            <div>
-                                                                                                <p className="font-semibold text-gray-800">{wp.nama_tahapan}</p>
-                                                                                                <p className="text-gray-500">
-                                                                                                    {wp.start_date ?? '-'} → {wp.end_date ?? '-'}
-                                                                                                    {' • '}
-                                                                                                    {wp.duration_days ?? 0} hari
-                                                                                                </p>
-                                                                                            </div>
-
-                                                                                            <span className={`px-2 py-1 rounded text-white text-[10px] font-bold ${statusClass}`}>
-                                                                                                {wp.status}
-                                                                                            </span>
-                                                                                        </div>
-
-                                                                                        {/* 🔥 Tombol Aksi */}
-                                                                                        <div className="mt-2 flex flex-wrap gap-1">
-                                                                                            
-                                                                                            {/* In Progress */}
-                                                                                            <button
-                                                                                                onClick={() => updateWorkplanStatus(wp.id, 'in_progress')}
-                                                                                                className="px-2 py-1 rounded bg-blue-600 text-white text-[10px] font-bold hover:bg-blue-700"
-                                                                                            >
-                                                                                                In Progress
-                                                                                            </button>
-
-                                                                                            {/* Complete */}
-                                                                                            <button
-                                                                                                onClick={() => updateWorkplanStatus(wp.id, 'done')}
-                                                                                                className="px-2 py-1 rounded bg-green-600 text-white text-[10px] font-bold hover:bg-green-700"
-                                                                                            >
-                                                                                                Complete
-                                                                                            </button>
-
-                                                                                            {/* Extend */}
-                                                                                            <button
-                                                                                                onClick={() => updateWorkplanStatus(wp.id, 'planned')}
-                                                                                                className="px-2 py-1 rounded bg-yellow-500 text-white text-[10px] font-bold hover:bg-yellow-600"
-                                                                                            >
-                                                                                                Extend
-                                                                                            </button>
-
-                                                                                            {/* Cancel */}
-                                                                                            <button
-                                                                                                onClick={() => updateWorkplanStatus(wp.id, 'cancelled')}
-                                                                                                className="px-2 py-1 rounded bg-red-600 text-white text-[10px] font-bold hover:bg-red-700"
-                                                                                            >
-                                                                                                Cancel
-                                                                                            </button>
-
-                                                                                        </div>
-                                                                                    </div>
-                                                                                );
-                                                                            })}
-                                                                        </div>
-                                                                    )}
-
-
-                                                                </div>
-
-                                                                {/* Workplan Modal */}
-                                                                {showWorkplanModal === produk.id && selectedProduk && (
-                                                                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-                                                                        <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-xl p-6">
-                                                                            <h2 className="text-2xl font-bold mb-4">
-                                                                                Timeline Workplan – {selectedProduk.nama_produk}
-                                                                            </h2>
-
-                                                                            <form
-                                                                                onSubmit={(e) => handleSubmitWorkplan(e, selectedProduk.id)}
-                                                                                className="space-y-4"
-                                                                            >
-                                                                                {workplanItems.map((wp, index) => (
-                                                                                    <div key={index} className="border-2 border-gray-200 rounded-lg p-4">
-                                                                                        <div className="flex justify-between mb-2">
-                                                                                            <h3 className="font-semibold text-gray-700">
-                                                                                                Tahapan #{index + 1}
-                                                                                            </h3>
-
-                                                                                            {workplanItems.length > 1 && (
-                                                                                                <button
-                                                                                                    type="button"
-                                                                                                    onClick={() => removeWorkplanItem(index)}
-                                                                                                    className="text-red-600 hover:text-red-800"
-                                                                                                >
-                                                                                                    🗑️ Hapus
-                                                                                                </button>
-                                                                                            )}
-                                                                                        </div>
-
-                                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                                                            <div>
-                                                                                                <label className="text-sm font-medium">Nama Tahapan</label>
-                                                                                                <input
-                                                                                                    type="text"
-                                                                                                    className="w-full border rounded-lg p-2"
-                                                                                                    required
-                                                                                                    value={wp.nama_tahapan}
-                                                                                                    onChange={(e) =>
-                                                                                                        updateWorkplanItem(index, 'nama_tahapan', e.target.value)
-                                                                                                    }
-                                                                                                />
-                                                                                            </div>
-
-                                                                                            <div>
-                                                                                                <label className="text-sm font-medium">Status</label>
-                                                                                                <select
-                                                                                                    className="w-full border rounded-lg p-2"
-                                                                                                    value={wp.status}
-                                                                                                    onChange={(e) =>
-                                                                                                        updateWorkplanItem(index, 'status', e.target.value)
-                                                                                                    }
-                                                                                                >
-                                                                                                    <option value="planned">Planned</option>
-                                                                                                    <option value="in_progress">In Progress</option>
-                                                                                                    <option value="done">Done</option>
-                                                                                                    <option value="cancelled">Cancelled</option>
-                                                                                                </select>
-                                                                                            </div>
-
-                                                                                            <div>
-                                                                                                <label className="text-sm font-medium">Tanggal Mulai</label>
-                                                                                                <input
-                                                                                                    type="date"
-                                                                                                    className="w-full border rounded-lg p-2"
-                                                                                                    value={wp.start_date || ''}
-                                                                                                    onChange={(e) =>
-                                                                                                        updateWorkplanItem(index, 'start_date', e.target.value)
-                                                                                                    }
-                                                                                                />
-                                                                                            </div>
-
-                                                                                            <div>
-                                                                                                <label className="text-sm font-medium">Tanggal Selesai</label>
-                                                                                                <input
-                                                                                                    type="date"
-                                                                                                    className="w-full border rounded-lg p-2"
-                                                                                                    value={wp.end_date || ''}
-                                                                                                    onChange={(e) =>
-                                                                                                        updateWorkplanItem(index, 'end_date', e.target.value)
-                                                                                                    }
-                                                                                                />
-                                                                                            </div>
-                                                                                        </div>
-
-                                                                                        <div className="mt-3">
-                                                                                            <label className="text-sm font-medium">Catatan</label>
-                                                                                            <textarea
-                                                                                                className="w-full border rounded-lg p-2"
-                                                                                                rows={3}
-                                                                                                value={wp.catatan || ''}
-                                                                                                onChange={(e) =>
-                                                                                                    updateWorkplanItem(index, 'catatan', e.target.value)
-                                                                                                }
-                                                                                            />
-                                                                                        </div>
-                                                                                    </div>
-                                                                                ))}
-
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={addWorkplanItem}
-                                                                                    className="w-full border-2 border-dashed rounded-lg p-3 text-gray-600 hover:border-teal-500 hover:text-teal-600"
-                                                                                >
-                                                                                    + Tambah Tahapan Workplan
-                                                                                </button>
-
-                                                                                <div className="flex gap-3 mt-4">
-                                                                                    <button
-                                                                                        type="button"
-                                                                                        onClick={() => setShowWorkplanModal(null)}
-                                                                                        className="flex-1 border rounded-lg py-2 hover:bg-gray-50"
-                                                                                    >
-                                                                                        Batal
-                                                                                    </button>
-                                                                                    <button
-                                                                                        type="submit"
-                                                                                        className="flex-1 bg-teal-600 text-white rounded-lg py-2 hover:bg-teal-700"
-                                                                                    >
-                                                                                        Simpan Workplan
-                                                                                    </button>
-                                                                                </div>
-                                                                            </form>
-                                                                        </div>
-                                                                    </div>
-                                                                )}
                                                             </div>
                                                         </div>
                                                     );

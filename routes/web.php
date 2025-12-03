@@ -367,11 +367,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:project-management.show');
         Route::post('/produk/{id}/update-stage', [ProjectManagementController::class, 'updateStage'])
             ->middleware('permission:project-management.update-stage');
-        Route::post('/produk/{id}/generate-bast', [ProjectManagementController::class, 'generateBast'])
+        Route::post('/item-pekerjaan/{id}/generate-bast', [ProjectManagementController::class, 'generateBast'])
             ->middleware('permission:project-management.bast');
-        Route::get('/produk/{id}/download-bast', [ProjectManagementController::class, 'downloadBast'])
+        Route::get('/item-pekerjaan/{id}/download-bast', [ProjectManagementController::class, 'downloadBast'])
             ->middleware('permission:project-management.bast');
-        Route::post('/project-management/produk/{produk}/workplan',[WorkplanItemController::class, 'store'])->name('project-management.workplan.store');
+        Route::post('/item-pekerjaan/{id}/unlock-next-step', [ProjectManagementController::class, 'unlockNextStep'])
+            ->middleware('permission:project-management.unlock-payment');
+    });
+
+    // WORKPLAN ROUTES
+    Route::middleware(['permission:workplan.index'])->group(function () {
+        Route::get('/workplan', [WorkplanItemController::class, 'index'])->name('workplan.index');
+        Route::get('/workplan/{order}/create', [WorkplanItemController::class, 'create'])->name('workplan.create');
+        Route::post('/workplan/{order}', [WorkplanItemController::class, 'store'])->name('workplan.store');
+        Route::get('/workplan/{order}/edit', [WorkplanItemController::class, 'edit'])->name('workplan.edit');
+        Route::put('/workplan/{order}', [WorkplanItemController::class, 'update'])->name('workplan.update');
         Route::post('/workplan/{workplan}/update-status', [WorkplanItemController::class, 'updateStatus'])
             ->name('workplan.update.status');
     });
