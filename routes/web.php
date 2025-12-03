@@ -27,6 +27,7 @@ use App\Http\Controllers\JenisInteriorController;
 use App\Http\Controllers\SurveyResultsController;
 use App\Http\Controllers\ProjectManagementController;
 use App\Http\Controllers\WorkplanItemController;
+use App\Http\Controllers\SurveyUlangController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -373,6 +374,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/project-management/produk/{produk}/workplan',[WorkplanItemController::class, 'store'])->name('project-management.workplan.store');
         Route::post('/workplan/{workplan}/update-status', [WorkplanItemController::class, 'updateStatus'])
             ->name('workplan.update.status');
+    });
+
+    // SUERVEY ULANG
+    Route::middleware(['permission:survey-ulang.index'])->group(function () {
+        Route::get('/survey-ulang', [SurveyUlangController::class, 'index'])->name('survey-ulang.index');
+
+        Route::post('/survey-ulang/{order}/start', [SurveyUlangController::class, 'start']);
+
+        Route::get('/survey-ulang/create/{order}', [SurveyUlangController::class, 'create']);
+        Route::post('/survey-ulang/{order}', [SurveyUlangController::class, 'store']);
+
+        Route::get('/survey-ulang/{surveyUlang}', [SurveyUlangController::class, 'show']);
+        Route::get('/survey-ulang/{surveyUlang}/edit', [SurveyUlangController::class, 'edit']);
+        Route::put('/survey-ulang/{surveyUlang}', [SurveyUlangController::class, 'update']);
     });
 
     
