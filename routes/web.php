@@ -26,6 +26,7 @@ use App\Http\Controllers\ItemPekerjaanController;
 use App\Http\Controllers\JenisInteriorController;
 use App\Http\Controllers\SurveyResultsController;
 use App\Http\Controllers\ProjectManagementController;
+use App\Http\Controllers\JenisPengukuranController;
 use App\Http\Controllers\WorkplanItemController;
 use App\Http\Controllers\SurveyUlangController;
 
@@ -108,6 +109,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('permission:jenis-item.edit')->name('jenis-item.update');
     Route::delete('jenis-item/{jenisItem}', [JenisItemController::class, 'destroy'])
         ->middleware('permission:jenis-item.delete')->name('jenis-item.destroy');
+
+    // Jenis Pengukuran Routes
+    Route::middleware(['permission:jenis-pengukuran.index'])->group(function () {
+        Route::get('jenis-pengukuran', [JenisPengukuranController::class, 'index'])->name('jenis-pengukuran.index');
+        Route::get('/api/jenis-pengukuran', [JenisPengukuranController::class, 'fetch'])->name('jenis-pengukuran.fetch');
+    });
+    // STORE
+    Route::post('jenis-pengukuran', [JenisPengukuranController::class, 'store'])
+        ->middleware('permission:jenis-pengukuran.create')
+        ->name('jenis-pengukuran.store');
+    // UPDATE
+    Route::put('jenis-pengukuran/{jenisPengukuran}', [JenisPengukuranController::class, 'update'])
+        ->middleware('permission:jenis-pengukuran.edit')
+        ->name('jenis-pengukuran.update');
+    // DELETE
+    Route::delete('jenis-pengukuran/{jenisPengukuran}', [JenisPengukuranController::class, 'destroy'])
+        ->middleware('permission:jenis-pengukuran.delete')
+        ->name('jenis-pengukuran.destroy');
 
     // Item Routes
     Route::resource('item', ItemController::class)
@@ -235,7 +254,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:commitment-fee.edit')->name('commitment-fee.update-fee');
         Route::post('commitment-fee/upload-payment/{commitmentFeeId}', [CommitmentFeeController::class, 'uploadPayment'])
             ->middleware('permission:commitment-fee.edit')->name('commitment-fee.upload-payment');
-    });
+        Route::get('commitment-fee/{id}/print', [CommitmentFeeController::class, 'print'])
+            ->name('commitment-fee.print');
+        });
 
     // DESAIN FINAL ROUTES
     Route::middleware(['permission:desain-final.index'])->group(function () {
@@ -346,6 +367,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('permission:kontrak.edit')->get('kontrak/{kontrak}/edit', [KontrakController::class, 'edit'])->name('kontrak.edit');
     Route::middleware('permission:kontrak.edit')->put('kontrak/{kontrak}', [KontrakController::class, 'update'])->name('kontrak.update');
     Route::middleware('permission:kontrak.delete')->delete('kontrak/{kontrak}', [KontrakController::class, 'destroy'])->name('kontrak.destroy');
+    Route::middleware('permission:kontrak.show')->get('kontrak/{kontrak}/print', [KontrakController::class, 'print'])->name('kontrak.print');
 
     // INVOICE ROUTES
     Route::middleware(['permission:invoice.index'])->group(function () {

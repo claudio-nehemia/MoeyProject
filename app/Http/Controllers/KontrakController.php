@@ -175,6 +175,76 @@ class KontrakController extends Controller
         return $pdf->download($filename);
     }
 
+    public function print($kontrakId)
+    {
+        $kontrak = Kontrak::with([
+            'itemPekerjaan.moodboard.order',
+            'itemPekerjaan.moodboard.commitmentFee',
+            'termin'
+        ])->findOrFail($kontrakId);
+
+        $itemPekerjaan = $kontrak->itemPekerjaan;
+        $order = $itemPekerjaan->moodboard->order;
+        $fee = $itemPekerjaan->moodboard->commitmentFee;
+
+        // path kop surat
+        $kopPath = public_path('kop-moey.png');
+
+        $contractData = [
+            // ======================================
+            // CUSTOMER / PROJECT DATA
+            // ======================================
+            'customer_name' => $order->customer_name,
+            'alamat' => $order->alamat ?? '-',
+            'project' => [
+                'nama' => $order->nama_project,
+            ],
+            'company_name' => $order->company_name,
+
+            // ======================================
+            // KONTRAK DATA
+            // ======================================
+            'nominal_kontrak' => $kontrak->harga_kontrak,
+            'tanggal' => now()->format('d F Y'),
+            'nomor' => 'PNW-' . $kontrak->id,
+            'nomor_kontrak' => 'KTR-' . $kontrak->id,
+            'today' => now()->format('d F Y'),
+
+            // ======================================
+            // COMMITMENT FEE DATA
+            // ======================================
+            'nominal_fee' => $fee ? number_format($fee->total_fee, 0, ',', '.') : '0',
+            'status_fee' => $fee ? ($fee->payment_status === 'completed' ? 'Paid' : 'Pending') : '-',
+            'nomor_surat_fee' => $fee ? "SPC-" . now()->format('Ymd') . "-" . $fee->id : null,
+            'nomor_invoice_fee' => $fee ? "INV-" . now()->format('Ymd') . "-" . $fee->id : null,
+            'nomor_kwitansi_fee' => $fee ? "KW-" . now()->format('Ymd') . "-" . $fee->id : null,
+        ];
+
+        // company moey
+        $companyName = "PT. Moey Jaya Abadi";
+        $companyAddress = "Tangerang";
+        $direkturName = "Aniq Infanuddin";
+        $jabatanDirektur = "Direktur Utama";
+        $nameBank = "Mandiri";
+        $norekBank = "1550007495610";
+        $atasNamaBank = "PT. Moey Jaya Abadi";
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.contract', [
+            'kontrak' => $kontrak,
+            'contractData' => $contractData,
+            'companyName' => $companyName,
+            'companyAddress' => $companyAddress,
+            'direkturName' => $direkturName,
+            'jabatanDirektur' => $jabatanDirektur,
+            'nameBank' => $nameBank,
+            'norekBank' => $norekBank,
+            'atasNamaBank' => $atasNamaBank,
+            'kopPath' => file_exists($kopPath) ? $kopPath : null,
+        ])->setPaper('A4', 'portrait');
+
+        return $pdf->stream('Kontrak-' . $order->nama_project . '.pdf');
+    }
+
     /**
      * Remove the specified resource from storage.
      */

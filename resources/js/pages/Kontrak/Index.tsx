@@ -240,6 +240,18 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                     <span className="inline-flex items-center px-3 py-1.5 bg-green-100 text-green-800 text-xs font-medium rounded-full">
                                                                         ✓ Kontrak Dibuat
                                                                     </span>
+
+                                                                    <a
+                                                                        href={`/kontrak/${item.kontrak.id}/print`}
+                                                                        target="_blank"
+                                                                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                                                                        title="Cetak Kontrak"
+                                                                    >
+                                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                                        </svg>
+                                                                        PDF
+                                                                    </a>
                                                                     {/* <a
                                                                         href={`/kontrak/${item.kontrak.id}/export-pdf`}
                                                                         className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
