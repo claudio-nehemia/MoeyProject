@@ -12,22 +12,36 @@ class SurveyUlangController extends Controller
     // 📌 Halaman Index
     public function index()
     {
-        $surveys = Order::where('tahapan_proyek', 'survey_ulang')
-            ->with('surveyUlang')
+        $surveys = Order::with(['surveyUlang', 'jenisInterior'])
+            ->where(function ($q) {
+                $q->whereRaw("LOWER(payment_status) LIKE '%commitment%'");
+            })
+            ->orWhere(function ($q) {
+                $q->whereRaw("LOWER(tahapan_proyek) = 'survey_ulang'");
+            })
+            ->orderBy('id', 'desc')
             ->get()
             ->map(function ($o) {
+
+                $status = 'pending';
+
+                if ($o->surveyUlang) {
+                    $status = 'done';
+                } elseif (strtolower($o->tahapan_proyek) === 'survey_ulang') {
+                    $status = 'in_progress';
+                }
 
                 return [
                     'id' => $o->id,
                     'nama_project' => $o->nama_project,
                     'company_name' => $o->company_name,
                     'customer_name' => $o->customer_name,
-                    'jenis_interior' => optional($o->jenisInterior)->nama ?? "-",
+                    'jenis_interior' => optional($o->jenisInterior)->nama_interior ?? "-",
                     'payment_status' => $o->payment_status,
                     'tahapan_proyek' => $o->tahapan_proyek,
-                    'tanggal_survey_ulang' => $o->tanggal_survey, // pakai tanggal survey ulang
-                    'status_survey_ulang' => $o->surveyUlang ? 'done' : 'pending',
-                    'survey_ulang_id' => $o->surveyUlang->id ?? null,
+                    'tanggal_survey_ulang' => $o->tanggal_survey,
+                    'status_survey_ulang' => $status,
+                    'survey_ulang_id' => optional($o->surveyUlang)->id,
                 ];
             });
 
@@ -45,6 +59,7 @@ class SurveyUlangController extends Controller
 
         return back()->with('success', 'Survey ulang dimulai.');
     }
+
 
     // 📌 Halaman Form Create
     public function create(Order $order)
@@ -81,8 +96,9 @@ class SurveyUlangController extends Controller
 
         // update tahapan utama
         $order->update([
-            'tahapan_proyek' => 'gambar_kerja', // setelah survey ulang
+            'tahapan_proyek' => 'survey_ulang', // tetap di survey ulang sampai user lanjut
         ]);
+
 
         return redirect()->route('survey-ulang.index')->with('success', 'Survey ulang berhasil disimpan.');
     }
