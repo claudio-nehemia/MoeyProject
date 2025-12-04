@@ -22,12 +22,13 @@ interface Produk {
     panjang: number | null;
     lebar: number | null;
     tinggi: number | null;
-    harga_dasar: number; // This is harga_jasa for RAB Jasa
+    harga_dasar: number; // This is harga_jasa for RAB Jasa (sum from selected bahan baku)
     harga_items_non_aksesoris: number;
     harga_dimensi: number;
     harga_satuan: number;
     harga_akhir: number;
     jenis_items: JenisItem[];
+    bahan_baku_names: string[];
 }
 
 // Helper function to calculate total harga for a jenis item
@@ -202,9 +203,6 @@ export default function Show({ rabJasa }: Props) {
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Bahan Baku
                                         </th>
-                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20">
-                                            Harga BB
-                                        </th>
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Finishing Dalam
                                         </th>
@@ -230,24 +228,19 @@ export default function Show({ rabJasa }: Props) {
                                 </thead>
                                 <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
                                     {rabJasa.produks.map((produk, produkIndex) => {
-                                        // Group items by jenis with prices
-                                        const bahanBakuItems: { nama: string; harga: number }[] = [];
+                                        // Get bahan baku names from produk (from selected bahan baku)
+                                        const bahanBakuNames = produk.bahan_baku_names || [];
+                                        
+                                        // Group items by jenis with prices (only for finishing)
                                         const finishingDalamItems: { nama: string; harga: number }[] = [];
                                         const finishingLuarItems: { nama: string; harga: number }[] = [];
                                         
-                                        let bahanBakuTotal = 0;
                                         let finishingDalamTotal = 0;
                                         let finishingLuarTotal = 0;
                                         
                                         produk.jenis_items.forEach((jenisItem) => {
                                             const namaJenis = jenisItem.nama_jenis.toLowerCase();
-                                            if (namaJenis === 'bahan baku') {
-                                                jenisItem.items.forEach(item => {
-                                                    const harga = Number(item.harga_total) || 0;
-                                                    bahanBakuItems.push({ nama: item.nama_item, harga });
-                                                    bahanBakuTotal += harga;
-                                                });
-                                            } else if (namaJenis === 'finishing dalam') {
+                                            if (namaJenis === 'finishing dalam') {
                                                 jenisItem.items.forEach(item => {
                                                     const harga = Number(item.harga_total) || 0;
                                                     finishingDalamItems.push({ nama: item.nama_item, harga });
@@ -262,11 +255,11 @@ export default function Show({ rabJasa }: Props) {
                                             }
                                         });
 
-                                        // Calculate total items (non-aksesoris for RAB Jasa)
-                                        const totalItems = bahanBakuTotal + finishingDalamTotal + finishingLuarTotal;
+                                        // Calculate total items (only finishing items for RAB Jasa)
+                                        const totalItems = finishingDalamTotal + finishingLuarTotal;
                                         
                                         const maxRows = Math.max(
-                                            bahanBakuItems.length,
+                                            bahanBakuNames.length,
                                             finishingDalamItems.length,
                                             finishingLuarItems.length,
                                             1
@@ -284,32 +277,25 @@ export default function Show({ rabJasa }: Props) {
                                                                 </div>
                                                                 {produk.panjang && produk.lebar && produk.tinggi && (
                                                                     <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                                                                        {produk.panjang} × {produk.lebar} × {produk.tinggi} cm
+                                                                        {produk.panjang} × {produk.lebar} × {produk.tinggi} m
                                                                     </div>
                                                                 )}
                                                             </td>
                                                         )}
                                                         
-                                                        {/* Harga Jasa Column - harga_dasar is harga_jasa for RAB Jasa */}
+                                                        {/* Harga Jasa Column - harga_dasar is sum of harga_jasa from selected bahan baku */}
                                                         {rowIndex === 0 && (
                                                             <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-bold text-green-700 dark:text-green-400 bg-green-50/50 dark:bg-green-900/10 border-r border-gray-200 dark:border-gray-700">
                                                                 {formatCurrency(produk.harga_dasar)}
                                                             </td>
                                                         )}
                                                         
-                                                        {/* Bahan Baku Column */}
+                                                        {/* Bahan Baku Column - Names only (no price column) */}
                                                         <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
-                                                            {bahanBakuItems[rowIndex] && (
-                                                                <div>• {bahanBakuItems[rowIndex].nama}</div>
+                                                            {bahanBakuNames[rowIndex] && (
+                                                                <div>• {bahanBakuNames[rowIndex]}</div>
                                                             )}
                                                         </td>
-                                                        
-                                                        {/* Harga Bahan Baku Column */}
-                                                        {rowIndex === 0 && (
-                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10 border-r border-gray-200 dark:border-gray-700">
-                                                                {formatCurrency(bahanBakuTotal)}
-                                                            </td>
-                                                        )}
                                                         
                                                         {/* Finishing Dalam Column */}
                                                         <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">

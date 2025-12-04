@@ -60,7 +60,7 @@ interface ItemPekerjaan {
     termin: Termin | null;
     steps_info: StepInfo[];
     current_step: number;
-    all_products_have_bast: boolean;
+    has_bast: boolean;
     is_fully_paid: boolean;
 }
 
@@ -417,7 +417,7 @@ export default function Index({ itemPekerjaans }: Props) {
                                                 </div>
 
                                                 {/* BAST Requirement Note */}
-                                                {!item.all_products_have_bast && item.steps_info.some(s => s.is_last_step && s.status === 'waiting_bast') && (
+                                                {!item.has_bast && item.steps_info.some(s => s.is_last_step && s.status === 'waiting_bast') && (
                                                     <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-xl">
                                                         <div className="flex items-start gap-3">
                                                             <svg className="w-5 h-5 text-purple-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -426,8 +426,8 @@ export default function Index({ itemPekerjaans }: Props) {
                                                             <div>
                                                                 <div className="font-semibold text-purple-800">Pembayaran Tahap Akhir Terkunci</div>
                                                                 <div className="text-sm text-purple-600 mt-1">
-                                                                    Pembayaran tahap terakhir hanya bisa dilakukan setelah semua produk memiliki BAST (Berita Acara Serah Terima).
-                                                                    Silakan selesaikan proses Project Management terlebih dahulu.
+                                                                    Pembayaran tahap terakhir hanya bisa dilakukan setelah BAST (Berita Acara Serah Terima) untuk Item Pekerjaan ini dibuat.
+                                                                    Silakan generate BAST di halaman Project Management terlebih dahulu.
                                                                 </div>
                                                             </div>
                                                         </div>

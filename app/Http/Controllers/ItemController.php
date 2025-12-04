@@ -42,11 +42,28 @@ class ItemController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        // Dapatkan jenis item untuk cek apakah bahan baku
+        $jenisItem = JenisItem::find($request->jenis_item_id);
+        $isBahanBaku = $jenisItem && strtolower($jenisItem->nama_jenis_item) === 'bahan baku';
+
+        $rules = [
             'nama_item' => 'required|string|max:255',
             'jenis_item_id' => 'required|exists:jenis_items,id',
-            'harga' => 'required|numeric|min:0',
-        ]);
+        ];
+
+        // Harga nullable untuk Bahan Baku, required untuk Finishing dan Aksesoris
+        if ($isBahanBaku) {
+            $rules['harga'] = 'nullable|numeric|min:0';
+        } else {
+            $rules['harga'] = 'required|numeric|min:0';
+        }
+
+        $validated = $request->validate($rules);
+
+        // Pastikan harga null untuk bahan baku jika tidak diisi
+        if ($isBahanBaku && !isset($validated['harga'])) {
+            $validated['harga'] = null;
+        }
 
         Item::create($validated);
         return redirect()->back()->with('success', 'Item created successfully.');
@@ -80,11 +97,29 @@ class ItemController extends Controller
      */
     public function update(Request $request, Item $item)
     {
-        $validated = $request->validate([
+        // Dapatkan jenis item untuk cek apakah bahan baku
+        $jenisItemId = $request->jenis_item_id ?? $item->jenis_item_id;
+        $jenisItem = JenisItem::find($jenisItemId);
+        $isBahanBaku = $jenisItem && strtolower($jenisItem->nama_jenis_item) === 'bahan baku';
+
+        $rules = [
             'nama_item' => 'required|string|max:255',
             'jenis_item_id' => 'required|exists:jenis_items,id',
-            'harga' => 'required|numeric|min:0',
-        ]);
+        ];
+
+        // Harga nullable untuk Bahan Baku, required untuk Finishing dan Aksesoris
+        if ($isBahanBaku) {
+            $rules['harga'] = 'nullable|numeric|min:0';
+        } else {
+            $rules['harga'] = 'required|numeric|min:0';
+        }
+
+        $validated = $request->validate($rules);
+
+        // Pastikan harga null untuk bahan baku jika tidak diisi
+        if ($isBahanBaku && !isset($validated['harga'])) {
+            $validated['harga'] = null;
+        }
 
         $item->update($validated);
 

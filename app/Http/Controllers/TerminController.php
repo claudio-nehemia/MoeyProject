@@ -27,29 +27,21 @@ class TerminController extends Controller
             'tahapan.*.persentase' => 'required|numeric|min:0|max:100',
         ]);
 
-        // Validate total percentage = 100
-        $totalPersentase = array_sum(array_column($validated['tahapan'], 'persentase'));
-        if ($totalPersentase != 100) {
-            return redirect()->back()->withErrors(['tahapan' => 'Total persentase harus 100%']);
-        }
-
-        // Transform tahapan dari frontend format ke database format
+        // Transform FE → DB format
         $tahapan = [];
         foreach ($validated['tahapan'] as $index => $item) {
-            if (!empty($item['tahapan'])) {
-                $tahapan[] = [
-                    'step' => $index + 1,
-                    'text' => $item['tahapan'],
-                    'persentase' => (float) $item['persentase'],
-                ];
-            }
+            $tahapan[] = [
+                'step'       => $index + 1,
+                'text'       => $item['tahapan'],
+                'persentase' => (float)$item['persentase'],
+            ];
         }
 
         Termin::create([
             'kode_tipe' => $validated['kode_tipe'],
             'nama_tipe' => $validated['nama_tipe'],
             'deskripsi' => $validated['deskripsi'],
-            'tahapan' => $tahapan,
+            'tahapan'   => $tahapan,
         ]);
 
         return redirect()->back()->with('success', 'Termin created successfully.');
@@ -57,28 +49,31 @@ class TerminController extends Controller
 
     public function edit(Termin $termin)
     {
-        // Transform tahapan dari database format ke frontend format
-        $tahapanFormatted = [];
+        // Transform DB → FE format
+        $formatted = [];
+
         if ($termin->tahapan) {
             foreach ($termin->tahapan as $item) {
-                $tahapanFormatted[] = [
-                    'tahapan' => $item['text'] ?? '',
-                    'persentase' => $item['persentase'] ?? 0,
+                $formatted[] = [
+                    'tahapan'    => $item['text'] ?? '',
+                    // Support both old 'percentage' and new 'persentase' field
+                    'persentase' => $item['persentase'] ?? $item['percentage'] ?? 0,
                 ];
             }
         }
-        
-        // Jika tidak ada tahapan, berikan default 1 row kosong
-        if (empty($tahapanFormatted)) {
-            $tahapanFormatted = [['tahapan' => '', 'persentase' => 0]];
+
+        if (empty($formatted)) {
+            $formatted = [
+                ['tahapan' => '', 'persentase' => 0]
+            ];
         }
 
         return response()->json([
-            'id' => $termin->id,
-            'kode_tipe' => $termin->kode_tipe,
-            'nama_tipe' => $termin->nama_tipe,
-            'deskripsi' => $termin->deskripsi,
-            'tahapan' => $tahapanFormatted,
+            'id'         => $termin->id,
+            'kode_tipe'  => $termin->kode_tipe,
+            'nama_tipe'  => $termin->nama_tipe,
+            'deskripsi'  => $termin->deskripsi,
+            'tahapan'    => $formatted,
         ]);
     }
 
@@ -93,29 +88,20 @@ class TerminController extends Controller
             'tahapan.*.persentase' => 'required|numeric|min:0|max:100',
         ]);
 
-        // Validate total percentage = 100
-        $totalPersentase = array_sum(array_column($validated['tahapan'], 'persentase'));
-        if ($totalPersentase != 100) {
-            return redirect()->back()->withErrors(['tahapan' => 'Total persentase harus 100%']);
-        }
-
-        // Transform tahapan dari frontend format ke database format
         $tahapan = [];
         foreach ($validated['tahapan'] as $index => $item) {
-            if (!empty($item['tahapan'])) {
-                $tahapan[] = [
-                    'step' => $index + 1,
-                    'text' => $item['tahapan'],
-                    'persentase' => (float) $item['persentase'],
-                ];
-            }
+            $tahapan[] = [
+                'step'       => $index + 1,
+                'text'       => $item['tahapan'],
+                'persentase' => (float)$item['persentase'],
+            ];
         }
 
         $termin->update([
             'kode_tipe' => $validated['kode_tipe'],
             'nama_tipe' => $validated['nama_tipe'],
             'deskripsi' => $validated['deskripsi'],
-            'tahapan' => $tahapan,
+            'tahapan'   => $tahapan,
         ]);
 
         return redirect()->back()->with('success', 'Termin updated successfully.');

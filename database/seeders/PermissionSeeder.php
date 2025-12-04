@@ -654,6 +654,38 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Generate & Download BAST',
                 'group' => 'Operations - Project Management'
             ],
+            [
+                'name' => 'project-management.unlock-payment',
+                'display_name' => 'Unlock Next Payment Step',
+                'group' => 'Operations - Project Management'
+            ],
+            
+            // Workplan Permissions
+            [
+                'name' => 'workplan.index',
+                'display_name' => 'View Workplan List',
+                'group' => 'Operations - Workplan'
+            ],
+            [
+                'name' => 'workplan.show',
+                'display_name' => 'View Workplan Detail',
+                'group' => 'Operations - Workplan'
+            ],
+            [
+                'name' => 'workplan.create',
+                'display_name' => 'Create Workplan',
+                'group' => 'Operations - Workplan'
+            ],
+            [
+                'name' => 'workplan.edit',
+                'display_name' => 'Edit Workplan',
+                'group' => 'Operations - Workplan'
+            ],
+            [
+                'name' => 'workplan.delete',
+                'display_name' => 'Delete Workplan',
+                'group' => 'Operations - Workplan'
+            ],
             
             // Defect Management Permissions
             [
@@ -685,6 +717,49 @@ class PermissionSeeder extends Seeder
                 'name' => 'defect.approve',
                 'display_name' => 'Approve Defect Repair',
                 'group' => 'Operations - Defect Management'
+            ],
+
+            // Survey Ulang
+            [
+                'name' => 'survey-ulang.index',
+                'display_name' => 'View Survey Ulang List',
+                'group' => 'Operations - Survey Ulang'
+            ],
+
+            [
+                'name' => 'survey-ulang.start',
+                'display_name' => 'Start Survey Ulang',
+                'group' => 'Operations - Survey Ulang'
+            ],
+
+            [
+                'name' => 'survey-ulang.create',
+                'display_name' => 'Create Survey Ulang',
+                'group' => 'Operations - Survey Ulang'
+            ],
+
+            [
+                'name' => 'survey-ulang.store',
+                'display_name' => 'Store Survey Ulang',
+                'group' => 'Operations - Survey Ulang'
+            ],
+
+            [
+                'name' => 'survey-ulang.show',
+                'display_name' => 'Show Survey Ulang',
+                'group' => 'Operations - Survey Ulang'
+            ],
+
+            [
+                'name' => 'survey-ulang.edit',
+                'display_name' => 'Edit Survey Ulang',
+                'group' => 'Operations - Survey Ulang'
+            ],
+
+            [
+                'name' => 'survey-ulang.update',
+                'display_name' => 'Update Survey Ulang',
+                'group' => 'Operations - Survey Ulang'
             ],
             
             // PDF Export Permissions

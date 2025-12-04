@@ -55,11 +55,15 @@ class InvoiceController extends Controller
                 $lastPaidStep = $paidInvoices->max('termin_step') ?? 0;
                 $currentStep = $lastPaidStep + 1;
 
-                // Check if all products have BAST (required for final payment)
-                $allProductsHaveBast = $itemPekerjaan->produks->every(fn($p) => $p->has_bast);
+                // Check if Item Pekerjaan has BAST (required for final payment)
+                // BAST is now at ItemPekerjaan level, not per product
+                $hasBast = $itemPekerjaan->has_bast;
 
                 // Calculate total paid from invoices
                 $totalPaidFromInvoices = (float) $paidInvoices->sum('total_amount');
+
+                // Get unlocked step (default 1)
+                $unlockedStep = $itemPekerjaan->unlocked_step ?? 1;
 
                 // Determine which steps are available
                 $stepsInfo = [];
@@ -81,17 +85,33 @@ class InvoiceController extends Controller
 
                     if ($invoice) {
                         $status = $invoice->status;
-                    } elseif ($step === $currentStep) {
-                        // Current step - check if can pay
-                        if ($isLastStep && !$allProductsHaveBast) {
+                    } elseif ($isLastStep) {
+                        // TAHAP TERAKHIR: Otomatis available jika BAST sudah ada & tahap sebelumnya sudah dibayar
+                        if (!$hasBast) {
                             $status = 'waiting_bast';
-                            $lockedReason = 'Menunggu BAST selesai';
+                            $lockedReason = 'Menunggu BAST Item Pekerjaan dibuat';
+                        } elseif ($lastPaidStep < $totalTahap - 1) {
+                            // Previous steps not all paid
+                            $status = 'locked';
+                            $lockedReason = 'Bayar tahap sebelumnya dulu';
+                        } else {
+                            // BAST ada & semua tahap sebelumnya sudah dibayar
+                            $status = 'available';
+                            $canPay = true;
+                        }
+                    } elseif ($step <= $unlockedStep) {
+                        // Step is unlocked (tahap 1 sampai n-1)
+                        if ($step > 1 && $lastPaidStep < $step - 1) {
+                            // Previous step not paid yet
+                            $status = 'locked';
+                            $lockedReason = 'Bayar tahap sebelumnya dulu';
                         } else {
                             $status = 'available';
                             $canPay = true;
                         }
-                    } elseif ($step < $currentStep) {
-                        $status = 'paid'; // Previous steps should be paid
+                    } else {
+                        // Step is still locked
+                        $lockedReason = 'Belum di-unlock oleh admin';
                     }
 
                     $stepsInfo[] = [
@@ -155,7 +175,7 @@ class InvoiceController extends Controller
                     ] : null,
                     'steps_info' => $stepsInfo,
                     'current_step' => $currentStep,
-                    'all_products_have_bast' => $allProductsHaveBast,
+                    'has_bast' => $hasBast,
                     'is_fully_paid' => $currentStep > $totalTahap && $totalTahap > 0,
                 ];
             });
@@ -196,9 +216,16 @@ class InvoiceController extends Controller
         $tahapan = $termin->tahapan ?? [];
         $requestedStep = $request->termin_step;
         $totalSteps = count($tahapan);
+        $isLastStep = $requestedStep === $totalSteps;
 
         if ($requestedStep > $totalSteps) {
             return back()->with('error', 'Tahap tidak valid.');
+        }
+
+        // Check if step is unlocked (tahap terakhir tidak perlu di-unlock manual)
+        $unlockedStep = $itemPekerjaan->unlocked_step ?? 1;
+        if (!$isLastStep && $requestedStep > $unlockedStep) {
+            return back()->with('error', 'Tahap ini belum dibuka. Hubungi admin untuk membuka tagihan pembayaran.');
         }
 
         // Check if invoice for this step already exists
@@ -217,11 +244,10 @@ class InvoiceController extends Controller
         }
 
         // Check BAST requirement for final step
-        $isLastStep = $requestedStep === $totalSteps;
+        // Tahap terakhir otomatis available setelah BAST dibuat
         if ($isLastStep) {
-            $allProductsHaveBast = $itemPekerjaan->produks->every(fn($p) => $p->has_bast);
-            if (!$allProductsHaveBast) {
-                return back()->with('error', 'Semua produk harus memiliki BAST untuk pembayaran tahap akhir.');
+            if (!$itemPekerjaan->has_bast) {
+                return back()->with('error', 'Item Pekerjaan harus memiliki BAST untuk pembayaran tahap akhir.');
             }
         }
 

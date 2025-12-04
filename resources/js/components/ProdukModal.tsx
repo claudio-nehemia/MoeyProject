@@ -8,7 +8,12 @@ interface ProdukImage {
 interface Item {
     id: number;
     nama_item: string;
-    harga?: number;
+}
+
+interface BahanBakuData {
+    item_id: number;
+    harga_dasar: string;
+    harga_jasa: string;
 }
 
 interface ProdukModalProps {
@@ -17,10 +22,7 @@ interface ProdukModalProps {
     processing: boolean;
     data: {
         nama_produk: string;
-        harga_dasar: string;
-        harga: string;
-        harga_jasa: string;
-        bahan_baku: number[];
+        bahan_baku: BahanBakuData[];
     };
     errors: {
         nama_produk?: string;
@@ -34,7 +36,7 @@ interface ProdukModalProps {
     bahanBakuItems: Item[];
     onClose: () => void;
     onSubmit: FormEventHandler;
-    onDataChange: (field: string, value: string | number[]) => void;
+    onDataChange: (field: string, value: string | BahanBakuData[]) => void;
     onImagesChange: (files: File[]) => void;
     onDeleteImage: (imagePath: string) => void;
 }
@@ -73,20 +75,28 @@ export default function ProdukModal({
         return 0;
     };
 
-    // Hitung total harga bahan baku
-    const calculateTotalBahanBaku = (): number => {
-        return (data.bahan_baku || []).reduce((sum: number, id: number) => {
-            const item = bahanBakuItems.find(b => b.id === id);
-            const harga = safeParseFloat(item?.harga);
-            return sum + harga;
+    // Hitung total harga dasar dari semua bahan baku
+    const calculateTotalHargaDasar = (): number => {
+        return (data.bahan_baku || []).reduce((sum: number, bahan: BahanBakuData) => {
+            return sum + safeParseFloat(bahan.harga_dasar);
         }, 0);
     };
 
-    // Hitung total harga
-    const calculateTotalHarga = (): number => {
-        const hargaDasar = safeParseFloat(data.harga_dasar);
-        const totalBahanBaku = calculateTotalBahanBaku();
-        return hargaDasar + totalBahanBaku;
+    // Hitung total harga jasa dari semua bahan baku
+    const calculateTotalHargaJasa = (): number => {
+        return (data.bahan_baku || []).reduce((sum: number, bahan: BahanBakuData) => {
+            return sum + safeParseFloat(bahan.harga_jasa);
+        }, 0);
+    };
+
+    // Cek apakah item sudah dipilih
+    const isItemSelected = (itemId: number): boolean => {
+        return (data.bahan_baku || []).some(b => b.item_id === itemId);
+    };
+
+    // Get bahan baku data by item_id
+    const getBahanBakuData = (itemId: number): BahanBakuData | undefined => {
+        return (data.bahan_baku || []).find(b => b.item_id === itemId);
     };
 
     if (!show) return null;
@@ -132,9 +142,22 @@ export default function ProdukModal({
 
     const toggleBahanBaku = (itemId: number) => {
         const currentBahan = data.bahan_baku || [];
-        const newBahan = currentBahan.includes(itemId)
-            ? currentBahan.filter(id => id !== itemId)
-            : [...currentBahan, itemId];
+        if (isItemSelected(itemId)) {
+            // Remove item
+            const newBahan = currentBahan.filter(b => b.item_id !== itemId);
+            onDataChange('bahan_baku', newBahan);
+        } else {
+            // Add item with empty values
+            const newBahan = [...currentBahan, { item_id: itemId, harga_dasar: '', harga_jasa: '' }];
+            onDataChange('bahan_baku', newBahan);
+        }
+    };
+
+    const updateBahanBakuHarga = (itemId: number, field: 'harga_dasar' | 'harga_jasa', value: string) => {
+        const currentBahan = data.bahan_baku || [];
+        const newBahan = currentBahan.map(b => 
+            b.item_id === itemId ? { ...b, [field]: value } : b
+        );
         onDataChange('bahan_baku', newBahan);
     };
 
@@ -225,77 +248,12 @@ export default function ProdukModal({
                     </div>
 
                     <div>
-                        <label className="block text-xs sm:text-sm font-semibold text-stone-700 mb-1.5">
-                            Harga Dasar Produk
-                        </label>
-                        <div className="relative">
-                            <span className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-stone-500 font-medium text-sm">Rp</span>
-                            <input
-                                type="number"
-                                value={data.harga_dasar}
-                                onChange={(e) => {
-                                    const value = e.target.value;
-                                    // Hanya izinkan angka, titik, dan minus di awal
-                                    if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
-                                        onDataChange('harga_dasar', value);
-                                    }
-                                }}
-                                className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm border border-stone-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all"
-                                placeholder="0"
-                                disabled={processing}
-                                step="0.01"
-                                min="0"
-                                max="9999999999999.99"
-                            />
-                        </div>
-                        {errors.harga && (
-                            <div className="flex items-center gap-1.5 mt-1 text-red-600 text-xs">
-                                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                </svg>
-                                {errors.harga}
-                            </div>
-                        )}
-                    </div>
-
-                    <div>
-                        <label className="block text-xs sm:text-sm font-semibold text-stone-700 mb-1.5">
-                            Harga Jasa
-                        </label>
-                        <div className="relative">
-                            <span className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-stone-500 font-medium text-sm">Rp</span>
-                            <input
-                                type="number"
-                                value={data.harga_jasa || ''}
-                                onChange={(e) => {
-                                    const value = e.target.value;
-                                    // Hanya izinkan angka, titik, dan minus di awal
-                                    if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
-                                        onDataChange('harga_jasa', value);
-                                    }
-                                }}
-                                className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm border border-stone-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all"
-                                placeholder="0"
-                                disabled={processing}
-                                step="0.01"
-                                min="0"
-                                max="9999999999999.99"
-                            />
-                        </div>
-                        {errors.harga_jasa && (
-                            <div className="flex items-center gap-1.5 mt-1 text-red-600 text-xs">
-                                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                </svg>
-                                {errors.harga_jasa}
-                            </div>
-                        )}
-                    </div>
-
-                    <div>
                         <label className="block text-xs sm:text-sm font-semibold text-stone-700 mb-2">
                             Bahan Baku
                         </label>
+                        <p className="text-xs text-stone-500 mb-3">
+                            Pilih bahan baku dan masukkan harga dasar & harga jasa untuk setiap bahan baku
+                        </p>
                         
                         <div className="mb-3">
                             <input
@@ -307,31 +265,65 @@ export default function ProdukModal({
                             />
                         </div>
 
-                        <div className="border border-stone-300 rounded-lg max-h-48 overflow-y-auto">
+                        <div className="border border-stone-300 rounded-lg max-h-64 overflow-y-auto">
                             {filteredBahanBaku.length > 0 ? (
                                 <div className="divide-y divide-stone-200">
-                                    {filteredBahanBaku.map((item) => (
-                                        <label
-                                            key={item.id}
-                                            className="flex items-center justify-between gap-3 p-3 hover:bg-stone-50 cursor-pointer transition-colors"
-                                        >
-                                            <div className="flex items-center gap-3 flex-1">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={data.bahan_baku?.includes(item.id) || false}
-                                                    onChange={() => toggleBahanBaku(item.id)}
-                                                    className="w-4 h-4 text-rose-600 border-stone-300 rounded focus:ring-rose-500"
-                                                    disabled={processing}
-                                                />
-                                                <span className="text-sm text-stone-700">{item.nama_item}</span>
+                                    {filteredBahanBaku.map((item) => {
+                                        const isSelected = isItemSelected(item.id);
+                                        const bahanData = getBahanBakuData(item.id);
+                                        
+                                        return (
+                                            <div key={item.id} className="p-3 hover:bg-stone-50 transition-colors">
+                                                <label className="flex items-center gap-3 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={() => toggleBahanBaku(item.id)}
+                                                        className="w-4 h-4 text-rose-600 border-stone-300 rounded focus:ring-rose-500"
+                                                        disabled={processing}
+                                                    />
+                                                    <span className="text-sm font-medium text-stone-700">{item.nama_item}</span>
+                                                </label>
+                                                
+                                                {isSelected && (
+                                                    <div className="mt-3 ml-7 grid grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className="block text-xs text-stone-600 mb-1">Harga Dasar</label>
+                                                            <div className="relative">
+                                                                <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-stone-500 text-xs">Rp</span>
+                                                                <input
+                                                                    type="number"
+                                                                    value={bahanData?.harga_dasar ?? ''}
+                                                                    onChange={(e) => updateBahanBakuHarga(item.id, 'harga_dasar', e.target.value)}
+                                                                    className="w-full pl-8 pr-2 py-1.5 text-xs border border-stone-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                                                                    placeholder="0"
+                                                                    disabled={processing}
+                                                                    min="0"
+                                                                    step="0.01"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-xs text-stone-600 mb-1">Harga Jasa</label>
+                                                            <div className="relative">
+                                                                <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-stone-500 text-xs">Rp</span>
+                                                                <input
+                                                                    type="number"
+                                                                    value={bahanData?.harga_jasa ?? ''}
+                                                                    onChange={(e) => updateBahanBakuHarga(item.id, 'harga_jasa', e.target.value)}
+                                                                    className="w-full pl-8 pr-2 py-1.5 text-xs border border-stone-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                                                                    placeholder="0"
+                                                                    disabled={processing}
+                                                                    min="0"
+                                                                    step="0.01"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
-                                            {item.harga !== undefined && (
-                                                <span className="text-xs font-semibold text-rose-600 whitespace-nowrap">
-                                                    Rp {new Intl.NumberFormat('id-ID').format(item.harga)}
-                                                </span>
-                                            )}
-                                        </label>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             ) : (
                                 <div className="p-4 text-center text-sm text-stone-500">
@@ -340,29 +332,46 @@ export default function ProdukModal({
                             )}
                         </div>
 
-                        <div className="mt-3 space-y-2">
-                            {data.bahan_baku && data.bahan_baku.length > 0 && (
-                                <div className="text-xs text-stone-600">
-                                    {data.bahan_baku.length} material{data.bahan_baku.length !== 1 ? 's' : ''} selected
+                        {/* Summary Section */}
+                        <div className="mt-4 bg-gradient-to-r from-stone-50 to-rose-50 rounded-lg p-4 space-y-2">
+                            <div className="text-xs font-semibold text-stone-700 mb-2">
+                                Ringkasan ({(data.bahan_baku || []).length} bahan baku dipilih)
+                            </div>
+                            
+                            {(data.bahan_baku || []).length > 0 && (
+                                <div className="space-y-1.5 mb-3">
+                                    {(data.bahan_baku || []).map(bahan => {
+                                        const item = bahanBakuItems.find(b => b.id === bahan.item_id);
+                                        return (
+                                            <div key={bahan.item_id} className="flex justify-between text-xs bg-white rounded px-2 py-1.5">
+                                                <span className="text-stone-600 truncate flex-1">{item?.nama_item || 'Unknown'}</span>
+                                                <span className="text-stone-700 font-medium ml-2">
+                                                    D: Rp {new Intl.NumberFormat('id-ID').format(safeParseFloat(bahan.harga_dasar))} | 
+                                                    J: Rp {new Intl.NumberFormat('id-ID').format(safeParseFloat(bahan.harga_jasa))}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
-                            <div className="bg-stone-50 rounded-lg p-3 space-y-1.5">
+                            
+                            <div className="border-t border-stone-200 pt-2 space-y-1">
                                 <div className="flex justify-between text-xs">
-                                    <span className="text-stone-600">Harga Dasar:</span>
+                                    <span className="text-stone-600">Total Harga Dasar:</span>
                                     <span className="font-semibold text-stone-700">
-                                        Rp {new Intl.NumberFormat('id-ID').format(safeParseFloat(data.harga_dasar))}
+                                        Rp {new Intl.NumberFormat('id-ID').format(calculateTotalHargaDasar())}
                                     </span>
                                 </div>
                                 <div className="flex justify-between text-xs">
-                                    <span className="text-stone-600">Total Bahan Baku:</span>
-                                    <span className="font-semibold text-stone-700">
-                                        Rp {new Intl.NumberFormat('id-ID').format(calculateTotalBahanBaku())}
+                                    <span className="text-stone-600">Total Harga Jasa:</span>
+                                    <span className="font-semibold text-green-600">
+                                        Rp {new Intl.NumberFormat('id-ID').format(calculateTotalHargaJasa())}
                                     </span>
                                 </div>
                                 <div className="border-t border-stone-200 pt-1.5 flex justify-between text-sm">
-                                    <span className="font-semibold text-stone-700">Total Harga:</span>
+                                    <span className="font-semibold text-stone-700">Grand Total:</span>
                                     <span className="font-bold text-rose-600">
-                                        Rp {new Intl.NumberFormat('id-ID').format(calculateTotalHarga())}
+                                        Rp {new Intl.NumberFormat('id-ID').format(calculateTotalHargaDasar() + calculateTotalHargaJasa())}
                                     </span>
                                 </div>
                             </div>

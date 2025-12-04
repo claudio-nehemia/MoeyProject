@@ -76,9 +76,9 @@ export default function Show({ itemPekerjaan }: Props) {
     const formatDimensi = (panjang: number | null, lebar: number | null, tinggi: number | null) => {
         if (!panjang && !lebar && !tinggi) return '-';
         const parts = [];
-        if (panjang) parts.push(`P: ${panjang} cm`);
-        if (lebar) parts.push(`L: ${lebar} cm`);
-        if (tinggi) parts.push(`T: ${tinggi} cm`);
+        if (panjang) parts.push(`P: ${panjang} m`);
+        if (lebar) parts.push(`L: ${lebar} m`);
+        if (tinggi) parts.push(`T: ${tinggi} m`);
         return parts.join(' × ');
     };
 

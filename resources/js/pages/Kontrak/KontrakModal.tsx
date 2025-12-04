@@ -31,6 +31,7 @@ interface KontrakModalProps {
             step: number;
             text: string;
             persentase?: number;
+            percentage: number;
         }>;
     }>;
 }

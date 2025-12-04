@@ -31,6 +31,8 @@ interface Produk {
     markup_satuan: number;
     non_aksesoris_items: NonAksesorisItem[];
     aksesoris: Aksesoris[];
+    bahan_baku_names: string[];
+    harga_produk: number;
 }
 
 interface RabInternal {
@@ -218,13 +220,12 @@ export default function Edit({ rabInternal }: Props) {
     const calculateHargaSatuan = (produk: Produk, formProduk: FormProduk, markupSatuan: string | number) => {
         const markup = typeof markupSatuan === 'string' ? parseFloat(markupSatuan) || 0 : markupSatuan;
         
-        // Calculate dimensi multiplier
-        let hargaDimensi = 1;
-        if (produk.panjang && produk.lebar && produk.tinggi) {
-            hargaDimensi = produk.panjang * produk.lebar * produk.tinggi * produk.qty_produk;
-        } else {
-            hargaDimensi = produk.qty_produk;
-        }
+        // Use Math.max(1, value) to match backend calculation logic
+        // Values are stored as-is (e.g., 0.8), but minimum 1 is used for calculation
+        const panjang = Math.max(1, produk.panjang || 1);
+        const lebar = Math.max(1, produk.lebar || 1);
+        const tinggi = Math.max(1, produk.tinggi || 1);
+        const hargaDimensi = panjang * lebar * tinggi * produk.qty_produk;
         
         // Calculate total harga items non-aksesoris from form data
         const totalHargaItemsNonAksesoris = formProduk.non_aksesoris_items.reduce(
@@ -363,11 +364,30 @@ export default function Edit({ rabInternal }: Props) {
                                             {produk.panjang &&
                                                 produk.lebar &&
                                                 produk.tinggi &&
-                                                ` Dimensi: ${produk.panjang} × ${produk.lebar} × ${produk.tinggi} cm`}
+                                                ` Dimensi: ${produk.panjang} × ${produk.lebar} × ${produk.tinggi} m`}
                                         </p>
                                     </div>
 
                                     <div className="p-6">
+                                        {/* Bahan Baku - Display Only (names) */}
+                                        {produk.bahan_baku_names && produk.bahan_baku_names.length > 0 && (
+                                            <div className="mb-6">
+                                                <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                                                    Bahan Baku
+                                                </h4>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {produk.bahan_baku_names.map((name, idx) => (
+                                                        <span
+                                                            key={idx}
+                                                            className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+                                                        >
+                                                            {name}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {/* Items Non-Aksesoris - Editable */}
                                         <div className="mb-6">
                                             <div className="mb-3 flex items-center justify-between">

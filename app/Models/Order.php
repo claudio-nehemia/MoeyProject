@@ -65,4 +65,9 @@ class Order extends Model
 
         return round($items->avg->progress, 2);
     }
+
+    public function surveyUlang()
+    {
+        return $this->hasOne(SurveyUlang::class);
+    }
 }

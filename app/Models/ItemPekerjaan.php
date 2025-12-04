@@ -10,7 +10,34 @@ class ItemPekerjaan extends Model
         'moodboard_id',
         'response_by',
         'response_time',
+        'workplan_start_date',
+        'workplan_end_date',
+        'unlocked_step',
+        'bast_number',
+        'bast_date',
+        'bast_pdf_path',
     ];
+
+    protected $casts = [
+        'workplan_start_date' => 'date',
+        'workplan_end_date' => 'date',
+        'bast_date' => 'datetime',
+    ];
+
+    // Accessor: Check if all produks completed Install QC
+    public function getIsCompletedAttribute()
+    {
+        if ($this->produks->isEmpty()) {
+            return false;
+        }
+        return $this->produks->every(fn($p) => $p->current_stage === 'Install QC');
+    }
+
+    // Accessor: Check if BAST exists
+    public function getHasBastAttribute()
+    {
+        return !empty($this->bast_number);
+    }
 
     public function moodboard()
     {

@@ -33,6 +33,8 @@ interface OrderDetail {
     tanggal_masuk_customer: string;
     project_status: string;
     priority_level: string;
+    payment_status: string;
+    tahapan_proyek: string;
     jenis_interior: JenisInterior;
     users: User[];
     mom_file: string | null;
@@ -84,6 +86,56 @@ useEffect(() => {
             case 'medium': return 'bg-blue-100 text-blue-700 border border-blue-300';
             case 'low': return 'bg-stone-100 text-stone-700 border border-stone-300';
             default: return 'bg-stone-100 text-stone-700 border border-stone-300';
+        }
+    };
+
+    const getPaymentStatusColor = (status: string) => {
+        switch (status) {
+            case 'lunas': return 'bg-emerald-100 text-emerald-700 border border-emerald-300';
+            case 'termin': return 'bg-blue-100 text-blue-700 border border-blue-300';
+            case 'dp': return 'bg-cyan-100 text-cyan-700 border border-cyan-300';
+            case 'cm_fee': return 'bg-amber-100 text-amber-700 border border-amber-300';
+            case 'not_start':
+            default: return 'bg-stone-100 text-stone-500 border border-stone-300';
+        }
+    };
+
+    const getTahapanColor = (tahapan: string) => {
+        switch (tahapan) {
+            case 'produksi': return 'bg-purple-100 text-purple-700 border border-purple-300';
+            case 'kontrak': return 'bg-indigo-100 text-indigo-700 border border-indigo-300';
+            case 'rab': return 'bg-blue-100 text-blue-700 border border-blue-300';
+            case 'desain_final': return 'bg-cyan-100 text-cyan-700 border border-cyan-300';
+            case 'cm_fee': return 'bg-amber-100 text-amber-700 border border-amber-300';
+            case 'moodboard': return 'bg-pink-100 text-pink-700 border border-pink-300';
+            case 'survey': return 'bg-teal-100 text-teal-700 border border-teal-300';
+            case 'not_start':
+            default: return 'bg-stone-100 text-stone-500 border border-stone-300';
+        }
+    };
+
+    const formatPaymentStatus = (status: string) => {
+        switch (status) {
+            case 'not_start': return 'Belum Bayar';
+            case 'cm_fee': return 'Commitment Fee';
+            case 'dp': return 'Down Payment';
+            case 'termin': return 'Termin';
+            case 'lunas': return 'Lunas';
+            default: return status;
+        }
+    };
+
+    const formatTahapan = (tahapan: string) => {
+        switch (tahapan) {
+            case 'not_start': return 'Belum Mulai';
+            case 'survey': return 'Survey';
+            case 'moodboard': return 'Moodboard';
+            case 'cm_fee': return 'Commitment Fee';
+            case 'desain_final': return 'Desain Final';
+            case 'rab': return 'RAB';
+            case 'kontrak': return 'Kontrak';
+            case 'produksi': return 'Produksi';
+            default: return tahapan;
         }
     };
 
@@ -253,17 +305,28 @@ useEffect(() => {
                     {/* Status Badges */}
                     <div className={`mb-8 flex gap-3 flex-wrap ${mounted ? 'fadeInUp' : 'opacity-0'}`} style={{ animationDelay: '0.05s' }}>
                         <div className={`badge ${getStatusColor(order.project_status)}`}>
-                            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
-                                <path fillRule="evenodd" d="M4 5a2 2 0 012-2 1 1 0 000-2H2a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2h-2a1 1 0 000 2h2v14H2V5z" clipRule="evenodd"></path>
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            {order.project_status}
+                            {order.project_status.replace('_', ' ')}
                         </div>
                         <div className={`badge ${getPriorityColor(order.priority_level)}`}>
-                            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"></path>
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                             </svg>
                             {order.priority_level} Priority
+                        </div>
+                        <div className={`badge ${getTahapanColor(order.tahapan_proyek)}`}>
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                            Tahap: {formatTahapan(order.tahapan_proyek)}
+                        </div>
+                        <div className={`badge ${getPaymentStatusColor(order.payment_status)}`}>
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {formatPaymentStatus(order.payment_status)}
                         </div>
                     </div>
 

@@ -27,6 +27,8 @@ use App\Http\Controllers\JenisInteriorController;
 use App\Http\Controllers\SurveyResultsController;
 use App\Http\Controllers\ProjectManagementController;
 use App\Http\Controllers\JenisPengukuranController;
+use App\Http\Controllers\WorkplanItemController;
+use App\Http\Controllers\SurveyUlangController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -387,11 +389,40 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:project-management.show');
         Route::post('/produk/{id}/update-stage', [ProjectManagementController::class, 'updateStage'])
             ->middleware('permission:project-management.update-stage');
-        Route::post('/produk/{id}/generate-bast', [ProjectManagementController::class, 'generateBast'])
+        Route::post('/item-pekerjaan/{id}/generate-bast', [ProjectManagementController::class, 'generateBast'])
             ->middleware('permission:project-management.bast');
-        Route::get('/produk/{id}/download-bast', [ProjectManagementController::class, 'downloadBast'])
+        Route::get('/item-pekerjaan/{id}/download-bast', [ProjectManagementController::class, 'downloadBast'])
             ->middleware('permission:project-management.bast');
+        Route::post('/item-pekerjaan/{id}/unlock-next-step', [ProjectManagementController::class, 'unlockNextStep'])
+            ->middleware('permission:project-management.unlock-payment');
     });
+
+    // WORKPLAN ROUTES
+    Route::middleware(['permission:workplan.index'])->group(function () {
+        Route::get('/workplan', [WorkplanItemController::class, 'index'])->name('workplan.index');
+        Route::get('/workplan/{order}/create', [WorkplanItemController::class, 'create'])->name('workplan.create');
+        Route::post('/workplan/{order}', [WorkplanItemController::class, 'store'])->name('workplan.store');
+        Route::get('/workplan/{order}/edit', [WorkplanItemController::class, 'edit'])->name('workplan.edit');
+        Route::put('/workplan/{order}', [WorkplanItemController::class, 'update'])->name('workplan.update');
+        Route::post('/workplan/{workplan}/update-status', [WorkplanItemController::class, 'updateStatus'])
+            ->name('workplan.update.status');
+    });
+
+    // SUERVEY ULANG
+    Route::middleware(['permission:survey-ulang.index'])->group(function () {
+        Route::get('/survey-ulang', [SurveyUlangController::class, 'index'])->name('survey-ulang.index');
+
+        Route::post('/survey-ulang/{order}/start', [SurveyUlangController::class, 'start']);
+
+        Route::get('/survey-ulang/create/{order}', [SurveyUlangController::class, 'create']);
+        Route::post('/survey-ulang/{order}', [SurveyUlangController::class, 'store']);
+
+        Route::get('/survey-ulang/{surveyUlang}', [SurveyUlangController::class, 'show']);
+        Route::get('/survey-ulang/{surveyUlang}/edit', [SurveyUlangController::class, 'edit']);
+        Route::put('/survey-ulang/{surveyUlang}', [SurveyUlangController::class, 'update']);
+    });
+
+    
 
     // DEFECT ROUTES
     Route::middleware(['permission:defect.index'])->group(function () {

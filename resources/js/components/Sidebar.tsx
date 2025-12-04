@@ -269,6 +269,18 @@ export default function Sidebar({
             gradient: 'from-indigo-400 to-indigo-600',
         },
         {
+            name: 'Survey Ulang',
+            href: '/survey-ulang',
+            page: 'survey',
+            permission: 'survey-ulang.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            ),
+            gradient: 'from-emerald-400 to-emerald-600',
+        },
+        {
             name: 'Invoice',
             href: '/invoice',
             page: 'invoice',
@@ -279,6 +291,18 @@ export default function Sidebar({
                 </svg>
             ),
             gradient: 'from-purple-400 to-purple-600',
+        },
+        {
+            name: 'Workplan',
+            href: '/workplan',
+            page: 'workplan',
+            permission: 'workplan.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+            ),
+            gradient: 'from-sky-400 to-sky-600',
         },
         {
             name: 'Project Management',
@@ -292,6 +316,7 @@ export default function Sidebar({
             ),
             gradient: 'from-teal-400 to-teal-600',
         },
+        
         {
             name: 'Defect Management',
             href: '/defect-management',

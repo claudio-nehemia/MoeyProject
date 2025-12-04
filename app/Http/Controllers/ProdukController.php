@@ -14,24 +14,11 @@ class ProdukController extends Controller
     public function index()
     {
         $produks = Produk::with(['produkImages', 'bahanBakus'])->get();
-        
-        // Pastikan harga di-include untuk setiap bahan baku
-        // Karena belongsToMany akan load semua field, tapi kita pastikan harga ada
-        $produks->transform(function ($produk) {
-            $produk->bahanBakus->transform(function ($item) {
-                // Pastikan harga di-include (jika null, set ke 0)
-                if (!isset($item->harga) || $item->harga === null) {
-                    $item->harga = 0;
-                }
-                return $item;
-            });
-            return $produk;
-        });
 
         // Ambil semua items yang termasuk bahan baku
         $bahanBakuItems = Item::whereHas('jenisItem', function ($query) {
             $query->where('nama_jenis_item', 'Bahan Baku');
-        })->get(['id', 'nama_item', 'harga']);
+        })->get(['id', 'nama_item']);
 
         return Inertia::render('Produk/Index', [
             'produks' => $produks,
@@ -43,23 +30,30 @@ class ProdukController extends Controller
     {
         $validated = $request->validate([
             'nama_produk' => 'required|string|max:255',
-            'harga' => 'required|numeric|min:0|max:9999999999999.99',
             'produk_images' => 'nullable|array',
             'produk_images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'harga_jasa' => 'required|numeric|min:0|max:9999999999999.99',
             'bahan_baku' => 'nullable|array',
-            'bahan_baku.*' => 'integer|exists:items,id',
+            'bahan_baku.*.item_id' => 'required|integer|exists:items,id',
+            'bahan_baku.*.harga_dasar' => 'required|numeric|min:0|max:9999999999999.99',
+            'bahan_baku.*.harga_jasa' => 'required|numeric|min:0|max:9999999999999.99',
         ]);
 
-        // Pastikan harga tidak terlalu besar untuk decimal(15,2)
-        $harga = min($validated['harga'], 9999999999999.99);
-        $hargaJasa = min($validated['harga_jasa'], 9999999999999.99);
+        // Hitung total harga dan harga jasa dari semua bahan baku
+        $totalHarga = 0;
+        $totalHargaJasa = 0;
+
+        if (!empty($validated['bahan_baku'])) {
+            foreach ($validated['bahan_baku'] as $bahan) {
+                $totalHarga += floatval($bahan['harga_dasar']);
+                $totalHargaJasa += floatval($bahan['harga_jasa']);
+            }
+        }
 
         // 1. Buat produk
         $produk = Produk::create([
             'nama_produk' => $validated['nama_produk'],
-            'harga' => $harga,
-            'harga_jasa' => $hargaJasa,
+            'harga' => min($totalHarga, 9999999999999.99),
+            'harga_jasa' => min($totalHargaJasa, 9999999999999.99),
         ]);
 
         // 2. Simpan gambar ke tabel relasi
@@ -74,8 +68,16 @@ class ProdukController extends Controller
             }
         }
 
-        if ($request->filled('bahan_baku')) {
-            $produk->bahanBakus()->sync($request->bahan_baku);
+        // 3. Sync bahan baku dengan pivot data
+        if (!empty($validated['bahan_baku'])) {
+            $syncData = [];
+            foreach ($validated['bahan_baku'] as $bahan) {
+                $syncData[$bahan['item_id']] = [
+                    'harga_dasar' => $bahan['harga_dasar'],
+                    'harga_jasa' => $bahan['harga_jasa'],
+                ];
+            }
+            $produk->bahanBakus()->sync($syncData);
         }
 
         return redirect()->back()->with('success', 'Produk created successfully.');
@@ -91,23 +93,30 @@ class ProdukController extends Controller
     {
         $validated = $request->validate([
             'nama_produk' => 'required|string|max:255',
-            'harga' => 'required|numeric|min:0|max:9999999999999.99',
-            'harga_jasa' => 'required|numeric|min:0|max:9999999999999.99',
             'produk_images' => 'nullable|array',
             'produk_images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'bahan_baku' => 'nullable|array',
-            'bahan_baku.*' => 'integer|exists:items,id',
+            'bahan_baku.*.item_id' => 'required|integer|exists:items,id',
+            'bahan_baku.*.harga_dasar' => 'required|numeric|min:0|max:9999999999999.99',
+            'bahan_baku.*.harga_jasa' => 'required|numeric|min:0|max:9999999999999.99',
         ]);
 
-        // Pastikan harga tidak terlalu besar untuk decimal(15,2)
-        $harga = min($validated['harga'], 9999999999999.99);
-        $hargaJasa = min($validated['harga_jasa'], 9999999999999.99);
+        // Hitung total harga dan harga jasa dari semua bahan baku
+        $totalHarga = 0;
+        $totalHargaJasa = 0;
+
+        if (!empty($validated['bahan_baku'])) {
+            foreach ($validated['bahan_baku'] as $bahan) {
+                $totalHarga += floatval($bahan['harga_dasar']);
+                $totalHargaJasa += floatval($bahan['harga_jasa']);
+            }
+        }
 
         // Update data produk
         $produk->update([
             'nama_produk' => $validated['nama_produk'],
-            'harga' => $harga,
-            'harga_jasa' => $hargaJasa,
+            'harga' => min($totalHarga, 9999999999999.99),
+            'harga_jasa' => min($totalHargaJasa, 9999999999999.99),
         ]);
 
         // Tambah gambar baru
@@ -122,10 +131,19 @@ class ProdukController extends Controller
             }
         }
 
-        if ($request->filled('bahan_baku')) {
-            $produk->bahanBakus()->sync($request->bahan_baku);
+        // Sync bahan baku dengan pivot data
+        if (!empty($validated['bahan_baku'])) {
+            $syncData = [];
+            foreach ($validated['bahan_baku'] as $bahan) {
+                $syncData[$bahan['item_id']] = [
+                    'harga_dasar' => $bahan['harga_dasar'],
+                    'harga_jasa' => $bahan['harga_jasa'],
+                ];
+            }
+            $produk->bahanBakus()->sync($syncData);
+        } else {
+            $produk->bahanBakus()->detach();
         }
-
 
         return redirect()->back()->with('success', 'Produk updated successfully.');
     }

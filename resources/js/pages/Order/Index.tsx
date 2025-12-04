@@ -22,6 +22,8 @@ interface OrderData {
     project_status: string;
     priority_level: string;
     tanggal_masuk_customer: string;
+    payment_status: string;
+    tahapan_proyek: string;
     users: User[];
 }
 
@@ -81,6 +83,69 @@ useEffect(() => {
         }
     };
 
+    const getPaymentStatusColor = (status: string) => {
+        switch (status) {
+            case 'lunas':
+                return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+            case 'termin':
+                return 'bg-blue-100 text-blue-700 border-blue-200';
+            case 'dp':
+                return 'bg-cyan-100 text-cyan-700 border-cyan-200';
+            case 'cm_fee':
+                return 'bg-amber-100 text-amber-700 border-amber-200';
+            case 'not_start':
+            default:
+                return 'bg-stone-100 text-stone-500 border-stone-200';
+        }
+    };
+
+    const getTahapanColor = (tahapan: string) => {
+        switch (tahapan) {
+            case 'produksi':
+                return 'bg-purple-100 text-purple-700 border-purple-200';
+            case 'kontrak':
+                return 'bg-indigo-100 text-indigo-700 border-indigo-200';
+            case 'rab':
+                return 'bg-blue-100 text-blue-700 border-blue-200';
+            case 'desain_final':
+                return 'bg-cyan-100 text-cyan-700 border-cyan-200';
+            case 'cm_fee':
+                return 'bg-amber-100 text-amber-700 border-amber-200';
+            case 'moodboard':
+                return 'bg-pink-100 text-pink-700 border-pink-200';
+            case 'survey':
+                return 'bg-teal-100 text-teal-700 border-teal-200';
+            case 'not_start':
+            default:
+                return 'bg-stone-100 text-stone-500 border-stone-200';
+        }
+    };
+
+    const formatPaymentStatus = (status: string) => {
+        switch (status) {
+            case 'not_start': return 'Belum Ada Pembayaran';
+            case 'cm_fee': return 'CM Fee';
+            case 'dp': return 'DP';
+            case 'termin': return 'Termin';
+            case 'lunas': return 'Lunas';
+            default: return status;
+        }
+    };
+
+    const formatTahapan = (tahapan: string) => {
+        switch (tahapan) {
+            case 'not_start': return 'Belum Mulai';
+            case 'survey': return 'Survey';
+            case 'moodboard': return 'Moodboard';
+            case 'cm_fee': return 'CM Fee';
+            case 'desain_final': return 'Desain Final';
+            case 'rab': return 'RAB';
+            case 'kontrak': return 'Kontrak';
+            case 'produksi': return 'Produksi';
+            default: return tahapan;
+        }
+    };
+
     const capitalize = (text: string) => {
         return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
     };
@@ -122,41 +187,13 @@ useEffect(() => {
                 }
 
                 .order-card {
-                    transition: all 0.3s ease;
-                    cursor: pointer;
+                    transition: all 0.2s ease;
                 }
 
                 .order-card:hover {
-                    transform: translateY(-4px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-                }
-
-                .status-badge {
-                    display: inline-flex;
-                    align-items: center;
-                    padding: 0.375rem 0.75rem;
-                    border-radius: 0.375rem;
-                    font-size: 0.75rem;
-                    font-weight: 500;
-                }
-
-                .team-avatars {
-                    display: flex;
-                    gap: -6px;
-                }
-
-                .team-avatar {
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: white;
-                    font-size: 12px;
-                    font-weight: bold;
-                    border: 2px solid white;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    transform: translateY(-2px);
+                    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+                    border-color: #d1d5db;
                 }
             `}</style>
 
@@ -266,173 +303,125 @@ useEffect(() => {
                             </Link>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                             {orders.map((order, index) => (
                                 <div
                                     key={order.id}
-                                    className={`order-card rounded-xl border border-stone-200 bg-white p-6 shadow-md ${mounted ? 'fadeInUp' : 'opacity-0'}`}
+                                    className={`order-card group relative overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm ${mounted ? 'fadeInUp' : 'opacity-0'}`}
                                     style={{
                                         animationDelay: `${index * 0.05}s`,
                                     }}
                                 >
-                                    {/* Header */}
-                                    <div className="mb-4 flex items-start justify-between">
-                                        <div className="flex-1">
-                                            <h3 className="line-clamp-2 text-lg font-semibold text-stone-900">
-                                                {order.nama_project}
-                                            </h3>
-                                            <p className="mt-1 text-sm text-stone-500">
-                                                {order.company_name}
-                                            </p>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <Link
-                                                href={`/order/${order.id}`}
-                                                className="rounded-lg p-2 text-blue-600 transition-colors hover:bg-blue-50"
-                                            >
-                                                <svg
-                                                    className="h-5 w-5"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        strokeWidth={2}
-                                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                                    />
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        strokeWidth={2}
-                                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                                    />
-                                                </svg>
-                                            </Link>
-                                            <Link
-                                                href={`/order/${order.id}/edit`}
-                                                className="rounded-lg p-2 text-amber-600 transition-colors hover:bg-amber-50"
-                                            >
-                                                <svg
-                                                    className="h-5 w-5"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        strokeWidth={2}
-                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                                    />
-                                                </svg>
-                                            </Link>
-                                            <button
-                                                onClick={() =>
-                                                    handleDelete(order.id)
-                                                }
-                                                className="rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50"
-                                            >
-                                                <svg
-                                                    className="h-5 w-5"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        strokeWidth={2}
-                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                                    />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </div>
+                                    {/* Priority Indicator Bar */}
+                                    <div className={`h-1 w-full ${
+                                        order.priority_level === 'urgent' ? 'bg-red-500' :
+                                        order.priority_level === 'high' ? 'bg-orange-500' :
+                                        order.priority_level === 'medium' ? 'bg-blue-500' : 'bg-stone-300'
+                                    }`} />
 
-                                    {/* Details Grid */}
-                                    <div className="mb-4 grid grid-cols-2 gap-3 border-b border-stone-200 pb-4">
-                                        <div>
-                                            <p className="text-xs font-semibold text-stone-600 uppercase">
-                                                Interior Type
-                                            </p>
-                                            <p className="mt-0.5 text-sm text-stone-900">
-                                                {
-                                                    order.jenis_interior
-                                                        .nama_interior
-                                                }
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-semibold text-stone-600 uppercase">
-                                                Phone
-                                            </p>
-                                            <p className="mt-0.5 text-sm text-stone-900">
-                                                {order.phone_number}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-semibold text-stone-600 uppercase">
-                                                Entry Date
-                                            </p>
-                                            <p className="mt-0.5 text-sm text-stone-900">
-                                                {formatDate(
-                                                    order.tanggal_masuk_customer,
-                                                )}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-semibold text-stone-600 uppercase">
-                                                Status
-                                            </p>
-                                            <div
-                                                className={`status-badge ${getStatusColor(order.project_status)} mt-0.5`}
-                                            >
-                                                {capitalize(
-                                                    order.project_status.replace(
-                                                        '_',
-                                                        ' ',
-                                                    ),
-                                                )}{' '}
+                                    <div className="p-4">
+                                        {/* Header */}
+                                        <div className="mb-3 flex items-start justify-between">
+                                            <div className="flex-1 min-w-0 pr-2">
+                                                <h3 className="text-sm font-bold text-stone-900 truncate">
+                                                    {order.nama_project}
+                                                </h3>
+                                                <p className="text-xs text-stone-500 truncate">
+                                                    {order.company_name}
+                                                </p>
+                                            </div>
+                                            <div className="flex gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                                                <Link
+                                                    href={`/order/${order.id}`}
+                                                    className="rounded p-1.5 text-blue-600 hover:bg-blue-50"
+                                                >
+                                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                    </svg>
+                                                </Link>
+                                                <Link
+                                                    href={`/order/${order.id}/edit`}
+                                                    className="rounded p-1.5 text-amber-600 hover:bg-amber-50"
+                                                >
+                                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                </Link>
+                                                <button
+                                                    onClick={() => handleDelete(order.id)}
+                                                    className="rounded p-1.5 text-red-600 hover:bg-red-50"
+                                                >
+                                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    {/* Priority & Team */}
-                                    <div className="flex items-center justify-between">
-                                        <div
-                                            className={`status-badge ${getPriorityColor(order.priority_level)}`}
-                                        >
-                                            {capitalize(order.priority_level)}{' '}
-                                            Priority{' '}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs font-semibold text-stone-600">
-                                                Team:
+                                        {/* Tahapan & Payment Status Badges */}
+                                        <div className="mb-3 flex flex-wrap gap-1.5">
+                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded border ${getTahapanColor(order.tahapan_proyek)}`}>
+                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                                </svg>
+                                                {formatTahapan(order.tahapan_proyek)}
                                             </span>
-                                            <div className="team-avatars">
-                                                {order.users
-                                                    .slice(0, 3)
-                                                    .map((user, idx) => (
+                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded border ${getPaymentStatusColor(order.payment_status)}`}>
+                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                {formatPaymentStatus(order.payment_status)}
+                                            </span>
+                                            <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded ${getStatusColor(order.project_status)}`}>
+                                                {capitalize(order.project_status.replace('_', ' '))}
+                                            </span>
+                                        </div>
+
+                                        {/* Info Grid */}
+                                        <div className="grid grid-cols-2 gap-2 text-xs border-t border-stone-100 pt-3">
+                                            <div>
+                                                <p className="text-stone-400 text-[10px] uppercase tracking-wide">Interior</p>
+                                                <p className="text-stone-700 font-medium truncate">{order.jenis_interior?.nama_interior || '-'}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-stone-400 text-[10px] uppercase tracking-wide">Telepon</p>
+                                                <p className="text-stone-700 font-medium truncate">{order.phone_number}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-stone-400 text-[10px] uppercase tracking-wide">Tanggal Masuk</p>
+                                                <p className="text-stone-700 font-medium">{formatDate(order.tanggal_masuk_customer)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-stone-400 text-[10px] uppercase tracking-wide">Prioritas</p>
+                                                <span className={`inline-block px-1.5 py-0.5 text-[10px] font-semibold rounded ${getPriorityColor(order.priority_level)}`}>
+                                                    {capitalize(order.priority_level)}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Team */}
+                                        {order.users && order.users.length > 0 && (
+                                            <div className="mt-3 pt-3 border-t border-stone-100 flex items-center justify-between">
+                                                <span className="text-[10px] text-stone-400 uppercase tracking-wide">Tim</span>
+                                                <div className="flex -space-x-1.5">
+                                                    {order.users.slice(0, 4).map((user) => (
                                                         <div
                                                             key={user.id}
-                                                            className="team-avatar bg-gradient-to-br from-blue-400 to-blue-600"
+                                                            className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center text-[10px] font-bold text-white border-2 border-white shadow-sm"
                                                             title={user.name}
                                                         >
-                                                            {user.name
-                                                                .charAt(0)
-                                                                .toUpperCase()}
+                                                            {user.name.charAt(0).toUpperCase()}
                                                         </div>
                                                     ))}
-                                                {order.users.length > 3 && (
-                                                    <div className="team-avatar bg-stone-400 text-white">
-                                                        +
-                                                        {order.users.length - 3}
-                                                    </div>
-                                                )}
+                                                    {order.users.length > 4 && (
+                                                        <div className="w-6 h-6 rounded-full bg-stone-400 flex items-center justify-center text-[10px] font-bold text-white border-2 border-white shadow-sm">
+                                                            +{order.users.length - 4}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}

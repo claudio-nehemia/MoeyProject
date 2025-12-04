@@ -8,6 +8,7 @@ use App\Models\JenisItem;
 use App\Models\RabInternal;
 use App\Models\ItemPekerjaan;
 use App\Models\RabJasaProduk;
+use App\Models\ItemPekerjaanProduk;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -50,6 +51,7 @@ class RabJasaController extends Controller
     {
         $itemPekerjaan = ItemPekerjaan::with([
             'rabInternal.rabProduks.itemPekerjaanProduk.produk',
+            'rabInternal.rabProduks.itemPekerjaanProduk.bahanBakus', // Selected bahan baku with harga_jasa
         ])->findOrFail($itemPekerjaanId);
 
         if (!$itemPekerjaan->rabInternal) {
@@ -72,9 +74,19 @@ class RabJasaController extends Controller
             ]);
 
             foreach ($rabInternal->rabProduks as $rabProduk) {
-                // Get harga_jasa from produk (not harga)
-                $itemPekerjaanProduk = $rabProduk->itemPekerjaanProduk;
-                $hargaJasa = $itemPekerjaanProduk->produk->harga_jasa ?? 0;
+                // Reload itemPekerjaanProduk with bahanBakus to ensure we get fresh data
+                $itemPekerjaanProduk = ItemPekerjaanProduk::with('bahanBakus')
+                    ->find($rabProduk->item_pekerjaan_produk_id);
+                
+                // DEBUG: Log the bahan baku data
+                Log::info('RAB Jasa Generate - ItemPekerjaanProduk ID: ' . $rabProduk->item_pekerjaan_produk_id);
+                Log::info('RAB Jasa Generate - BahanBakus count: ' . $itemPekerjaanProduk->bahanBakus->count());
+                Log::info('RAB Jasa Generate - BahanBakus data: ' . json_encode($itemPekerjaanProduk->bahanBakus->toArray()));
+                
+                // Get harga_jasa from selected bahan baku (sum of all selected bahan baku harga_jasa)
+                $hargaJasa = $itemPekerjaanProduk->bahanBakus->sum('harga_jasa') ?: 0;
+                
+                Log::info('RAB Jasa Generate - Harga Jasa Sum: ' . $hargaJasa);
                 
                 // Keep harga_items_non_aksesoris from RAB Internal
                 $hargaItemsOriginal = $rabProduk->harga_items_non_aksesoris;
@@ -105,11 +117,13 @@ class RabJasaController extends Controller
         $rabJasa = RabJasa::with([
             'itemPekerjaan.moodboard.order',
             'rabJasaProduks.itemPekerjaanProduk.produk',
+            'rabJasaProduks.itemPekerjaanProduk.bahanBakus.item', // Selected bahan baku
             'rabJasaProduks.itemPekerjaanProduk.jenisItems.jenisItem',
             'rabJasaProduks.itemPekerjaanProduk.jenisItems.items.item',
         ])->findOrFail($rabJasaId);
 
         $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
+        $bahanBakuJenisItem = JenisItem::where('nama_jenis_item', 'Bahan Baku')->first();
 
         return Inertia::render('RabJasa/Show', [
             'rabJasa' => [
@@ -121,11 +135,15 @@ class RabJasaController extends Controller
                     'company_name' => $rabJasa->itemPekerjaan->moodboard->order->company_name,
                     'customer_name' => $rabJasa->itemPekerjaan->moodboard->order->customer_name,
                 ],
-                'produks' => $rabJasa->rabJasaProduks->map(function ($rabProduk) use ($aksesorisJenisItem) {
+                'produks' => $rabJasa->rabJasaProduks->map(function ($rabProduk) use ($aksesorisJenisItem, $bahanBakuJenisItem) {
+                    // Get selected bahan baku names
+                    $selectedBahanBakus = $rabProduk->itemPekerjaanProduk->bahanBakus;
+                    $bahanBakuNames = $selectedBahanBakus->map(fn($bb) => $bb->item->nama_item)->toArray();
+
+                    // Collect jenis items (Finishing only, NO AKSESORIS, exclude Bahan Baku)
                     $jenisItemsList = [];
                     foreach ($rabProduk->itemPekerjaanProduk->jenisItems as $jenisItem) {
-                        // NO AKSESORIS - Skip aksesoris items
-                        if ($jenisItem->jenis_item_id !== $aksesorisJenisItem->id) {
+                        if ($jenisItem->jenis_item_id !== $aksesorisJenisItem?->id && $jenisItem->jenis_item_id !== $bahanBakuJenisItem?->id) {
                             $itemsList = [];
                             foreach ($jenisItem->items as $item) {
                                 $itemsList[] = [
@@ -150,11 +168,12 @@ class RabJasaController extends Controller
                         'panjang' => $rabProduk->itemPekerjaanProduk->panjang,
                         'lebar' => $rabProduk->itemPekerjaanProduk->lebar,
                         'tinggi' => $rabProduk->itemPekerjaanProduk->tinggi,
-                        'harga_dasar' => $rabProduk->harga_dasar,
+                        'harga_dasar' => $rabProduk->harga_dasar, // harga_jasa for RAB Jasa
                         'harga_items_non_aksesoris' => $rabProduk->harga_items_non_aksesoris,
                         'harga_dimensi' => $rabProduk->harga_dimensi,
                         'harga_satuan' => $rabProduk->harga_satuan,
                         'harga_akhir' => $rabProduk->harga_akhir,
+                        'bahan_baku_names' => $bahanBakuNames,
                         'jenis_items' => $jenisItemsList,
                     ];
                 })->toArray(),
@@ -169,16 +188,24 @@ class RabJasaController extends Controller
             'rabJasaProduks.itemPekerjaanProduk.produk',
             'rabJasaProduks.itemPekerjaanProduk.jenisItems.jenisItem',
             'rabJasaProduks.itemPekerjaanProduk.jenisItems.items.item',
+            'rabJasaProduks.itemPekerjaanProduk.bahanBakus.item',
         ])->findOrFail($rabJasaId);
 
         $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
+        $bahanBakuJenisItem = JenisItem::where('nama_jenis_item', 'Bahan Baku')->first();
 
         // Prepare data
-        $produks = $rabJasa->rabJasaProduks->map(function ($rabProduk) use ($aksesorisJenisItem) {
+        $produks = $rabJasa->rabJasaProduks->map(function ($rabProduk) use ($aksesorisJenisItem, $bahanBakuJenisItem) {
+            // Get bahan baku names from selected bahan baku
+            $bahanBakuNames = $rabProduk->itemPekerjaanProduk->bahanBakus
+                ->map(fn($bb) => $bb->item->nama_item)
+                ->toArray();
+
             $jenisItemsList = [];
             foreach ($rabProduk->itemPekerjaanProduk->jenisItems as $jenisItem) {
-                // NO AKSESORIS - Skip aksesoris items
-                if ($jenisItem->jenis_item_id !== $aksesorisJenisItem->id) {
+                // NO AKSESORIS and NO BAHAN BAKU - Skip aksesoris and bahan baku items
+                if ($jenisItem->jenis_item_id !== $aksesorisJenisItem->id &&
+                    ($bahanBakuJenisItem === null || $jenisItem->jenis_item_id !== $bahanBakuJenisItem->id)) {
                     $itemsList = [];
                     foreach ($jenisItem->items as $item) {
                         $itemsList[] = [
@@ -209,6 +236,7 @@ class RabJasaController extends Controller
                 'harga_satuan' => $rabProduk->harga_satuan,
                 'harga_akhir' => $rabProduk->harga_akhir,
                 'jenis_items' => $jenisItemsList,
+                'bahan_baku_names' => $bahanBakuNames,
             ];
         });
 
@@ -241,7 +269,7 @@ class RabJasaController extends Controller
     {
         try {
             $rabJasa = RabJasa::with([
-                'itemPekerjaan.rabInternal.rabProduks.itemPekerjaanProduk.produk',
+                'itemPekerjaan.rabInternal.rabProduks',
             ])->findOrFail($rabJasaId);
 
             $rabInternal = $rabJasa->itemPekerjaan->rabInternal;
@@ -257,9 +285,12 @@ class RabJasaController extends Controller
 
                 // Regenerate from RAB Internal
                 foreach ($rabInternal->rabProduks as $rabProduk) {
-                    // Get harga_jasa from produk (not harga)
-                    $itemPekerjaanProduk = $rabProduk->itemPekerjaanProduk;
-                    $hargaJasa = $itemPekerjaanProduk->produk->harga_jasa ?? 0;
+                    // Reload itemPekerjaanProduk with bahanBakus to ensure we get fresh data
+                    $itemPekerjaanProduk = ItemPekerjaanProduk::with('bahanBakus')
+                        ->find($rabProduk->item_pekerjaan_produk_id);
+                    
+                    // Get harga_jasa from selected bahan baku (sum of all selected bahan baku harga_jasa)
+                    $hargaJasa = $itemPekerjaanProduk->bahanBakus->sum('harga_jasa') ?: 0;
                     
                     // Keep harga_items_non_aksesoris from RAB Internal
                     $hargaItemsOriginal = $rabProduk->harga_items_non_aksesoris;
