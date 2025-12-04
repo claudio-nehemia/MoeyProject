@@ -232,6 +232,33 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Delete Termin',
                 'group' => 'Master Data - Termin'
             ],
+
+            // Jenis Pengukuran Permissions
+            [
+                'name' => 'jenis-pengukuran.index',
+                'display_name' => 'View Jenis Pengukuran List',
+                'group' => 'Master Data - Jenis Pengukuran'
+            ],
+            [
+                'name' => 'jenis-pengukuran.show',
+                'display_name' => 'VIew Jenis Pengukuran Detail',
+                'group' => 'Master Data - Jenis Pengukuran'
+            ],
+            [
+                'name' => 'jenis-pengukuran.create',
+                'display_name' => 'Create Jenis Pengukuran',
+                'group' => 'Master Data - Jenis Pengukuran'
+            ],
+            [
+                'name' => 'jenis-pengukuran.edit',
+                'display_name' => 'Edit Jenis Pengukuran',
+                'group' => 'Master Data - Jenis Pengukuran'
+            ],
+            [
+                'name' => 'jenis-pengukuran.delete',
+                'display_name' => 'Delete Jenis Pengukuran',
+                'group' => 'Master Data - Jenis Pengukuran'
+            ],
             
             // ==================== OPERATIONS ====================
             

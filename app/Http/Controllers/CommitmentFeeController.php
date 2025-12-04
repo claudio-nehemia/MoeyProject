@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Inertia\Inertia;
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Moodboard;
 use Illuminate\Http\Request;
 use App\Models\CommitmentFee;
@@ -158,6 +159,44 @@ class CommitmentFeeController extends Controller
             Log::error('Stack trace: ' . $e->getTraceAsString());
             return back()->with('error', 'Gagal upload bukti pembayaran: ' . $e->getMessage());
         }
+    }
+
+    public function print($id)
+    {
+        $fee = CommitmentFee::with('moodboard.order')->findOrFail($id);
+        $order = $fee->moodboard->order;
+
+        // Semua variabel untuk view
+        $data = [
+            'customerName' => $order->customer_name,
+            'alamat' => $order->customer_additional_info ?? '-',
+            'projectName' => $order->nama_project,
+
+            'companyName' => "PT. Moey Jaya Abadi",
+            'companyAddress' => "Tangerang",
+            'direkturName' => "Aniq Infanuddin",
+            'jabatanDirektur' => "Direktur Utama",
+
+            'nominal' => number_format($fee->total_fee, 0, ',', '.'),
+            'today' => now()->format('d F Y'),
+
+            'nomor_surat' => "SPC-" . now()->format('Ymd') . "-" . $fee->id,
+            'nomor_invoice' => "INV-" . now()->format('Ymd') . "-" . $fee->id,
+            'nomor_kwitansi' => "KW-" . now()->format('Ymd') . "-" . $fee->id,
+
+            'nameBank' => "Mandiri",
+            'norekBank' => "1550007495610",
+            'atasNamaBank' => "PT. Moey Jaya Abadi",
+
+            'logoUrl' => public_path('assets/logo.png'),
+            'signatureUrl' => public_path('assets/signature.png'),
+            'stampUrl' => public_path('assets/stamp.png'),
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.commitment_fee', $data)
+            ->setPaper('A4', 'portrait');
+
+        return $pdf->stream('Commitment Fee - ' . $order->nama_project . '.pdf');
     }
 
     /**

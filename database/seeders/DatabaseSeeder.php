@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             JenisItemSeeder::class,
             ProdukSeeder::class,
             ItemSeeder::class,
+            JenisPengukuranSeeder::class,
         ]);
     }
 }

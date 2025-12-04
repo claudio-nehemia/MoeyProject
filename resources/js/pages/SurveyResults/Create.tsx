@@ -36,6 +36,7 @@ interface Survey {
 interface Props {
     order: Order;
     survey: Survey;
+    jenisPengukuran: { id: number; nama_pengukuran: string }[];
 }
 
 export default function Create({ order, survey }: Props) {
@@ -52,6 +53,7 @@ export default function Create({ order, survey }: Props) {
         layout: null as File | null,
         foto_lokasi: null as File | null,
         mom_file: null as File | null,
+        jenis_pengukuran_ids: [] as number[],
     });
 
     const handleSubmit: FormEventHandler = (e) => {
@@ -266,6 +268,38 @@ export default function Create({ order, survey }: Props) {
                                         Supported formats: JPG, PNG (Max 5MB)
                                     </p>
                                     {errors.foto_lokasi && <p className="text-red-500 text-xs mt-1">{errors.foto_lokasi}</p>}
+                                </div>
+
+                                {/* Jenis Pengukuran */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-stone-700 mb-2">
+                                        Jenis Pengukuran
+                                    </label>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {typeof window !== 'undefined' && (window as any).jenisPengukuran?.map((jp: { id: number; nama_pengukuran: string }) => (
+                                            <label
+                                                key={jp.id}
+                                                className="flex items-center gap-2 p-3 border-2 border-stone-200 rounded-xl cursor-pointer hover:border-cyan-500 transition-colors"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    value={jp.id}
+                                                    checked={data.jenis_pengukuran_ids?.includes(jp.id) || false}
+                                                    onChange={(e) => {
+                                                        const current = data.jenis_pengukuran_ids || [];
+                                                        if (e.target.checked) {
+                                                            setData('jenis_pengukuran_ids', [...current, jp.id]);
+                                                        } else {
+                                                            setData('jenis_pengukuran_ids', current.filter((id) => id !== jp.id));
+                                                        }
+                                                    }}
+                                                    className="h-4 w-4 text-cyan-600 border-stone-300 rounded focus:ring-cyan-500"
+                                                />
+                                                <span className="text-stone-700 text-sm">{jp.nama_pengukuran}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    {errors.jenis_pengukuran_ids && <p className="text-red-500 text-xs mt-1">{errors.jenis_pengukuran_ids}</p>}
                                 </div>
 
                                 {/* MOM File */}

@@ -37,11 +37,20 @@ interface Survey {
     order: Order;
 }
 
-interface Props {
-    survey: Survey;
+interface Pengukuran {
+    id: number;
+    nama_pengukuran: string;
 }
 
-export default function Edit({ survey }: Props) {
+interface Props {
+    survey: Survey;
+    jenisPengukuran: Pengukuran[]; // semua jenis pengukuran
+    selectedPengukuranIds: number[]; // id pengukuran yang sudah dicentang
+}
+
+export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }: Props) {
+    const [selectedPengukuran, setSelectedPengukuran] = useState<number[]>(selectedPengukuranIds || []);
+
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 1024;
@@ -54,7 +63,17 @@ export default function Edit({ survey }: Props) {
         layout: null as File | null,
         foto_lokasi: null as File | null,
         mom_file: null as File | null,
+        jenis_pengukuran_ids: selectedPengukuran
     });
+
+    const handleCheckboxChange = (id: number) => {
+        const newSelection = selectedPengukuran.includes(id)
+            ? selectedPengukuran.filter(i => i !== id)
+            : [...selectedPengukuran, id];
+
+        setSelectedPengukuran(newSelection);
+        setData('jenis_pengukuran_ids', newSelection);
+    };
 
     const handleSubmit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -67,16 +86,13 @@ export default function Edit({ survey }: Props) {
         console.log('Has new mom_file:', data.mom_file ? 'Yes' : 'No');
 
         router.post(`/survey-results/${survey.id}`, {
-            ...data,
-            _method: 'PUT'
+        ...data,
+        jenis_pengukuran_ids: selectedPengukuran, // kirim array checkbox
+        _method: 'PUT'
         }, {
             preserveScroll: true,
-            onError: (errors) => {
-                console.log('Validation errors:', errors);
-            },
-            onSuccess: () => {
-                console.log('Survey updated successfully!');
-            }
+            onError: (errors) => console.log('Validation errors:', errors),
+            onSuccess: () => console.log('Survey berhasil diupdate!'),
         });
     };
 
@@ -211,6 +227,7 @@ export default function Edit({ survey }: Props) {
                         </div>
                     )}
 
+
                     {/* Form */}
                     <form onSubmit={handleSubmit}>
                         <div className="bg-white rounded-2xl shadow-xl border border-stone-200 overflow-hidden fadeInUp" style={{ animationDelay: '0.15s' }}>
@@ -329,6 +346,24 @@ export default function Edit({ survey }: Props) {
                                             : 'Supported formats: JPG, PNG (Max 5MB)'}
                                     </p>
                                     {errors.foto_lokasi && <p className="text-red-500 text-xs mt-1">{errors.foto_lokasi}</p>}
+                                </div>
+
+                                {/* Jenis Pengukuran */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-stone-700 mb-2">Jenis Pengukuran</label>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                        {jenisPengukuran.map((item) => (
+                                            <label key={item.id} className="flex items-center gap-2 bg-stone-50 p-3 rounded-lg border border-stone-200 cursor-pointer hover:bg-stone-100">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedPengukuran.includes(item.id)}
+                                                    onChange={() => handleCheckboxChange(item.id)}
+                                                    className="w-4 h-4 accent-amber-600"
+                                                />
+                                                <span className="text-sm text-stone-700">{item.nama_pengukuran}</span>
+                                            </label>
+                                        ))}
+                                    </div>
                                 </div>
 
                                 {/* MOM File */}

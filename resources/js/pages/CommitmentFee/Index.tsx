@@ -447,15 +447,26 @@ export default function Index({ moodboards }: Props) {
                                                         Upload Bukti Pembayaran
                                                     </button>
                                                 ) : (
-                                                    <a
-                                                        href={`/storage/${moodboard.commitmentFee.payment_proof}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="rounded-lg bg-gray-600 px-4 py-2 font-medium text-white transition-colors hover:bg-gray-700"
-                                                    >
-                                                        Download Bukti
-                                                        Pembayaran
-                                                    </a>
+                                                    <div className="flex flex-wrap gap-3">
+                                                        {/* Tombol download bukti pembayaran */}
+                                                        <a
+                                                            href={`/storage/${moodboard.commitmentFee.payment_proof}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="rounded-lg bg-gray-600 px-4 py-2 font-medium text-white transition-colors hover:bg-gray-700"
+                                                        >
+                                                            Download Bukti Pembayaran
+                                                        </a>
+
+                                                        {/* Tombol cetak commitment fee */}
+                                                        <a
+                                                            href={`/commitment-fee/${moodboard.commitmentFee.id}/print`} target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-700"
+                                                        >
+                                                            Cetak Commitment Fee
+                                                        </a>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
