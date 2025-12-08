@@ -189,6 +189,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('permission:survey-results.edit')->name('survey-results.edit');
     Route::put('survey-results/{surveyResult}', [SurveyResultsController::class, 'update'])
         ->middleware('permission:survey-results.edit')->name('survey-results.update');
+    Route::delete('survey-results/{surveyResult}/file/{fileIndex}', [SurveyResultsController::class, 'deleteFile'])
+        ->middleware('permission:survey-results.edit')->name('survey-results.delete-file');
     Route::get('survey-results/{surveyResult}', [SurveyResultsController::class, 'show'])
         ->middleware('permission:survey-results.show')->name('survey-results.show');
 

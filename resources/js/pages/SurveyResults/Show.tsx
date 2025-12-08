@@ -37,8 +37,18 @@ interface Survey {
     id: number;
     order_id: number;
     feedback: string | null;
-    layout: string | null;
-    foto_lokasi: string | null;
+    layout_files?: Array<{
+        path: string;
+        original_name: string;
+        mime_type: string;
+        size: number;
+    }>;
+    foto_lokasi_files?: Array<{
+        path: string;
+        original_name: string;
+        mime_type: string;
+        size: number;
+    }>;
     response_time: string | null;
     response_by: string | null;
     created_at: string;
@@ -59,6 +69,9 @@ export default function Show({ survey }: Props) {
         return true;
     });
 
+    const [currentLayoutIndex, setCurrentLayoutIndex] = useState(0);
+    const [currentFotoIndex, setCurrentFotoIndex] = useState(0);
+
     const formatDate = (date: string) => {
         return new Date(date).toLocaleDateString('id-ID', {
             year: 'numeric',
@@ -67,6 +80,28 @@ export default function Show({ survey }: Props) {
             hour: '2-digit',
             minute: '2-digit'
         });
+    };
+
+    const getFileIcon = (mimeType: string) => {
+        if (mimeType.includes('image')) {
+            return (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+            );
+        } else if (mimeType.includes('pdf')) {
+            return (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+            );
+        } else {
+            return (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            );
+        }
     };
 
     const handleDelete = () => {
@@ -252,56 +287,41 @@ export default function Show({ survey }: Props) {
                             </div>
                         </div>
 
-                        {/* Files */}
+                        {/* Files Summary */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-                            {/* Layout */}
+                            {/* Layout Files Count */}
                             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg sm:rounded-xl p-4 sm:p-5 border-2 border-blue-200">
                                 <div className="flex items-center gap-2 sm:gap-3 mb-3">
                                     <svg className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
-                                    <p className="font-semibold text-blue-900 text-sm sm:text-base">Layout File</p>
+                                    <p className="font-semibold text-blue-900 text-sm sm:text-base">Layout Files</p>
                                 </div>
-                                {survey.layout ? (
-                                    <a
-                                        href={`/storage/${survey.layout}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors w-full justify-center"
-                                    >
-                                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                        </svg>
-                                        Download
-                                    </a>
+                                {survey.layout_files && survey.layout_files.length > 0 ? (
+                                    <div className="text-center">
+                                        <p className="text-3xl font-bold text-blue-600">{survey.layout_files.length}</p>
+                                        <p className="text-blue-700 text-xs mt-1">{survey.layout_files.length === 1 ? 'file' : 'files'} uploaded</p>
+                                    </div>
                                 ) : (
-                                    <p className="text-blue-700 text-xs sm:text-sm">No file uploaded</p>
+                                    <p className="text-blue-700 text-xs sm:text-sm">No files uploaded</p>
                                 )}
                             </div>
 
-                            {/* Foto Lokasi */}
+                            {/* Site Photos Count */}
                             <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg sm:rounded-xl p-4 sm:p-5 border-2 border-emerald-200">
                                 <div className="flex items-center gap-2 sm:gap-3 mb-3">
                                     <svg className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
-                                    <p className="font-semibold text-emerald-900 text-sm sm:text-base">Site Photo</p>
+                                    <p className="font-semibold text-emerald-900 text-sm sm:text-base">Site Photos</p>
                                 </div>
-                                {survey.foto_lokasi ? (
-                                    <a
-                                        href={`/storage/${survey.foto_lokasi}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center px-3 sm:px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors w-full justify-center"
-                                    >
-                                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                        </svg>
-                                        View Photo
-                                    </a>
+                                {survey.foto_lokasi_files && survey.foto_lokasi_files.length > 0 ? (
+                                    <div className="text-center">
+                                        <p className="text-3xl font-bold text-emerald-600">{survey.foto_lokasi_files.length}</p>
+                                        <p className="text-emerald-700 text-xs mt-1">{survey.foto_lokasi_files.length === 1 ? 'photo' : 'photos'} uploaded</p>
+                                    </div>
                                 ) : (
-                                    <p className="text-emerald-700 text-xs sm:text-sm">No photo uploaded</p>
+                                    <p className="text-emerald-700 text-xs sm:text-sm">No photos uploaded</p>
                                 )}
                             </div>
 
@@ -350,6 +370,249 @@ export default function Show({ survey }: Props) {
                             </div>
                         </div>
                     </div>
+
+                    {/* Layout Files Carousel */}
+                    {survey.layout_files && survey.layout_files.length > 0 && (
+                        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-stone-200 p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8">
+                            <h2 className="text-lg sm:text-xl font-semibold text-stone-900 mb-4 sm:mb-6 flex items-center gap-2">
+                                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <span className="text-sm sm:text-base lg:text-xl">Layout Files ({survey.layout_files.length})</span>
+                            </h2>
+
+                            <div className="relative">
+                                <div className="overflow-hidden rounded-xl bg-gradient-to-br from-cyan-50 to-blue-50 border-2 border-cyan-200">
+                                    <div className="aspect-video flex items-center justify-center p-8">
+                                        {survey.layout_files[currentLayoutIndex].mime_type.includes('image') ? (
+                                            <img
+                                                src={`/storage/${survey.layout_files[currentLayoutIndex].path}`}
+                                                alt={survey.layout_files[currentLayoutIndex].original_name}
+                                                className="max-h-full max-w-full object-contain rounded-lg shadow-lg"
+                                            />
+                                        ) : (
+                                            <div className="text-center">
+                                                <div className="flex justify-center mb-4">
+                                                    {getFileIcon(survey.layout_files[currentLayoutIndex].mime_type)}
+                                                </div>
+                                                <p className="text-lg font-semibold text-cyan-900 mb-2">
+                                                    {survey.layout_files[currentLayoutIndex].original_name}
+                                                </p>
+                                                <p className="text-sm text-cyan-700 mb-4">
+                                                    {(survey.layout_files[currentLayoutIndex].size / 1024).toFixed(1)} KB
+                                                </p>
+                                                <a
+                                                    href={`/storage/${survey.layout_files[currentLayoutIndex].path}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg transition-colors shadow-lg"
+                                                >
+                                                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                    </svg>
+                                                    Download File
+                                                </a>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white px-4 py-3">
+                                        <p className="text-sm font-semibold truncate">{survey.layout_files[currentLayoutIndex].original_name}</p>
+                                        <div className="flex items-center justify-between mt-1">
+                                            <p className="text-xs">File {currentLayoutIndex + 1} of {survey.layout_files.length}</p>
+                                            <p className="text-xs">{(survey.layout_files[currentLayoutIndex].size / 1024).toFixed(1)} KB</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {survey.layout_files.length > 1 && (
+                                    <>
+                                        <button
+                                            onClick={() => setCurrentLayoutIndex((prev) => 
+                                                prev === 0 ? survey.layout_files!.length - 1 : prev - 1
+                                            )}
+                                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-cyan-600 p-3 rounded-full shadow-lg transition-all transform hover:scale-110"
+                                        >
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            onClick={() => setCurrentLayoutIndex((prev) => 
+                                                prev === survey.layout_files!.length - 1 ? 0 : prev + 1
+                                            )}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-cyan-600 p-3 rounded-full shadow-lg transition-all transform hover:scale-110"
+                                        >
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+
+                            {survey.layout_files.length > 1 && (
+                                <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
+                                    {survey.layout_files.map((file, index) => (
+                                        <button
+                                            key={index}
+                                            onClick={() => setCurrentLayoutIndex(index)}
+                                            className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                                                currentLayoutIndex === index
+                                                    ? 'border-cyan-600 ring-2 ring-cyan-300'
+                                                    : 'border-stone-300 hover:border-cyan-400'
+                                            }`}
+                                        >
+                                            {file.mime_type.includes('image') ? (
+                                                <img
+                                                    src={`/storage/${file.path}`}
+                                                    alt={file.original_name}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full bg-gradient-to-br from-cyan-100 to-blue-100 flex items-center justify-center">
+                                                    <div className="text-cyan-600">
+                                                        {getFileIcon(file.mime_type)}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Foto Lokasi Carousel */}
+                    {survey.foto_lokasi_files && survey.foto_lokasi_files.length > 0 && (
+                        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-stone-200 p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8">
+                            <h2 className="text-lg sm:text-xl font-semibold text-stone-900 mb-4 sm:mb-6 flex items-center gap-2">
+                                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span className="text-sm sm:text-base lg:text-xl">Site Photos ({survey.foto_lokasi_files.length})</span>
+                            </h2>
+
+                            <div className="relative">
+                                <div className="overflow-hidden rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200">
+                                    <div className="aspect-video flex items-center justify-center p-8">
+                                        <img
+                                            src={`/storage/${survey.foto_lokasi_files[currentFotoIndex].path}`}
+                                            alt={survey.foto_lokasi_files[currentFotoIndex].original_name}
+                                            className="max-h-full max-w-full object-contain rounded-lg shadow-lg"
+                                        />
+                                    </div>
+
+                                    <div className="bg-gradient-to-r from-emerald-600 to-green-600 text-white px-4 py-3">
+                                        <p className="text-sm font-semibold truncate">{survey.foto_lokasi_files[currentFotoIndex].original_name}</p>
+                                        <div className="flex items-center justify-between mt-1">
+                                            <p className="text-xs">Photo {currentFotoIndex + 1} of {survey.foto_lokasi_files.length}</p>
+                                            <p className="text-xs">{(survey.foto_lokasi_files[currentFotoIndex].size / 1024).toFixed(1)} KB</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {survey.foto_lokasi_files.length > 1 && (
+                                    <>
+                                        <button
+                                            onClick={() => setCurrentFotoIndex((prev) => 
+                                                prev === 0 ? survey.foto_lokasi_files!.length - 1 : prev - 1
+                                            )}
+                                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-emerald-600 p-3 rounded-full shadow-lg transition-all transform hover:scale-110"
+                                        >
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            onClick={() => setCurrentFotoIndex((prev) => 
+                                                prev === survey.foto_lokasi_files!.length - 1 ? 0 : prev + 1
+                                            )}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-emerald-600 p-3 rounded-full shadow-lg transition-all transform hover:scale-110"
+                                        >
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+
+                            {survey.foto_lokasi_files.length > 1 && (
+                                <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
+                                    {survey.foto_lokasi_files.map((file, index) => (
+                                        <button
+                                            key={index}
+                                            onClick={() => setCurrentFotoIndex(index)}
+                                            className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                                                currentFotoIndex === index
+                                                    ? 'border-emerald-600 ring-2 ring-emerald-300'
+                                                    : 'border-stone-300 hover:border-emerald-400'
+                                            }`}
+                                        >
+                                            <img
+                                                src={`/storage/${file.path}`}
+                                                alt={file.original_name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* MOM File Section */}
+                    {survey.order.mom_file && (
+                        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-stone-200 p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8">
+                            <h2 className="text-lg sm:text-xl font-semibold text-stone-900 mb-4 sm:mb-6 flex items-center gap-2">
+                                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
+                                <span className="text-sm sm:text-base lg:text-xl">Minutes of Meeting</span>
+                            </h2>
+                            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 border-2 border-amber-200">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        <p className="font-semibold text-amber-900">{survey.order.mom_file.split('/').pop()}</p>
+                                    </div>
+                                    <a
+                                        href={`/storage/${survey.order.mom_file}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg transition-colors shadow-lg"
+                                    >
+                                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                        </svg>
+                                        Download
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Jenis Pengukuran Section */}
+                    {survey.jenis_pengukuran && survey.jenis_pengukuran.length > 0 && (
+                        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-stone-200 p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8">
+                            <h2 className="text-lg sm:text-xl font-semibold text-stone-900 mb-4 flex items-center gap-2">
+                                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                                <span className="text-sm sm:text-base lg:text-xl">Jenis Pengukuran</span>
+                            </h2>
+                            <div className="flex flex-wrap gap-2">
+                                {survey.jenis_pengukuran.map((jp) => (
+                                    <span key={jp.id} className="inline-block px-4 py-2 bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-800 text-sm font-semibold rounded-lg border border-indigo-200">
+                                        {jp.nama_pengukuran}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Metadata */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">

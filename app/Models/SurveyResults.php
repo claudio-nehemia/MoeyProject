@@ -9,10 +9,15 @@ class SurveyResults extends Model
     protected $fillable = [
         'order_id',
         'feedback',
-        'layout',
-        'foto_lokasi',
+        'layout_files',
+        'foto_lokasi_files',
         'response_time',
         'response_by',
+    ];
+
+    protected $casts = [
+        'layout_files' => 'array',
+        'foto_lokasi_files' => 'array',
     ];
 
     public function order()
