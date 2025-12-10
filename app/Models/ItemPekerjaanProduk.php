@@ -9,6 +9,7 @@ class ItemPekerjaanProduk extends Model
 {
     protected $fillable = [
         'item_pekerjaan_id',
+        'nama_ruangan',
         'produk_id',
         'quantity',
         'panjang',

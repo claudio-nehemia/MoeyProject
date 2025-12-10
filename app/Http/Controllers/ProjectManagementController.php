@@ -167,6 +167,7 @@ class ProjectManagementController extends Controller
                 return [
                     'id'                  => $produk->id,
                     'nama_produk'         => $produk->produk->nama_produk,
+                    'nama_ruangan'        => $produk->nama_ruangan,
                     'quantity'            => $produk->quantity,
                     'dimensi'             => "{$produk->panjang}×{$produk->lebar}×{$produk->tinggi}",
                     'total_harga'         => $produk->total_harga,

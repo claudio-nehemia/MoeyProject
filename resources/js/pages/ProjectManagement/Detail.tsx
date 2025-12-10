@@ -27,6 +27,7 @@ type WorkplanItem = {
 type Produk = {
     id: number;
     nama_produk: string;
+    nama_ruangan: string | null;
     quantity: number;
     dimensi: string;
     total_harga: number;
@@ -178,6 +179,26 @@ export default function Detail({
             if (produkFilter === 'completed') return produk.progress === 100;
             return true;
         });
+    };
+
+    // Function to group produks by ruangan
+    const groupProduksByRuangan = (produks: Produk[]) => {
+        const groups: { ruangan: string; produks: Produk[] }[] = [];
+        const ruanganMap = new Map<string, Produk[]>();
+        
+        produks.forEach(produk => {
+            const ruangan = produk.nama_ruangan || 'Tanpa Ruangan';
+            if (!ruanganMap.has(ruangan)) {
+                ruanganMap.set(ruangan, []);
+            }
+            ruanganMap.get(ruangan)!.push(produk);
+        });
+        
+        ruanganMap.forEach((prods, ruangan) => {
+            groups.push({ ruangan, produks: prods });
+        });
+        
+        return groups;
     };
 
     // Calculate counts for filter tabs
@@ -862,9 +883,9 @@ export default function Detail({
                                         )}
                                     </div>
 
-                                    {/* Produk List */}
+                                    {/* Produk List - Grouped by Ruangan */}
                                     <div className="p-6">
-                                        <div className="grid grid-cols-1 gap-4">
+                                        <div className="space-y-6">
                                             {filterProduks(item.produks).length === 0 ? (
                                                 <div className="rounded-xl border-2 border-dashed border-gray-300 p-8 text-center">
                                                     <div className="text-4xl mb-2">🔍</div>
@@ -877,7 +898,31 @@ export default function Detail({
                                                         }" di item pekerjaan ini
                                                     </p>
                                                 </div>
-                                            ) : filterProduks(item.produks).map(
+                                            ) : groupProduksByRuangan(filterProduks(item.produks)).map(
+                                                (ruanganGroup, ruanganIndex) => (
+                                                    <div key={ruanganGroup.ruangan} className="space-y-4">
+                                                        {/* Ruangan Header */}
+                                                        <div className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-cyan-50 to-teal-50 border-2 border-cyan-200 px-5 py-3">
+                                                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600 text-lg font-bold text-white shadow">
+                                                                🚪
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <h4 className="font-bold text-cyan-900 text-lg">{ruanganGroup.ruangan}</h4>
+                                                                <p className="text-xs text-cyan-600">
+                                                                    {ruanganGroup.produks.length} produk • 
+                                                                    Progress: {Math.round(ruanganGroup.produks.reduce((sum, p) => sum + p.progress, 0) / ruanganGroup.produks.length)}%
+                                                                </p>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="text-sm font-semibold text-cyan-800">
+                                                                    {formatRupiah(ruanganGroup.produks.reduce((sum, p) => sum + p.total_harga, 0))}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Produks in this Ruangan */}
+                                                        <div className="grid grid-cols-1 gap-4 pl-4 border-l-4 border-cyan-200">
+                                                            {ruanganGroup.produks.map(
                                                 (produk, produkIndex) => {
                                                     const isUpdating =
                                                         updatingProduk ===
@@ -1640,6 +1685,10 @@ export default function Detail({
                                                         </div>
                                                     );
                                                 },
+                                            )}
+                                                        </div>
+                                                    </div>
+                                                ),
                                             )}
                                         </div>
                                     </div>

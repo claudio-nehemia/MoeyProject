@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { router, Link, Head } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
@@ -27,6 +27,7 @@ interface Aksesoris {
 interface Produk {
     id: number;
     nama_produk: string;
+    nama_ruangan: string | null;
     qty_produk: number;
     panjang: number | null;
     lebar: number | null;
@@ -104,6 +105,23 @@ export default function Show({ rabInternal }: Props) {
     };
 
     const totalSemuaProduk = rabInternal.produks.reduce((sum, produk) => sum + Number(produk.harga_akhir), 0);
+
+    // Group products by ruangan
+    const groupedByRuangan = useMemo(() => {
+        const groups: { [key: string]: typeof rabInternal.produks } = {};
+        rabInternal.produks.forEach((produk) => {
+            const ruangan = produk.nama_ruangan || 'Tanpa Ruangan';
+            if (!groups[ruangan]) {
+                groups[ruangan] = [];
+            }
+            groups[ruangan].push(produk);
+        });
+        return Object.entries(groups).map(([nama_ruangan, produks]) => ({
+            nama_ruangan,
+            produks,
+            total: produks.reduce((sum, p) => sum + Number(p.harga_akhir), 0),
+        }));
+    }, [rabInternal.produks]);
 
     return (
         <>
@@ -216,7 +234,29 @@ export default function Show({ rabInternal }: Props) {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
-                                    {rabInternal.produks.map((produk, produkIndex) => {
+                                    {groupedByRuangan.map((ruangan, ruanganIndex) => (
+                                        <>
+                                            {/* Ruangan Header Row */}
+                                            <tr key={`ruangan-header-${ruanganIndex}`} className="bg-gradient-to-r from-cyan-500 to-cyan-600">
+                                                <td colSpan={13} className="px-4 py-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                                            </svg>
+                                                            <span className="text-lg font-bold text-white">{ruangan.nama_ruangan}</span>
+                                                            <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs text-white">
+                                                                {ruangan.produks.length} produk
+                                                            </span>
+                                                        </div>
+                                                        <span className="text-lg font-bold text-white">
+                                                            Subtotal: {formatCurrency(ruangan.total)}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {/* Products in this Ruangan */}
+                                            {ruangan.produks.map((produk, produkIndex) => {
                                         // Get bahan baku names from produk (from master data)
                                         const bahanBakuNames = produk.bahan_baku_names || [];
                                         
@@ -371,6 +411,8 @@ export default function Show({ rabInternal }: Props) {
                                             </>
                                         );
                                     })}
+                                        </>
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
@@ -383,7 +425,7 @@ export default function Show({ rabInternal }: Props) {
                                             Grand Total
                                         </h3>
                                         <p className="mt-1 text-sm text-purple-100">
-                                            Total semua produk ({rabInternal.produks.length} produk)
+                                            Total semua produk ({rabInternal.produks.length} produk) • {groupedByRuangan.length} ruangan
                                         </p>
                                     </div>
                                     <div className="text-right">

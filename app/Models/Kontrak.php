@@ -13,12 +13,15 @@ class Kontrak extends Model
         'harga_kontrak',
         'tanggal_mulai',
         'tanggal_selesai',
+        'signed_contract_path',
+        'signed_at',
     ];
 
     protected $casts = [
         'tanggal_mulai' => 'date',
         'tanggal_selesai' => 'date',
         'harga_kontrak' => 'decimal:0',
+        'signed_at' => 'datetime',
     ];
 
     public function termin()

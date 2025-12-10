@@ -163,6 +163,7 @@ class ItemPekerjaanController extends Controller
                 'status' => 'required|in:draft,published',
                 'produks' => 'required|array|min:1',
                 'produks.*.produk_id' => 'required|exists:produks,id',
+                'produks.*.nama_ruangan' => 'nullable|string|max:255',
                 'produks.*.quantity' => 'required|integer|min:1',
                 'produks.*.panjang' => 'nullable|numeric|min:0',
                 'produks.*.lebar' => 'nullable|numeric|min:0',
@@ -195,6 +196,7 @@ class ItemPekerjaanController extends Controller
 
                 $produk = ItemPekerjaanProduk::create([
                     'item_pekerjaan_id' => $validated['item_pekerjaan_id'],
+                    'nama_ruangan' => $produkData['nama_ruangan'] ?? null,
                     'produk_id' => $produkData['produk_id'],
                     'quantity' => $produkData['quantity'],
                     'panjang' => $panjang,
@@ -309,6 +311,7 @@ class ItemPekerjaanController extends Controller
                         'id' => $produk->id,
                         'produk_id' => $produk->produk_id,
                         'produk_name' => $produk->produk->nama_produk,
+                        'nama_ruangan' => $produk->nama_ruangan,
                         'quantity' => $produk->quantity,
                         'panjang' => $produk->panjang,
                         'lebar' => $produk->lebar,
@@ -384,6 +387,7 @@ class ItemPekerjaanController extends Controller
                         'id' => $produk->id,
                         'produk_id' => $produk->produk_id,
                         'produk_name' => $produk->produk->nama_produk,
+                        'nama_ruangan' => $produk->nama_ruangan,
                         'quantity' => $produk->quantity,
                         'panjang' => $produk->panjang,
                         'lebar' => $produk->lebar,
@@ -417,6 +421,7 @@ class ItemPekerjaanController extends Controller
                 'produks' => 'required|array|min:1',
                 'produks.*.id' => 'nullable|exists:item_pekerjaan_produks,id',
                 'produks.*.produk_id' => 'required|exists:produks,id',
+                'produks.*.nama_ruangan' => 'nullable|string|max:255',
                 'produks.*.quantity' => 'required|integer|min:1',
                 'produks.*.panjang' => 'nullable|numeric|min:0',
                 'produks.*.lebar' => 'nullable|numeric|min:0',
@@ -460,6 +465,7 @@ class ItemPekerjaanController extends Controller
 
                     $produk->update([
                         'produk_id' => $produkData['produk_id'],
+                        'nama_ruangan' => $produkData['nama_ruangan'] ?? null,
                         'quantity' => $produkData['quantity'],
                         'panjang' => $panjang,
                         'lebar' => $lebar,
@@ -481,6 +487,7 @@ class ItemPekerjaanController extends Controller
 
                     $produk = ItemPekerjaanProduk::create([
                         'item_pekerjaan_id' => $itemPekerjaanId,
+                        'nama_ruangan' => $produkData['nama_ruangan'] ?? null,
                         'produk_id' => $produkData['produk_id'],
                         'quantity' => $produkData['quantity'],
                         'panjang' => $panjang,

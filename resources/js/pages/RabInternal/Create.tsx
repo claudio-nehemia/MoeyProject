@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, FormEvent, useMemo } from 'react';
 import { router, Head } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
@@ -21,6 +21,7 @@ interface Produk {
     id: number;
     item_pekerjaan_produk_id: number;
     nama_produk: string;
+    nama_ruangan: string | null;
     qty_produk: number;
     panjang: number | null;
     lebar: number | null;
@@ -248,6 +249,22 @@ export default function Create({ rabInternal }: Props) {
         });
     };
 
+    // Group products by ruangan
+    const groupedByRuangan = useMemo(() => {
+        const groups: { [key: string]: { produk: Produk; formIndex: number }[] } = {};
+        rabInternal.itemPekerjaan.produks.forEach((produk, index) => {
+            const ruangan = produk.nama_ruangan || 'Tanpa Ruangan';
+            if (!groups[ruangan]) {
+                groups[ruangan] = [];
+            }
+            groups[ruangan].push({ produk, formIndex: index });
+        });
+        return Object.entries(groups).map(([nama_ruangan, items]) => ({
+            nama_ruangan,
+            items,
+        }));
+    }, [rabInternal.itemPekerjaan.produks]);
+
     return (
         <>
             <Head title="Input RAB Internal" />
@@ -282,7 +299,23 @@ export default function Create({ rabInternal }: Props) {
                     </div>
 
                     <form onSubmit={handleSubmit}>
-                        {rabInternal.itemPekerjaan.produks.map((produk, produkIndex) => {
+                        {groupedByRuangan.map((ruangan, ruanganIndex) => (
+                            <div key={ruanganIndex} className="mb-8">
+                                {/* Ruangan Header */}
+                                <div className="mb-4 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 p-4">
+                                    <div className="flex items-center gap-2">
+                                        <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                        </svg>
+                                        <h2 className="text-xl font-bold text-white">{ruangan.nama_ruangan}</h2>
+                                        <span className="rounded-full bg-white/20 px-3 py-1 text-sm text-white">
+                                            {ruangan.items.length} produk
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Products in this Ruangan */}
+                                {ruangan.items.map(({ produk, formIndex: produkIndex }) => {
                             const formProduk = formData[produkIndex];
                             if (!formProduk) return <div key={produk.id} />;
 
@@ -627,6 +660,8 @@ export default function Create({ rabInternal }: Props) {
                                 </div>
                             );
                         })}
+                            </div>
+                        ))}
 
                         {/* ACTION BUTTONS */}
                         <div className="flex justify-end space-x-3 mt-4">

@@ -148,6 +148,7 @@ class RabInternalController extends Controller
                             'id' => $produk->id,
                             'item_pekerjaan_produk_id' => $produk->id,
                             'nama_produk' => $produk->produk->nama_produk,
+                            'nama_ruangan' => $produk->nama_ruangan,
                             'qty_produk' => $produk->quantity,
                             'panjang' => $produk->panjang,
                             'lebar' => $produk->lebar,
@@ -332,6 +333,7 @@ class RabInternalController extends Controller
                     return [
                         'id' => $rabProduk->id,
                         'nama_produk' => $rabProduk->itemPekerjaanProduk->produk->nama_produk,
+                        'nama_ruangan' => $rabProduk->itemPekerjaanProduk->nama_ruangan,
                         'qty_produk' => $rabProduk->itemPekerjaanProduk->quantity,
                         'panjang' => $rabProduk->itemPekerjaanProduk->panjang,
                         'lebar' => $rabProduk->itemPekerjaanProduk->lebar,
