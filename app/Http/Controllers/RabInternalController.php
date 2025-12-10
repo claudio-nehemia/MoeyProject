@@ -29,6 +29,7 @@ class RabInternalController extends Controller
             ->map(function ($itemPekerjaan) {
                 return [
                     'id' => $itemPekerjaan->id,
+                    'status' => $itemPekerjaan->status,
                     'order' => [
                         'nama_project' => $itemPekerjaan->moodboard->order->nama_project,
                         'company_name' => $itemPekerjaan->moodboard->order->company_name,
@@ -52,6 +53,11 @@ class RabInternalController extends Controller
     {
         try {
             $itemPekerjaan = ItemPekerjaan::findOrFail($itemPekerjaanId);
+
+            // Check if item pekerjaan status is published
+            if ($itemPekerjaan->status !== 'published') {
+                return back()->with('error', 'Item Pekerjaan masih dalam status draft. Harap publish terlebih dahulu.');
+            }
 
             if ($itemPekerjaan->rabInternal) {
                 return back()->with('error', 'RAB Internal sudah ada untuk item pekerjaan ini.');

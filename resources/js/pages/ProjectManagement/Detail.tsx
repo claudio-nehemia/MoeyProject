@@ -143,6 +143,60 @@ export default function Detail({
 
     // State for unlocking next payment step
     const [unlockingPayment, setUnlockingPayment] = useState<number | null>(null);
+    
+    // State for produk filter
+    const [produkFilter, setProdukFilter] = useState<'all' | 'not_started' | 'in_progress' | 'deadline' | 'completed'>('all');
+
+    // Function to get produk deadline status
+    const getProdukDeadlineStatus = (produk: Produk) => {
+        const lastWorkplan = produk.workplan_items
+            ?.filter(wp => wp.end_date)
+            ?.sort((a, b) => new Date(b.end_date!).getTime() - new Date(a.end_date!).getTime())[0];
+        if (lastWorkplan?.end_date) {
+            const deadline = new Date(lastWorkplan.end_date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const diffDays = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            if (diffDays < 0) return 'overdue';
+            if (diffDays <= 3) return 'urgent';
+            if (diffDays <= 7) return 'warning';
+            return 'normal';
+        }
+        return null;
+    };
+
+    // Function to filter produks based on filter state
+    const filterProduks = (produks: Produk[]) => {
+        if (produkFilter === 'all') return produks;
+        return produks.filter(produk => {
+            if (produkFilter === 'not_started') return produk.progress === 0;
+            if (produkFilter === 'in_progress') return produk.progress > 0 && produk.progress < 100;
+            if (produkFilter === 'deadline') {
+                const status = getProdukDeadlineStatus(produk);
+                return status === 'overdue' || status === 'urgent';
+            }
+            if (produkFilter === 'completed') return produk.progress === 100;
+            return true;
+        });
+    };
+
+    // Calculate counts for filter tabs
+    const getProdukCounts = () => {
+        let total = 0, notStarted = 0, inProgress = 0, deadline = 0, completed = 0;
+        order.item_pekerjaans.forEach(item => {
+            item.produks.forEach(produk => {
+                total++;
+                if (produk.progress === 0) notStarted++;
+                else if (produk.progress === 100) completed++;
+                else inProgress++;
+                const status = getProdukDeadlineStatus(produk);
+                if (status === 'overdue' || status === 'urgent') deadline++;
+            });
+        });
+        return { total, notStarted, inProgress, deadline, completed };
+    };
+
+    const produkCounts = getProdukCounts();
 
 
     useEffect(() => {
@@ -461,6 +515,95 @@ export default function Detail({
                             </div>
                         </div>
 
+                        {/* Produk Filter Tabs */}
+                        <div className="mb-6 rounded-xl bg-white p-4 shadow-lg">
+                            <h3 className="mb-3 text-sm font-semibold text-gray-700">🔍 Filter Produk</h3>
+                            <div className="overflow-x-auto">
+                                <div className="flex gap-2 min-w-max">
+                                    <button
+                                        onClick={() => setProdukFilter('all')}
+                                        className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                                            produkFilter === 'all'
+                                                ? 'bg-blue-600 text-white shadow-md'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        <span>📊</span>
+                                        <span>Semua</span>
+                                        <span className={`rounded-full px-2 py-0.5 text-xs ${
+                                            produkFilter === 'all' ? 'bg-blue-500' : 'bg-gray-300'
+                                        }`}>
+                                            {produkCounts.total}
+                                        </span>
+                                    </button>
+                                    <button
+                                        onClick={() => setProdukFilter('not_started')}
+                                        className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                                            produkFilter === 'not_started'
+                                                ? 'bg-gray-600 text-white shadow-md'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        <span>⏳</span>
+                                        <span>Belum Mulai</span>
+                                        <span className={`rounded-full px-2 py-0.5 text-xs ${
+                                            produkFilter === 'not_started' ? 'bg-gray-500' : 'bg-gray-300'
+                                        }`}>
+                                            {produkCounts.notStarted}
+                                        </span>
+                                    </button>
+                                    <button
+                                        onClick={() => setProdukFilter('in_progress')}
+                                        className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                                            produkFilter === 'in_progress'
+                                                ? 'bg-yellow-600 text-white shadow-md'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        <span>🔄</span>
+                                        <span>Proses</span>
+                                        <span className={`rounded-full px-2 py-0.5 text-xs ${
+                                            produkFilter === 'in_progress' ? 'bg-yellow-500' : 'bg-gray-300'
+                                        }`}>
+                                            {produkCounts.inProgress}
+                                        </span>
+                                    </button>
+                                    <button
+                                        onClick={() => setProdukFilter('deadline')}
+                                        className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                                            produkFilter === 'deadline'
+                                                ? 'bg-red-600 text-white shadow-md'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        <span>🚨</span>
+                                        <span>Deadline</span>
+                                        <span className={`rounded-full px-2 py-0.5 text-xs ${
+                                            produkFilter === 'deadline' ? 'bg-red-500' : 'bg-gray-300'
+                                        }`}>
+                                            {produkCounts.deadline}
+                                        </span>
+                                    </button>
+                                    <button
+                                        onClick={() => setProdukFilter('completed')}
+                                        className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                                            produkFilter === 'completed'
+                                                ? 'bg-green-600 text-white shadow-md'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        <span>✅</span>
+                                        <span>Selesai</span>
+                                        <span className={`rounded-full px-2 py-0.5 text-xs ${
+                                            produkFilter === 'completed' ? 'bg-green-500' : 'bg-gray-300'
+                                        }`}>
+                                            {produkCounts.completed}
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Item Pekerjaan List */}
                         <div className="space-y-6">
                             {order.item_pekerjaans.map((item, itemIndex) => (
@@ -722,7 +865,19 @@ export default function Detail({
                                     {/* Produk List */}
                                     <div className="p-6">
                                         <div className="grid grid-cols-1 gap-4">
-                                            {item.produks.map(
+                                            {filterProduks(item.produks).length === 0 ? (
+                                                <div className="rounded-xl border-2 border-dashed border-gray-300 p-8 text-center">
+                                                    <div className="text-4xl mb-2">🔍</div>
+                                                    <p className="text-gray-500 font-medium">
+                                                        Tidak ada produk dengan status "{
+                                                            produkFilter === 'not_started' ? 'Belum Mulai' :
+                                                            produkFilter === 'in_progress' ? 'Proses' :
+                                                            produkFilter === 'deadline' ? 'Deadline' :
+                                                            produkFilter === 'completed' ? 'Selesai' : 'Semua'
+                                                        }" di item pekerjaan ini
+                                                    </p>
+                                                </div>
+                                            ) : filterProduks(item.produks).map(
                                                 (produk, produkIndex) => {
                                                     const isUpdating =
                                                         updatingProduk ===

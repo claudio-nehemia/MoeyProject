@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 
@@ -72,6 +72,42 @@ export default function Index({ itemPekerjaans }: Props) {
     const [generating, setGenerating] = useState<string | null>(null);
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [expandedRows, setExpandedRows] = useState<number[]>([]);
+    const [activeFilter, setActiveFilter] = useState<'semua' | 'belum_bayar' | 'dp' | 'proses' | 'lunas'>('semua');
+
+    // Helper function to determine payment status category
+    const getPaymentCategory = (item: ItemPekerjaan): 'belum_bayar' | 'dp' | 'proses' | 'lunas' => {
+        // Count paid steps
+        const paidSteps = item.steps_info.filter(s => s.status === 'paid').length;
+        const totalSteps = item.steps_info.length;
+        
+        if (item.is_fully_paid || paidSteps === totalSteps) {
+            return 'lunas';
+        }
+        if (paidSteps === 0) {
+            return 'belum_bayar';
+        }
+        if (paidSteps === 1) {
+            return 'dp'; // DP = sudah bayar tahap 1
+        }
+        return 'proses'; // lebih dari tahap 1 tapi belum lunas
+    };
+
+    // Filter items based on active filter
+    const filteredItems = useMemo(() => {
+        if (activeFilter === 'semua') return itemPekerjaans;
+        return itemPekerjaans.filter(item => getPaymentCategory(item) === activeFilter);
+    }, [itemPekerjaans, activeFilter]);
+
+    // Calculate filter counts
+    const filterCounts = useMemo(() => {
+        return {
+            semua: itemPekerjaans.length,
+            belum_bayar: itemPekerjaans.filter(i => getPaymentCategory(i) === 'belum_bayar').length,
+            dp: itemPekerjaans.filter(i => getPaymentCategory(i) === 'dp').length,
+            proses: itemPekerjaans.filter(i => getPaymentCategory(i) === 'proses').length,
+            lunas: itemPekerjaans.filter(i => getPaymentCategory(i) === 'lunas').length,
+        };
+    }, [itemPekerjaans]);
 
     const handleGenerateInvoice = (itemPekerjaanId: number, terminStep: number) => {
         const key = `${itemPekerjaanId}-${terminStep}`;
@@ -197,20 +233,120 @@ export default function Index({ itemPekerjaans }: Props) {
                             </div>
                         </div>
 
+                        {/* Filter Tabs */}
+                        <div className="mb-6 bg-white rounded-xl shadow-lg p-4 border border-gray-100">
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    onClick={() => setActiveFilter('semua')}
+                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                                        activeFilter === 'semua'
+                                            ? 'bg-blue-600 text-white shadow-md'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    <span>📋</span>
+                                    <span>Semua</span>
+                                    <span className={`rounded-full px-2 py-0.5 text-xs ${
+                                        activeFilter === 'semua' ? 'bg-blue-500' : 'bg-gray-300'
+                                    }`}>
+                                        {filterCounts.semua}
+                                    </span>
+                                </button>
+                                <button
+                                    onClick={() => setActiveFilter('belum_bayar')}
+                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                                        activeFilter === 'belum_bayar'
+                                            ? 'bg-gray-600 text-white shadow-md'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    <span>⏳</span>
+                                    <span>Belum Bayar</span>
+                                    <span className={`rounded-full px-2 py-0.5 text-xs ${
+                                        activeFilter === 'belum_bayar' ? 'bg-gray-500' : 'bg-gray-300'
+                                    }`}>
+                                        {filterCounts.belum_bayar}
+                                    </span>
+                                </button>
+                                <button
+                                    onClick={() => setActiveFilter('dp')}
+                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                                        activeFilter === 'dp'
+                                            ? 'bg-amber-600 text-white shadow-md'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    <span>💰</span>
+                                    <span>DP</span>
+                                    <span className={`rounded-full px-2 py-0.5 text-xs ${
+                                        activeFilter === 'dp' ? 'bg-amber-500' : 'bg-gray-300'
+                                    }`}>
+                                        {filterCounts.dp}
+                                    </span>
+                                </button>
+                                <button
+                                    onClick={() => setActiveFilter('proses')}
+                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                                        activeFilter === 'proses'
+                                            ? 'bg-indigo-600 text-white shadow-md'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    <span>🔄</span>
+                                    <span>Proses</span>
+                                    <span className={`rounded-full px-2 py-0.5 text-xs ${
+                                        activeFilter === 'proses' ? 'bg-indigo-500' : 'bg-gray-300'
+                                    }`}>
+                                        {filterCounts.proses}
+                                    </span>
+                                </button>
+                                <button
+                                    onClick={() => setActiveFilter('lunas')}
+                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                                        activeFilter === 'lunas'
+                                            ? 'bg-green-600 text-white shadow-md'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    <span>✅</span>
+                                    <span>Lunas</span>
+                                    <span className={`rounded-full px-2 py-0.5 text-xs ${
+                                        activeFilter === 'lunas' ? 'bg-green-500' : 'bg-gray-300'
+                                    }`}>
+                                        {filterCounts.lunas}
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+
                         {/* Projects List */}
                         <div className="space-y-6">
-                            {itemPekerjaans.length === 0 ? (
+                            {filteredItems.length === 0 ? (
                                 <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
                                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
                                         <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                         </svg>
                                     </div>
-                                    <p className="text-gray-500 font-medium">Tidak ada project dengan kontrak</p>
-                                    <p className="text-sm text-gray-400 mt-1">Invoice akan muncul setelah kontrak dibuat</p>
+                                    <p className="text-gray-500 font-medium">
+                                        {activeFilter === 'semua' 
+                                            ? 'Tidak ada project dengan kontrak' 
+                                            : `Tidak ada project dengan status "${
+                                                activeFilter === 'belum_bayar' ? 'Belum Bayar' :
+                                                activeFilter === 'dp' ? 'DP' :
+                                                activeFilter === 'proses' ? 'Proses' : 'Lunas'
+                                            }"`
+                                        }
+                                    </p>
+                                    <p className="text-sm text-gray-400 mt-1">
+                                        {activeFilter === 'semua' 
+                                            ? 'Invoice akan muncul setelah kontrak dibuat'
+                                            : 'Coba pilih filter lain'
+                                        }
+                                    </p>
                                 </div>
                             ) : (
-                                itemPekerjaans.map((item) => (
+                                filteredItems.map((item) => (
                                     <div key={item.id} className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
                                         {/* Project Header */}
                                         <div 
@@ -243,12 +379,22 @@ export default function Index({ itemPekerjaans }: Props) {
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    {/* Fully Paid Badge */}
-                                                    {item.is_fully_paid && (
-                                                        <span className="inline-flex items-center gap-1 px-4 py-2 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-full text-sm font-bold shadow-md">
-                                                            ✓ {item.current_payment_status}
-                                                        </span>
-                                                    )}
+                                                    {/* Payment Category Badge */}
+                                                    {(() => {
+                                                        const category = getPaymentCategory(item);
+                                                        const configs = {
+                                                            belum_bayar: { bg: 'from-gray-400 to-gray-500', icon: '⏳', label: 'Belum Bayar' },
+                                                            dp: { bg: 'from-amber-400 to-orange-500', icon: '💰', label: 'DP' },
+                                                            proses: { bg: 'from-indigo-400 to-purple-500', icon: '🔄', label: 'Proses' },
+                                                            lunas: { bg: 'from-green-400 to-emerald-500', icon: '✅', label: 'Lunas' },
+                                                        };
+                                                        const config = configs[category];
+                                                        return (
+                                                            <span className={`inline-flex items-center gap-1 px-4 py-2 bg-gradient-to-r ${config.bg} text-white rounded-full text-sm font-bold shadow-md`}>
+                                                                {config.icon} {config.label}
+                                                            </span>
+                                                        );
+                                                    })()}
                                                     {/* Expand Icon */}
                                                     <svg 
                                                         className={`w-6 h-6 text-gray-400 transition-transform duration-300 ${expandedRows.includes(item.id) ? 'rotate-180' : ''}`}

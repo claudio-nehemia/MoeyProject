@@ -20,7 +20,8 @@ class Order extends Model
         'mom_file',
         'tanggal_survey',
         'payment_status',
-        'tahapan_proyek'
+        'tahapan_proyek',
+        'alamat',
     ];
 
     public function jenisInterior()

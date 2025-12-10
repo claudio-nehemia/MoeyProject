@@ -206,14 +206,8 @@ export default function Show({ rabJasa }: Props) {
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Finishing Dalam
                                         </th>
-                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20">
-                                            Harga FD
-                                        </th>
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Finishing Luar
-                                        </th>
-                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20">
-                                            Harga FL
                                         </th>
                                         <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Qty
@@ -304,26 +298,12 @@ export default function Show({ rabJasa }: Props) {
                                                             )}
                                                         </td>
                                                         
-                                                        {/* Harga Finishing Dalam Column */}
-                                                        {rowIndex === 0 && (
-                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10 border-r border-gray-200 dark:border-gray-700">
-                                                                {formatCurrency(finishingDalamTotal)}
-                                                            </td>
-                                                        )}
-                                                        
                                                         {/* Finishing Luar Column */}
                                                         <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
                                                             {finishingLuarItems[rowIndex] && (
                                                                 <div>• {finishingLuarItems[rowIndex].nama}</div>
                                                             )}
                                                         </td>
-                                                        
-                                                        {/* Harga Finishing Luar Column */}
-                                                        {rowIndex === 0 && (
-                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10 border-r border-gray-200 dark:border-gray-700">
-                                                                {formatCurrency(finishingLuarTotal)}
-                                                            </td>
-                                                        )}
                                                         
                                                         {/* Qty Column */}
                                                         {rowIndex === 0 && (
@@ -332,7 +312,7 @@ export default function Show({ rabJasa }: Props) {
                                                             </td>
                                                         )}
                                                         
-                                                        {/* Total Items Column */}
+                                                        {/* Total Finishing Column */}
                                                         {rowIndex === 0 && (
                                                             <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-bold text-purple-700 dark:text-purple-400 bg-purple-50/50 dark:bg-purple-900/10 border-r border-gray-200 dark:border-gray-700">
                                                                 {formatCurrency(totalItems)}

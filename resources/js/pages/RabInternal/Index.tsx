@@ -18,6 +18,7 @@ interface RabInternal {
 
 interface ItemPekerjaan {
     id: number;
+    status: 'draft' | 'published';
     order: Order;
     rabInternal: RabInternal | null;
 }
@@ -131,6 +132,9 @@ export default function Index({ itemPekerjaans }: Props) {
                                                     Customer
                                                 </th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                                                    Status Item Pekerjaan
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
                                                     Status RAB
                                                 </th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
@@ -149,6 +153,17 @@ export default function Index({ itemPekerjaans }: Props) {
                                                     </td>
                                                     <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-300">
                                                         {itemPekerjaan.order.customer_name}
+                                                    </td>
+                                                    <td className="whitespace-nowrap px-6 py-4 text-sm">
+                                                        {itemPekerjaan.status === 'published' ? (
+                                                            <span className="inline-flex rounded-full bg-emerald-100 px-2 text-xs font-semibold leading-5 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+                                                                ✓ Published
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex rounded-full bg-amber-100 px-2 text-xs font-semibold leading-5 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                                                                📝 Draft
+                                                            </span>
+                                                        )}
                                                     </td>
                                                     <td className="whitespace-nowrap px-6 py-4 text-sm">
                                                         {itemPekerjaan.rabInternal ? (
@@ -178,13 +193,17 @@ export default function Index({ itemPekerjaans }: Props) {
                                                                     Edit
                                                                 </Link>
                                                             </div>
-                                                        ) : (
+                                                        ) : itemPekerjaan.status === 'published' ? (
                                                             <button
                                                                 onClick={() => handleResponse(itemPekerjaan.id)}
                                                                 className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
                                                             >
                                                                 Response RAB
                                                             </button>
+                                                        ) : (
+                                                            <span className="text-gray-400 text-xs italic">
+                                                                Submit Item Pekerjaan dahulu
+                                                            </span>
                                                         )}
                                                     </td>
                                                 </tr>

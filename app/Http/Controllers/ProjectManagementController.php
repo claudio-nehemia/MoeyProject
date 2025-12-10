@@ -15,18 +15,32 @@ class ProjectManagementController extends Controller
     {
         $orders = Order::with([
             'moodboard.itemPekerjaans.produks.itemPekerjaan.rabVendor.rabVendorProduks',
+            'moodboard.itemPekerjaans.kontrak',
         ])
             ->whereHas('moodboard.itemPekerjaans.invoice', function ($q) {
                 $q->whereNotNull('bukti_bayar');
             })
             ->get()
             ->map(function ($order) {
+                // Get deadline status from kontrak
+                $deadlineStatus = null;
+                $sisaHari = null;
+                foreach ($order->moodboard->itemPekerjaans as $ip) {
+                    if ($ip->kontrak) {
+                        $deadlineStatus = $ip->kontrak->deadline_status;
+                        $sisaHari = $ip->kontrak->sisa_hari;
+                        break;
+                    }
+                }
+                
                 return [
-                    'id'            => $order->id,
-                    'nama_project'  => $order->nama_project,
-                    'company_name'  => $order->company_name,
-                    'customer_name' => $order->customer_name,
-                    'progress'      => $order->progress,
+                    'id'              => $order->id,
+                    'nama_project'    => $order->nama_project,
+                    'company_name'    => $order->company_name,
+                    'customer_name'   => $order->customer_name,
+                    'progress'        => $order->progress,
+                    'deadline_status' => $deadlineStatus,
+                    'sisa_hari'       => $sisaHari,
                 ];
             });
 

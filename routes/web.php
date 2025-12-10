@@ -263,6 +263,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // DESAIN FINAL ROUTES
     Route::middleware(['permission:desain-final.index'])->group(function () {
         Route::get('desain-final', [DesainFinalController::class, 'index'])->name('desain-final.index');
+        Route::post('desain-final/response/{moodboardId}', [DesainFinalController::class, 'responseDesainFinal'])
+            ->middleware('permission:desain-final.create')->name('desain-final.response');
         Route::post('desain-final/upload', [DesainFinalController::class, 'uploadDesainFinal'])
             ->middleware('permission:desain-final.create')->name('desain-final.upload');
         Route::post('desain-final/accept/{moodboardId}', [DesainFinalController::class, 'acceptDesainFinal'])

@@ -166,26 +166,20 @@ export default function Show({ rabKontrak }: Props) {
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Finishing Dalam
                                         </th>
-                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20">
-                                            Harga FD
-                                        </th>
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Finishing Luar
-                                        </th>
-                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20">
-                                            Harga FL
                                         </th>
                                         <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Qty
                                         </th>
                                         <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20">
-                                            Total Non-Aks
+                                            Total Item
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Aksesoris
                                         </th>
                                         <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20">
-                                            Harga Aks
+                                            Total Aksesoris
                                         </th>
                                         <th className="bg-green-100 px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-green-800 dark:bg-green-900/30 dark:text-green-400">
                                             Grand Total
@@ -201,31 +195,24 @@ export default function Show({ rabKontrak }: Props) {
                                         const finishingDalamItems: { nama: string; harga: number }[] = [];
                                         const finishingLuarItems: { nama: string; harga: number }[] = [];
                                         
-                                        let finishingDalamTotal = 0;
-                                        let finishingLuarTotal = 0;
-                                        
                                         produk.jenis_items.forEach((jenisItem) => {
                                             const namaJenis = jenisItem.nama_jenis.toLowerCase();
                                             if (namaJenis === 'finishing dalam') {
                                                 jenisItem.items.forEach(item => {
                                                     const harga = Number(item.harga_total) || 0;
                                                     finishingDalamItems.push({ nama: item.nama_item, harga });
-                                                    finishingDalamTotal += harga;
                                                 });
                                             } else if (namaJenis === 'finishing luar') {
                                                 jenisItem.items.forEach(item => {
                                                     const harga = Number(item.harga_total) || 0;
                                                     finishingLuarItems.push({ nama: item.nama_item, harga });
-                                                    finishingLuarTotal += harga;
                                                 });
                                             }
                                         });
 
-                                        // Calculate total non-aksesoris (only finishing items)
-                                        const totalNonAksesoris = finishingDalamTotal + finishingLuarTotal;
-
-                                        // Calculate total aksesoris
+                                        // Calculate total item = harga_akhir - total aksesoris
                                         const totalAksesoris = produk.aksesoris.reduce((sum, aks) => sum + (Number(aks.harga_total) || 0), 0);
+                                        const totalItem = Number(produk.harga_akhir) - totalAksesoris;
                                         
                                         const maxRows = Math.max(
                                             bahanBakuNames.length,
@@ -274,26 +261,12 @@ export default function Show({ rabKontrak }: Props) {
                                                             )}
                                                         </td>
                                                         
-                                                        {/* Harga Finishing Dalam Column */}
-                                                        {rowIndex === 0 && (
-                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10 border-r border-gray-200 dark:border-gray-700">
-                                                                {formatCurrency(finishingDalamTotal)}
-                                                            </td>
-                                                        )}
-                                                        
                                                         {/* Finishing Luar Column */}
                                                         <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
                                                             {finishingLuarItems[rowIndex] && (
                                                                 <div>• {finishingLuarItems[rowIndex].nama}</div>
                                                             )}
                                                         </td>
-                                                        
-                                                        {/* Harga Finishing Luar Column */}
-                                                        {rowIndex === 0 && (
-                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10 border-r border-gray-200 dark:border-gray-700">
-                                                                {formatCurrency(finishingLuarTotal)}
-                                                            </td>
-                                                        )}
                                                         
                                                         {/* Qty Column */}
                                                         {rowIndex === 0 && (
@@ -302,26 +275,26 @@ export default function Show({ rabKontrak }: Props) {
                                                             </td>
                                                         )}
                                                         
-                                                        {/* Total Non-Aksesoris Column */}
+                                                        {/* Total Item Column */}
                                                         {rowIndex === 0 && (
                                                             <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-bold text-purple-700 dark:text-purple-400 bg-purple-50/50 dark:bg-purple-900/10 border-r border-gray-200 dark:border-gray-700">
-                                                                {formatCurrency(totalNonAksesoris)}
+                                                                {formatCurrency(totalItem)}
                                                             </td>
                                                         )}
                                                         
-                                                        {/* Aksesoris Column */}
+                                                        {/* Aksesoris Column with price per item */}
                                                         <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
                                                             {produk.aksesoris[rowIndex] && (
                                                                 <div>
-                                                                    • {produk.aksesoris[rowIndex].nama_aksesoris} 
-                                                                    <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                                                                        (Qty: {produk.aksesoris[rowIndex].qty_aksesoris})
-                                                                    </span>
+                                                                    <div className="font-medium">• {produk.aksesoris[rowIndex].nama_aksesoris}</div>
+                                                                    <div className="text-xs text-gray-500 dark:text-gray-400 ml-3">
+                                                                        Qty: {produk.aksesoris[rowIndex].qty_aksesoris} × {formatCurrency(produk.aksesoris[rowIndex].harga_satuan_aksesoris)} = {formatCurrency(produk.aksesoris[rowIndex].harga_total)}
+                                                                    </div>
                                                                 </div>
                                                             )}
                                                         </td>
                                                         
-                                                        {/* Harga Aksesoris Column */}
+                                                        {/* Total Aksesoris Column */}
                                                         {rowIndex === 0 && (
                                                             <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-orange-700 dark:text-orange-400 bg-orange-50/50 dark:bg-orange-900/10 border-r border-gray-200 dark:border-gray-700">
                                                                 {formatCurrency(totalAksesoris)}

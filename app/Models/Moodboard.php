@@ -12,6 +12,8 @@ class Moodboard extends Model
         'moodboard_final',
         'response_time',
         'response_by',
+        'response_final_time',
+        'response_final_by',
         'status',
         'notes',
         'revisi_final',
