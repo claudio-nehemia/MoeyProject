@@ -189,6 +189,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('permission:survey-results.edit')->name('survey-results.edit');
     Route::put('survey-results/{surveyResult}', [SurveyResultsController::class, 'update'])
         ->middleware('permission:survey-results.edit')->name('survey-results.update');
+    Route::delete('survey-results/{surveyResult}/file/{fileIndex}', [SurveyResultsController::class, 'deleteFile'])
+        ->middleware('permission:survey-results.edit')->name('survey-results.delete-file');
     Route::get('survey-results/{surveyResult}', [SurveyResultsController::class, 'show'])
         ->middleware('permission:survey-results.show')->name('survey-results.show');
 
@@ -261,6 +263,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // DESAIN FINAL ROUTES
     Route::middleware(['permission:desain-final.index'])->group(function () {
         Route::get('desain-final', [DesainFinalController::class, 'index'])->name('desain-final.index');
+        Route::post('desain-final/response/{moodboardId}', [DesainFinalController::class, 'responseDesainFinal'])
+            ->middleware('permission:desain-final.create')->name('desain-final.response');
         Route::post('desain-final/upload', [DesainFinalController::class, 'uploadDesainFinal'])
             ->middleware('permission:desain-final.create')->name('desain-final.upload');
         Route::post('desain-final/accept/{moodboardId}', [DesainFinalController::class, 'acceptDesainFinal'])
@@ -368,6 +372,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('permission:kontrak.edit')->put('kontrak/{kontrak}', [KontrakController::class, 'update'])->name('kontrak.update');
     Route::middleware('permission:kontrak.delete')->delete('kontrak/{kontrak}', [KontrakController::class, 'destroy'])->name('kontrak.destroy');
     Route::middleware('permission:kontrak.show')->get('kontrak/{kontrak}/print', [KontrakController::class, 'print'])->name('kontrak.print');
+    
+    // Signed Contract Routes
+    Route::middleware('permission:kontrak.edit')->post('kontrak/{kontrak}/upload-signed', [KontrakController::class, 'uploadSignedContract'])->name('kontrak.upload-signed');
+    Route::middleware('permission:kontrak.show')->get('kontrak/{kontrak}/download-signed', [KontrakController::class, 'downloadSignedContract'])->name('kontrak.download-signed');
+    Route::middleware('permission:kontrak.edit')->delete('kontrak/{kontrak}/delete-signed', [KontrakController::class, 'deleteSignedContract'])->name('kontrak.delete-signed');
 
     // INVOICE ROUTES
     Route::middleware(['permission:invoice.index'])->group(function () {

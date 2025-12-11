@@ -85,12 +85,12 @@
             color: #1e40af;
         }
         
-        table th.total-non-aks {
+        table th.total-item {
             background: #f3e8ff;
             color: #7c3aed;
         }
         
-        table th.harga-aks {
+        table th.total-aks {
             background: #ffedd5;
             color: #c2410c;
         }
@@ -126,17 +126,23 @@
             text-align: right;
         }
         
-        .total-non-aks-cell {
+        .total-item-cell {
             background: #faf5ff;
             color: #7c3aed;
             font-weight: bold;
             text-align: right;
         }
         
-        .harga-aks-cell {
+        .total-aks-cell {
             background: #fff7ed;
             color: #c2410c;
             text-align: right;
+        }
+        
+        .aksesoris-detail {
+            font-size: 7px;
+            color: #6b7280;
+            margin-left: 8px;
         }
         
         .grand-total-cell {
@@ -227,17 +233,15 @@
         <thead>
             <tr>
                 <th style="width: 12%;">Produk</th>
-                <th class="harga-col text-right" style="width: 8%;">Harga Dasar</th>
-                <th style="width: 10%;">Bahan Baku</th>
-                <th style="width: 10%;">Finishing Dalam</th>
-                <th class="harga-col text-right" style="width: 7%;">Harga FD</th>
-                <th style="width: 10%;">Finishing Luar</th>
-                <th class="harga-col text-right" style="width: 7%;">Harga FL</th>
-                <th class="text-center" style="width: 4%;">Qty</th>
-                <th class="total-non-aks text-right" style="width: 8%;">Total Non-Aks</th>
-                <th style="width: 10%;">Aksesoris</th>
-                <th class="harga-aks text-right" style="width: 7%;">Harga Aks</th>
-                <th class="grand-total-header text-right" style="width: 9%;">Grand Total</th>
+                <th class="harga-col text-right" style="width: 10%;">Harga Dasar</th>
+                <th style="width: 12%;">Bahan Baku</th>
+                <th style="width: 12%;">Finishing Dalam</th>
+                <th style="width: 12%;">Finishing Luar</th>
+                <th class="text-center" style="width: 5%;">Qty</th>
+                <th class="total-item text-right" style="width: 10%;">Total Item</th>
+                <th style="width: 14%;">Aksesoris</th>
+                <th class="total-aks text-right" style="width: 10%;">Total Aksesoris</th>
+                <th class="grand-total-header text-right" style="width: 10%;">Grand Total</th>
             </tr>
         </thead>
         <tbody>
@@ -249,34 +253,31 @@
                     // Group items by jenis (only for finishing)
                     $finishingDalamItems = [];
                     $finishingLuarItems = [];
-                    $finishingDalamTotal = 0;
-                    $finishingLuarTotal = 0;
 
                     foreach ($produk['jenis_items'] as $jenisItem) {
                         $namaJenis = strtolower($jenisItem['nama_jenis']);
                         foreach ($jenisItem['items'] as $item) {
-                            $harga = $item['harga_total'] ?? 0;
                             if ($namaJenis === 'finishing dalam') {
                                 $finishingDalamItems[] = $item['nama_item'];
-                                $finishingDalamTotal += $harga;
                             } elseif ($namaJenis === 'finishing luar') {
                                 $finishingLuarItems[] = $item['nama_item'];
-                                $finishingLuarTotal += $harga;
                             }
                         }
                     }
 
-                    $totalNonAksesoris = $finishingDalamTotal + $finishingLuarTotal;
-                    
-                    // Aksesoris
-                    $aksesorisItems = [];
+                    // Calculate total aksesoris
                     $totalAksesoris = 0;
                     foreach ($produk['aksesoris'] ?? [] as $aks) {
-                        $aksesorisItems[] = $aks['nama_aksesoris'] . ' (Qty: ' . $aks['qty_aksesoris'] . ')';
                         $totalAksesoris += $aks['harga_total'] ?? 0;
                     }
+                    
+                    // Calculate total item = harga_akhir - total aksesoris
+                    $totalItem = ($produk['harga_akhir'] ?? 0) - $totalAksesoris;
+                    
+                    // Aksesoris with details
+                    $aksesorisData = $produk['aksesoris'] ?? [];
 
-                    $maxRows = max(count($bahanBakuNames), count($finishingDalamItems), count($finishingLuarItems), count($aksesorisItems), 1);
+                    $maxRows = max(count($bahanBakuNames), count($finishingDalamItems), count($finishingLuarItems), count($aksesorisData), 1);
                 @endphp
 
                 @for($rowIndex = 0; $rowIndex < $maxRows; $rowIndex++)
@@ -305,12 +306,6 @@
                             @endif
                         </td>
 
-                        @if($rowIndex === 0)
-                            <td rowspan="{{ $maxRows }}" class="harga-col-cell">
-                                Rp {{ number_format($finishingDalamTotal, 0, ',', '.') }}
-                            </td>
-                        @endif
-
                         <td>
                             @if(isset($finishingLuarItems[$rowIndex]))
                                 • {{ $finishingLuarItems[$rowIndex] }}
@@ -318,25 +313,25 @@
                         </td>
 
                         @if($rowIndex === 0)
-                            <td rowspan="{{ $maxRows }}" class="harga-col-cell">
-                                Rp {{ number_format($finishingLuarTotal, 0, ',', '.') }}
-                            </td>
                             <td rowspan="{{ $maxRows }}" class="text-center">
                                 {{ $produk['qty_produk'] }}
                             </td>
-                            <td rowspan="{{ $maxRows }}" class="total-non-aks-cell">
-                                Rp {{ number_format($totalNonAksesoris, 0, ',', '.') }}
+                            <td rowspan="{{ $maxRows }}" class="total-item-cell">
+                                Rp {{ number_format($totalItem, 0, ',', '.') }}
                             </td>
                         @endif
 
                         <td>
-                            @if(isset($aksesorisItems[$rowIndex]))
-                                • {{ $aksesorisItems[$rowIndex] }}
+                            @if(isset($aksesorisData[$rowIndex]))
+                                <div>• {{ $aksesorisData[$rowIndex]['nama_aksesoris'] }}</div>
+                                <div class="aksesoris-detail">
+                                    Qty: {{ $aksesorisData[$rowIndex]['qty_aksesoris'] }} × Rp {{ number_format($aksesorisData[$rowIndex]['harga_satuan_aksesoris'] ?? 0, 0, ',', '.') }} = Rp {{ number_format($aksesorisData[$rowIndex]['harga_total'] ?? 0, 0, ',', '.') }}
+                                </div>
                             @endif
                         </td>
 
                         @if($rowIndex === 0)
-                            <td rowspan="{{ $maxRows }}" class="harga-aks-cell">
+                            <td rowspan="{{ $maxRows }}" class="total-aks-cell">
                                 Rp {{ number_format($totalAksesoris, 0, ',', '.') }}
                             </td>
                             <td rowspan="{{ $maxRows }}" class="grand-total-cell">

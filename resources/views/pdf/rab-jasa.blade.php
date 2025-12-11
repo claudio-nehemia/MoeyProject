@@ -230,15 +230,13 @@
         <thead>
             <tr>
                 <th style="width: 14%;">Produk</th>
-                <th class="harga-jasa text-right" style="width: 9%;">Harga Jasa</th>
-                <th style="width: 14%;">Bahan Baku</th>
-                <th style="width: 12%;">Finishing Dalam</th>
-                <th class="harga-col text-right" style="width: 9%;">Harga FD</th>
-                <th style="width: 12%;">Finishing Luar</th>
-                <th class="harga-col text-right" style="width: 9%;">Harga FL</th>
-                <th class="text-center" style="width: 5%;">Qty</th>
-                <th class="total-items text-right" style="width: 9%;">Total Items</th>
-                <th class="grand-total-header text-right" style="width: 10%;">Grand Total</th>
+                <th class="harga-jasa text-right" style="width: 12%;">Harga Jasa</th>
+                <th style="width: 16%;">Bahan Baku</th>
+                <th style="width: 16%;">Finishing Dalam</th>
+                <th style="width: 16%;">Finishing Luar</th>
+                <th class="text-center" style="width: 6%;">Qty</th>
+                <th class="total-items text-right" style="width: 12%;">Total Items</th>
+                <th class="grand-total-header text-right" style="width: 12%;">Grand Total</th>
             </tr>
         </thead>
         <tbody>
@@ -297,12 +295,6 @@
                             @endif
                         </td>
 
-                        @if($rowIndex === 0)
-                            <td rowspan="{{ $maxRows }}" class="harga-col-cell">
-                                Rp {{ number_format($finishingDalamTotal, 0, ',', '.') }}
-                            </td>
-                        @endif
-
                         <td>
                             @if(isset($finishingLuarItems[$rowIndex]))
                                 • {{ $finishingLuarItems[$rowIndex] }}
@@ -310,9 +302,6 @@
                         </td>
 
                         @if($rowIndex === 0)
-                            <td rowspan="{{ $maxRows }}" class="harga-col-cell">
-                                Rp {{ number_format($finishingLuarTotal, 0, ',', '.') }}
-                            </td>
                             <td rowspan="{{ $maxRows }}" class="text-center">
                                 {{ $produk['qty_produk'] }}
                             </td>

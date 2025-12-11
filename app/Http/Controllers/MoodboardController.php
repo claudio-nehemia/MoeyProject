@@ -17,7 +17,7 @@ class MoodboardController extends Controller
      */
     public function index()
     {
-        $orders = Order::with(['moodboard.estimasi', 'moodboard.itemPekerjaan', 'moodboard.commitmentFee', 'moodboard.kasarFiles', 'moodboard.finalFiles', 'jenisInterior', 'users.role'])
+        $orders = Order::with(['moodboard.estimasi', 'moodboard.itemPekerjaan', 'moodboard.commitmentFee', 'moodboard.kasarFiles.estimasiFile', 'moodboard.finalFiles', 'jenisInterior', 'users.role'])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($order) {
@@ -39,6 +39,12 @@ class MoodboardController extends Controller
                                 'file_path' => $file->file_path,
                                 'original_name' => $file->original_name,
                                 'url' => asset('storage/' . $file->file_path),
+                                'estimasi_file' => $file->estimasiFile ? [
+                                    'id' => $file->estimasiFile->id,
+                                    'file_path' => $file->estimasiFile->file_path,
+                                    'original_name' => $file->estimasiFile->original_name,
+                                    'url' => asset('storage/' . $file->estimasiFile->file_path),
+                                ] : null,
                             ];
                         }),
                         'final_files' => $order->moodboard->finalFiles->map(function ($file) {

@@ -125,6 +125,7 @@ class WorkplanItemController extends Controller
                     return [
                         'id' => $produk->id,
                         'nama_produk' => $produk->produk->nama_produk,
+                        'nama_ruangan' => $produk->nama_ruangan,
                         'quantity' => $produk->quantity,
                         'dimensi' => "{$produk->panjang}×{$produk->lebar}×{$produk->tinggi}",
                         'workplan_items' => $workplanItems->map(fn($wp) => [

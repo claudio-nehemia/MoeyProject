@@ -49,6 +49,7 @@ interface ItemPekerjaan {
     id: number;
     response_by: string;
     response_time: string;
+    status: 'draft' | 'published';
     produks: ItemPekerjaanProduk[];
 }
 
@@ -237,7 +238,15 @@ export default function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: 
                                                     Response Input Item Pekerjaan
                                                 </button>
                                             ) : (
-                                                <div className="flex gap-2">
+                                                <div className="flex items-center gap-2">
+                                                    {/* Status Badge */}
+                                                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                                        moodboard.itemPekerjaan.status === 'published' 
+                                                            ? 'bg-emerald-100 text-emerald-700' 
+                                                            : 'bg-amber-100 text-amber-700'
+                                                    }`}>
+                                                        {moodboard.itemPekerjaan.status === 'published' ? '✓ Published' : '📝 Draft'}
+                                                    </span>
                                                     <Link
                                                         href={`/item-pekerjaan/${moodboard.itemPekerjaan.id}/show`}
                                                         className="rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-700"
@@ -259,8 +268,16 @@ export default function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: 
                                     {moodboard.itemPekerjaan && (
                                         <div className="p-6">
                                             {/* Response Info */}
-                                            <div className="rounded-lg bg-blue-50 p-4">
-                                                <div className="flex items-center gap-2 text-sm text-blue-800">
+                                            <div className={`rounded-lg p-4 ${
+                                                moodboard.itemPekerjaan.status === 'published' 
+                                                    ? 'bg-blue-50' 
+                                                    : 'bg-amber-50'
+                                            }`}>
+                                                <div className={`flex items-center gap-2 text-sm ${
+                                                    moodboard.itemPekerjaan.status === 'published' 
+                                                        ? 'text-blue-800' 
+                                                        : 'text-amber-800'
+                                                }`}>
                                                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                     </svg>
@@ -268,9 +285,18 @@ export default function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: 
                                                         <strong>Response by:</strong> {moodboard.itemPekerjaan.response_by} • {formatDateTime(moodboard.itemPekerjaan.response_time)}
                                                     </span>
                                                 </div>
-                                                <div className="mt-3 text-sm text-blue-700">
+                                                <div className={`mt-3 text-sm ${
+                                                    moodboard.itemPekerjaan.status === 'published' 
+                                                        ? 'text-blue-700' 
+                                                        : 'text-amber-700'
+                                                }`}>
                                                     <strong>Total Produk:</strong> {moodboard.itemPekerjaan.produks.length} produk
                                                 </div>
+                                                {moodboard.itemPekerjaan.status === 'draft' && (
+                                                    <div className="mt-2 text-xs text-amber-600">
+                                                        ⚠️ Status masih draft. RAB Internal belum bisa diproses sampai di-publish.
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     )}

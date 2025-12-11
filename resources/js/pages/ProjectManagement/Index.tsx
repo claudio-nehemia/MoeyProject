@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 
@@ -9,11 +9,16 @@ type Order = {
     company_name: string;
     customer_name: string;
     progress: number;
+    deadline_status: 'overdue' | 'urgent' | 'warning' | 'normal' | null;
+    sisa_hari: number | null;
 };
+
+type FilterType = 'semua' | 'belum_mulai' | 'proses' | 'deadline' | 'selesai';
 
 export default function Index({ orders }: { orders: Order[] }) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [animatedProgress, setAnimatedProgress] = useState<{[key: number]: number}>({});
+    const [activeFilter, setActiveFilter] = useState<FilterType>('semua');
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -25,6 +30,43 @@ export default function Index({ orders }: { orders: Order[] }) {
         }, 100);
         return () => clearTimeout(timer);
     }, [orders]);
+
+    // Filter logic
+    const filteredOrders = useMemo(() => {
+        return orders.filter(order => {
+            switch (activeFilter) {
+                case 'belum_mulai':
+                    return order.progress === 0;
+                case 'proses':
+                    return order.progress > 0 && order.progress < 100 && (order.deadline_status !== 'overdue' && (order.sisa_hari === null || order.sisa_hari > 0));
+                case 'deadline':
+                    return order.deadline_status === 'overdue' || (order.sisa_hari !== null && order.sisa_hari <= 0 && order.progress < 100);
+                case 'selesai':
+                    return order.progress >= 100;
+                default:
+                    return true;
+            }
+        });
+    }, [orders, activeFilter]);
+
+    // Count for each filter
+    const filterCounts = useMemo(() => {
+        return {
+            semua: orders.length,
+            belum_mulai: orders.filter(o => o.progress === 0).length,
+            proses: orders.filter(o => o.progress > 0 && o.progress < 100 && (o.deadline_status !== 'overdue' && (o.sisa_hari === null || o.sisa_hari > 0))).length,
+            deadline: orders.filter(o => o.deadline_status === 'overdue' || (o.sisa_hari !== null && o.sisa_hari <= 0 && o.progress < 100)).length,
+            selesai: orders.filter(o => o.progress >= 100).length,
+        };
+    }, [orders]);
+
+    const filters: { key: FilterType; label: string; icon: string; color: string; bgColor: string }[] = [
+        { key: 'semua', label: 'Semua', icon: '📋', color: 'text-gray-700', bgColor: 'bg-gray-100 hover:bg-gray-200' },
+        { key: 'belum_mulai', label: 'Belum Mulai', icon: '⏸️', color: 'text-slate-700', bgColor: 'bg-slate-100 hover:bg-slate-200' },
+        { key: 'proses', label: 'Proses', icon: '🔄', color: 'text-blue-700', bgColor: 'bg-blue-100 hover:bg-blue-200' },
+        { key: 'deadline', label: 'Deadline', icon: '⚠️', color: 'text-red-700', bgColor: 'bg-red-100 hover:bg-red-200' },
+        { key: 'selesai', label: 'Selesai', icon: '✅', color: 'text-green-700', bgColor: 'bg-green-100 hover:bg-green-200' },
+    ];
 
     const getProgressColor = (progress: number) => {
         if (progress === 100) return 'from-green-400 to-emerald-600';
@@ -69,8 +111,33 @@ export default function Index({ orders }: { orders: Order[] }) {
                             </p>
                         </div>
 
+                        {/* Filter Buttons */}
+                        <div className="mb-6 flex flex-wrap gap-2">
+                            {filters.map((filter) => (
+                                <button
+                                    key={filter.key}
+                                    onClick={() => setActiveFilter(filter.key)}
+                                    className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
+                                        activeFilter === filter.key
+                                            ? `${filter.bgColor} ${filter.color} ring-2 ring-offset-2 ring-${filter.key === 'semua' ? 'gray' : filter.key === 'belum_mulai' ? 'slate' : filter.key === 'proses' ? 'blue' : filter.key === 'deadline' ? 'red' : 'green'}-400 shadow-md`
+                                            : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                                    }`}
+                                >
+                                    <span>{filter.icon}</span>
+                                    <span>{filter.label}</span>
+                                    <span className={`ml-1 rounded-full px-2 py-0.5 text-xs font-bold ${
+                                        activeFilter === filter.key
+                                            ? 'bg-white/50'
+                                            : 'bg-gray-100'
+                                    }`}>
+                                        {filterCounts[filter.key]}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {orders.map((order, index) => (
+                            {filteredOrders.map((order, index) => (
                                 <Link
                                     href={`/project-management/${order.id}`}
                                     key={order.id}
@@ -147,15 +214,27 @@ export default function Index({ orders }: { orders: Order[] }) {
                             }
                         `}</style>
 
-                        {orders.length === 0 && (
+                        {filteredOrders.length === 0 && (
                             <div className="text-center py-12 bg-white rounded-lg shadow-sm">
                                 <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                                 </svg>
-                                <h3 className="mt-2 text-sm font-medium text-gray-900">Tidak ada project</h3>
+                                <h3 className="mt-2 text-sm font-medium text-gray-900">
+                                    {activeFilter === 'semua' ? 'Tidak ada project' : `Tidak ada project dengan status "${filters.find(f => f.key === activeFilter)?.label}"`}
+                                </h3>
                                 <p className="mt-1 text-sm text-gray-500">
-                                    Belum ada project yang tersedia untuk dikelola.
+                                    {activeFilter === 'semua' 
+                                        ? 'Belum ada project yang tersedia untuk dikelola.'
+                                        : 'Coba pilih filter lain untuk melihat project lainnya.'}
                                 </p>
+                                {activeFilter !== 'semua' && (
+                                    <button
+                                        onClick={() => setActiveFilter('semua')}
+                                        className="mt-4 inline-flex items-center rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+                                    >
+                                        Lihat Semua Project
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>

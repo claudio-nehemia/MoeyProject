@@ -17,4 +17,9 @@ class MoodboardFile extends Model
     {
         return $this->belongsTo(Moodboard::class);
     }
+
+    public function estimasiFile()
+    {
+        return $this->hasOne(EstimasiFile::class);
+    }
 }

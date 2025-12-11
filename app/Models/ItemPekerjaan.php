@@ -10,6 +10,7 @@ class ItemPekerjaan extends Model
         'moodboard_id',
         'response_by',
         'response_time',
+        'status',
         'workplan_start_date',
         'workplan_end_date',
         'unlocked_step',

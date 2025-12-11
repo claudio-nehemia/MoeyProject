@@ -29,6 +29,7 @@ class RabInternalController extends Controller
             ->map(function ($itemPekerjaan) {
                 return [
                     'id' => $itemPekerjaan->id,
+                    'status' => $itemPekerjaan->status,
                     'order' => [
                         'nama_project' => $itemPekerjaan->moodboard->order->nama_project,
                         'company_name' => $itemPekerjaan->moodboard->order->company_name,
@@ -52,6 +53,11 @@ class RabInternalController extends Controller
     {
         try {
             $itemPekerjaan = ItemPekerjaan::findOrFail($itemPekerjaanId);
+
+            // Check if item pekerjaan status is published
+            if ($itemPekerjaan->status !== 'published') {
+                return back()->with('error', 'Item Pekerjaan masih dalam status draft. Harap publish terlebih dahulu.');
+            }
 
             if ($itemPekerjaan->rabInternal) {
                 return back()->with('error', 'RAB Internal sudah ada untuk item pekerjaan ini.');
@@ -142,6 +148,7 @@ class RabInternalController extends Controller
                             'id' => $produk->id,
                             'item_pekerjaan_produk_id' => $produk->id,
                             'nama_produk' => $produk->produk->nama_produk,
+                            'nama_ruangan' => $produk->nama_ruangan,
                             'qty_produk' => $produk->quantity,
                             'panjang' => $produk->panjang,
                             'lebar' => $produk->lebar,
@@ -326,6 +333,7 @@ class RabInternalController extends Controller
                     return [
                         'id' => $rabProduk->id,
                         'nama_produk' => $rabProduk->itemPekerjaanProduk->produk->nama_produk,
+                        'nama_ruangan' => $rabProduk->itemPekerjaanProduk->nama_ruangan,
                         'qty_produk' => $rabProduk->itemPekerjaanProduk->quantity,
                         'panjang' => $rabProduk->itemPekerjaanProduk->panjang,
                         'lebar' => $rabProduk->itemPekerjaanProduk->lebar,

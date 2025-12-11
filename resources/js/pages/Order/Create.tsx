@@ -46,6 +46,7 @@ export default function Create({
         customer_additional_info: '',
         nomor_unit: '',
         phone_number: '',
+        alamat: '',
         tanggal_masuk_customer: '',
         tanggal_survey: '',
         project_status: 'pending',
@@ -521,6 +522,28 @@ export default function Create({
                                             </p>
                                         )}
                                     </div>
+                                </div>
+
+                                {/* Alamat */}
+                                <div className="mt-6">
+                                    <label className="mb-2 block text-sm font-semibold text-stone-700">
+                                        <span className="text-red-500">*</span> Alamat
+                                    </label>
+                                    <textarea
+                                        value={data.alamat}
+                                        onChange={(e) =>
+                                            setData('alamat', e.target.value)
+                                        }
+                                        rows={3}
+                                        className="w-full resize-none rounded-lg border border-stone-300 px-4 py-2.5 transition-all outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Masukkan alamat lengkap project"
+                                        required
+                                    />
+                                    {errors.alamat && (
+                                        <p className="mt-1 text-xs text-red-500">
+                                            {errors.alamat}
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Additional Info */}

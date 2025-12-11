@@ -42,6 +42,7 @@ class ItemPekerjaanController extends Controller
                     'id' => $moodboard->itemPekerjaan->id,
                     'response_by' => $moodboard->itemPekerjaan->response_by,
                     'response_time' => $moodboard->itemPekerjaan->response_time,
+                    'status' => $moodboard->itemPekerjaan->status,
                     'produks' => $moodboard->itemPekerjaan->produks->map(function ($produk) {
                         return [
                             'id' => $produk->id,
@@ -159,8 +160,10 @@ class ItemPekerjaanController extends Controller
         try {
             $validated = $request->validate([
                 'item_pekerjaan_id' => 'required|exists:item_pekerjaans,id',
+                'status' => 'required|in:draft,published',
                 'produks' => 'required|array|min:1',
                 'produks.*.produk_id' => 'required|exists:produks,id',
+                'produks.*.nama_ruangan' => 'nullable|string|max:255',
                 'produks.*.quantity' => 'required|integer|min:1',
                 'produks.*.panjang' => 'nullable|numeric|min:0',
                 'produks.*.lebar' => 'nullable|numeric|min:0',
@@ -173,6 +176,10 @@ class ItemPekerjaanController extends Controller
                 'produks.*.jenisItems.*.items.*.item_id' => 'required|exists:items,id',
                 'produks.*.jenisItems.*.items.*.quantity' => 'required|integer|min:1',
             ]);
+
+            // Update item pekerjaan status
+            $itemPekerjaan = ItemPekerjaan::findOrFail($validated['item_pekerjaan_id']);
+            $itemPekerjaan->update(['status' => $validated['status']]);
 
             // Save produks and nested data
             foreach ($validated['produks'] as $produkData) {
@@ -189,6 +196,7 @@ class ItemPekerjaanController extends Controller
 
                 $produk = ItemPekerjaanProduk::create([
                     'item_pekerjaan_id' => $validated['item_pekerjaan_id'],
+                    'nama_ruangan' => $produkData['nama_ruangan'] ?? null,
                     'produk_id' => $produkData['produk_id'],
                     'quantity' => $produkData['quantity'],
                     'panjang' => $panjang,
@@ -259,8 +267,12 @@ class ItemPekerjaanController extends Controller
                 }
             }
 
+            $statusMessage = $validated['status'] === 'draft' 
+                ? 'Data item pekerjaan berhasil disimpan sebagai draft.' 
+                : 'Data item pekerjaan berhasil dipublish.';
+
             return redirect()->route('item-pekerjaan.index')
-                ->with('success', 'Data item pekerjaan berhasil disimpan.');
+                ->with('success', $statusMessage);
         } catch (\Exception $e) {
             Log::error('Store item pekerjaan error: ' . $e->getMessage());
             return back()->with('error', 'Gagal menyimpan data: ' . $e->getMessage());
@@ -299,6 +311,7 @@ class ItemPekerjaanController extends Controller
                         'id' => $produk->id,
                         'produk_id' => $produk->produk_id,
                         'produk_name' => $produk->produk->nama_produk,
+                        'nama_ruangan' => $produk->nama_ruangan,
                         'quantity' => $produk->quantity,
                         'panjang' => $produk->panjang,
                         'lebar' => $produk->lebar,
@@ -374,6 +387,7 @@ class ItemPekerjaanController extends Controller
                         'id' => $produk->id,
                         'produk_id' => $produk->produk_id,
                         'produk_name' => $produk->produk->nama_produk,
+                        'nama_ruangan' => $produk->nama_ruangan,
                         'quantity' => $produk->quantity,
                         'panjang' => $produk->panjang,
                         'lebar' => $produk->lebar,
@@ -403,9 +417,11 @@ class ItemPekerjaanController extends Controller
     {
         try {
             $validated = $request->validate([
+                'status' => 'required|in:draft,published',
                 'produks' => 'required|array|min:1',
                 'produks.*.id' => 'nullable|exists:item_pekerjaan_produks,id',
                 'produks.*.produk_id' => 'required|exists:produks,id',
+                'produks.*.nama_ruangan' => 'nullable|string|max:255',
                 'produks.*.quantity' => 'required|integer|min:1',
                 'produks.*.panjang' => 'nullable|numeric|min:0',
                 'produks.*.lebar' => 'nullable|numeric|min:0',
@@ -423,6 +439,9 @@ class ItemPekerjaanController extends Controller
             ]);
 
             $itemPekerjaan = ItemPekerjaan::findOrFail($itemPekerjaanId);
+            
+            // Update status
+            $itemPekerjaan->update(['status' => $validated['status']]);
 
             // Get existing IDs for deletion
             $existingProdukIds = $itemPekerjaan->produks->pluck('id')->toArray();
@@ -446,6 +465,7 @@ class ItemPekerjaanController extends Controller
 
                     $produk->update([
                         'produk_id' => $produkData['produk_id'],
+                        'nama_ruangan' => $produkData['nama_ruangan'] ?? null,
                         'quantity' => $produkData['quantity'],
                         'panjang' => $panjang,
                         'lebar' => $lebar,
@@ -467,6 +487,7 @@ class ItemPekerjaanController extends Controller
 
                     $produk = ItemPekerjaanProduk::create([
                         'item_pekerjaan_id' => $itemPekerjaanId,
+                        'nama_ruangan' => $produkData['nama_ruangan'] ?? null,
                         'produk_id' => $produkData['produk_id'],
                         'quantity' => $produkData['quantity'],
                         'panjang' => $panjang,
@@ -580,8 +601,12 @@ class ItemPekerjaanController extends Controller
             $produksToDelete = array_diff($existingProdukIds, $submittedProdukIds);
             ItemPekerjaanProduk::whereIn('id', $produksToDelete)->delete();
 
+            $statusMessage = $validated['status'] === 'draft' 
+                ? 'Data item pekerjaan berhasil disimpan sebagai draft.' 
+                : 'Data item pekerjaan berhasil dipublish.';
+
             return redirect()->route('item-pekerjaan.index')
-                ->with('success', 'Data item pekerjaan berhasil diupdate.');
+                ->with('success', $statusMessage);
         } catch (\Exception $e) {
             Log::error('Update item pekerjaan error: ' . $e->getMessage());
             return back()->with('error', 'Gagal update data: ' . $e->getMessage());

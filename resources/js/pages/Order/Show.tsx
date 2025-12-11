@@ -30,6 +30,7 @@ interface OrderDetail {
     customer_additional_info: string;
     nomor_unit: string;
     phone_number: string;
+    alamat: string | null;
     tanggal_masuk_customer: string;
     project_status: string;
     priority_level: string;
@@ -361,6 +362,21 @@ useEffect(() => {
                                 <div className="info-value">{formatDate(order.tanggal_masuk_customer)}</div>
                             </div>
                         </div>
+
+                        {order.alamat && (
+                            <div className="mt-6 pt-6 border-t border-stone-200">
+                                <h3 className="text-sm font-semibold text-stone-700 uppercase mb-3 flex items-center gap-2">
+                                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    Alamat Project
+                                </h3>
+                                <p className="text-stone-700 leading-relaxed bg-blue-50 rounded-lg p-4 border border-blue-100">
+                                    {order.alamat}
+                                </p>
+                            </div>
+                        )}
 
                         {order.customer_additional_info && (
                             <div className="mt-6 pt-6 border-t border-stone-200">

@@ -2,16 +2,15 @@ import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import { Head, router } from '@inertiajs/react';
 import { FormEvent, useEffect, useState } from 'react';
-
-interface BahanBakuPivot {
-    harga_dasar: number;
-    harga_jasa: number;
-}
+import { RuanganCard } from './components';
 
 interface BahanBaku {
     id: number;
     nama_item: string;
-    pivot?: BahanBakuPivot;
+    pivot?: {
+        harga_dasar: number;
+        harga_jasa: number;
+    };
 }
 
 interface Produk {
@@ -35,31 +34,37 @@ interface Item {
 
 interface FormItem {
     id?: number;
-    temp_id: string;
-    item_id: string;
+    temp_id: number;
+    item_id: string | number;
     quantity: number;
     notes: string;
 }
 
 interface FormJenisItem {
     id?: number;
-    temp_id: string;
-    jenis_item_id: string;
+    temp_id: number;
+    jenis_item_id: string | number;
     jenis_item_name?: string;
     items: FormItem[];
 }
 
-interface FormProduk {
+interface ProdukData {
     id?: number;
-    temp_id: string;
-    produk_id: string;
+    temp_id: number;
+    produk_id: string | number;
     produk_name?: string;
     quantity: number;
-    panjang: string;
-    lebar: string;
-    tinggi: string;
+    panjang: string | number;
+    lebar: string | number;
+    tinggi: string | number;
     jenisItems: FormJenisItem[];
-    selected_bahan_bakus: number[]; // IDs of selected bahan baku
+    selected_bahan_bakus: number[];
+}
+
+interface RuanganData {
+    temp_id: number;
+    nama_ruangan: string;
+    produks: ProdukData[];
 }
 
 interface ExistingItem {
@@ -81,15 +86,16 @@ interface ExistingProduk {
     id: number;
     produk_id: number;
     produk_name: string;
+    nama_ruangan: string | null;
     quantity: number;
     panjang: number | null;
     lebar: number | null;
     tinggi: number | null;
     jenisItems: ExistingJenisItem[];
-    selected_bahan_bakus?: number[]; // IDs of selected bahan baku
+    selected_bahan_bakus?: number[];
 }
 
-interface ItemPekerjaan {
+interface ItemPekerjaanType {
     id: number;
     moodboard: {
         order: {
@@ -102,7 +108,7 @@ interface ItemPekerjaan {
 }
 
 interface Props {
-    itemPekerjaan: ItemPekerjaan;
+    itemPekerjaan: ItemPekerjaanType;
     produks: Produk[];
     jenisItems: JenisItem[];
     items: Item[];
@@ -116,9 +122,9 @@ export default function Edit({
 }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [loading, setLoading] = useState(false);
-    const [formProduks, setFormProduks] = useState<FormProduk[]>([]);
+    const [ruangans, setRuangans] = useState<RuanganData[]>([]);
 
-    // Helper function to get default jenis items (Finishing Dalam, Finishing Luar, Aksesoris)
+    // Helper function to get default jenis items
     const getDefaultJenisItems = (): FormJenisItem[] => {
         const defaultNames = ['finishing dalam', 'finishing luar', 'aksesoris'];
         const defaultJenisItems: FormJenisItem[] = [];
@@ -129,7 +135,7 @@ export default function Edit({
             );
             if (jenisItem) {
                 defaultJenisItems.push({
-                    temp_id: `new_${Date.now() + index}`,
+                    temp_id: Date.now() + index,
                     jenis_item_id: jenisItem.id.toString(),
                     jenis_item_name: jenisItem.nama_jenis_item,
                     items: []
@@ -140,270 +146,412 @@ export default function Edit({
         return defaultJenisItems;
     };
 
-    const formatCurrency = (value: number): string => {
-        return new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        }).format(value);
-    };
-
-    // Initialize form with existing data
+    // Initialize form with existing data - group by ruangan
     useEffect(() => {
-        const initialProduks: FormProduk[] = itemPekerjaan.produks.map((p) => ({
-            id: p.id,
-            temp_id: `existing_${p.id}`,
-            produk_id: p.produk_id.toString(),
-            produk_name: p.produk_name,
-            quantity: p.quantity,
-            panjang: p.panjang?.toString() || '',
-            lebar: p.lebar?.toString() || '',
-            tinggi: p.tinggi?.toString() || '',
-            selected_bahan_bakus: p.selected_bahan_bakus || [],
-            jenisItems: p.jenisItems.map((j) => ({
-                id: j.id,
-                temp_id: `existing_${j.id}`,
-                jenis_item_id: j.jenis_item_id.toString(),
-                jenis_item_name: j.jenis_item_name,
-                items: j.items.map((i) => ({
-                    id: i.id,
-                    temp_id: `existing_${i.id}`,
-                    item_id: i.item_id.toString(),
-                    quantity: i.quantity,
-                    notes: i.notes || '',
+        const ruanganMap = new Map<string, ProdukData[]>();
+        
+        itemPekerjaan.produks.forEach((p) => {
+            const ruanganName = p.nama_ruangan || 'Ruangan Tanpa Nama';
+            
+            const produkData: ProdukData = {
+                id: p.id,
+                temp_id: Date.now() + Math.random() * 1000,
+                produk_id: p.produk_id.toString(),
+                produk_name: p.produk_name,
+                quantity: p.quantity,
+                panjang: p.panjang?.toString() || '',
+                lebar: p.lebar?.toString() || '',
+                tinggi: p.tinggi?.toString() || '',
+                selected_bahan_bakus: p.selected_bahan_bakus || [],
+                jenisItems: p.jenisItems.map((j, jIdx) => ({
+                    id: j.id,
+                    temp_id: Date.now() + jIdx + Math.random() * 1000,
+                    jenis_item_id: j.jenis_item_id.toString(),
+                    jenis_item_name: j.jenis_item_name,
+                    items: j.items.map((i, iIdx) => ({
+                        id: i.id,
+                        temp_id: Date.now() + iIdx + Math.random() * 1000,
+                        item_id: i.item_id.toString(),
+                        quantity: i.quantity,
+                        notes: i.notes || '',
+                    })),
                 })),
-            })),
-        }));
-        setFormProduks(initialProduks);
+            };
+            
+            if (!ruanganMap.has(ruanganName)) {
+                ruanganMap.set(ruanganName, []);
+            }
+            ruanganMap.get(ruanganName)!.push(produkData);
+        });
+        
+        const initialRuangans: RuanganData[] = [];
+        let ruanganIdx = 0;
+        ruanganMap.forEach((prods, ruanganName) => {
+            initialRuangans.push({
+                temp_id: Date.now() + ruanganIdx++,
+                nama_ruangan: ruanganName === 'Ruangan Tanpa Nama' ? '' : ruanganName,
+                produks: prods,
+            });
+        });
+        
+        setRuangans(initialRuangans);
     }, [itemPekerjaan]);
 
-    const addProduk = () => {
-        setFormProduks([
-            ...formProduks,
+    // ============ Ruangan Functions ============
+    const addRuangan = () => {
+        setRuangans([
+            ...ruangans,
             {
-                temp_id: `new_${Date.now()}`,
-                produk_id: '',
-                quantity: 1,
-                panjang: '',
-                lebar: '',
-                tinggi: '',
-                jenisItems: getDefaultJenisItems(),
-                selected_bahan_bakus: [],
+                temp_id: Date.now(),
+                nama_ruangan: '',
+                produks: [],
             },
         ]);
     };
 
-    const toggleBahanBaku = (produkTempId: string, bahanBakuId: number) => {
-        setFormProduks(formProduks.map(p => {
-            if (p.temp_id === produkTempId) {
-                const selected = p.selected_bahan_bakus || [];
-                const isSelected = selected.includes(bahanBakuId);
-                return {
-                    ...p,
-                    selected_bahan_bakus: isSelected 
-                        ? selected.filter(id => id !== bahanBakuId)
-                        : [...selected, bahanBakuId]
-                };
-            }
-            return p;
-        }));
+    const removeRuangan = (ruanganTempId: number) => {
+        setRuangans(ruangans.filter((r) => r.temp_id !== ruanganTempId));
     };
 
-    const selectAllBahanBaku = (produkTempId: string, bahanBakuIds: number[]) => {
-        setFormProduks(formProduks.map(p => {
-            if (p.temp_id === produkTempId) {
-                return { ...p, selected_bahan_bakus: bahanBakuIds };
-            }
-            return p;
-        }));
-    };
-
-    const clearAllBahanBaku = (produkTempId: string) => {
-        setFormProduks(formProduks.map(p => {
-            if (p.temp_id === produkTempId) {
-                return { ...p, selected_bahan_bakus: [] };
-            }
-            return p;
-        }));
-    };
-
-    const removeProduk = (tempId: string) => {
-        setFormProduks(formProduks.filter((p) => p.temp_id !== tempId));
-    };
-
-    const updateProduk = (tempId: string, field: string, value: any) => {
-        setFormProduks(
-            formProduks.map((p) =>
-                p.temp_id === tempId ? { ...p, [field]: value } : p,
+    const updateRuanganName = (ruanganTempId: number, nama: string) => {
+        setRuangans(
+            ruangans.map((r) =>
+                r.temp_id === ruanganTempId ? { ...r, nama_ruangan: nama } : r,
             ),
         );
     };
 
-    const addJenisItem = (produkTempId: string) => {
-        setFormProduks(
-            formProduks.map((p) =>
-                p.temp_id === produkTempId
+    // ============ Produk Functions ============
+    const addProdukToRuangan = (ruanganTempId: number) => {
+        setRuangans(
+            ruangans.map((r) =>
+                r.temp_id === ruanganTempId
                     ? {
-                          ...p,
-                          jenisItems: [
-                              ...p.jenisItems,
+                          ...r,
+                          produks: [
+                              ...r.produks,
                               {
-                                  temp_id: `new_${Date.now()}`,
-                                  jenis_item_id: '',
-                                  items: [],
+                                  temp_id: Date.now(),
+                                  produk_id: '',
+                                  quantity: 1,
+                                  panjang: '',
+                                  lebar: '',
+                                  tinggi: '',
+                                  jenisItems: getDefaultJenisItems(),
+                                  selected_bahan_bakus: [],
                               },
                           ],
                       }
-                    : p,
+                    : r,
             ),
         );
     };
 
-    const removeJenisItem = (produkTempId: string, jenisItemTempId: string) => {
-        setFormProduks(
-            formProduks.map((p) =>
-                p.temp_id === produkTempId
+    const removeProdukFromRuangan = (ruanganTempId: number, produkTempId: number) => {
+        setRuangans(
+            ruangans.map((r) =>
+                r.temp_id === ruanganTempId
                     ? {
-                          ...p,
-                          jenisItems: p.jenisItems.filter(
-                              (j) => j.temp_id !== jenisItemTempId,
+                          ...r,
+                          produks: r.produks.filter((p) => p.temp_id !== produkTempId),
+                      }
+                    : r,
+            ),
+        );
+    };
+
+    const updateProdukInRuangan = (ruanganTempId: number, produkTempId: number, field: string, value: any) => {
+        setRuangans(
+            ruangans.map((r) =>
+                r.temp_id === ruanganTempId
+                    ? {
+                          ...r,
+                          produks: r.produks.map((p) =>
+                              p.temp_id === produkTempId ? { ...p, [field]: value } : p,
                           ),
                       }
-                    : p,
+                    : r,
             ),
         );
     };
 
-    const updateJenisItem = (
-        produkTempId: string,
-        jenisItemTempId: string,
-        field: string,
-        value: any,
-    ) => {
-        setFormProduks(
-            formProduks.map((p) =>
-                p.temp_id === produkTempId
+    // ============ Bahan Baku Functions ============
+    const toggleBahanBakuInRuangan = (ruanganTempId: number, produkTempId: number, bahanBakuId: number) => {
+        setRuangans(
+            ruangans.map((r) =>
+                r.temp_id === ruanganTempId
                     ? {
-                          ...p,
-                          jenisItems: p.jenisItems.map((j) =>
-                              j.temp_id === jenisItemTempId
-                                  ? { ...j, [field]: value }
-                                  : j,
+                          ...r,
+                          produks: r.produks.map((p) => {
+                              if (p.temp_id === produkTempId) {
+                                  const selected = p.selected_bahan_bakus || [];
+                                  const isSelected = selected.includes(bahanBakuId);
+                                  return {
+                                      ...p,
+                                      selected_bahan_bakus: isSelected
+                                          ? selected.filter((id) => id !== bahanBakuId)
+                                          : [...selected, bahanBakuId],
+                                  };
+                              }
+                              return p;
+                          }),
+                      }
+                    : r,
+            ),
+        );
+    };
+
+    const selectAllBahanBakuInRuangan = (ruanganTempId: number, produkTempId: number, bahanBakuIds: number[]) => {
+        setRuangans(
+            ruangans.map((r) =>
+                r.temp_id === ruanganTempId
+                    ? {
+                          ...r,
+                          produks: r.produks.map((p) =>
+                              p.temp_id === produkTempId
+                                  ? { ...p, selected_bahan_bakus: bahanBakuIds }
+                                  : p,
                           ),
                       }
-                    : p,
+                    : r,
             ),
         );
     };
 
-    const addItem = (produkTempId: string, jenisItemTempId: string) => {
-        setFormProduks(
-            formProduks.map((p) =>
-                p.temp_id === produkTempId
+    const clearAllBahanBakuInRuangan = (ruanganTempId: number, produkTempId: number) => {
+        setRuangans(
+            ruangans.map((r) =>
+                r.temp_id === ruanganTempId
                     ? {
-                          ...p,
-                          jenisItems: p.jenisItems.map((j) =>
-                              j.temp_id === jenisItemTempId
+                          ...r,
+                          produks: r.produks.map((p) =>
+                              p.temp_id === produkTempId
+                                  ? { ...p, selected_bahan_bakus: [] }
+                                  : p,
+                          ),
+                      }
+                    : r,
+            ),
+        );
+    };
+
+    // ============ Jenis Item Functions ============
+    const addJenisItemInRuangan = (ruanganTempId: number, produkTempId: number) => {
+        setRuangans(
+            ruangans.map((r) =>
+                r.temp_id === ruanganTempId
+                    ? {
+                          ...r,
+                          produks: r.produks.map((p) =>
+                              p.temp_id === produkTempId
                                   ? {
-                                        ...j,
-                                        items: [
-                                            ...j.items,
+                                        ...p,
+                                        jenisItems: [
+                                            ...p.jenisItems,
                                             {
-                                                temp_id: `new_${Date.now()}`,
-                                                item_id: '',
-                                                quantity: 1,
-                                                notes: '',
+                                                temp_id: Date.now(),
+                                                jenis_item_id: '',
+                                                items: [],
                                             },
                                         ],
                                     }
-                                  : j,
+                                  : p,
                           ),
                       }
-                    : p,
+                    : r,
             ),
         );
     };
 
-    const removeItem = (
-        produkTempId: string,
-        jenisItemTempId: string,
-        itemTempId: string,
-    ) => {
-        setFormProduks(
-            formProduks.map((p) =>
-                p.temp_id === produkTempId
+    const removeJenisItemInRuangan = (ruanganTempId: number, produkTempId: number, jenisItemTempId: number) => {
+        setRuangans(
+            ruangans.map((r) =>
+                r.temp_id === ruanganTempId
                     ? {
-                          ...p,
-                          jenisItems: p.jenisItems.map((j) =>
-                              j.temp_id === jenisItemTempId
+                          ...r,
+                          produks: r.produks.map((p) =>
+                              p.temp_id === produkTempId
                                   ? {
-                                        ...j,
-                                        items: j.items.filter(
-                                            (i) => i.temp_id !== itemTempId,
+                                        ...p,
+                                        jenisItems: p.jenisItems.filter(
+                                            (j) => j.temp_id !== jenisItemTempId,
                                         ),
                                     }
-                                  : j,
+                                  : p,
                           ),
                       }
-                    : p,
+                    : r,
             ),
         );
     };
 
-    const updateItem = (
-        produkTempId: string,
-        jenisItemTempId: string,
-        itemTempId: string,
-        field: string,
-        value: any,
-    ) => {
-        setFormProduks(
-            formProduks.map((p) =>
-                p.temp_id === produkTempId
+    const updateJenisItemInRuangan = (ruanganTempId: number, produkTempId: number, jenisItemTempId: number, value: string) => {
+        const selectedJI = jenisItems.find((ji) => ji.id.toString() === value);
+        setRuangans(
+            ruangans.map((r) =>
+                r.temp_id === ruanganTempId
                     ? {
-                          ...p,
-                          jenisItems: p.jenisItems.map((j) =>
-                              j.temp_id === jenisItemTempId
+                          ...r,
+                          produks: r.produks.map((p) =>
+                              p.temp_id === produkTempId
                                   ? {
-                                        ...j,
-                                        items: j.items.map((i) =>
-                                            i.temp_id === itemTempId
-                                                ? { ...i, [field]: value }
-                                                : i,
+                                        ...p,
+                                        jenisItems: p.jenisItems.map((j) =>
+                                            j.temp_id === jenisItemTempId
+                                                ? {
+                                                      ...j,
+                                                      jenis_item_id: value,
+                                                      jenis_item_name: selectedJI?.nama_jenis_item || '',
+                                                  }
+                                                : j,
                                         ),
                                     }
-                                  : j,
+                                  : p,
                           ),
                       }
-                    : p,
+                    : r,
             ),
         );
     };
 
-    const getAvailableItems = (jenisItemId: string) => {
-        return items.filter(
-            (item) => item.jenis_item_id === parseInt(jenisItemId),
+    // ============ Item Functions ============
+    const addItemInRuangan = (ruanganTempId: number, produkTempId: number, jenisItemTempId: number) => {
+        setRuangans(
+            ruangans.map((r) =>
+                r.temp_id === ruanganTempId
+                    ? {
+                          ...r,
+                          produks: r.produks.map((p) =>
+                              p.temp_id === produkTempId
+                                  ? {
+                                        ...p,
+                                        jenisItems: p.jenisItems.map((j) =>
+                                            j.temp_id === jenisItemTempId
+                                                ? {
+                                                      ...j,
+                                                      items: [
+                                                          ...j.items,
+                                                          {
+                                                              temp_id: Date.now(),
+                                                              item_id: '',
+                                                              quantity: 1,
+                                                              notes: '',
+                                                          },
+                                                      ],
+                                                  }
+                                                : j,
+                                        ),
+                                    }
+                                  : p,
+                          ),
+                      }
+                    : r,
+            ),
         );
     };
 
-    const getUsedJenisItemIds = (produkTempId: string) => {
-        const produk = formProduks.find((p) => p.temp_id === produkTempId);
-        return produk
-            ? produk.jenisItems.map((j) => j.jenis_item_id).filter((id) => id)
-            : [];
+    const removeItemInRuangan = (ruanganTempId: number, produkTempId: number, jenisItemTempId: number, itemTempId: number) => {
+        setRuangans(
+            ruangans.map((r) =>
+                r.temp_id === ruanganTempId
+                    ? {
+                          ...r,
+                          produks: r.produks.map((p) =>
+                              p.temp_id === produkTempId
+                                  ? {
+                                        ...p,
+                                        jenisItems: p.jenisItems.map((j) =>
+                                            j.temp_id === jenisItemTempId
+                                                ? {
+                                                      ...j,
+                                                      items: j.items.filter(
+                                                          (i) => i.temp_id !== itemTempId,
+                                                      ),
+                                                  }
+                                                : j,
+                                        ),
+                                    }
+                                  : p,
+                          ),
+                      }
+                    : r,
+            ),
+        );
     };
 
-    const handleSubmit = (e: FormEvent) => {
+    const updateItemInRuangan = (ruanganTempId: number, produkTempId: number, jenisItemTempId: number, itemTempId: number, field: string, value: any) => {
+        setRuangans(
+            ruangans.map((r) =>
+                r.temp_id === ruanganTempId
+                    ? {
+                          ...r,
+                          produks: r.produks.map((p) =>
+                              p.temp_id === produkTempId
+                                  ? {
+                                        ...p,
+                                        jenisItems: p.jenisItems.map((j) =>
+                                            j.temp_id === jenisItemTempId
+                                                ? {
+                                                      ...j,
+                                                      items: j.items.map((i) =>
+                                                          i.temp_id === itemTempId
+                                                              ? { ...i, [field]: value }
+                                                              : i,
+                                                      ),
+                                                  }
+                                                : j,
+                                        ),
+                                    }
+                                  : p,
+                          ),
+                      }
+                    : r,
+            ),
+        );
+    };
+
+    // ============ Submit ============
+    const handleSubmit = (e: FormEvent, status: 'draft' | 'published') => {
         e.preventDefault();
 
-        if (formProduks.length === 0) {
+        // Flatten ruangans into produks array
+        const allProduks: any[] = [];
+        ruangans.forEach((ruangan) => {
+            ruangan.produks.forEach((p) => {
+                allProduks.push({
+                    id: p.id,
+                    produk_id: parseInt(p.produk_id.toString()),
+                    nama_ruangan: ruangan.nama_ruangan || null,
+                    quantity: p.quantity,
+                    panjang: p.panjang ? parseFloat(p.panjang.toString()) : null,
+                    lebar: p.lebar ? parseFloat(p.lebar.toString()) : null,
+                    tinggi: p.tinggi ? parseFloat(p.tinggi.toString()) : null,
+                    bahan_bakus: p.selected_bahan_bakus || [],
+                    jenisItems: p.jenisItems
+                        .filter((j) => j.jenis_item_name?.toLowerCase() !== 'bahan baku')
+                        .map((j) => {
+                            const isAksesoris = j.jenis_item_name?.toLowerCase() === 'aksesoris';
+                            return {
+                                id: j.id,
+                                jenis_item_id: parseInt(j.jenis_item_id.toString()),
+                                items: j.items.map((i) => ({
+                                    id: i.id,
+                                    item_id: parseInt(i.item_id.toString()),
+                                    quantity: isAksesoris ? i.quantity : 1,
+                                    notes: i.notes || null,
+                                })),
+                            };
+                        }),
+                });
+            });
+        });
+
+        if (allProduks.length === 0) {
             alert('Minimal harus ada 1 produk');
             return;
         }
 
-        // Validate
-        for (const produk of formProduks) {
+        for (const produk of allProduks) {
             if (!produk.produk_id) {
                 alert('Semua produk harus dipilih');
                 return;
@@ -412,39 +560,11 @@ export default function Edit({
 
         setLoading(true);
 
-        // Transform data - filter out Bahan Baku
-        const dataToSend = {
-            produks: formProduks.map((p) => ({
-                id: p.id,
-                produk_id: parseInt(p.produk_id),
-                quantity: p.quantity,
-                panjang: p.panjang ? parseFloat(p.panjang) : null,
-                lebar: p.lebar ? parseFloat(p.lebar) : null,
-                tinggi: p.tinggi ? parseFloat(p.tinggi) : null,
-                bahan_bakus: p.selected_bahan_bakus || [], // Send selected bahan baku IDs
-                jenisItems: p.jenisItems
-                    .filter((j) => j.jenis_item_name?.toLowerCase() !== 'bahan baku')
-                    .map((j) => {
-                        const isAksesoris = j.jenis_item_name?.toLowerCase() === 'aksesoris';
-                        return {
-                            id: j.id,
-                            jenis_item_id: parseInt(j.jenis_item_id),
-                            items: j.items.map((i) => ({
-                                id: i.id,
-                                item_id: parseInt(i.item_id),
-                                // Set quantity default 1 untuk non-Aksesoris
-                                quantity: isAksesoris ? i.quantity : 1,
-                                notes: i.notes || null,
-                            })),
-                        };
-                    }),
-            })),
-        };
-
-        router.put(`/item-pekerjaan/${itemPekerjaan.id}/update`, dataToSend, {
-            onSuccess: () => {
-                setLoading(false);
-            },
+        router.put(`/item-pekerjaan/${itemPekerjaan.id}/update`, {
+            status: status,
+            produks: allProduks,
+        }, {
+            onSuccess: () => setLoading(false),
             onError: (errors) => {
                 console.error(errors);
                 alert('Gagal update data');
@@ -453,7 +573,10 @@ export default function Edit({
         });
     };
 
-return (
+    // ============ Count total produks ============
+    const totalProduks = ruangans.reduce((acc, r) => acc + r.produks.length, 0);
+
+    return (
         <>
             <Head title="Edit Item Pekerjaan" />
 
@@ -486,438 +609,127 @@ return (
                         </div>
                     </div>
 
-                    {/* Form */}
-                    <form onSubmit={handleSubmit}>
-                        {/* Add Produk Button */}
-                        <div className="mb-6 flex justify-between items-center">
-                            <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                                <span className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                    </svg>
-                                </span>
-                                Daftar Produk
-                            </h2>
-                            <button
-                                type="button"
-                                onClick={addProduk}
-                                className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    {/* Add Ruangan Button */}
+                    <div className="mb-6 flex justify-between items-center">
+                        <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+                            <span className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                                 </svg>
-                                Tambah Produk
-                            </button>
-                        </div>
+                            </span>
+                            Daftar Ruangan
+                            <span className="text-sm font-normal text-slate-500">
+                                ({ruangans.length} ruangan, {totalProduks} produk)
+                            </span>
+                        </h2>
+                        <button
+                            type="button"
+                            onClick={addRuangan}
+                            className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Tambah Ruangan
+                        </button>
+                    </div>
 
-                        {formProduks.length === 0 ? (
-                            <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center">
-                                <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                    <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    {/* Empty State */}
+                    {ruangans.length === 0 ? (
+                        <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center">
+                            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                </svg>
+                            </div>
+                            <p className="text-slate-500 mb-2">Belum ada ruangan yang ditambahkan</p>
+                            <p className="text-slate-400 text-sm">Klik "Tambah Ruangan" untuk memulai</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-6">
+                            {ruangans.map((ruangan, rIndex) => (
+                                <RuanganCard
+                                    key={ruangan.temp_id}
+                                    ruangan={ruangan}
+                                    ruanganIndex={rIndex}
+                                    produks={produks}
+                                    jenisItems={jenisItems}
+                                    items={items}
+                                    onUpdateRuanganName={updateRuanganName}
+                                    onRemoveRuangan={removeRuangan}
+                                    onAddProdukToRuangan={addProdukToRuangan}
+                                    onRemoveProdukFromRuangan={removeProdukFromRuangan}
+                                    onUpdateProdukInRuangan={updateProdukInRuangan}
+                                    onToggleBahanBakuInRuangan={toggleBahanBakuInRuangan}
+                                    onSelectAllBahanBakuInRuangan={selectAllBahanBakuInRuangan}
+                                    onClearAllBahanBakuInRuangan={clearAllBahanBakuInRuangan}
+                                    onAddJenisItemInRuangan={addJenisItemInRuangan}
+                                    onRemoveJenisItemInRuangan={removeJenisItemInRuangan}
+                                    onUpdateJenisItemInRuangan={updateJenisItemInRuangan}
+                                    onAddItemInRuangan={addItemInRuangan}
+                                    onRemoveItemInRuangan={removeItemInRuangan}
+                                    onUpdateItemInRuangan={updateItemInRuangan}
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Submit Buttons */}
+                    <div className="mt-8 flex gap-4 justify-end">
+                        <button
+                            type="button"
+                            onClick={() => router.visit('/item-pekerjaan')}
+                            className="px-6 py-3 border border-slate-300 rounded-xl text-slate-700 font-medium hover:bg-slate-50 transition-colors"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            type="button"
+                            onClick={(e) => handleSubmit(e, 'draft')}
+                            disabled={loading || totalProduks === 0}
+                            className="border-2 border-amber-500 bg-amber-50 text-amber-700 px-6 py-3 rounded-xl font-medium hover:bg-amber-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                            {loading ? (
+                                <>
+                                    <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
-                                </div>
-                                <p className="text-slate-500 mb-2">Belum ada produk yang ditambahkan</p>
-                                <p className="text-slate-400 text-sm">Klik "Tambah Produk" untuk memulai</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-6">
-                                {formProduks.map((produk, pIndex) => {
-                                    const selectedProduk = produks.find(
-                                        (pr) => pr.id.toString() === produk.produk_id,
-                                    );
-
-                                    return (
-                                        <div key={produk.temp_id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                                            {/* Produk Header */}
-                                            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 flex justify-between items-center">
-                                                <h3 className="text-white font-semibold text-lg flex items-center gap-2">
-                                                    <span className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center text-sm">
-                                                        {pIndex + 1}
-                                                    </span>
-                                                    Produk #{pIndex + 1}
-                                                    {produk.id && (
-                                                        <span className="ml-2 text-xs bg-white/20 px-2 py-1 rounded">
-                                                            ID: {produk.id}
-                                                        </span>
-                                                    )}
-                                                </h3>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeProduk(produk.temp_id)}
-                                                    className="bg-red-500/20 text-red-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-500/30 transition-colors flex items-center gap-2"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                    Hapus
-                                                </button>
-                                            </div>
-
-                                            <div className="p-6">
-                                                {/* Produk Selection & Quantity */}
-                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                                                            Pilih Produk <span className="text-red-500">*</span>
-                                                        </label>
-                                                        <select
-                                                            value={produk.produk_id}
-                                                            onChange={(e) => updateProduk(produk.temp_id, 'produk_id', e.target.value)}
-                                                            className="w-full border border-slate-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                                                            required
-                                                        >
-                                                            <option value="">-- Pilih --</option>
-                                                            {produks.map((p) => (
-                                                                <option key={p.id} value={p.id}>
-                                                                    {p.nama_produk}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                                                            Quantity <span className="text-red-500">*</span>
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            min="1"
-                                                            value={produk.quantity}
-                                                            onChange={(e) => updateProduk(produk.temp_id, 'quantity', parseInt(e.target.value))}
-                                                            className="w-full border border-slate-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                                                            required
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {/* Dimensi */}
-                                                <div className="mb-6">
-                                                    <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
-                                                        <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                                                        </svg>
-                                                        Dimensi (m)
-                                                    </label>
-                                                    <div className="grid grid-cols-3 gap-4">
-                                                        <div>
-                                                            <input
-                                                                type="number"
-                                                                step="any"
-                                                                min="0"
-                                                                placeholder="Panjang"
-                                                                value={produk.panjang}
-                                                                onChange={(e) => updateProduk(produk.temp_id, 'panjang', e.target.value)}
-                                                                className="w-full border border-slate-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                                                            />
-                                                            <p className="mt-1 text-xs text-slate-500">Panjang</p>
-                                                        </div>
-                                                        <div>
-                                                            <input
-                                                                type="number"
-                                                                step="any"
-                                                                min="0"
-                                                                placeholder="Lebar"
-                                                                value={produk.lebar}
-                                                                onChange={(e) => updateProduk(produk.temp_id, 'lebar', e.target.value)}
-                                                                className="w-full border border-slate-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                                                            />
-                                                            <p className="mt-1 text-xs text-slate-500">Lebar</p>
-                                                        </div>
-                                                        <div>
-                                                            <input
-                                                                type="number"
-                                                                step="any"
-                                                                min="0"
-                                                                placeholder="Tinggi"
-                                                                value={produk.tinggi}
-                                                                onChange={(e) => updateProduk(produk.temp_id, 'tinggi', e.target.value)}
-                                                                className="w-full border border-slate-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                                                            />
-                                                            <p className="mt-1 text-xs text-slate-500">Tinggi</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Bahan Baku Card - Selectable */}
-                                                {(() => {
-                                                    const masterBahanBakus = selectedProduk?.bahan_bakus || [];
-                                                    
-                                                    if (masterBahanBakus.length > 0) {
-                                                        return (
-                                                            <div className="mb-6 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl overflow-hidden">
-                                                                <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3">
-                                                                    <div className="flex justify-between items-center">
-                                                                        <h4 className="text-white font-semibold flex items-center gap-2">
-                                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                                                            </svg>
-                                                                            Pilih Bahan Baku <span className="text-amber-200 text-xs font-normal ml-2">({produk.selected_bahan_bakus?.length || 0} dipilih)</span>
-                                                                        </h4>
-                                                                        <div className="flex gap-2">
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => selectAllBahanBaku(produk.temp_id, masterBahanBakus.map((bb: BahanBaku) => bb.id))}
-                                                                                className="bg-white/20 text-white px-3 py-1 rounded-lg text-xs font-medium hover:bg-white/30 transition-colors"
-                                                                            >
-                                                                                Pilih Semua
-                                                                            </button>
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => clearAllBahanBaku(produk.temp_id)}
-                                                                                className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-medium hover:bg-white/20 transition-colors"
-                                                                            >
-                                                                                Clear
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="p-4">
-                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                                        {masterBahanBakus.map((bb: BahanBaku) => {
-                                                                            const isSelected = produk.selected_bahan_bakus?.includes(bb.id) || false;
-                                                                            return (
-                                                                                <div 
-                                                                                    key={bb.id} 
-                                                                                    onClick={() => toggleBahanBaku(produk.temp_id, bb.id)}
-                                                                                    className={`rounded-lg p-3 border-2 flex items-center justify-between cursor-pointer transition-all ${
-                                                                                        isSelected 
-                                                                                            ? 'bg-amber-100 border-amber-400 shadow-sm' 
-                                                                                            : 'bg-white border-slate-200 hover:border-amber-300'
-                                                                                    }`}
-                                                                                >
-                                                                                    <div className="flex items-center gap-3">
-                                                                                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                                                                                            isSelected 
-                                                                                                ? 'bg-amber-500 border-amber-500' 
-                                                                                                : 'border-slate-300'
-                                                                                        }`}>
-                                                                                            {isSelected && (
-                                                                                                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                                                                                </svg>
-                                                                                            )}
-                                                                                        </div>
-                                                                                        <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                                                                                            <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                                                                                            </svg>
-                                                                                        </div>
-                                                                                        <div>
-                                                                                            <p className="font-medium text-slate-800">{bb.nama_item}</p>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </div>
-                                                                            );
-                                                                        })}
-                                                                    </div>
-                                                                    <p className="text-xs text-amber-700 mt-3 flex items-center gap-1">
-                                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                                        </svg>
-                                                                        Klik untuk memilih/membatalkan bahan baku.
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    }
-                                                    return null;
-                                                })()}
-
-                                                {/* Jenis Items Section */}
-                                                <div className="bg-slate-50 rounded-xl p-4">
-                                                    <div className="flex justify-between items-center mb-4">
-                                                        <h4 className="font-semibold text-slate-800 flex items-center gap-2">
-                                                            <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                                            </svg>
-                                                            Finishing & Aksesoris
-                                                        </h4>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => addJenisItem(produk.temp_id)}
-                                                            className="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors flex items-center gap-1"
-                                                        >
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                                            </svg>
-                                                            Tambah Kategori
-                                                        </button>
-                                                    </div>
-
-                                                    {(() => {
-                                                        const editableJenisItems = produk.jenisItems.filter(
-                                                            (j) => j.jenis_item_name?.toLowerCase() !== 'bahan baku'
-                                                        );
-                                                        
-                                                        return editableJenisItems.length === 0 ? (
-                                                            <div className="bg-white rounded-lg border-2 border-dashed border-slate-200 p-6 text-center">
-                                                                <p className="text-slate-400 text-sm">Belum ada kategori item. Klik "Tambah Kategori" untuk menambahkan.</p>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="space-y-4">
-                                                                {editableJenisItems.map((jenisItem, jIndex) => {
-                                                                    const isAksesoris = jenisItem.jenis_item_name?.toLowerCase() === 'aksesoris';
-                                                                    
-                                                                    return (
-                                                                        <div key={jenisItem.temp_id} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                                                                            <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 flex justify-between items-center">
-                                                                                <div className="flex items-center gap-3 flex-1">
-                                                                                    <select
-                                                                                        value={jenisItem.jenis_item_id}
-                                                                                        onChange={(e) => {
-                                                                                            const selectedJI = jenisItems.find(ji => ji.id.toString() === e.target.value);
-                                                                                            updateJenisItem(produk.temp_id, jenisItem.temp_id, 'jenis_item_id', e.target.value);
-                                                                                            if (selectedJI) {
-                                                                                                updateJenisItem(produk.temp_id, jenisItem.temp_id, 'jenis_item_name', selectedJI.nama_jenis_item);
-                                                                                            }
-                                                                                        }}
-                                                                                        className="bg-white/20 text-white border-0 rounded-lg px-3 py-1.5 text-sm font-medium focus:ring-2 focus:ring-white/50 [&>option]:text-slate-800"
-                                                                                        required
-                                                                                    >
-                                                                                        <option value="">-- Pilih Jenis Item --</option>
-                                                                                        {jenisItems.map((j) => (
-                                                                                            <option key={j.id} value={j.id}>
-                                                                                                {j.nama_jenis_item}
-                                                                                            </option>
-                                                                                        ))}
-                                                                                    </select>
-                                                                                    {jenisItem.id && (
-                                                                                        <span className="text-xs text-white/70 bg-white/20 px-2 py-1 rounded">
-                                                                                            ID: {jenisItem.id}
-                                                                                        </span>
-                                                                                    )}
-                                                                                </div>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={() => removeJenisItem(produk.temp_id, jenisItem.temp_id)}
-                                                                                    className="w-8 h-8 bg-red-500/20 text-white rounded-lg flex items-center justify-center hover:bg-red-500/40 transition-colors"
-                                                                                >
-                                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                                                    </svg>
-                                                                                </button>
-                                                                            </div>
-
-                                                                            {jenisItem.jenis_item_id && (
-                                                                                <div className="p-4">
-                                                                                    <div className="flex justify-between items-center mb-3">
-                                                                                        <span className="text-sm font-medium text-slate-700">Daftar Item</span>
-                                                                                        <button
-                                                                                            type="button"
-                                                                                            onClick={() => addItem(produk.temp_id, jenisItem.temp_id)}
-                                                                                            className="bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-indigo-200 transition-colors flex items-center gap-1"
-                                                                                        >
-                                                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                                                                            </svg>
-                                                                                            Tambah Item
-                                                                                        </button>
-                                                                                    </div>
-
-                                                                                    {jenisItem.items.length === 0 ? (
-                                                                                        <p className="text-center text-slate-400 text-sm py-4">Belum ada item</p>
-                                                                                    ) : (
-                                                                                        <div className="space-y-2">
-                                                                                            {jenisItem.items.map((item, iIndex) => (
-                                                                                                <div key={item.temp_id} className="flex gap-2 items-center bg-slate-50 rounded-lg p-2">
-                                                                                                    <select
-                                                                                                        value={item.item_id}
-                                                                                                        onChange={(e) => updateItem(produk.temp_id, jenisItem.temp_id, item.temp_id, 'item_id', e.target.value)}
-                                                                                                        className={`${isAksesoris ? 'flex-1' : 'w-1/2'} border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500`}
-                                                                                                        required
-                                                                                                    >
-                                                                                                        <option value="">-- Pilih Item --</option>
-                                                                                                        {getAvailableItems(jenisItem.jenis_item_id).map((i) => (
-                                                                                                            <option key={i.id} value={i.id}>
-                                                                                                                {i.nama_item}
-                                                                                                            </option>
-                                                                                                        ))}
-                                                                                                    </select>
-
-                                                                                                    {!isAksesoris && (
-                                                                                                        <input
-                                                                                                            type="text"
-                                                                                                            value={item.notes}
-                                                                                                            onChange={(e) => updateItem(produk.temp_id, jenisItem.temp_id, item.temp_id, 'notes', e.target.value)}
-                                                                                                            className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                                                                                            placeholder="Notes (opsional)"
-                                                                                                        />
-                                                                                                    )}
-
-                                                                                                    {isAksesoris && (
-                                                                                                        <input
-                                                                                                            type="number"
-                                                                                                            min="1"
-                                                                                                            value={item.quantity}
-                                                                                                            onChange={(e) => updateItem(produk.temp_id, jenisItem.temp_id, item.temp_id, 'quantity', parseInt(e.target.value))}
-                                                                                                            className="w-24 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                                                                                            placeholder="Qty"
-                                                                                                            required
-                                                                                                        />
-                                                                                                    )}
-
-                                                                                                    <button
-                                                                                                        type="button"
-                                                                                                        onClick={() => removeItem(produk.temp_id, jenisItem.temp_id, item.temp_id)}
-                                                                                                        className="w-8 h-8 bg-red-100 text-red-600 rounded-lg flex items-center justify-center hover:bg-red-200 transition-colors"
-                                                                                                    >
-                                                                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                                                                        </svg>
-                                                                                                    </button>
-                                                                                                </div>
-                                                                                            ))}
-                                                                                        </div>
-                                                                                    )}
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        );
-                                                    })()}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-
-                        {/* Submit Button */}
-                        <div className="mt-8 flex gap-4 justify-end">
-                            <button
-                                type="button"
-                                onClick={() => router.visit('/item-pekerjaan')}
-                                className="px-6 py-3 border border-slate-300 rounded-xl text-slate-700 font-medium hover:bg-slate-50 transition-colors"
-                            >
-                                Batal
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={loading || formProduks.length === 0}
-                                className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-8 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                            >
-                                {loading ? (
-                                    <>
-                                        <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Menyimpan...
-                                    </>
-                                ) : (
-                                    <>
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                        </svg>
-                                        Update Semua
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    </form>
+                                    Menyimpan...
+                                </>
+                            ) : (
+                                <>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                    </svg>
+                                    Simpan Draft
+                                </>
+                            )}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={(e) => handleSubmit(e, 'published')}
+                            disabled={loading || totalProduks === 0}
+                            className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-8 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                            {loading ? (
+                                <>
+                                    <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Menyimpan...
+                                </>
+                            ) : (
+                                <>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Publish
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
         </>

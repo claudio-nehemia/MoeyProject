@@ -23,6 +23,7 @@ interface OrderData {
     customer_additional_info: string | null;
     nomor_unit: string | null;
     phone_number: string;
+    alamat: string | null;
     tanggal_masuk_customer: string;
     tanggal_survey: string;
     project_status: string;
@@ -59,6 +60,7 @@ export default function Edit({ order, marketings, drafters, desainers, jenisInte
         customer_additional_info: order.customer_additional_info || '',
         nomor_unit: order.nomor_unit || '',
         phone_number: order.phone_number,
+        alamat: order.alamat || '',
         tanggal_masuk_customer: order.tanggal_masuk_customer,
         project_status: order.project_status,
         tanggal_surveyL: order.tanggal_survey,
@@ -377,6 +379,24 @@ export default function Edit({ order, marketings, drafters, desainers, jenisInte
                                             <option value="high">High</option>
                                         </select>
                                     </div>
+                                </div>
+
+                                {/* Alamat */}
+                                <div className="mt-6">
+                                    <label className="block text-sm font-semibold text-stone-700 mb-2">
+                                        <span className="text-red-500">*</span> Alamat
+                                    </label>
+                                    <textarea
+                                        value={data.alamat}
+                                        onChange={(e) => setData('alamat', e.target.value)}
+                                        rows={3}
+                                        className="w-full px-4 py-2.5 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all resize-none"
+                                        placeholder="Masukkan alamat lengkap project"
+                                        required
+                                    />
+                                    {errors.alamat && (
+                                        <p className="text-red-500 text-xs mt-1">{errors.alamat}</p>
+                                    )}
                                 </div>
 
                                 {/* Additional Info */}
