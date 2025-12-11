@@ -413,60 +413,51 @@ export default function Index({ moodboards }: Props) {
                                             <div className="flex flex-wrap gap-3">
                                                 {!moodboard.commitmentFee ? (
                                                     <button
-                                                        onClick={() =>
-                                                            handleResponse(
-                                                                moodboard,
-                                                            )
-                                                        }
-                                                        className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700"
+                                                        onClick={() => handleResponse(moodboard)}
+                                                        className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
                                                     >
                                                         Response Commitment Fee
                                                     </button>
-                                                ) : !moodboard.commitmentFee
-                                                      .total_fee ? (
+                                                ) : !moodboard.commitmentFee.total_fee ? (
                                                     <button
-                                                        onClick={() =>
-                                                            handleOpenFeeModal(
-                                                                moodboard,
-                                                            )
-                                                        }
-                                                        className="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white transition-colors hover:bg-indigo-700"
+                                                        onClick={() => handleOpenFeeModal(moodboard)}
+                                                        className="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700"
                                                     >
                                                         Isi Total Fee
                                                     </button>
-                                                ) : !moodboard.commitmentFee
-                                                      .payment_proof ? (
-                                                    <button
-                                                        onClick={() =>
-                                                            handleOpenPaymentModal(
-                                                                moodboard,
-                                                            )
-                                                        }
-                                                        className="rounded-lg bg-green-600 px-4 py-2 font-medium text-white transition-colors hover:bg-green-700"
-                                                    >
-                                                        Upload Bukti Pembayaran
-                                                    </button>
                                                 ) : (
-                                                    <div className="flex flex-wrap gap-3">
-                                                        {/* Tombol download bukti pembayaran */}
+                                                    <>
+                                                        {/* Tombol Cetak Commitment Fee — muncul setelah total_fee terisi */}
                                                         <a
-                                                            href={`/storage/${moodboard.commitmentFee.payment_proof}`}
+                                                            href={`/commitment-fee/${moodboard.commitmentFee.id}/print`}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className="rounded-lg bg-gray-600 px-4 py-2 font-medium text-white transition-colors hover:bg-gray-700"
-                                                        >
-                                                            Download Bukti Pembayaran
-                                                        </a>
-
-                                                        {/* Tombol cetak commitment fee */}
-                                                        <a
-                                                            href={`/commitment-fee/${moodboard.commitmentFee.id}/print`} target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-700"
+                                                            className="rounded-lg bg-purple-600 px-4 py-2 font-medium text-white hover:bg-purple-700"
                                                         >
                                                             Cetak Commitment Fee
                                                         </a>
-                                                    </div>
+
+                                                        {/* Jika payment_proof belum ada, tampilkan tombol upload */}
+                                                        {!moodboard.commitmentFee.payment_proof ? (
+                                                            <button
+                                                                onClick={() => handleOpenPaymentModal(moodboard)}
+                                                                className="rounded-lg bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700"
+                                                            >
+                                                                Upload Bukti Pembayaran
+                                                            </button>
+                                                        ) : (
+                                                            <>
+                                                                <a
+                                                                    href={`/storage/${moodboard.commitmentFee.payment_proof}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="rounded-lg bg-gray-600 px-4 py-2 font-medium text-white hover:bg-gray-700"
+                                                                >
+                                                                    Download Bukti Pembayaran
+                                                                </a>
+                                                            </>
+                                                        )}
+                                                    </>
                                                 )}
                                             </div>
                                         </div>
