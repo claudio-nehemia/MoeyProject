@@ -347,6 +347,12 @@ class InvoiceController extends Controller
         // Calculate totals
         $totalPaid = $allInvoices->where('status', 'paid')->sum('total_amount');
 
+        // Check if this is the last step and needs BAST foto klien
+        $isLastStep = $invoice->termin_step === $totalSteps;
+        $itemPekerjaan = $invoice->itemPekerjaan;
+        $hasBastFotoKlien = !empty($itemPekerjaan->bast_foto_klien);
+        $bastFotoKlienUrl = $itemPekerjaan->bast_foto_klien ? Storage::url($itemPekerjaan->bast_foto_klien) : null;
+
         return Inertia::render('Invoice/Show', [
             'invoice' => [
                 'id' => $invoice->id,
@@ -379,6 +385,12 @@ class InvoiceController extends Controller
                 ],
                 'termin_nama' => $termin?->nama_tipe,
                 'all_invoices' => $allInvoices,
+                // BAST foto klien info (untuk tahap terakhir/pelunasan)
+                'is_last_step' => $isLastStep,
+                'item_pekerjaan_id' => $itemPekerjaan->id,
+                'has_bast_foto_klien' => $hasBastFotoKlien,
+                'bast_foto_klien' => $bastFotoKlienUrl,
+                'bast_foto_klien_uploaded_at' => $itemPekerjaan->bast_foto_klien_uploaded_at?->format('d M Y H:i'),
                 'items' => $invoice->rabKontrak->rabKontrakProduks->map(function ($rabProduk) use ($aksesorisJenisItem) {
                     $jenisItemsList = [];
                     foreach ($rabProduk->itemPekerjaanProduk->jenisItems as $jenisItem) {
@@ -435,6 +447,15 @@ class InvoiceController extends Controller
         $request->validate([
             'bukti_bayar' => 'required|file|mimes:jpeg,png,jpg,pdf|max:5120', // 5MB
         ]);
+
+        // Check if this is the last step - require BAST foto klien
+        $termin = $invoice->itemPekerjaan->kontrak?->termin;
+        $totalSteps = count($termin?->tahapan ?? []);
+        $isLastStep = $invoice->termin_step === $totalSteps;
+
+        if ($isLastStep && empty($invoice->itemPekerjaan->bast_foto_klien)) {
+            return back()->with('error', 'Untuk pembayaran tahap terakhir/pelunasan, upload foto BAST dengan klien terlebih dahulu.');
+        }
 
         DB::transaction(function () use ($request, $invoice) {
             // Delete old bukti bayar if exists
@@ -598,6 +619,38 @@ class InvoiceController extends Controller
         $filename = 'Invoice-' . $safeInvoiceNumber . '-Tahap' . $invoice->termin_step . '-' . date('YmdHis') . '.pdf';
 
         return $pdf->download($filename);
+    }
+
+    /**
+     * Upload foto BAST dengan klien (diperlukan untuk pembayaran tahap terakhir/pelunasan)
+     */
+    public function uploadBastFotoKlien(Request $request, $itemPekerjaanId)
+    {
+        $request->validate([
+            'bast_foto_klien' => 'required|image|mimes:jpeg,png,jpg|max:5120', // 5MB
+        ]);
+
+        $itemPekerjaan = ItemPekerjaan::findOrFail($itemPekerjaanId);
+
+        // Check if BAST document exists first
+        if (!$itemPekerjaan->has_bast) {
+            return back()->with('error', 'BAST dokumen harus dibuat terlebih dahulu');
+        }
+
+        // Delete old photo if exists
+        if ($itemPekerjaan->bast_foto_klien) {
+            Storage::disk('public')->delete($itemPekerjaan->bast_foto_klien);
+        }
+
+        // Store new photo
+        $path = $request->file('bast_foto_klien')->store('bast-foto-klien', 'public');
+
+        $itemPekerjaan->update([
+            'bast_foto_klien' => $path,
+            'bast_foto_klien_uploaded_at' => now(),
+        ]);
+
+        return back()->with('success', 'Foto BAST dengan klien berhasil diupload. Sekarang Anda dapat upload bukti pembayaran.');
     }
 
     public function destroy($invoiceId)

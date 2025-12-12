@@ -226,6 +226,10 @@ class ProjectManagementController extends Controller
                 'bast_number'          => $itemPekerjaan->bast_number,
                 'bast_date'            => $itemPekerjaan->bast_date?->format('d M Y'),
                 'bast_pdf_path'        => $itemPekerjaan->bast_pdf_path,
+                // BAST Foto dengan Klien (untuk pelunasan)
+                'has_bast_foto_klien'  => $itemPekerjaan->has_bast_foto_klien,
+                'bast_foto_klien'      => $itemPekerjaan->bast_foto_klien,
+                'bast_foto_klien_uploaded_at' => $itemPekerjaan->bast_foto_klien_uploaded_at?->format('d M Y H:i'),
                 // Pengajuan Perpanjangan Timeline
                 'pengajuan_perpanjangan' => $pengajuanPerpanjangan,
             ];
@@ -389,6 +393,38 @@ class ProjectManagementController extends Controller
         return response()->download($filePath);
     }
 
+    /**
+     * Upload foto BAST dengan klien (diperlukan untuk pelunasan/tahap terakhir)
+     */
+    public function uploadBastFotoKlien(Request $request, $itemPekerjaanId)
+    {
+        $request->validate([
+            'bast_foto_klien' => 'required|image|mimes:jpeg,png,jpg|max:5120', // 5MB
+        ]);
+
+        $itemPekerjaan = \App\Models\ItemPekerjaan::findOrFail($itemPekerjaanId);
+
+        // Check if BAST document exists first
+        if (!$itemPekerjaan->has_bast) {
+            return back()->withErrors(['bast_foto_klien' => 'BAST dokumen harus dibuat terlebih dahulu']);
+        }
+
+        // Delete old photo if exists
+        if ($itemPekerjaan->bast_foto_klien) {
+            Storage::disk('public')->delete($itemPekerjaan->bast_foto_klien);
+        }
+
+        // Store new photo
+        $path = $request->file('bast_foto_klien')->store('bast-foto-klien', 'public');
+
+        $itemPekerjaan->update([
+            'bast_foto_klien' => $path,
+            'bast_foto_klien_uploaded_at' => now(),
+        ]);
+
+        return back()->with('success', 'Foto BAST dengan klien berhasil diupload');
+    }
+
     public function requestPerpanjanganTimeline(Request $request, $itemPekerjaanId)
     {
         $request->validate([
@@ -488,6 +524,9 @@ class ProjectManagementController extends Controller
 
         // Check if item pekerjaan has BAST (now at item level, not per product)
         $hasBast = $itemPekerjaan->has_bast;
+        
+        // Check if BAST foto klien exists (required for final payment)
+        $hasBastFotoKlien = $itemPekerjaan->has_bast_foto_klien;
 
         // Build steps info
         $stepsInfo = [];
@@ -508,16 +547,19 @@ class ProjectManagementController extends Controller
             } elseif ($invoice && $invoice->status === 'pending') {
                 $status = 'pending';
             } elseif ($isLastStep) {
-                // TAHAP TERAKHIR: Otomatis available jika BAST sudah ada & tahap sebelumnya sudah dibayar
+                // TAHAP TERAKHIR: Memerlukan BAST dokumen DAN foto BAST dengan klien
                 if (!$hasBast) {
                     $status = 'waiting_bast';
                     $lockedReason = 'Menunggu BAST Item Pekerjaan dibuat';
+                } elseif (!$hasBastFotoKlien) {
+                    $status = 'waiting_bast_foto';
+                    $lockedReason = 'Upload foto BAST dengan klien terlebih dahulu';
                 } elseif ($lastPaidStep < $totalSteps - 1) {
                     // Previous steps not all paid
                     $status = 'locked';
                     $lockedReason = 'Bayar tahap sebelumnya dulu';
                 } else {
-                    // BAST ada & semua tahap sebelumnya sudah dibayar
+                    // BAST ada, foto BAST klien ada & semua tahap sebelumnya sudah dibayar
                     $status = 'available';
                     $canPay = true;
                 }

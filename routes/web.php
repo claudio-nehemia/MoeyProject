@@ -387,6 +387,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:invoice.create')->name('invoice.generate');
         Route::post('invoice/{invoiceId}/upload-bukti', [InvoiceController::class, 'uploadBuktiBayar'])
             ->middleware('permission:invoice.edit')->name('invoice.upload-bukti');
+        Route::post('invoice/{itemPekerjaanId}/upload-bast-foto-klien', [InvoiceController::class, 'uploadBastFotoKlien'])
+            ->middleware('permission:invoice.edit')->name('invoice.upload-bast-foto-klien');
         Route::delete('invoice/{invoiceId}', [InvoiceController::class, 'destroy'])
             ->middleware('permission:invoice.delete')->name('invoice.destroy');
     });
