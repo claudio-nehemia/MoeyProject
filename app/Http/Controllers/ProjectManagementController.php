@@ -96,7 +96,7 @@ class ProjectManagementController extends Controller
             // ================================
             $paymentInfo = $this->getPaymentInfo($itemPekerjaan, $order);
 
-            $produks = $itemPekerjaan->produks->map(function ($produk) use ($totalHargaItem) {
+            $produks = $itemPekerjaan->produks->sortBy('id')->values()->map(function ($produk) use ($totalHargaItem) {
                 // ================================
                 // 🔢 Perhitungan bobot & progress
                 // ================================
