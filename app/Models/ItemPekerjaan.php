@@ -86,6 +86,11 @@ class ItemPekerjaan extends Model
         return $this->hasMany(Invoice::class);
     }
 
+    public function pengajuanPerpanjanganTimelines()
+    {
+        return $this->hasMany(PengajuanPerpanjanganTimeline::class, 'item_pekerjaan_id');
+    }
+
     public function getProgressAttribute()
     {
         $produks = $this->produks;

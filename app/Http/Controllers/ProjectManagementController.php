@@ -3,11 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use App\Models\ItemPekerjaanProduk;
-use App\Models\StageEvidence;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use App\Models\StageEvidence;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\ItemPekerjaanProduk;
+use Illuminate\Support\Facades\Storage;
+use App\Models\PengajuanPerpanjanganTimeline;
 
 class ProjectManagementController extends Controller
 {
@@ -59,6 +60,7 @@ class ProjectManagementController extends Controller
             'moodboard.itemPekerjaans.rabVendor.rabVendorProduks',
             'moodboard.itemPekerjaans.kontrak.termin',
             'moodboard.itemPekerjaans.invoices',
+            'moodboard.itemPekerjaans.pengajuanPerpanjanganTimelines',
             'moodboard.commitmentFee',
         ])->findOrFail($id);
 
@@ -198,6 +200,17 @@ class ProjectManagementController extends Controller
                 ];
             });
 
+            // Get latest pengajuan perpanjangan for this item pekerjaan
+            $latestPengajuan = $itemPekerjaan->pengajuanPerpanjanganTimelines
+                ->sortByDesc('created_at')
+                ->first();
+
+            $pengajuanPerpanjangan = $latestPengajuan ? [
+                'id' => $latestPengajuan->id,
+                'status' => $latestPengajuan->status,
+                'reason' => $latestPengajuan->reason,
+            ] : null;
+
             return [
                 'id'                   => $itemPekerjaan->id,
                 'produks'              => $produks,
@@ -213,6 +226,8 @@ class ProjectManagementController extends Controller
                 'bast_number'          => $itemPekerjaan->bast_number,
                 'bast_date'            => $itemPekerjaan->bast_date?->format('d M Y'),
                 'bast_pdf_path'        => $itemPekerjaan->bast_pdf_path,
+                // Pengajuan Perpanjangan Timeline
+                'pengajuan_perpanjangan' => $pengajuanPerpanjangan,
             ];
         });
 
@@ -372,6 +387,61 @@ class ProjectManagementController extends Controller
         $filePath = storage_path('app/public/' . $itemPekerjaan->bast_pdf_path);
         
         return response()->download($filePath);
+    }
+
+    public function requestPerpanjanganTimeline(Request $request, $itemPekerjaanId)
+    {
+        $request->validate([
+            'reason' => 'nullable|string|max:1000',
+        ]);
+
+        $itemPekerjaan = \App\Models\ItemPekerjaan::with('pengajuanPerpanjanganTimelines')->findOrFail($itemPekerjaanId);
+
+        // Cari pengajuan dengan status 'none' atau 'rejected' (bisa diajukan ulang)
+        $pengajuanPerpanjangan = $itemPekerjaan->pengajuanPerpanjanganTimelines
+            ->whereIn('status', ['none', 'rejected'])
+            ->sortByDesc('created_at')
+            ->first();
+
+        if (!$pengajuanPerpanjangan) {
+            return back()->withErrors(['pengajuan' => 'Tidak dapat mengajukan perpanjangan saat ini']);
+        }
+
+        // Update status ke pending
+        $pengajuanPerpanjangan->update([
+            'status' => 'pending',
+            'reason' => $request->reason,
+        ]);
+
+        return back()->with('success', 'Permohonan perpanjangan timeline berhasil diajukan');
+    }
+
+    public function acceptPerpanjanganTimeline($pengajuanId)
+    {
+        $pengajuan = PengajuanPerpanjanganTimeline::findOrFail($pengajuanId);
+
+        $pengajuan->update([
+            'status' => 'approved',
+        ]);
+
+        return back()->with('success', 'Permohonan perpanjangan timeline disetujui');
+    }
+
+
+    public function rejectPerpanjanganTimeline(Request $request, $pengajuanId)
+    {
+        $request->validate([
+            'reason' => 'nullable|string|max:1000',
+        ]);
+
+        $pengajuan = PengajuanPerpanjanganTimeline::findOrFail($pengajuanId);
+
+        $pengajuan->update([
+            'status' => 'rejected',
+            'reason' => $request->reason,
+        ]);
+
+        return back()->with('success', 'Permohonan perpanjangan timeline ditolak');
     }
 
     /**

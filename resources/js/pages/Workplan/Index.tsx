@@ -4,12 +4,20 @@ import Sidebar from '@/components/Sidebar';
 import { Head, Link } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 
+interface PengajuanPerpanjanganTimeline {
+    id: number;
+    item_pekerjaan_id: number;
+    status: 'pending' | 'approved' | 'rejected' | 'none';
+    reason: string | null;
+}
+
 interface ItemPekerjaan {
     id: number;
     total_produks: number;
     produks_with_workplan: number;
     has_kontrak: boolean;
     kontrak_durasi: number | null;
+    pengajuan_perpanjangans: PengajuanPerpanjanganTimeline[];
 }
 
 interface Order {
@@ -57,6 +65,22 @@ export default function Index({ orders }: Props) {
         if (progress >= 25) return 'bg-gradient-to-r from-orange-500 to-red-500';
         if (progress > 0) return 'bg-gradient-to-r from-pink-500 to-rose-600';
         return 'bg-gray-300';
+    };
+
+    // Cek apakah bisa edit workplan berdasarkan status pengajuan perpanjangan
+    const canEditWorkplan = (order: Order): boolean => {
+        // Cek semua item_pekerjaans
+        for (const item of order.item_pekerjaans) {
+            // Ambil pengajuan perpanjangan terbaru (jika ada)
+            const latestPengajuan = item.pengajuan_perpanjangans?.[0];
+            if (latestPengajuan) {
+                // Hanya bisa edit jika status 'approved'
+                if (latestPengajuan.status === 'approved') {
+                    return true;
+                }
+            }
+        }
+        return false;
     };
 
     const getStatusBadge = (progress: number) => {
@@ -250,15 +274,24 @@ export default function Index({ orders }: Props) {
                                     {/* Actions */}
                                     <div className="mt-4 flex items-center justify-end gap-2">
                                         {order.workplan_progress > 0 ? (
-                                            <Link
-                                                href={`/workplan/${order.id}/edit`}
-                                                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-amber-600 hover:to-orange-700 hover:shadow-lg"
-                                            >
-                                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                </svg>
-                                                Edit Workplan
-                                            </Link>
+                                            canEditWorkplan(order) ? (
+                                                <Link
+                                                    href={`/workplan/${order.id}/edit`}
+                                                    className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-amber-600 hover:to-orange-700 hover:shadow-lg"
+                                                >
+                                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                    Edit Workplan
+                                                </Link>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-2 rounded-lg bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-500 cursor-not-allowed">
+                                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                                    </svg>
+                                                    Workplan Terkunci
+                                                </span>
+                                            )
                                         ) : (
                                             <Link
                                                 href={`/workplan/${order.id}/create`}

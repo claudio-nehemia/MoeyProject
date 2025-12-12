@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ItemPekerjaan;
-use App\Models\ItemPekerjaanProduk;
+use Carbon\Carbon;
+use Inertia\Inertia;
 use App\Models\Order;
 use App\Models\WorkplanItem;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
+use App\Models\ItemPekerjaan;
 use Illuminate\Support\Facades\DB;
-use Inertia\Inertia;
+use App\Models\ItemPekerjaanProduk;
+use App\Models\PengajuanPerpanjanganTimeline;
 
 class WorkplanItemController extends Controller
 {
@@ -34,6 +35,7 @@ class WorkplanItemController extends Controller
             'moodboard.itemPekerjaans.produks.workplanItems',
             'moodboard.itemPekerjaans.invoices',
             'moodboard.itemPekerjaans.kontrak',
+            'moodboard.itemPekerjaans.pengajuanPerpanjanganTimelines',
         ])
             ->whereHas('moodboard.itemPekerjaans.invoices', function ($q) {
                 // Sudah ada pembayaran termin (bukan commitment fee, tahap >= 1)
@@ -48,6 +50,11 @@ class WorkplanItemController extends Controller
                         $p->workplanItems->count() > 0
                     )->count();
                     
+                    // Get latest pengajuan perpanjangan
+                    $latestPengajuan = $ip->pengajuanPerpanjanganTimelines
+                        ->sortByDesc('created_at')
+                        ->first();
+
                     return [
                         'id' => $ip->id,
                         'total_produks' => $totalProduks,
@@ -57,6 +64,12 @@ class WorkplanItemController extends Controller
                         'workplan_end_date' => $ip->workplan_end_date?->format('Y-m-d'),
                         'has_kontrak' => $ip->kontrak !== null,
                         'kontrak_durasi' => $ip->kontrak?->durasi_kontrak,
+                        'pengajuan_perpanjangans' => $latestPengajuan ? [[
+                            'id' => $latestPengajuan->id,
+                            'item_pekerjaan_id' => $latestPengajuan->item_pekerjaan_id,
+                            'status' => $latestPengajuan->status,
+                            'reason' => $latestPengajuan->reason,
+                        ]] : [],
                     ];
                 });
 
@@ -212,6 +225,13 @@ class WorkplanItemController extends Controller
                     }
                 }
             }
+
+            PengajuanPerpanjanganTimeline::create([
+                'item_pekerjaan_id' => $itemPekerjaan->id,
+                'status' => 'none',
+                'reason' => null,
+            ]);
+
         });
 
         return redirect()->route('workplan.index')
@@ -232,7 +252,12 @@ class WorkplanItemController extends Controller
      */
     public function update(Request $request, $orderId)
     {
-        return $this->store($request, $orderId);
+        if ($orderId->moodboard->itemPekerjaans->pengajuanPerpanjanganTimelines->firstWhere('status', 'accepted')) {
+            return $this->store($request, $orderId);
+        }
+        
+        return redirect()->back()->withErrors(['error' => 'Tidak dapat mengubah workplan saat ada pengajuan perpanjangan yang sedang diproses.']);
+
     }
 
     /**

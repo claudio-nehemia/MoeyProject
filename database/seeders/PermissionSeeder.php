@@ -659,6 +659,16 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Unlock Next Payment Step',
                 'group' => 'Operations - Project Management'
             ],
+            [
+                'name' => 'project-management.request-perpanjangan',
+                'display_name' => 'Request Timeline Extension',
+                'group' => 'Operations - Project Management'
+            ],
+            [
+                'name' => 'project-management.response-perpanjangan',
+                'display_name' => 'Respond to Timeline Extension',
+                'group' => 'Operations - Project Management'
+            ],
             
             // Workplan Permissions
             [

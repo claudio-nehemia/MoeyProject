@@ -404,6 +404,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:project-management.bast');
         Route::post('/item-pekerjaan/{id}/unlock-next-step', [ProjectManagementController::class, 'unlockNextStep'])
             ->middleware('permission:project-management.unlock-payment');
+        Route::put('/item-pekerjaan/{id}/request-perpanjangan', [ProjectManagementController::class, 'requestPerpanjanganTimeline'])
+            ->middleware('permission:project-management.request-perpanjangan');
+        Route::put('/item-pekerjaan/{pengajuanId}/acc-perpanjangan', [ProjectManagementController::class, 'acceptPerpanjanganTimeline'])
+            ->middleware('permission:project-management.response-perpanjangan');
+        Route::put('/item-pekerjaan/{pengajuanId}/reject-perpanjangan', [ProjectManagementController::class, 'rejectPerpanjanganTimeline'])
+            ->middleware('permission:project-management.response-perpanjangan');
     });
 
     // WORKPLAN ROUTES
