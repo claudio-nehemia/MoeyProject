@@ -45,6 +45,7 @@ export default function Index({ moodboards }: Props) {
     const [selectedMoodboard, setSelectedMoodboard] =
         useState<Moodboard | null>(null);
     const [totalFee, setTotalFee] = useState('');
+    const [isEditMode, setIsEditMode] = useState(false); 
     const [paymentFile, setPaymentFile] = useState<File | null>(null);
     const [showImagePreview, setShowImagePreview] = useState(false);
     const [previewImage, setPreviewImage] = useState('');
@@ -61,18 +62,34 @@ export default function Index({ moodboards }: Props) {
         }
     };
 
-    const handleOpenFeeModal = (moodboard: Moodboard) => {
+    const handleOpenFeeModal = (moodboard: Moodboard, isEdit: boolean = false) => {
         setSelectedMoodboard(moodboard);
-        setTotalFee('');
+        setIsEditMode(isEdit);
+
+        // Perbaikan Type Safety: Gunakan Non-Null Assertion Operator (!)
+        if (isEdit && moodboard.commitmentFee?.total_fee !== null) {
+            setTotalFee(String(moodboard.commitmentFee!.total_fee));
+        } else {
+            setTotalFee('');
+        }
+        
         setShowFeeModal(true);
     };
 
     const handleSubmitFee = (e: React.FormEvent) => {
         e.preventDefault();
+        
         if (!selectedMoodboard?.commitmentFee) return;
 
+        const commitmentFeeId = selectedMoodboard.commitmentFee.id;
+
+        // Tentukan endpoint berdasarkan mode
+        const endpoint = isEditMode
+            ? `/commitment-fee/revise-fee/${commitmentFeeId}`
+            : `/commitment-fee/update-fee/${commitmentFeeId}`;
+
         router.post(
-            `/commitment-fee/update-fee/${selectedMoodboard.commitmentFee.id}`,
+            endpoint,
             {
                 total_fee: totalFee,
             },
@@ -82,9 +99,33 @@ export default function Index({ moodboards }: Props) {
                     setShowFeeModal(false);
                     setTotalFee('');
                     setSelectedMoodboard(null);
+                    setIsEditMode(false);
                 },
             },
         );
+    };
+
+    // FUNGSI BARU UNTUK MERESET FEE SETELAH STATUS COMPLETE
+    const handleResetFee = (moodboard: Moodboard) => {
+        if (!moodboard.commitmentFee) return;
+
+        if (confirm('PERINGATAN! Tindakan ini akan menghapus total fee, bukti pembayaran, dan mengubah status pembayaran menjadi PENDING (reset). Lanjutkan revisi?')) {
+            router.post(
+                `/commitment-fee/reset-fee/${moodboard.commitmentFee.id}`,
+                {},
+                {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        // Setelah reset di backend, kita arahkan user untuk mengisi fee lagi
+                        router.visit(window.location.pathname, { // Refresh halaman
+                            onFinish: () => {
+                                // Opsional: Tambahkan notifikasi toast di sini jika Inertia mendukung
+                            }
+                        });
+                    }
+                }
+            );
+        }
     };
 
     const handleOpenPaymentModal = (moodboard: Moodboard) => {
@@ -119,7 +160,8 @@ export default function Index({ moodboards }: Props) {
         setShowImagePreview(true);
     };
 
-    const formatCurrency = (value: number) => {
+    const formatCurrency = (value: number | null) => {
+        if (value === null) return 'N/A';
         return new Intl.NumberFormat('id-ID', {
             style: 'currency',
             currency: 'IDR',
@@ -233,7 +275,7 @@ export default function Index({ moodboards }: Props) {
                                                 )}
                                             </div>
 
-                                            {/* Moodboard Kasar & Estimasi Preview */}
+                                            {/* Moodboard Kasar & Estimasi Preview (Tidak Berubah) */}
                                             <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                                                 {/* Moodboard Kasar */}
                                                 {moodboard.moodboard_kasar && (
@@ -390,17 +432,17 @@ export default function Index({ moodboards }: Props) {
                                                                 )}
                                                             </p>
                                                         </div>
+                                                        {/* Perbaikan Type Safety: Cek total_fee !== null */}
                                                         {moodboard.commitmentFee
-                                                            .total_fee && (
+                                                            .total_fee !== null && (
                                                             <div className="md:col-span-2">
                                                                 <p className="font-medium text-amber-700">
                                                                     Total Fee
                                                                 </p>
                                                                 <p className="text-lg font-semibold text-gray-900">
+                                                                    {/* Aman menggunakan ! karena sudah dicek !== null */}
                                                                     {formatCurrency(
-                                                                        moodboard
-                                                                            .commitmentFee
-                                                                            .total_fee,
+                                                                        moodboard.commitmentFee.total_fee!,
                                                                     )}
                                                                 </p>
                                                             </div>
@@ -422,8 +464,8 @@ export default function Index({ moodboards }: Props) {
                                                     >
                                                         Response Commitment Fee
                                                     </button>
-                                                ) : !moodboard.commitmentFee
-                                                      .total_fee ? (
+                                                ) : 
+                                                moodboard.commitmentFee.total_fee === null ? (
                                                     <button
                                                         onClick={() =>
                                                             handleOpenFeeModal(
@@ -434,28 +476,55 @@ export default function Index({ moodboards }: Props) {
                                                     >
                                                         Isi Total Fee
                                                     </button>
-                                                ) : !moodboard.commitmentFee
+                                                ) : moodboard.commitmentFee
+                                                      .payment_status ===
+                                                      'pending' &&
+                                                  !moodboard.commitmentFee
                                                       .payment_proof ? (
-                                                    <button
-                                                        onClick={() =>
-                                                            handleOpenPaymentModal(
-                                                                moodboard,
-                                                            )
-                                                        }
-                                                        className="rounded-lg bg-green-600 px-4 py-2 font-medium text-white transition-colors hover:bg-green-700"
-                                                    >
-                                                        Upload Bukti Pembayaran
-                                                    </button>
+                                                    // Tombol Revisi Minor & Upload Pembayaran (saat pending)
+                                                    <>
+                                                        <button
+                                                            onClick={() =>
+                                                                handleOpenFeeModal(
+                                                                    moodboard,
+                                                                    true, // Aktifkan mode edit/revisi minor
+                                                                )
+                                                            }
+                                                            className="rounded-lg bg-yellow-500 px-4 py-2 font-medium text-white transition-colors hover:bg-yellow-600"
+                                                        >
+                                                            Revisi Total Fee
+                                                        </button>
+                                                        <button
+                                                            onClick={() =>
+                                                                handleOpenPaymentModal(
+                                                                    moodboard,
+                                                                )
+                                                            }
+                                                            className="rounded-lg bg-green-600 px-4 py-2 font-medium text-white transition-colors hover:bg-green-700"
+                                                        >
+                                                            Upload Bukti Pembayaran
+                                                        </button>
+                                                    </>
                                                 ) : (
-                                                    <a
-                                                        href={`/storage/${moodboard.commitmentFee.payment_proof}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="rounded-lg bg-gray-600 px-4 py-2 font-medium text-white transition-colors hover:bg-gray-700"
-                                                    >
-                                                        Download Bukti
-                                                        Pembayaran
-                                                    </a>
+                                                    // Tombol Reset/Revisi Mayor (saat completed)
+                                                    <>
+                                                        <a
+                                                            href={`/storage/${moodboard.commitmentFee.payment_proof!}`} 
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="rounded-lg bg-gray-600 px-4 py-2 font-medium text-white transition-colors hover:bg-gray-700"
+                                                        >
+                                                            Download Bukti Pembayaran
+                                                        </a>
+                                                        <button
+                                                            onClick={() =>
+                                                                handleResetFee(moodboard)
+                                                            }
+                                                            className="rounded-lg bg-red-600 px-4 py-2 font-medium text-white transition-colors hover:bg-red-700"
+                                                        >
+                                                            Reset & Revisi Fee
+                                                        </button>
+                                                    </>
                                                 )}
                                             </div>
                                         </div>
@@ -466,7 +535,7 @@ export default function Index({ moodboards }: Props) {
                     </div>
                 </div>
 
-                {/* Image Preview Modal */}
+                {/* Image Preview Modal (Tidak Berubah) */}
                 {showImagePreview && (
                     <div
                         className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
@@ -501,7 +570,7 @@ export default function Index({ moodboards }: Props) {
                     </div>
                 )}
 
-                {/* Fee Modal */}
+                {/* Fee Modal (Direvisi Judul dan Tombol) */}
                 {showFeeModal && selectedMoodboard && (
                     <div
                         className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
@@ -509,7 +578,7 @@ export default function Index({ moodboards }: Props) {
                     >
                         <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-2xl">
                             <h2 className="mb-4 text-xl font-semibold text-gray-900">
-                                Isi Total Fee
+                                {isEditMode ? 'Revisi Total Fee' : 'Isi Total Fee'} 
                             </h2>
                             <p className="mb-4 text-sm text-gray-600">
                                 Project:{' '}
@@ -538,6 +607,7 @@ export default function Index({ moodboards }: Props) {
                                         setShowFeeModal(false);
                                         setTotalFee('');
                                         setSelectedMoodboard(null);
+                                        setIsEditMode(false); // Reset mode
                                     }}
                                     className="flex-1 rounded-lg bg-gray-200 px-4 py-2 text-gray-800 transition-colors hover:bg-gray-300"
                                 >
@@ -545,16 +615,16 @@ export default function Index({ moodboards }: Props) {
                                 </button>
                                 <button
                                     onClick={handleSubmitFee}
-                                    className="flex-1 rounded-lg bg-indigo-600 px-4 py-2 text-white transition-colors hover:bg-indigo-700"
+                                    className={`flex-1 rounded-lg px-4 py-2 text-white transition-colors ${isEditMode ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-indigo-600 hover:bg-indigo-700'}`} 
                                 >
-                                    Simpan
+                                    {isEditMode ? 'Simpan Revisi' : 'Simpan'} 
                                 </button>
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* Payment Modal */}
+                {/* Payment Modal (Tidak Berubah) */}
                 {showPaymentModal && selectedMoodboard && (
                     <div
                         className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"

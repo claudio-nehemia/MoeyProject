@@ -198,7 +198,7 @@ export default function Index({ surveys }: Props) {
                                             {s.status_survey_ulang === "done" && (
                                                 <div className="flex gap-2">
                                                     <Link
-                                                        href={`/survey-ulang/${s.survey_ulang_id}`}
+                                                        href={`/survey-ulang/show/${s.survey_ulang_id}`}
                                                         className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 shadow"
                                                     >
                                                         View

@@ -233,8 +233,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:commitment-fee.create')->name('commitment-fee.response');
         Route::post('commitment-fee/update-fee/{commitmentFeeId}', [CommitmentFeeController::class, 'updateFee'])
             ->middleware('permission:commitment-fee.edit')->name('commitment-fee.update-fee');
+        Route::post('commitment-fee/revise-fee/{commitmentFeeId}', [CommitmentFeeController::class, 'reviseFee'])->middleware('permission:commitment-fee.edit')->name('commitment-fee.revise-fee');
         Route::post('commitment-fee/upload-payment/{commitmentFeeId}', [CommitmentFeeController::class, 'uploadPayment'])
             ->middleware('permission:commitment-fee.edit')->name('commitment-fee.upload-payment');
+        Route::post('commitment-fee/reset-fee/{commitmentFee}', [CommitmentFeeController::class, 'resetFee'])
+        ->middleware('permission:commitment-fee.edit')->name('commitment-fee.reset-fee');
     });
 
     // DESAIN FINAL ROUTES
@@ -377,20 +380,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // SUERVEY ULANG
-    Route::middleware(['permission:survey-ulang.index'])->group(function () {
-        Route::get('/survey-ulang', [SurveyUlangController::class, 'index'])->name('survey-ulang.index');
+    Route::middleware(['permission:survey-ulang.index'])
+    ->prefix('survey-ulang')
+    ->name('survey-ulang.')
+    ->group(function () {
 
-        Route::post('/survey-ulang/{order}/start', [SurveyUlangController::class, 'start']);
+        // INDEX
+        Route::get('/', [SurveyUlangController::class, 'index'])->name('index');
 
-        Route::get('/survey-ulang/create/{order}', [SurveyUlangController::class, 'create']);
-        Route::post('/survey-ulang/{order}', [SurveyUlangController::class, 'store']);
+        // START
+        Route::post('/{order}/start', [SurveyUlangController::class, 'start'])->name('start');
 
-        Route::get('/survey-ulang/{surveyUlang}', [SurveyUlangController::class, 'show']);
-        Route::get('/survey-ulang/{surveyUlang}/edit', [SurveyUlangController::class, 'edit']);
-        Route::put('/survey-ulang/{surveyUlang}', [SurveyUlangController::class, 'update']);
+        // CREATE + STORE
+        Route::get('/create/{order}', [SurveyUlangController::class, 'create'])->name('create');
+        Route::post('/create/{order}', [SurveyUlangController::class, 'store'])->name('store');
+
+        // SHOW
+        Route::get('/show/{surveyUlang}', [SurveyUlangController::class, 'show'])->name('show');
+
+        // EDIT + UPDATE
+        Route::get('/edit/{surveyUlang}', [SurveyUlangController::class, 'edit'])->name('edit');
+        Route::put('/edit/{surveyUlang}', [SurveyUlangController::class, 'update'])->name('update');
+
     });
-
-    
 
     // DEFECT ROUTES
     Route::middleware(['permission:defect.index'])->group(function () {

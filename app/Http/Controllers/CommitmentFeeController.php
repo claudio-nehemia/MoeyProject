@@ -160,6 +160,93 @@ class CommitmentFeeController extends Controller
         }
     }
 
+    public function resetFee(Request $request, CommitmentFee $commitmentFee)
+    {
+        try {
+            \Log::info('=== RESET FEE START (MAYOR REVISION) ===');
+            
+            // 1. Hapus file payment_proof di storage jika ada
+            if ($commitmentFee->payment_proof) {
+                if (Storage::disk('public')->exists($commitmentFee->payment_proof)) {
+                    Storage::disk('public')->delete($commitmentFee->payment_proof);
+                    \Log::info('Old payment proof file deleted.');
+                }
+            }
+
+            // 2. Reset data di database
+            $commitmentFee->update([
+                'total_fee' => null,          // Direset ke null
+                'payment_proof' => null,      // Direset ke null
+                'payment_status' => 'pending', // Kembalikan status ke pending
+            ]);
+            
+            // 3. Opsional: Update status pembayaran di tabel Order
+            if ($commitmentFee->moodboard && $commitmentFee->moodboard->order) {
+                $commitmentFee->moodboard->order->update([
+                    'payment_status' => null, // Kembali ke status sebelum CM Fee dibayar
+                ]);
+            }
+
+            \Log::info('Commitment Fee successfully reset.');
+            \Log::info('=== RESET FEE END ===');
+
+            return back()->with('success', 'Commitment Fee berhasil direset dan siap untuk direvisi ulang.');
+
+        } catch (\Exception $e) {
+            \Log::error('Reset fee error: ' . $e->getMessage());
+            return back()->with('error', 'Gagal mereset commitment fee: ' . $e->getMessage());
+        }
+    }
+
+    /**
+    * Revisi Total Fee untuk Commitment Fee yang belum dibayar.
+    */
+    public function reviseFee(Request $request, $commitmentFeeId)
+    {
+        try {
+            Log::info('=== REVISE FEE START ===');
+            Log::info('Commitment Fee ID: ' . $commitmentFeeId);
+
+            $commitmentFee = CommitmentFee::findOrFail($commitmentFeeId);
+
+            // 1. Cek Kondisi Revisi Kritis
+            // Revisi hanya diizinkan jika status masih 'pending' dan payment_proof masih null.
+            if (
+                $commitmentFee->payment_status !== 'pending' ||
+                $commitmentFee->payment_proof !== null
+            ) {
+                Log::warning('Revision denied for ID: ' . $commitmentFeeId . '. Status: ' . $commitmentFee->payment_status . ', Proof: ' . ($commitmentFee->payment_proof ? 'Exists' : 'Null'));
+                return back()->with('error', 'Revisi Total Fee tidak diizinkan karena pembayaran telah dilakukan atau sedang dalam proses upload bukti pembayaran.');
+            }
+
+            // 2. Validasi Input
+            $validated = $request->validate([
+                'total_fee' => 'required|numeric|min:0',
+            ]);
+
+            Log::info('Validation passed, new total_fee: ' . $validated['total_fee']);
+
+            // 3. Update Data
+            $commitmentFee->update([
+                'total_fee' => $validated['total_fee'],
+                // Tidak perlu update response_time/response_by kecuali ada kebijakan khusus
+            ]);
+
+            Log::info('Commitment Fee successfully revised');
+            Log::info('=== REVISE FEE END ===');
+
+            return back()->with('success', 'Total Fee Commitment Fee berhasil direvisi.');
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            Log::error('Commitment Fee not found: ' . $commitmentFeeId);
+            return back()->with('error', 'Data Commitment Fee tidak ditemukan.');
+        } catch (\Exception $e) {
+            Log::error('Revise fee error: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            return back()->with('error', 'Terjadi kesalahan saat merevisi Total Fee: ' . $e->getMessage());
+        }
+    }
+
     /**
      * Remove the specified resource from storage.
      */
