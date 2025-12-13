@@ -126,10 +126,14 @@ class SurveyUlangController extends Controller
             'catatan' => 'nullable|string',
             'temuan' => 'nullable|array',
             'foto.*' => 'nullable|image',
+            'foto_lama' => 'nullable',
         ]);
 
-        $fotoPaths = $surveyUlang->foto ?? [];
+        $fotoLama = json_decode($request->foto_lama, true) ?? [];
 
+        $fotoPaths = $fotoLama;
+
+        // append new photos
         if ($request->hasFile('foto')) {
             foreach ($request->file('foto') as $file) {
                 $fotoPaths[] = $file->store('survey_ulang', 'public');
@@ -137,10 +141,11 @@ class SurveyUlangController extends Controller
         }
 
         $surveyUlang->update([
-            'catatan' => $validated['catatan'] ?? null,
-            'temuan' => $validated['temuan'] ?? [],
+            'catatan' => $validated['catatan'],
+            'temuan' => $validated['temuan'],
             'foto' => $fotoPaths,
         ]);
+
 
         return redirect()->route('survey-ulang.index')->with('success', 'Survey ulang berhasil diperbarui.');
     }
