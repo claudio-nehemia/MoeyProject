@@ -232,6 +232,33 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Delete Termin',
                 'group' => 'Master Data - Termin'
             ],
+
+            // Jenis Pengukuran Permissions
+            [
+                'name' => 'jenis-pengukuran.index',
+                'display_name' => 'View Jenis Pengukuran List',
+                'group' => 'Master Data - Jenis Pengukuran'
+            ],
+            [
+                'name' => 'jenis-pengukuran.show',
+                'display_name' => 'VIew Jenis Pengukuran Detail',
+                'group' => 'Master Data - Jenis Pengukuran'
+            ],
+            [
+                'name' => 'jenis-pengukuran.create',
+                'display_name' => 'Create Jenis Pengukuran',
+                'group' => 'Master Data - Jenis Pengukuran'
+            ],
+            [
+                'name' => 'jenis-pengukuran.edit',
+                'display_name' => 'Edit Jenis Pengukuran',
+                'group' => 'Master Data - Jenis Pengukuran'
+            ],
+            [
+                'name' => 'jenis-pengukuran.delete',
+                'display_name' => 'Delete Jenis Pengukuran',
+                'group' => 'Master Data - Jenis Pengukuran'
+            ],
             
             // ==================== OPERATIONS ====================
             
@@ -626,6 +653,48 @@ class PermissionSeeder extends Seeder
                 'name' => 'project-management.bast',
                 'display_name' => 'Generate & Download BAST',
                 'group' => 'Operations - Project Management'
+            ],
+            [
+                'name' => 'project-management.unlock-payment',
+                'display_name' => 'Unlock Next Payment Step',
+                'group' => 'Operations - Project Management'
+            ],
+            [
+                'name' => 'project-management.request-perpanjangan',
+                'display_name' => 'Request Timeline Extension',
+                'group' => 'Operations - Project Management'
+            ],
+            [
+                'name' => 'project-management.response-perpanjangan',
+                'display_name' => 'Respond to Timeline Extension',
+                'group' => 'Operations - Project Management'
+            ],
+            
+            // Workplan Permissions
+            [
+                'name' => 'workplan.index',
+                'display_name' => 'View Workplan List',
+                'group' => 'Operations - Workplan'
+            ],
+            [
+                'name' => 'workplan.show',
+                'display_name' => 'View Workplan Detail',
+                'group' => 'Operations - Workplan'
+            ],
+            [
+                'name' => 'workplan.create',
+                'display_name' => 'Create Workplan',
+                'group' => 'Operations - Workplan'
+            ],
+            [
+                'name' => 'workplan.edit',
+                'display_name' => 'Edit Workplan',
+                'group' => 'Operations - Workplan'
+            ],
+            [
+                'name' => 'workplan.delete',
+                'display_name' => 'Delete Workplan',
+                'group' => 'Operations - Workplan'
             ],
             
             // Defect Management Permissions

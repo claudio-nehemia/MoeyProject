@@ -25,12 +25,62 @@ class DesainFinalController extends Controller
                     $file->url = Storage::url($file->file_path);
                     return $file;
                 });
+                $moodboard->has_response_final = !empty($moodboard->response_final_time);
                 return $moodboard;
             });
 
         return Inertia::render('DesainFinal/Index', [
             'moodboards' => $moodboards,
         ]);
+    }
+
+    public function responseDesainFinal(Request $request, $moodboardId)
+    {
+        try {
+            Log::info('=== RESPONSE DESAIN FINAL START ===');
+            Log::info('Moodboard ID: ' . $moodboardId);
+            Log::info('User: ' . auth()->user()->name);
+
+            $moodboard = Moodboard::with('commitmentFee')->findOrFail($moodboardId);
+            Log::info('Moodboard found: ' . $moodboard->id);
+
+            // Check if moodboard is approved
+            if ($moodboard->status !== 'approved') {
+                Log::warning('Moodboard status is not approved: ' . $moodboard->status);
+                return back()->with('error', 'Moodboard harus disetujui terlebih dahulu.');
+            }
+
+            // Check if commitment fee is completed
+            if (!$moodboard->commitmentFee || $moodboard->commitmentFee->payment_status !== 'completed') {
+                Log::warning('Commitment fee not completed');
+                return back()->with('error', 'Commitment Fee harus diselesaikan terlebih dahulu.');
+            }
+
+            // Check if already responded
+            if ($moodboard->response_final_time) {
+                Log::warning('Already responded for desain final');
+                return back()->with('error', 'Sudah di-response untuk desain final.');
+            }
+
+            $moodboard->update([
+                'response_final_time' => now(),
+                'response_final_by' => auth()->user()->name,
+            ]);
+
+            // Update order tahapan
+            $moodboard->order->update([
+                'tahapan_proyek' => 'desain_final',
+            ]);
+
+            Log::info('Desain final response created');
+            Log::info('=== RESPONSE DESAIN FINAL END ===');
+
+            return back()->with('success', 'Desain final berhasil di-response. Silahkan upload file desain final.');
+        } catch (\Exception $e) {
+            Log::error('Response desain final error: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            return back()->with('error', 'Gagal response desain final: ' . $e->getMessage());
+        }
     }
 
     public function uploadDesainFinal(Request $request)
@@ -63,6 +113,11 @@ class DesainFinalController extends Controller
                 return back()->with('error', 'Commitment Fee harus diselesaikan terlebih dahulu.');
             }
 
+            // Check if response final has been done
+            if (!$moodboard->response_final_time) {
+                Log::warning('Response final not done yet');
+                return back()->with('error', 'Silahkan response terlebih dahulu sebelum upload file.');
+            }
             if ($request->hasFile('moodboard_final')) {
                 $files = $request->file('moodboard_final');
                 Log::info('Number of files: ' . count($files));

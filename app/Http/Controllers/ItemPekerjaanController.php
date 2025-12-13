@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use App\Models\ItemPekerjaan;
 use App\Models\ItemPekerjaanItem;
 use App\Models\ItemPekerjaanProduk;
+use App\Models\ItemPekerjaanProdukBahanBaku;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use App\Models\ItemPekerjaanJenisItem;
@@ -41,6 +42,7 @@ class ItemPekerjaanController extends Controller
                     'id' => $moodboard->itemPekerjaan->id,
                     'response_by' => $moodboard->itemPekerjaan->response_by,
                     'response_time' => $moodboard->itemPekerjaan->response_time,
+                    'status' => $moodboard->itemPekerjaan->status,
                     'produks' => $moodboard->itemPekerjaan->produks->map(function ($produk) {
                         return [
                             'id' => $produk->id,
@@ -158,12 +160,16 @@ class ItemPekerjaanController extends Controller
         try {
             $validated = $request->validate([
                 'item_pekerjaan_id' => 'required|exists:item_pekerjaans,id',
+                'status' => 'required|in:draft,published',
                 'produks' => 'required|array|min:1',
                 'produks.*.produk_id' => 'required|exists:produks,id',
+                'produks.*.nama_ruangan' => 'nullable|string|max:255',
                 'produks.*.quantity' => 'required|integer|min:1',
                 'produks.*.panjang' => 'nullable|numeric|min:0',
                 'produks.*.lebar' => 'nullable|numeric|min:0',
                 'produks.*.tinggi' => 'nullable|numeric|min:0',
+                'produks.*.bahan_bakus' => 'nullable|array', // Selected bahan baku IDs
+                'produks.*.bahan_bakus.*' => 'exists:items,id',
                 'produks.*.jenisItems' => 'array',
                 'produks.*.jenisItems.*.jenis_item_id' => 'required|exists:jenis_items,id',
                 'produks.*.jenisItems.*.items' => 'array',
@@ -171,24 +177,26 @@ class ItemPekerjaanController extends Controller
                 'produks.*.jenisItems.*.items.*.quantity' => 'required|integer|min:1',
             ]);
 
-            // Get jenis item "Bahan Baku"
-            $bahanBakuJenisItem = JenisItem::where('nama_jenis_item', 'Bahan Baku')->first();
+            // Update item pekerjaan status
+            $itemPekerjaan = ItemPekerjaan::findOrFail($validated['item_pekerjaan_id']);
+            $itemPekerjaan->update(['status' => $validated['status']]);
 
             // Save produks and nested data
             foreach ($validated['produks'] as $produkData) {
-                // Set default 1 untuk dimensi jika null, 0, atau empty
-                $panjang = isset($produkData['panjang']) && $produkData['panjang'] !== '' && $produkData['panjang'] > 0 
-                    ? $produkData['panjang'] 
-                    : 1;
-                $lebar = isset($produkData['lebar']) && $produkData['lebar'] !== '' && $produkData['lebar'] > 0 
-                    ? $produkData['lebar'] 
-                    : 1;
-                $tinggi = isset($produkData['tinggi']) && $produkData['tinggi'] !== '' && $produkData['tinggi'] > 0 
-                    ? $produkData['tinggi'] 
-                    : 1;
+                // Set dimensi - gunakan nilai yang diinput, atau null jika kosong
+                $panjang = isset($produkData['panjang']) && is_numeric($produkData['panjang']) 
+                    ? (float)$produkData['panjang'] 
+                    : null;
+                $lebar = isset($produkData['lebar']) && is_numeric($produkData['lebar']) 
+                    ? (float)$produkData['lebar'] 
+                    : null;
+                $tinggi = isset($produkData['tinggi']) && is_numeric($produkData['tinggi']) 
+                    ? (float)$produkData['tinggi'] 
+                    : null;
 
                 $produk = ItemPekerjaanProduk::create([
                     'item_pekerjaan_id' => $validated['item_pekerjaan_id'],
+                    'nama_ruangan' => $produkData['nama_ruangan'] ?? null,
                     'produk_id' => $produkData['produk_id'],
                     'quantity' => $produkData['quantity'],
                     'panjang' => $panjang,
@@ -196,23 +204,43 @@ class ItemPekerjaanController extends Controller
                     'tinggi' => $tinggi,
                 ]);
 
-                // Auto-create bahan baku dari produk
-                if ($bahanBakuJenisItem) {
+                // Save selected bahan baku ke tabel item_pekerjaan_produk_bahan_bakus
+                if (isset($produkData['bahan_bakus']) && count($produkData['bahan_bakus']) > 0) {
                     $masterProduk = Produk::with('bahanBakus')->find($produkData['produk_id']);
-                    if ($masterProduk && $masterProduk->bahanBakus->count() > 0) {
-                        $jenisItemBahanBaku = ItemPekerjaanJenisItem::create([
-                            'item_pekerjaan_produk_id' => $produk->id,
-                            'jenis_item_id' => $bahanBakuJenisItem->id,
-                        ]);
-
-                        // Save semua bahan baku dari produk
-                        foreach ($masterProduk->bahanBakus as $bahanBaku) {
-                            ItemPekerjaanItem::create([
-                                'item_pekerjaan_jenis_item_id' => $jenisItemBahanBaku->id,
-                                'item_id' => $bahanBaku->id,
-                                'quantity' => 1, // Default quantity untuk bahan baku
-                            ]);
+                    
+                    // DEBUG: Log master produk bahan bakus
+                    Log::info('ItemPekerjaan Store - Produk ID: ' . $produkData['produk_id']);
+                    Log::info('ItemPekerjaan Store - Master Produk BahanBakus: ' . json_encode($masterProduk->bahanBakus->map(function($b) {
+                        return [
+                            'id' => $b->id,
+                            'nama_item' => $b->nama_item,
+                            'pivot_harga_dasar' => $b->pivot->harga_dasar ?? 'NULL',
+                            'pivot_harga_jasa' => $b->pivot->harga_jasa ?? 'NULL',
+                        ];
+                    })->toArray()));
+                    Log::info('ItemPekerjaan Store - Selected BahanBaku IDs: ' . json_encode($produkData['bahan_bakus']));
+                    
+                    foreach ($produkData['bahan_bakus'] as $bahanBakuId) {
+                        // Get harga_dasar and harga_jasa from produk_items pivot
+                        $bahanBakuItem = $masterProduk->bahanBakus->firstWhere('id', $bahanBakuId);
+                        
+                        Log::info('ItemPekerjaan Store - BahanBaku ID: ' . $bahanBakuId . ', Found: ' . ($bahanBakuItem ? 'YES' : 'NO'));
+                        if ($bahanBakuItem) {
+                            Log::info('ItemPekerjaan Store - BahanBaku pivot data: ' . json_encode([
+                                'harga_dasar' => $bahanBakuItem->pivot->harga_dasar ?? 'NULL',
+                                'harga_jasa' => $bahanBakuItem->pivot->harga_jasa ?? 'NULL',
+                            ]));
                         }
+                        
+                        $hargaDasar = $bahanBakuItem?->pivot?->harga_dasar ?? 0;
+                        $hargaJasa = $bahanBakuItem?->pivot?->harga_jasa ?? 0;
+
+                        ItemPekerjaanProdukBahanBaku::create([
+                            'item_pekerjaan_produk_id' => $produk->id,
+                            'item_id' => $bahanBakuId,
+                            'harga_dasar' => $hargaDasar,
+                            'harga_jasa' => $hargaJasa,
+                        ]);
                     }
                 }
 
@@ -239,8 +267,12 @@ class ItemPekerjaanController extends Controller
                 }
             }
 
+            $statusMessage = $validated['status'] === 'draft' 
+                ? 'Data item pekerjaan berhasil disimpan sebagai draft.' 
+                : 'Data item pekerjaan berhasil dipublish.';
+
             return redirect()->route('item-pekerjaan.index')
-                ->with('success', 'Data item pekerjaan berhasil disimpan.');
+                ->with('success', $statusMessage);
         } catch (\Exception $e) {
             Log::error('Store item pekerjaan error: ' . $e->getMessage());
             return back()->with('error', 'Gagal menyimpan data: ' . $e->getMessage());
@@ -251,7 +283,8 @@ class ItemPekerjaanController extends Controller
     {
         $itemPekerjaan = ItemPekerjaan::with([
             'moodboard.order',
-            'produks.produk',
+            'produks.produk.bahanBakus',
+            'produks.bahanBakus.item',
             'produks.jenisItems.jenisItem',
             'produks.jenisItems.items.item'
         ])->findOrFail($itemPekerjaanId);
@@ -278,10 +311,13 @@ class ItemPekerjaanController extends Controller
                         'id' => $produk->id,
                         'produk_id' => $produk->produk_id,
                         'produk_name' => $produk->produk->nama_produk,
+                        'nama_ruangan' => $produk->nama_ruangan,
                         'quantity' => $produk->quantity,
                         'panjang' => $produk->panjang,
                         'lebar' => $produk->lebar,
                         'tinggi' => $produk->tinggi,
+                        // Selected bahan baku IDs
+                        'selected_bahan_bakus' => $produk->bahanBakus->pluck('item_id')->toArray(),
                         'jenisItems' => $produk->jenisItems->map(function ($jenisItem) {
                             return [
                                 'id' => $jenisItem->id,
@@ -351,6 +387,7 @@ class ItemPekerjaanController extends Controller
                         'id' => $produk->id,
                         'produk_id' => $produk->produk_id,
                         'produk_name' => $produk->produk->nama_produk,
+                        'nama_ruangan' => $produk->nama_ruangan,
                         'quantity' => $produk->quantity,
                         'panjang' => $produk->panjang,
                         'lebar' => $produk->lebar,
@@ -380,13 +417,17 @@ class ItemPekerjaanController extends Controller
     {
         try {
             $validated = $request->validate([
+                'status' => 'required|in:draft,published',
                 'produks' => 'required|array|min:1',
                 'produks.*.id' => 'nullable|exists:item_pekerjaan_produks,id',
                 'produks.*.produk_id' => 'required|exists:produks,id',
+                'produks.*.nama_ruangan' => 'nullable|string|max:255',
                 'produks.*.quantity' => 'required|integer|min:1',
                 'produks.*.panjang' => 'nullable|numeric|min:0',
                 'produks.*.lebar' => 'nullable|numeric|min:0',
                 'produks.*.tinggi' => 'nullable|numeric|min:0',
+                'produks.*.bahan_bakus' => 'nullable|array', // Selected bahan baku IDs
+                'produks.*.bahan_bakus.*' => 'exists:items,id',
                 'produks.*.jenisItems' => 'array',
                 'produks.*.jenisItems.*.id' => 'nullable|exists:item_pekerjaan_jenis_items,id',
                 'produks.*.jenisItems.*.jenis_item_id' => 'required|exists:jenis_items,id',
@@ -398,9 +439,9 @@ class ItemPekerjaanController extends Controller
             ]);
 
             $itemPekerjaan = ItemPekerjaan::findOrFail($itemPekerjaanId);
-
-            // Get jenis item "Bahan Baku"
-            $bahanBakuJenisItem = JenisItem::where('nama_jenis_item', 'Bahan Baku')->first();
+            
+            // Update status
+            $itemPekerjaan->update(['status' => $validated['status']]);
 
             // Get existing IDs for deletion
             $existingProdukIds = $itemPekerjaan->produks->pluck('id')->toArray();
@@ -408,100 +449,103 @@ class ItemPekerjaanController extends Controller
 
             // Update or create produks
             foreach ($validated['produks'] as $produkData) {
-                $produkIdChanged = false;
                 if (isset($produkData['id'])) {
                     // Update existing
                     $produk = ItemPekerjaanProduk::find($produkData['id']);
-                    $oldProdukId = $produk->produk_id;
-                    // Set default 1 untuk dimensi jika null, 0, atau empty
-                    $panjang = isset($produkData['panjang']) && $produkData['panjang'] !== '' && $produkData['panjang'] > 0 
-                        ? $produkData['panjang'] 
-                        : 1;
-                    $lebar = isset($produkData['lebar']) && $produkData['lebar'] !== '' && $produkData['lebar'] > 0 
-                        ? $produkData['lebar'] 
-                        : 1;
-                    $tinggi = isset($produkData['tinggi']) && $produkData['tinggi'] !== '' && $produkData['tinggi'] > 0 
-                        ? $produkData['tinggi'] 
-                        : 1;
+                    // Set dimensi - gunakan nilai yang diinput, atau null jika kosong
+                    $panjang = isset($produkData['panjang']) && is_numeric($produkData['panjang']) 
+                        ? (float)$produkData['panjang'] 
+                        : null;
+                    $lebar = isset($produkData['lebar']) && is_numeric($produkData['lebar']) 
+                        ? (float)$produkData['lebar'] 
+                        : null;
+                    $tinggi = isset($produkData['tinggi']) && is_numeric($produkData['tinggi']) 
+                        ? (float)$produkData['tinggi'] 
+                        : null;
 
                     $produk->update([
                         'produk_id' => $produkData['produk_id'],
+                        'nama_ruangan' => $produkData['nama_ruangan'] ?? null,
                         'quantity' => $produkData['quantity'],
                         'panjang' => $panjang,
                         'lebar' => $lebar,
                         'tinggi' => $tinggi,
                     ]);
-                    $produkIdChanged = ($oldProdukId != $produkData['produk_id']);
                     $submittedProdukIds[] = $produk->id;
                 } else {
                     // Create new
-                    // Set default 1 untuk dimensi jika null, 0, atau empty
-                    $panjang = isset($produkData['panjang']) && $produkData['panjang'] !== '' && $produkData['panjang'] > 0 
-                        ? $produkData['panjang'] 
-                        : 1;
-                    $lebar = isset($produkData['lebar']) && $produkData['lebar'] !== '' && $produkData['lebar'] > 0 
-                        ? $produkData['lebar'] 
-                        : 1;
-                    $tinggi = isset($produkData['tinggi']) && $produkData['tinggi'] !== '' && $produkData['tinggi'] > 0 
-                        ? $produkData['tinggi'] 
-                        : 1;
+                    // Set dimensi - gunakan nilai yang diinput, atau null jika kosong
+                    $panjang = isset($produkData['panjang']) && is_numeric($produkData['panjang']) 
+                        ? (float)$produkData['panjang'] 
+                        : null;
+                    $lebar = isset($produkData['lebar']) && is_numeric($produkData['lebar']) 
+                        ? (float)$produkData['lebar'] 
+                        : null;
+                    $tinggi = isset($produkData['tinggi']) && is_numeric($produkData['tinggi']) 
+                        ? (float)$produkData['tinggi'] 
+                        : null;
 
                     $produk = ItemPekerjaanProduk::create([
                         'item_pekerjaan_id' => $itemPekerjaanId,
+                        'nama_ruangan' => $produkData['nama_ruangan'] ?? null,
                         'produk_id' => $produkData['produk_id'],
                         'quantity' => $produkData['quantity'],
                         'panjang' => $panjang,
                         'lebar' => $lebar,
                         'tinggi' => $tinggi,
                     ]);
-                    $produkIdChanged = true; // New produk, need to create bahan baku
                     $submittedProdukIds[] = $produk->id;
                 }
 
-                // Auto-create/update bahan baku dari produk jika produk_id berubah atau produk baru
-                if ($produkIdChanged && $bahanBakuJenisItem) {
-                    // Hapus bahan baku lama jika ada
-                    $existingBahanBakuJenisItem = $produk->jenisItems()
-                        ->where('jenis_item_id', $bahanBakuJenisItem->id)
-                        ->first();
-                    
-                    if ($existingBahanBakuJenisItem) {
-                        $existingBahanBakuJenisItem->items()->delete();
-                        $existingBahanBakuJenisItem->delete();
-                    }
-
-                    // Create bahan baku baru dari produk
+                // Update selected bahan baku
+                // Delete old bahan baku dan create new
+                $produk->bahanBakus()->delete();
+                
+                if (isset($produkData['bahan_bakus']) && count($produkData['bahan_bakus']) > 0) {
                     $masterProduk = Produk::with('bahanBakus')->find($produkData['produk_id']);
-                    if ($masterProduk && $masterProduk->bahanBakus->count() > 0) {
-                        $jenisItemBahanBaku = ItemPekerjaanJenisItem::create([
-                            'item_pekerjaan_produk_id' => $produk->id,
-                            'jenis_item_id' => $bahanBakuJenisItem->id,
-                        ]);
-
-                        // Save semua bahan baku dari produk
-                        foreach ($masterProduk->bahanBakus as $bahanBaku) {
-                            ItemPekerjaanItem::create([
-                                'item_pekerjaan_jenis_item_id' => $jenisItemBahanBaku->id,
-                                'item_id' => $bahanBaku->id,
-                                'quantity' => 1, // Default quantity untuk bahan baku
-                            ]);
+                    
+                    // DEBUG: Log master produk bahan bakus
+                    Log::info('ItemPekerjaan Update - Produk ID: ' . $produkData['produk_id']);
+                    Log::info('ItemPekerjaan Update - Master Produk BahanBakus: ' . json_encode($masterProduk->bahanBakus->map(function($b) {
+                        return [
+                            'id' => $b->id,
+                            'nama_item' => $b->nama_item,
+                            'pivot_harga_dasar' => $b->pivot->harga_dasar ?? 'NULL',
+                            'pivot_harga_jasa' => $b->pivot->harga_jasa ?? 'NULL',
+                        ];
+                    })->toArray()));
+                    Log::info('ItemPekerjaan Update - Selected BahanBaku IDs: ' . json_encode($produkData['bahan_bakus']));
+                    
+                    foreach ($produkData['bahan_bakus'] as $bahanBakuId) {
+                        // Get harga_dasar and harga_jasa from produk_items pivot
+                        $bahanBakuItem = $masterProduk->bahanBakus->firstWhere('id', $bahanBakuId);
+                        
+                        Log::info('ItemPekerjaan Update - BahanBaku ID: ' . $bahanBakuId . ', Found: ' . ($bahanBakuItem ? 'YES' : 'NO'));
+                        if ($bahanBakuItem) {
+                            Log::info('ItemPekerjaan Update - BahanBaku pivot data: ' . json_encode([
+                                'harga_dasar' => $bahanBakuItem->pivot->harga_dasar ?? 'NULL',
+                                'harga_jasa' => $bahanBakuItem->pivot->harga_jasa ?? 'NULL',
+                            ]));
                         }
+                        
+                        $hargaDasar = $bahanBakuItem?->pivot?->harga_dasar ?? 0;
+                        $hargaJasa = $bahanBakuItem?->pivot?->harga_jasa ?? 0;
+
+                        ItemPekerjaanProdukBahanBaku::create([
+                            'item_pekerjaan_produk_id' => $produk->id,
+                            'item_id' => $bahanBakuId,
+                            'harga_dasar' => $hargaDasar,
+                            'harga_jasa' => $hargaJasa,
+                        ]);
                     }
                 }
 
-                // Handle jenis items (skip Bahan Baku karena sudah di-handle otomatis)
+                // Handle jenis items
                 if (isset($produkData['jenisItems'])) {
-                    $existingJenisIds = $produk->jenisItems()
-                        ->where('jenis_item_id', '!=', $bahanBakuJenisItem?->id)
-                        ->pluck('id')
-                        ->toArray();
+                    $existingJenisIds = $produk->jenisItems()->pluck('id')->toArray();
                     $submittedJenisIds = [];
 
                     foreach ($produkData['jenisItems'] as $jenisItemData) {
-                        // Skip Bahan Baku
-                        if ($jenisItemData['jenis_item_id'] == $bahanBakuJenisItem?->id) {
-                            continue;
-                        }
                         if (isset($jenisItemData['id'])) {
                             // Update existing
                             $jenisItem = ItemPekerjaanJenisItem::find($jenisItemData['id']);
@@ -557,8 +601,12 @@ class ItemPekerjaanController extends Controller
             $produksToDelete = array_diff($existingProdukIds, $submittedProdukIds);
             ItemPekerjaanProduk::whereIn('id', $produksToDelete)->delete();
 
+            $statusMessage = $validated['status'] === 'draft' 
+                ? 'Data item pekerjaan berhasil disimpan sebagai draft.' 
+                : 'Data item pekerjaan berhasil dipublish.';
+
             return redirect()->route('item-pekerjaan.index')
-                ->with('success', 'Data item pekerjaan berhasil diupdate.');
+                ->with('success', $statusMessage);
         } catch (\Exception $e) {
             Log::error('Update item pekerjaan error: ' . $e->getMessage());
             return back()->with('error', 'Gagal update data: ' . $e->getMessage());

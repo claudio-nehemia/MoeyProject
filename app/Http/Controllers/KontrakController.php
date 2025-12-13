@@ -7,6 +7,7 @@ use App\Models\Kontrak;
 use Illuminate\Http\Request;
 use App\Models\ItemPekerjaan;
 use App\Models\Termin;
+use Illuminate\Support\Facades\Storage;
 
 class KontrakController extends Controller
 {
@@ -57,6 +58,10 @@ class KontrakController extends Controller
                     'id' => $itemPekerjaan->kontrak->id,
                     'durasi_kontrak' => $itemPekerjaan->kontrak->durasi_kontrak,
                     'harga_kontrak' => $itemPekerjaan->kontrak->harga_kontrak,
+                    'signed_contract_path' => $itemPekerjaan->kontrak->signed_contract_path 
+                        ? Storage::url($itemPekerjaan->kontrak->signed_contract_path) 
+                        : null,
+                    'signed_at' => $itemPekerjaan->kontrak->signed_at?->format('d M Y H:i'),
                     'termin' => [
                         'id' => $itemPekerjaan->kontrak->termin->id ?? null,
                         'nama' => $itemPekerjaan->kontrak->termin->nama_tipe ?? null,
@@ -173,6 +178,144 @@ class KontrakController extends Controller
         $filename = 'Kontrak-' . $kontrak->itemPekerjaan->moodboard->order->nama_project . '-' . date('YmdHis') . '.pdf';
 
         return $pdf->download($filename);
+    }
+
+    public function print($kontrakId)
+    {
+        $kontrak = Kontrak::with([
+            'itemPekerjaan.moodboard.order',
+            'itemPekerjaan.moodboard.commitmentFee',
+            'termin'
+        ])->findOrFail($kontrakId);
+
+        $itemPekerjaan = $kontrak->itemPekerjaan;
+        $order = $itemPekerjaan->moodboard->order;
+        $fee = $itemPekerjaan->moodboard->commitmentFee;
+
+        // path kop surat
+        $kopPath = public_path('kop-moey.png');
+
+        $contractData = [
+            // ======================================
+            // CUSTOMER / PROJECT DATA
+            // ======================================
+            'customer_name' => $order->customer_name,
+            'alamat' => $order->alamat ?? '-',
+            'project' => [
+                'nama' => $order->nama_project,
+            ],
+            'company_name' => $order->company_name,
+
+            // ======================================
+            // KONTRAK DATA
+            // ======================================
+            'nominal_kontrak' => $kontrak->harga_kontrak,
+            'tanggal' => now()->format('d F Y'),
+            'nomor' => 'PNW-' . $kontrak->id,
+            'nomor_kontrak' => 'KTR-' . $kontrak->id,
+            'today' => now()->format('d F Y'),
+
+            // ======================================
+            // COMMITMENT FEE DATA
+            // ======================================
+            'nominal_fee' => $fee ? number_format($fee->total_fee, 0, ',', '.') : '0',
+            'status_fee' => $fee ? ($fee->payment_status === 'completed' ? 'Paid' : 'Pending') : '-',
+            'nomor_surat_fee' => $fee ? "SPC-" . now()->format('Ymd') . "-" . $fee->id : null,
+            'nomor_invoice_fee' => $fee ? "INV-" . now()->format('Ymd') . "-" . $fee->id : null,
+            'nomor_kwitansi_fee' => $fee ? "KW-" . now()->format('Ymd') . "-" . $fee->id : null,
+        ];
+
+        // company moey
+        $companyName = "PT. Moey Jaya Abadi";
+        $companyAddress = "Tangerang";
+        $direkturName = "Aniq Infanuddin";
+        $jabatanDirektur = "Direktur Utama";
+        $nameBank = "Mandiri";
+        $norekBank = "1550007495610";
+        $atasNamaBank = "PT. Moey Jaya Abadi";
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.contract', [
+            'kontrak' => $kontrak,
+            'contractData' => $contractData,
+            'companyName' => $companyName,
+            'companyAddress' => $companyAddress,
+            'direkturName' => $direkturName,
+            'jabatanDirektur' => $jabatanDirektur,
+            'nameBank' => $nameBank,
+            'norekBank' => $norekBank,
+            'atasNamaBank' => $atasNamaBank,
+            'kopPath' => file_exists($kopPath) ? $kopPath : null,
+        ])->setPaper('A4', 'portrait');
+
+        return $pdf->stream('Kontrak-' . $order->nama_project . '.pdf');
+    }
+
+    /**
+     * Upload signed contract PDF.
+     */
+    public function uploadSignedContract(Request $request, $kontrakId)
+    {
+        $kontrak = Kontrak::with('itemPekerjaan.moodboard.order')->findOrFail($kontrakId);
+
+        $request->validate([
+            'signed_contract' => 'required|file|mimes:pdf|max:10240', // Max 10MB
+        ], [
+            'signed_contract.required' => 'File kontrak harus diupload.',
+            'signed_contract.mimes' => 'File harus berformat PDF.',
+            'signed_contract.max' => 'Ukuran file maksimal 10MB.',
+        ]);
+
+        // Delete old signed contract if exists
+        if ($kontrak->signed_contract_path) {
+            Storage::disk('public')->delete($kontrak->signed_contract_path);
+        }
+
+        // Store the new signed contract
+        $projectName = str_replace(' ', '_', $kontrak->itemPekerjaan->moodboard->order->nama_project);
+        $filename = 'Kontrak_TTD_' . $projectName . '_' . now()->format('YmdHis') . '.pdf';
+        $path = $request->file('signed_contract')->storeAs('signed-contracts', $filename, 'public');
+
+        $kontrak->update([
+            'signed_contract_path' => $path,
+            'signed_at' => now(),
+        ]);
+
+        return back()->with('success', 'Kontrak yang sudah ditandatangani berhasil diupload!');
+    }
+
+    /**
+     * Download signed contract PDF.
+     */
+    public function downloadSignedContract($kontrakId)
+    {
+        $kontrak = Kontrak::with('itemPekerjaan.moodboard.order')->findOrFail($kontrakId);
+
+        if (!$kontrak->signed_contract_path) {
+            return back()->with('error', 'Kontrak yang sudah ditandatangani belum diupload.');
+        }
+
+        $projectName = $kontrak->itemPekerjaan->moodboard->order->nama_project;
+        $filename = 'Kontrak_TTD_' . $projectName . '.pdf';
+
+        return Storage::disk('public')->download($kontrak->signed_contract_path, $filename);
+    }
+
+    /**
+     * Delete signed contract.
+     */
+    public function deleteSignedContract($kontrakId)
+    {
+        $kontrak = Kontrak::findOrFail($kontrakId);
+
+        if ($kontrak->signed_contract_path) {
+            Storage::disk('public')->delete($kontrak->signed_contract_path);
+            $kontrak->update([
+                'signed_contract_path' => null,
+                'signed_at' => null,
+            ]);
+        }
+
+        return back()->with('success', 'Kontrak yang sudah ditandatangani berhasil dihapus.');
     }
 
     /**

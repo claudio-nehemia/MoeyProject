@@ -8,8 +8,9 @@ import { FormEventHandler, useEffect, useState } from 'react';
 interface TerminStep {
     step: number;
     text: string;
-    // backend sekarang bisa kirim persentase
+    // Support both old 'percentage' and new 'persentase' field
     persentase?: number | string;
+    percentage?: number | string;
 }
 
 interface Termin {
@@ -17,7 +18,7 @@ interface Termin {
     kode_tipe: string;
     nama_tipe: string;
     deskripsi: string | null;
-    tahapan: { step: number; text: string; persentase: number }[];
+    tahapan: TerminStep[];
     created_at: string;
     updated_at: string;
 }
@@ -322,7 +323,7 @@ export default function Index({ termins }: Props) {
                                                                         </span>
                                                                     </div>
                                                                     <span className="rounded bg-rose-200 px-1.5 py-0.5 text-[10px] font-bold text-rose-700">
-                                                                        {item.persentase}%
+                                                                        {item.persentase ?? item.percentage ?? 0}%
                                                                     </span>
                                                                 </div>
                                                             ),

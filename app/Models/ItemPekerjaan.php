@@ -10,7 +10,44 @@ class ItemPekerjaan extends Model
         'moodboard_id',
         'response_by',
         'response_time',
+        'status',
+        'workplan_start_date',
+        'workplan_end_date',
+        'unlocked_step',
+        'bast_number',
+        'bast_date',
+        'bast_pdf_path',
+        'bast_foto_klien',
+        'bast_foto_klien_uploaded_at',
     ];
+
+    protected $casts = [
+        'workplan_start_date' => 'date',
+        'workplan_end_date' => 'date',
+        'bast_date' => 'datetime',
+        'bast_foto_klien_uploaded_at' => 'datetime',
+    ];
+
+    // Accessor: Check if BAST foto klien exists
+    public function getHasBastFotoKlienAttribute()
+    {
+        return !empty($this->bast_foto_klien);
+    }
+
+    // Accessor: Check if all produks completed Install QC
+    public function getIsCompletedAttribute()
+    {
+        if ($this->produks->isEmpty()) {
+            return false;
+        }
+        return $this->produks->every(fn($p) => $p->current_stage === 'Install QC');
+    }
+
+    // Accessor: Check if BAST exists
+    public function getHasBastAttribute()
+    {
+        return !empty($this->bast_number);
+    }
 
     public function moodboard()
     {
@@ -56,6 +93,11 @@ class ItemPekerjaan extends Model
     public function invoices()
     {
         return $this->hasMany(Invoice::class);
+    }
+
+    public function pengajuanPerpanjanganTimelines()
+    {
+        return $this->hasMany(PengajuanPerpanjanganTimeline::class, 'item_pekerjaan_id');
     }
 
     public function getProgressAttribute()

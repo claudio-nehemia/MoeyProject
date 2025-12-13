@@ -26,6 +26,7 @@ use App\Http\Controllers\ItemPekerjaanController;
 use App\Http\Controllers\JenisInteriorController;
 use App\Http\Controllers\SurveyResultsController;
 use App\Http\Controllers\ProjectManagementController;
+use App\Http\Controllers\JenisPengukuranController;
 use App\Http\Controllers\WorkplanItemController;
 use App\Http\Controllers\SurveyUlangController;
 
@@ -109,6 +110,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('jenis-item/{jenisItem}', [JenisItemController::class, 'destroy'])
         ->middleware('permission:jenis-item.delete')->name('jenis-item.destroy');
 
+    // Jenis Pengukuran Routes
+    Route::middleware(['permission:jenis-pengukuran.index'])->group(function () {
+        Route::get('jenis-pengukuran', [JenisPengukuranController::class, 'index'])->name('jenis-pengukuran.index');
+        Route::get('/api/jenis-pengukuran', [JenisPengukuranController::class, 'fetch'])->name('jenis-pengukuran.fetch');
+    });
+    // STORE
+    Route::post('jenis-pengukuran', [JenisPengukuranController::class, 'store'])
+        ->middleware('permission:jenis-pengukuran.create')
+        ->name('jenis-pengukuran.store');
+    // UPDATE
+    Route::put('jenis-pengukuran/{jenisPengukuran}', [JenisPengukuranController::class, 'update'])
+        ->middleware('permission:jenis-pengukuran.edit')
+        ->name('jenis-pengukuran.update');
+    // DELETE
+    Route::delete('jenis-pengukuran/{jenisPengukuran}', [JenisPengukuranController::class, 'destroy'])
+        ->middleware('permission:jenis-pengukuran.delete')
+        ->name('jenis-pengukuran.destroy');
+
     // Item Routes
     Route::resource('item', ItemController::class)
         ->middleware([
@@ -170,6 +189,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('permission:survey-results.edit')->name('survey-results.edit');
     Route::put('survey-results/{surveyResult}', [SurveyResultsController::class, 'update'])
         ->middleware('permission:survey-results.edit')->name('survey-results.update');
+    Route::delete('survey-results/{surveyResult}/file/{fileIndex}', [SurveyResultsController::class, 'deleteFile'])
+        ->middleware('permission:survey-results.edit')->name('survey-results.delete-file');
     Route::get('survey-results/{surveyResult}', [SurveyResultsController::class, 'show'])
         ->middleware('permission:survey-results.show')->name('survey-results.show');
 
@@ -239,10 +260,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('commitment-fee/reset-fee/{commitmentFee}', [CommitmentFeeController::class, 'resetFee'])
         ->middleware('permission:commitment-fee.edit')->name('commitment-fee.reset-fee');
     });
+        Route::get('commitment-fee/{id}/print', [CommitmentFeeController::class, 'print'])
+            ->name('commitment-fee.print');
+        });
 
     // DESAIN FINAL ROUTES
     Route::middleware(['permission:desain-final.index'])->group(function () {
         Route::get('desain-final', [DesainFinalController::class, 'index'])->name('desain-final.index');
+        Route::post('desain-final/response/{moodboardId}', [DesainFinalController::class, 'responseDesainFinal'])
+            ->middleware('permission:desain-final.create')->name('desain-final.response');
         Route::post('desain-final/upload', [DesainFinalController::class, 'uploadDesainFinal'])
             ->middleware('permission:desain-final.create')->name('desain-final.upload');
         Route::post('desain-final/accept/{moodboardId}', [DesainFinalController::class, 'acceptDesainFinal'])
@@ -349,6 +375,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('permission:kontrak.edit')->get('kontrak/{kontrak}/edit', [KontrakController::class, 'edit'])->name('kontrak.edit');
     Route::middleware('permission:kontrak.edit')->put('kontrak/{kontrak}', [KontrakController::class, 'update'])->name('kontrak.update');
     Route::middleware('permission:kontrak.delete')->delete('kontrak/{kontrak}', [KontrakController::class, 'destroy'])->name('kontrak.destroy');
+    Route::middleware('permission:kontrak.show')->get('kontrak/{kontrak}/print', [KontrakController::class, 'print'])->name('kontrak.print');
+    
+    // Signed Contract Routes
+    Route::middleware('permission:kontrak.edit')->post('kontrak/{kontrak}/upload-signed', [KontrakController::class, 'uploadSignedContract'])->name('kontrak.upload-signed');
+    Route::middleware('permission:kontrak.show')->get('kontrak/{kontrak}/download-signed', [KontrakController::class, 'downloadSignedContract'])->name('kontrak.download-signed');
+    Route::middleware('permission:kontrak.edit')->delete('kontrak/{kontrak}/delete-signed', [KontrakController::class, 'deleteSignedContract'])->name('kontrak.delete-signed');
 
     // INVOICE ROUTES
     Route::middleware(['permission:invoice.index'])->group(function () {
@@ -359,6 +391,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:invoice.create')->name('invoice.generate');
         Route::post('invoice/{invoiceId}/upload-bukti', [InvoiceController::class, 'uploadBuktiBayar'])
             ->middleware('permission:invoice.edit')->name('invoice.upload-bukti');
+        Route::post('invoice/{itemPekerjaanId}/upload-bast-foto-klien', [InvoiceController::class, 'uploadBastFotoKlien'])
+            ->middleware('permission:invoice.edit')->name('invoice.upload-bast-foto-klien');
         Route::delete('invoice/{invoiceId}', [InvoiceController::class, 'destroy'])
             ->middleware('permission:invoice.delete')->name('invoice.destroy');
     });
@@ -370,11 +404,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:project-management.show');
         Route::post('/produk/{id}/update-stage', [ProjectManagementController::class, 'updateStage'])
             ->middleware('permission:project-management.update-stage');
-        Route::post('/produk/{id}/generate-bast', [ProjectManagementController::class, 'generateBast'])
+        Route::post('/item-pekerjaan/{id}/generate-bast', [ProjectManagementController::class, 'generateBast'])
             ->middleware('permission:project-management.bast');
-        Route::get('/produk/{id}/download-bast', [ProjectManagementController::class, 'downloadBast'])
+        Route::get('/item-pekerjaan/{id}/download-bast', [ProjectManagementController::class, 'downloadBast'])
             ->middleware('permission:project-management.bast');
-        Route::post('/project-management/produk/{produk}/workplan',[WorkplanItemController::class, 'store'])->name('project-management.workplan.store');
+        Route::post('/item-pekerjaan/{id}/unlock-next-step', [ProjectManagementController::class, 'unlockNextStep'])
+            ->middleware('permission:project-management.unlock-payment');
+        Route::put('/item-pekerjaan/{id}/request-perpanjangan', [ProjectManagementController::class, 'requestPerpanjanganTimeline'])
+            ->middleware('permission:project-management.request-perpanjangan');
+        Route::put('/item-pekerjaan/{pengajuanId}/acc-perpanjangan', [ProjectManagementController::class, 'acceptPerpanjanganTimeline'])
+            ->middleware('permission:project-management.response-perpanjangan');
+        Route::put('/item-pekerjaan/{pengajuanId}/reject-perpanjangan', [ProjectManagementController::class, 'rejectPerpanjanganTimeline'])
+            ->middleware('permission:project-management.response-perpanjangan');
+    });
+
+    // WORKPLAN ROUTES
+    Route::middleware(['permission:workplan.index'])->group(function () {
+        Route::get('/workplan', [WorkplanItemController::class, 'index'])->name('workplan.index');
+        Route::get('/workplan/{order}/create', [WorkplanItemController::class, 'create'])->name('workplan.create');
+        Route::post('/workplan/{order}', [WorkplanItemController::class, 'store'])->name('workplan.store');
+        Route::get('/workplan/{order}/edit', [WorkplanItemController::class, 'edit'])->name('workplan.edit');
+        Route::put('/workplan/{order}', [WorkplanItemController::class, 'update'])->name('workplan.update');
         Route::post('/workplan/{workplan}/update-status', [WorkplanItemController::class, 'updateStatus'])
             ->name('workplan.update.status');
     });

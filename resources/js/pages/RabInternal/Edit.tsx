@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, FormEvent, useMemo } from 'react';
 import { router, Head } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
@@ -22,6 +22,7 @@ interface Produk {
     id: number;
     item_pekerjaan_produk_id: number;
     nama_produk: string;
+    nama_ruangan: string | null;
     qty_produk: number;
     panjang: number | null;
     lebar: number | null;
@@ -31,6 +32,8 @@ interface Produk {
     markup_satuan: number;
     non_aksesoris_items: NonAksesorisItem[];
     aksesoris: Aksesoris[];
+    bahan_baku_names: string[];
+    harga_produk: number;
 }
 
 interface RabInternal {
@@ -218,13 +221,12 @@ export default function Edit({ rabInternal }: Props) {
     const calculateHargaSatuan = (produk: Produk, formProduk: FormProduk, markupSatuan: string | number) => {
         const markup = typeof markupSatuan === 'string' ? parseFloat(markupSatuan) || 0 : markupSatuan;
         
-        // Calculate dimensi multiplier
-        let hargaDimensi = 1;
-        if (produk.panjang && produk.lebar && produk.tinggi) {
-            hargaDimensi = produk.panjang * produk.lebar * produk.tinggi * produk.qty_produk;
-        } else {
-            hargaDimensi = produk.qty_produk;
-        }
+        // Use Math.max(1, value) to match backend calculation logic
+        // Values are stored as-is (e.g., 0.8), but minimum 1 is used for calculation
+        const panjang = Math.max(1, produk.panjang || 1);
+        const lebar = Math.max(1, produk.lebar || 1);
+        const tinggi = Math.max(1, produk.tinggi || 1);
+        const hargaDimensi = panjang * lebar * tinggi * produk.qty_produk;
         
         // Calculate total harga items non-aksesoris from form data
         const totalHargaItemsNonAksesoris = formProduk.non_aksesoris_items.reduce(
@@ -271,6 +273,22 @@ export default function Edit({ rabInternal }: Props) {
             }
         );
     };
+
+    // Group products by ruangan
+    const groupedByRuangan = useMemo(() => {
+        const groups: { [key: string]: { produk: Produk; formIndex: number }[] } = {};
+        rabInternal.itemPekerjaan.produks.forEach((produk, index) => {
+            const ruangan = produk.nama_ruangan || 'Tanpa Ruangan';
+            if (!groups[ruangan]) {
+                groups[ruangan] = [];
+            }
+            groups[ruangan].push({ produk, formIndex: index });
+        });
+        return Object.entries(groups).map(([nama_ruangan, items]) => ({
+            nama_ruangan,
+            items,
+        }));
+    }, [rabInternal.itemPekerjaan.produks]);
 
     return (
         <>
@@ -334,7 +352,23 @@ export default function Edit({ rabInternal }: Props) {
 
                     {/* FORM PRODUK */}
                     <form onSubmit={handleSubmit}>
-                        {rabInternal.itemPekerjaan.produks.map((produk, produkIndex) => {
+                        {groupedByRuangan.map((ruangan, ruanganIndex) => (
+                            <div key={ruanganIndex} className="mb-8">
+                                {/* Ruangan Header */}
+                                <div className="mb-4 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 p-4">
+                                    <div className="flex items-center gap-2">
+                                        <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                        </svg>
+                                        <h2 className="text-xl font-bold text-white">{ruangan.nama_ruangan}</h2>
+                                        <span className="rounded-full bg-white/20 px-3 py-1 text-sm text-white">
+                                            {ruangan.items.length} produk
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Products in this Ruangan */}
+                                {ruangan.items.map(({ produk, formIndex: produkIndex }) => {
                             const formProduk = formData[produkIndex];
                             if (!formProduk) return <div key={produk.item_pekerjaan_produk_id} />;
 
@@ -363,11 +397,30 @@ export default function Edit({ rabInternal }: Props) {
                                             {produk.panjang &&
                                                 produk.lebar &&
                                                 produk.tinggi &&
-                                                ` Dimensi: ${produk.panjang} × ${produk.lebar} × ${produk.tinggi} cm`}
+                                                ` Dimensi: ${produk.panjang} × ${produk.lebar} × ${produk.tinggi} m`}
                                         </p>
                                     </div>
 
                                     <div className="p-6">
+                                        {/* Bahan Baku - Display Only (names) */}
+                                        {produk.bahan_baku_names && produk.bahan_baku_names.length > 0 && (
+                                            <div className="mb-6">
+                                                <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                                                    Bahan Baku
+                                                </h4>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {produk.bahan_baku_names.map((name, idx) => (
+                                                        <span
+                                                            key={idx}
+                                                            className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+                                                        >
+                                                            {name}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {/* Items Non-Aksesoris - Editable */}
                                         <div className="mb-6">
                                             <div className="mb-3 flex items-center justify-between">
@@ -748,6 +801,8 @@ export default function Edit({ rabInternal }: Props) {
                                 </div>
                             );
                         })}
+                            </div>
+                        ))}
 
                         <div className="flex justify-end space-x-3">
                             <button

@@ -55,11 +55,15 @@ class InvoiceController extends Controller
                 $lastPaidStep = $paidInvoices->max('termin_step') ?? 0;
                 $currentStep = $lastPaidStep + 1;
 
-                // Check if all products have BAST (required for final payment)
-                $allProductsHaveBast = $itemPekerjaan->produks->every(fn($p) => $p->has_bast);
+                // Check if Item Pekerjaan has BAST (required for final payment)
+                // BAST is now at ItemPekerjaan level, not per product
+                $hasBast = $itemPekerjaan->has_bast;
 
                 // Calculate total paid from invoices
                 $totalPaidFromInvoices = (float) $paidInvoices->sum('total_amount');
+
+                // Get unlocked step (default 1)
+                $unlockedStep = $itemPekerjaan->unlocked_step ?? 1;
 
                 // Determine which steps are available
                 $stepsInfo = [];
@@ -81,17 +85,33 @@ class InvoiceController extends Controller
 
                     if ($invoice) {
                         $status = $invoice->status;
-                    } elseif ($step === $currentStep) {
-                        // Current step - check if can pay
-                        if ($isLastStep && !$allProductsHaveBast) {
+                    } elseif ($isLastStep) {
+                        // TAHAP TERAKHIR: Otomatis available jika BAST sudah ada & tahap sebelumnya sudah dibayar
+                        if (!$hasBast) {
                             $status = 'waiting_bast';
-                            $lockedReason = 'Menunggu BAST selesai';
+                            $lockedReason = 'Menunggu BAST Item Pekerjaan dibuat';
+                        } elseif ($lastPaidStep < $totalTahap - 1) {
+                            // Previous steps not all paid
+                            $status = 'locked';
+                            $lockedReason = 'Bayar tahap sebelumnya dulu';
+                        } else {
+                            // BAST ada & semua tahap sebelumnya sudah dibayar
+                            $status = 'available';
+                            $canPay = true;
+                        }
+                    } elseif ($step <= $unlockedStep) {
+                        // Step is unlocked (tahap 1 sampai n-1)
+                        if ($step > 1 && $lastPaidStep < $step - 1) {
+                            // Previous step not paid yet
+                            $status = 'locked';
+                            $lockedReason = 'Bayar tahap sebelumnya dulu';
                         } else {
                             $status = 'available';
                             $canPay = true;
                         }
-                    } elseif ($step < $currentStep) {
-                        $status = 'paid'; // Previous steps should be paid
+                    } else {
+                        // Step is still locked
+                        $lockedReason = 'Belum di-unlock oleh admin';
                     }
 
                     $stepsInfo[] = [
@@ -155,7 +175,7 @@ class InvoiceController extends Controller
                     ] : null,
                     'steps_info' => $stepsInfo,
                     'current_step' => $currentStep,
-                    'all_products_have_bast' => $allProductsHaveBast,
+                    'has_bast' => $hasBast,
                     'is_fully_paid' => $currentStep > $totalTahap && $totalTahap > 0,
                 ];
             });
@@ -196,9 +216,16 @@ class InvoiceController extends Controller
         $tahapan = $termin->tahapan ?? [];
         $requestedStep = $request->termin_step;
         $totalSteps = count($tahapan);
+        $isLastStep = $requestedStep === $totalSteps;
 
         if ($requestedStep > $totalSteps) {
             return back()->with('error', 'Tahap tidak valid.');
+        }
+
+        // Check if step is unlocked (tahap terakhir tidak perlu di-unlock manual)
+        $unlockedStep = $itemPekerjaan->unlocked_step ?? 1;
+        if (!$isLastStep && $requestedStep > $unlockedStep) {
+            return back()->with('error', 'Tahap ini belum dibuka. Hubungi admin untuk membuka tagihan pembayaran.');
         }
 
         // Check if invoice for this step already exists
@@ -217,11 +244,10 @@ class InvoiceController extends Controller
         }
 
         // Check BAST requirement for final step
-        $isLastStep = $requestedStep === $totalSteps;
+        // Tahap terakhir otomatis available setelah BAST dibuat
         if ($isLastStep) {
-            $allProductsHaveBast = $itemPekerjaan->produks->every(fn($p) => $p->has_bast);
-            if (!$allProductsHaveBast) {
-                return back()->with('error', 'Semua produk harus memiliki BAST untuk pembayaran tahap akhir.');
+            if (!$itemPekerjaan->has_bast) {
+                return back()->with('error', 'Item Pekerjaan harus memiliki BAST untuk pembayaran tahap akhir.');
             }
         }
 
@@ -321,6 +347,12 @@ class InvoiceController extends Controller
         // Calculate totals
         $totalPaid = $allInvoices->where('status', 'paid')->sum('total_amount');
 
+        // Check if this is the last step and needs BAST foto klien
+        $isLastStep = $invoice->termin_step === $totalSteps;
+        $itemPekerjaan = $invoice->itemPekerjaan;
+        $hasBastFotoKlien = !empty($itemPekerjaan->bast_foto_klien);
+        $bastFotoKlienUrl = $itemPekerjaan->bast_foto_klien ? Storage::url($itemPekerjaan->bast_foto_klien) : null;
+
         return Inertia::render('Invoice/Show', [
             'invoice' => [
                 'id' => $invoice->id,
@@ -353,6 +385,12 @@ class InvoiceController extends Controller
                 ],
                 'termin_nama' => $termin?->nama_tipe,
                 'all_invoices' => $allInvoices,
+                // BAST foto klien info (untuk tahap terakhir/pelunasan)
+                'is_last_step' => $isLastStep,
+                'item_pekerjaan_id' => $itemPekerjaan->id,
+                'has_bast_foto_klien' => $hasBastFotoKlien,
+                'bast_foto_klien' => $bastFotoKlienUrl,
+                'bast_foto_klien_uploaded_at' => $itemPekerjaan->bast_foto_klien_uploaded_at?->format('d M Y H:i'),
                 'items' => $invoice->rabKontrak->rabKontrakProduks->map(function ($rabProduk) use ($aksesorisJenisItem) {
                     $jenisItemsList = [];
                     foreach ($rabProduk->itemPekerjaanProduk->jenisItems as $jenisItem) {
@@ -409,6 +447,15 @@ class InvoiceController extends Controller
         $request->validate([
             'bukti_bayar' => 'required|file|mimes:jpeg,png,jpg,pdf|max:5120', // 5MB
         ]);
+
+        // Check if this is the last step - require BAST foto klien
+        $termin = $invoice->itemPekerjaan->kontrak?->termin;
+        $totalSteps = count($termin?->tahapan ?? []);
+        $isLastStep = $invoice->termin_step === $totalSteps;
+
+        if ($isLastStep && empty($invoice->itemPekerjaan->bast_foto_klien)) {
+            return back()->with('error', 'Untuk pembayaran tahap terakhir/pelunasan, upload foto BAST dengan klien terlebih dahulu.');
+        }
 
         DB::transaction(function () use ($request, $invoice) {
             // Delete old bukti bayar if exists
@@ -572,6 +619,38 @@ class InvoiceController extends Controller
         $filename = 'Invoice-' . $safeInvoiceNumber . '-Tahap' . $invoice->termin_step . '-' . date('YmdHis') . '.pdf';
 
         return $pdf->download($filename);
+    }
+
+    /**
+     * Upload foto BAST dengan klien (diperlukan untuk pembayaran tahap terakhir/pelunasan)
+     */
+    public function uploadBastFotoKlien(Request $request, $itemPekerjaanId)
+    {
+        $request->validate([
+            'bast_foto_klien' => 'required|image|mimes:jpeg,png,jpg|max:5120', // 5MB
+        ]);
+
+        $itemPekerjaan = ItemPekerjaan::findOrFail($itemPekerjaanId);
+
+        // Check if BAST document exists first
+        if (!$itemPekerjaan->has_bast) {
+            return back()->with('error', 'BAST dokumen harus dibuat terlebih dahulu');
+        }
+
+        // Delete old photo if exists
+        if ($itemPekerjaan->bast_foto_klien) {
+            Storage::disk('public')->delete($itemPekerjaan->bast_foto_klien);
+        }
+
+        // Store new photo
+        $path = $request->file('bast_foto_klien')->store('bast-foto-klien', 'public');
+
+        $itemPekerjaan->update([
+            'bast_foto_klien' => $path,
+            'bast_foto_klien_uploaded_at' => now(),
+        ]);
+
+        return back()->with('success', 'Foto BAST dengan klien berhasil diupload. Sekarang Anda dapat upload bukti pembayaran.');
     }
 
     public function destroy($invoiceId)

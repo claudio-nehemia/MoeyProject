@@ -29,6 +29,7 @@ class RabInternalController extends Controller
             ->map(function ($itemPekerjaan) {
                 return [
                     'id' => $itemPekerjaan->id,
+                    'status' => $itemPekerjaan->status,
                     'order' => [
                         'nama_project' => $itemPekerjaan->moodboard->order->nama_project,
                         'company_name' => $itemPekerjaan->moodboard->order->company_name,
@@ -52,6 +53,11 @@ class RabInternalController extends Controller
     {
         try {
             $itemPekerjaan = ItemPekerjaan::findOrFail($itemPekerjaanId);
+
+            // Check if item pekerjaan status is published
+            if ($itemPekerjaan->status !== 'published') {
+                return back()->with('error', 'Item Pekerjaan masih dalam status draft. Harap publish terlebih dahulu.');
+            }
 
             if ($itemPekerjaan->rabInternal) {
                 return back()->with('error', 'RAB Internal sudah ada untuk item pekerjaan ini.');
@@ -81,13 +87,15 @@ class RabInternalController extends Controller
     {
         $rabInternal = RabInternal::with([
             'itemPekerjaan.moodboard.order',
-            'itemPekerjaan.produks.produk',
+            'itemPekerjaan.produks.produk.bahanBakus',
+            'itemPekerjaan.produks.bahanBakus.item', // Selected bahan baku
             'itemPekerjaan.produks.jenisItems.jenisItem',
             'itemPekerjaan.produks.jenisItems.items.item'
         ])->findOrFail($rabInternalId);
 
         // Get Aksesoris jenis_item_id
         $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
+        $bahanBakuJenisItem = JenisItem::where('nama_jenis_item', 'Bahan Baku')->first();
 
         return Inertia::render('RabInternal/Create', [
             'rabInternal' => [
@@ -98,14 +106,21 @@ class RabInternalController extends Controller
                         'company_name' => $rabInternal->itemPekerjaan->moodboard->order->company_name,
                         'customer_name' => $rabInternal->itemPekerjaan->moodboard->order->customer_name,
                     ],
-                    'produks' => $rabInternal->itemPekerjaan->produks->map(function ($produk) use ($aksesorisJenisItem) {
-                        // Hitung harga items non-aksesoris
+                    'produks' => $rabInternal->itemPekerjaan->produks->map(function ($produk) use ($aksesorisJenisItem, $bahanBakuJenisItem) {
+                        // Hitung harga items non-aksesoris (Finishing Dalam/Luar)
                         $hargaItemsNonAksesoris = 0;
                         $aksesorisList = [];
                         $nonAksesorisList = [];
 
+                        // Get selected bahan baku from item_pekerjaan_produk_bahan_bakus
+                        $selectedBahanBakus = $produk->bahanBakus;
+                        $bahanBakuNames = $selectedBahanBakus->map(fn($bb) => $bb->item->nama_item)->toArray();
+                        
+                        // Hitung harga dasar produk = total harga_dasar dari selected bahan baku
+                        $hargaDasarProduk = $selectedBahanBakus->sum('harga_dasar');
+
                         foreach ($produk->jenisItems as $jenisItem) {
-                            if ($jenisItem->jenis_item_id === $aksesorisJenisItem->id) {
+                            if ($jenisItem->jenis_item_id === $aksesorisJenisItem?->id) {
                                 // Collect aksesoris
                                 foreach ($jenisItem->items as $item) {
                                     $aksesorisList[] = [
@@ -116,8 +131,8 @@ class RabInternalController extends Controller
                                         'qty_item_pekerjaan' => $item->quantity,
                                     ];
                                 }
-                            } else {
-                                // Collect non-aksesoris items
+                            } elseif ($jenisItem->jenis_item_id !== $bahanBakuJenisItem?->id) {
+                                // Collect non-aksesoris items (Finishing Dalam/Luar only, exclude Bahan Baku)
                                 foreach ($jenisItem->items as $item) {
                                     $hargaItemsNonAksesoris += ($item->item->harga * $item->quantity);
                                     $nonAksesorisList[] = [
@@ -133,13 +148,15 @@ class RabInternalController extends Controller
                             'id' => $produk->id,
                             'item_pekerjaan_produk_id' => $produk->id,
                             'nama_produk' => $produk->produk->nama_produk,
+                            'nama_ruangan' => $produk->nama_ruangan,
                             'qty_produk' => $produk->quantity,
                             'panjang' => $produk->panjang,
                             'lebar' => $produk->lebar,
                             'tinggi' => $produk->tinggi,
-                            'harga_dasar' => $produk->produk->harga,
+                            'harga_dasar' => $hargaDasarProduk, // Total harga_dasar dari selected bahan baku
                             'harga_items_non_aksesoris' => $hargaItemsNonAksesoris,
                             'non_aksesoris_items' => $nonAksesorisList,
+                            'bahan_baku_names' => $bahanBakuNames, // Nama bahan baku yang dipilih
                             'aksesoris' => $aksesorisList,
                         ];
                     }),
@@ -165,15 +182,19 @@ class RabInternalController extends Controller
             DB::beginTransaction();
 
             foreach ($validated['produks'] as $produkData) {
-                // Get item pekerjaan produk data
-                $itemProduk = ItemPekerjaanProduk::with(['produk', 'jenisItems.items.item'])->findOrFail($produkData['item_pekerjaan_produk_id']);
+                // Get item pekerjaan produk data with selected bahan bakus
+                $itemProduk = ItemPekerjaanProduk::with(['produk', 'bahanBakus', 'jenisItems.items.item'])->findOrFail($produkData['item_pekerjaan_produk_id']);
 
-                // Calculate harga items non-aksesoris
+                // Calculate harga dasar dari selected bahan baku
+                $hargaDasarProduk = $itemProduk->bahanBakus->sum('harga_dasar');
+
+                // Calculate harga items non-aksesoris (exclude Bahan Baku)
                 $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
+                $bahanBakuJenisItem = JenisItem::where('nama_jenis_item', 'Bahan Baku')->first();
                 $hargaItemsNonAksesoris = 0;
 
                 foreach ($itemProduk->jenisItems as $jenisItem) {
-                    if ($jenisItem->jenis_item_id !== $aksesorisJenisItem->id) {
+                    if ($jenisItem->jenis_item_id !== $aksesorisJenisItem?->id && $jenisItem->jenis_item_id !== $bahanBakuJenisItem?->id) {
                         foreach ($jenisItem->items as $item) {
                             $hargaItemsNonAksesoris += ($item->item->harga * $item->quantity);
                         }
@@ -181,24 +202,29 @@ class RabInternalController extends Controller
                 }
 
                 // Calculate harga dimensi (P × L × T × Qty)
-                // If all dimensions exist, use them; otherwise default to qty only
+                // If all dimensions exist and are not null, use them with minimum value of 1 each
+                // Otherwise default to qty only
                 $hargaDimensi = 1;
-                if ($itemProduk->panjang && $itemProduk->lebar && $itemProduk->tinggi) {
-                    $hargaDimensi = $itemProduk->panjang * $itemProduk->lebar * $itemProduk->tinggi * $itemProduk->quantity;
+                if ($itemProduk->panjang !== null && $itemProduk->lebar !== null && $itemProduk->tinggi !== null) {
+                    // Use max(1, value) to ensure minimum 1 for calculation
+                    $panjangCalc = max(1, (float)$itemProduk->panjang);
+                    $lebarCalc = max(1, (float)$itemProduk->lebar);
+                    $tinggiCalc = max(1, (float)$itemProduk->tinggi);
+                    $hargaDimensi = $panjangCalc * $lebarCalc * $tinggiCalc * $itemProduk->quantity;
                 } else {
                     $hargaDimensi = $itemProduk->quantity;
                 }
 
                 // Calculate harga satuan = (harga_dasar + harga_items_non_aksesoris) * (1 + markup/100) * harga_dimensi
                 $markupSatuan = $produkData['markup_satuan'];
-                $hargaSatuan = ($itemProduk->produk->harga + $hargaItemsNonAksesoris) * (1 + $markupSatuan / 100) * $hargaDimensi;
+                $hargaSatuan = ($hargaDasarProduk + $hargaItemsNonAksesoris) * (1 + $markupSatuan / 100) * $hargaDimensi;
 
                 // Create RAB Produk
                 $rabProduk = RabProduk::create([
                     'rab_internal_id' => $validated['rab_internal_id'],
                     'item_pekerjaan_produk_id' => $produkData['item_pekerjaan_produk_id'],
                     'markup_satuan' => $markupSatuan,
-                    'harga_dasar' => $itemProduk->produk->harga,
+                    'harga_dasar' => $hargaDasarProduk, // Total harga_dasar dari selected bahan baku
                     'harga_items_non_aksesoris' => $hargaItemsNonAksesoris,
                     'harga_dimensi' => $hargaDimensi,
                     'harga_satuan' => $hargaSatuan,
@@ -254,7 +280,8 @@ class RabInternalController extends Controller
     {
         $rabInternal = RabInternal::with([
             'itemPekerjaan.moodboard.order',
-            'rabProduks.itemPekerjaanProduk.produk',
+            'rabProduks.itemPekerjaanProduk.produk.bahanBakus',
+            'rabProduks.itemPekerjaanProduk.bahanBakus.item', // Selected bahan baku
             'rabProduks.itemPekerjaanProduk.jenisItems.jenisItem',
             'rabProduks.itemPekerjaanProduk.jenisItems.items.item',
             'rabProduks.rabAksesoris'
@@ -262,6 +289,7 @@ class RabInternalController extends Controller
 
         // Get Aksesoris jenis_item_id
         $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
+        $bahanBakuJenisItem = JenisItem::where('nama_jenis_item', 'Bahan Baku')->first();
 
         return Inertia::render('RabInternal/Show', [
             'rabInternal' => [
@@ -276,11 +304,15 @@ class RabInternalController extends Controller
                     'company_name' => $rabInternal->itemPekerjaan->moodboard->order->company_name,
                     'customer_name' => $rabInternal->itemPekerjaan->moodboard->order->customer_name,
                 ],
-                'produks' => $rabInternal->rabProduks->map(function ($rabProduk) use ($aksesorisJenisItem) {
-                    // Collect jenis items & items (non-aksesoris)
+                'produks' => $rabInternal->rabProduks->map(function ($rabProduk) use ($aksesorisJenisItem, $bahanBakuJenisItem) {
+                    // Get selected bahan baku names
+                    $selectedBahanBakus = $rabProduk->itemPekerjaanProduk->bahanBakus;
+                    $bahanBakuNames = $selectedBahanBakus->map(fn($bb) => $bb->item->nama_item)->toArray();
+
+                    // Collect jenis items & items (Finishing Dalam/Luar only, exclude Aksesoris & Bahan Baku)
                     $jenisItemsList = [];
                     foreach ($rabProduk->itemPekerjaanProduk->jenisItems as $jenisItem) {
-                        if ($jenisItem->jenis_item_id !== $aksesorisJenisItem->id) {
+                        if ($jenisItem->jenis_item_id !== $aksesorisJenisItem?->id && $jenisItem->jenis_item_id !== $bahanBakuJenisItem?->id) {
                             $itemsList = [];
                             foreach ($jenisItem->items as $item) {
                                 $itemsList[] = [
@@ -301,17 +333,19 @@ class RabInternalController extends Controller
                     return [
                         'id' => $rabProduk->id,
                         'nama_produk' => $rabProduk->itemPekerjaanProduk->produk->nama_produk,
+                        'nama_ruangan' => $rabProduk->itemPekerjaanProduk->nama_ruangan,
                         'qty_produk' => $rabProduk->itemPekerjaanProduk->quantity,
                         'panjang' => $rabProduk->itemPekerjaanProduk->panjang,
                         'lebar' => $rabProduk->itemPekerjaanProduk->lebar,
                         'tinggi' => $rabProduk->itemPekerjaanProduk->tinggi,
                         'markup_satuan' => $rabProduk->markup_satuan,
-                        'harga_dasar' => $rabProduk->harga_dasar,
+                        'harga_dasar' => $rabProduk->harga_dasar, // Already saved from selected bahan baku total
                         'harga_items_non_aksesoris' => $rabProduk->harga_items_non_aksesoris,
                         'harga_dimensi' => $rabProduk->harga_dimensi,
                         'harga_satuan' => $rabProduk->harga_satuan,
                         'harga_total_aksesoris' => $rabProduk->harga_total_aksesoris,
                         'harga_akhir' => $rabProduk->harga_akhir,
+                        'bahan_baku_names' => $bahanBakuNames,
                         'jenis_items' => $jenisItemsList,
                         'aksesoris' => $rabProduk->rabAksesoris->map(function ($aksesoris) {
                             return [
@@ -334,7 +368,8 @@ class RabInternalController extends Controller
     {
         $rabInternal = RabInternal::with([
             'itemPekerjaan.moodboard.order',
-            'itemPekerjaan.produks.produk',
+            'itemPekerjaan.produks.produk.bahanBakus',
+            'itemPekerjaan.produks.bahanBakus.item', // Selected bahan baku
             'itemPekerjaan.produks.jenisItems.jenisItem',
             'itemPekerjaan.produks.jenisItems.items.item',
             'rabProduks.rabAksesoris'
@@ -348,6 +383,7 @@ class RabInternalController extends Controller
 
         // Get Aksesoris jenis_item_id
         $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
+        $bahanBakuJenisItem = JenisItem::where('nama_jenis_item', 'Bahan Baku')->first();
 
         return Inertia::render('RabInternal/Edit', [
             'rabInternal' => [
@@ -358,17 +394,24 @@ class RabInternalController extends Controller
                         'company_name' => $rabInternal->itemPekerjaan->moodboard->order->company_name,
                         'customer_name' => $rabInternal->itemPekerjaan->moodboard->order->customer_name,
                     ],
-                    'produks' => $rabInternal->itemPekerjaan->produks->map(function ($produk) use ($aksesorisJenisItem, $rabInternal) {
+                    'produks' => $rabInternal->itemPekerjaan->produks->map(function ($produk) use ($aksesorisJenisItem, $bahanBakuJenisItem, $rabInternal) {
                         // Get existing RAB Produk
                         $rabProduk = $rabInternal->rabProduks->firstWhere('item_pekerjaan_produk_id', $produk->id);
 
-                        // Hitung harga items non-aksesoris
+                        // Get selected bahan baku
+                        $selectedBahanBakus = $produk->bahanBakus;
+                        $bahanBakuNames = $selectedBahanBakus->map(fn($bb) => $bb->item->nama_item)->toArray();
+                        
+                        // Hitung harga dasar produk = total harga_dasar dari selected bahan baku
+                        $hargaDasarProduk = $selectedBahanBakus->sum('harga_dasar');
+
+                        // Hitung harga items non-aksesoris (Finishing Dalam/Luar)
                         $hargaItemsNonAksesoris = 0;
                         $aksesorisList = [];
                         $nonAksesorisList = [];
 
                         foreach ($produk->jenisItems as $jenisItem) {
-                            if ($jenisItem->jenis_item_id === $aksesorisJenisItem->id) {
+                            if ($jenisItem->jenis_item_id === $aksesorisJenisItem?->id) {
                                 // Collect aksesoris
                                 foreach ($jenisItem->items as $item) {
                                     // Find existing aksesoris in RAB
@@ -383,8 +426,8 @@ class RabInternalController extends Controller
                                         'markup_aksesoris' => $existingAks ? $existingAks->markup_aksesoris : 0,
                                     ];
                                 }
-                            } else {
-                                // Sum non-aksesoris items
+                            } elseif ($jenisItem->jenis_item_id !== $bahanBakuJenisItem?->id) {
+                                // Sum non-aksesoris items (Finishing Dalam/Luar only, exclude Bahan Baku)
                                 foreach ($jenisItem->items as $item) {
                                     $hargaItemsNonAksesoris += ($item->item->harga * $item->quantity);
                                     $nonAksesorisList[] = [
@@ -404,9 +447,10 @@ class RabInternalController extends Controller
                             'panjang' => $produk->panjang,
                             'lebar' => $produk->lebar,
                             'tinggi' => $produk->tinggi,
-                            'harga_dasar' => $produk->produk->harga,
+                            'harga_dasar' => $hargaDasarProduk, // Total harga_dasar dari selected bahan baku
                             'harga_items_non_aksesoris' => $hargaItemsNonAksesoris,
                             'non_aksesoris_items' => $nonAksesorisList ?? [],
+                            'bahan_baku_names' => $bahanBakuNames,
                             'markup_satuan' => $rabProduk ? $rabProduk->markup_satuan : 0,
                             'aksesoris' => $aksesorisList,
                         ];
@@ -436,15 +480,19 @@ class RabInternalController extends Controller
                 // Get RAB Produk
                 $rabProduk = RabProduk::findOrFail($produkData['id']);
 
-                // Get item pekerjaan produk data
-                $itemProduk = ItemPekerjaanProduk::with(['produk', 'jenisItems.items.item'])->findOrFail($produkData['item_pekerjaan_produk_id']);
+                // Get item pekerjaan produk data with selected bahan bakus
+                $itemProduk = ItemPekerjaanProduk::with(['produk', 'bahanBakus', 'jenisItems.items.item'])->findOrFail($produkData['item_pekerjaan_produk_id']);
 
-                // Calculate harga items non-aksesoris
+                // Calculate harga dasar dari selected bahan baku
+                $hargaDasarProduk = $itemProduk->bahanBakus->sum('harga_dasar');
+
+                // Calculate harga items non-aksesoris (exclude Bahan Baku)
                 $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
+                $bahanBakuJenisItem = JenisItem::where('nama_jenis_item', 'Bahan Baku')->first();
                 $hargaItemsNonAksesoris = 0;
 
                 foreach ($itemProduk->jenisItems as $jenisItem) {
-                    if ($jenisItem->jenis_item_id !== $aksesorisJenisItem->id) {
+                    if ($jenisItem->jenis_item_id !== $aksesorisJenisItem?->id && $jenisItem->jenis_item_id !== $bahanBakuJenisItem?->id) {
                         foreach ($jenisItem->items as $item) {
                             $hargaItemsNonAksesoris += ($item->item->harga * $item->quantity);
                         }
@@ -452,22 +500,27 @@ class RabInternalController extends Controller
                 }
 
                 // Calculate harga dimensi (P × L × T × Qty)
-                // If all dimensions exist, use them; otherwise default to qty only
+                // If all dimensions exist and are not null, use them with minimum value of 1 each
+                // Otherwise default to qty only
                 $hargaDimensi = 1;
-                if ($itemProduk->panjang && $itemProduk->lebar && $itemProduk->tinggi) {
-                    $hargaDimensi = $itemProduk->panjang * $itemProduk->lebar * $itemProduk->tinggi * $itemProduk->quantity;
+                if ($itemProduk->panjang !== null && $itemProduk->lebar !== null && $itemProduk->tinggi !== null) {
+                    // Use max(1, value) to ensure minimum 1 for calculation
+                    $panjangCalc = max(1, (float)$itemProduk->panjang);
+                    $lebarCalc = max(1, (float)$itemProduk->lebar);
+                    $tinggiCalc = max(1, (float)$itemProduk->tinggi);
+                    $hargaDimensi = $panjangCalc * $lebarCalc * $tinggiCalc * $itemProduk->quantity;
                 } else {
                     $hargaDimensi = $itemProduk->quantity;
                 }
 
-                // Calculate harga satuan
+                // Calculate harga satuan = (harga_dasar + harga_items_non_aksesoris) * (1 + markup/100) * harga_dimensi
                 $markupSatuan = $produkData['markup_satuan'];
-                $hargaSatuan = ($itemProduk->produk->harga + $hargaItemsNonAksesoris) * (1 + $markupSatuan / 100) * $hargaDimensi;
+                $hargaSatuan = ($hargaDasarProduk + $hargaItemsNonAksesoris) * (1 + $markupSatuan / 100) * $hargaDimensi;
 
                 // Update RAB Produk
                 $rabProduk->update([
                     'markup_satuan' => $markupSatuan,
-                    'harga_dasar' => $itemProduk->produk->harga,
+                    'harga_dasar' => $hargaDasarProduk, // Total harga_dasar dari selected bahan baku
                     'harga_items_non_aksesoris' => $hargaItemsNonAksesoris,
                     'harga_dimensi' => $hargaDimensi,
                     'harga_satuan' => $hargaSatuan,

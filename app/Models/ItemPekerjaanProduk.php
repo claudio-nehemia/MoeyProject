@@ -9,19 +9,20 @@ class ItemPekerjaanProduk extends Model
 {
     protected $fillable = [
         'item_pekerjaan_id',
+        'nama_ruangan',
         'produk_id',
         'quantity',
         'panjang',
         'lebar',
         'tinggi',
         'current_stage',
-        'bast_number',
-        'bast_date',
-        'bast_pdf_path',
+        'workplan_start_date',
+        'workplan_end_date',
     ];
 
     protected $casts = [
-        'bast_date' => 'datetime',
+        'workplan_start_date' => 'date',
+        'workplan_end_date' => 'date',
     ];
 
     public function itemPekerjaan()
@@ -37,6 +38,11 @@ class ItemPekerjaanProduk extends Model
     public function jenisItems()
     {
         return $this->hasMany(ItemPekerjaanJenisItem::class);
+    }
+
+    public function bahanBakus()
+    {
+        return $this->hasMany(ItemPekerjaanProdukBahanBaku::class);
     }
 
     public function stageEvidences()
@@ -66,12 +72,6 @@ class ItemPekerjaanProduk extends Model
     public function getIsCompletedAttribute()
     {
         return $this->current_stage === 'Install QC';
-    }
-
-    // Accessor: Cek apakah BAST sudah dibuat
-    public function getHasBastAttribute()
-    {
-        return !empty($this->bast_number);
     }
 
     public function getProgressAttribute()

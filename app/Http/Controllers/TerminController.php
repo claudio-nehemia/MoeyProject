@@ -24,7 +24,7 @@ class TerminController extends Controller
             'deskripsi' => 'nullable|string',
             'tahapan'   => 'required|array|min:1',
             'tahapan.*.tahapan' => 'required|string',
-            'tahapan.*.percentage' => 'required|numeric|min:0|max:100',
+            'tahapan.*.persentase' => 'required|numeric|min:0|max:100',
         ]);
 
         // Transform FE → DB format
@@ -33,7 +33,7 @@ class TerminController extends Controller
             $tahapan[] = [
                 'step'       => $index + 1,
                 'text'       => $item['tahapan'],
-                'percentage' => (float)$item['percentage'],
+                'persentase' => (float)$item['persentase'],
             ];
         }
 
@@ -56,14 +56,15 @@ class TerminController extends Controller
             foreach ($termin->tahapan as $item) {
                 $formatted[] = [
                     'tahapan'    => $item['text'] ?? '',
-                    'percentage' => $item['percentage'] ?? '',
+                    // Support both old 'percentage' and new 'persentase' field
+                    'persentase' => $item['persentase'] ?? $item['percentage'] ?? 0,
                 ];
             }
         }
 
         if (empty($formatted)) {
             $formatted = [
-                ['tahapan' => '', 'percentage' => '']
+                ['tahapan' => '', 'persentase' => 0]
             ];
         }
 
@@ -84,7 +85,7 @@ class TerminController extends Controller
             'deskripsi' => 'nullable|string',
             'tahapan'   => 'required|array|min:1',
             'tahapan.*.tahapan' => 'required|string',
-            'tahapan.*.percentage' => 'required|numeric|min:0|max:100',
+            'tahapan.*.persentase' => 'required|numeric|min:0|max:100',
         ]);
 
         $tahapan = [];
@@ -92,7 +93,7 @@ class TerminController extends Controller
             $tahapan[] = [
                 'step'       => $index + 1,
                 'text'       => $item['tahapan'],
-                'percentage' => (float)$item['percentage'],
+                'persentase' => (float)$item['persentase'],
             ];
         }
 

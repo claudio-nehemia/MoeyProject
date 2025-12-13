@@ -111,12 +111,14 @@ class RabKontrakController extends Controller
             'itemPekerjaan.moodboard.order',
             'itemPekerjaan.rabInternal.rabProduks',
             'rabKontrakProduks.itemPekerjaanProduk.produk',
+            'rabKontrakProduks.itemPekerjaanProduk.bahanBakus.item', // Selected bahan baku
             'rabKontrakProduks.itemPekerjaanProduk.jenisItems.jenisItem',
             'rabKontrakProduks.itemPekerjaanProduk.jenisItems.items.item',
             'rabKontrakProduks.rabKontrakAksesoris.itemPekerjaanItem.item'
         ])->findOrFail($rabKontrakId);
 
         $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
+        $bahanBakuJenisItem = JenisItem::where('nama_jenis_item', 'Bahan Baku')->first();
 
         // Create mapping of item_pekerjaan_produk_id to markup_satuan
         $markupMap = [];
@@ -134,12 +136,17 @@ class RabKontrakController extends Controller
                     'company_name' => $rabKontrak->itemPekerjaan->moodboard->order->company_name,
                     'customer_name' => $rabKontrak->itemPekerjaan->moodboard->order->customer_name,
                 ],
-                'produks' => $rabKontrak->rabKontrakProduks->map(function ($rabProduk) use ($aksesorisJenisItem, $markupMap) {
+                'produks' => $rabKontrak->rabKontrakProduks->map(function ($rabProduk) use ($aksesorisJenisItem, $bahanBakuJenisItem, $markupMap) {
                     $markupMultiplier = $markupMap[$rabProduk->item_pekerjaan_produk_id] ?? 1;
 
+                    // Get selected bahan baku names
+                    $selectedBahanBakus = $rabProduk->itemPekerjaanProduk->bahanBakus;
+                    $bahanBakuNames = $selectedBahanBakus->map(fn($bb) => $bb->item->nama_item)->toArray();
+
+                    // Collect jenis items (Finishing only, exclude Aksesoris & Bahan Baku)
                     $jenisItemsList = [];
                     foreach ($rabProduk->itemPekerjaanProduk->jenisItems as $jenisItem) {
-                        if ($jenisItem->jenis_item_id !== $aksesorisJenisItem->id) {
+                        if ($jenisItem->jenis_item_id !== $aksesorisJenisItem?->id && $jenisItem->jenis_item_id !== $bahanBakuJenisItem?->id) {
                             $itemsList = [];
                             foreach ($jenisItem->items as $item) {
                                 $hargaSatuanWithMarkup = $item->item->harga * $markupMultiplier;
@@ -161,6 +168,7 @@ class RabKontrakController extends Controller
                     return [
                         'id' => $rabProduk->id,
                         'nama_produk' => $rabProduk->itemPekerjaanProduk->produk->nama_produk,
+                        'nama_ruangan' => $rabProduk->itemPekerjaanProduk->nama_ruangan,
                         'qty_produk' => $rabProduk->itemPekerjaanProduk->quantity,
                         'panjang' => $rabProduk->itemPekerjaanProduk->panjang,
                         'lebar' => $rabProduk->itemPekerjaanProduk->lebar,
@@ -171,6 +179,7 @@ class RabKontrakController extends Controller
                         'harga_satuan' => $rabProduk->harga_satuan,
                         'harga_total_aksesoris' => $rabProduk->harga_total_aksesoris,
                         'harga_akhir' => $rabProduk->harga_akhir,
+                        'bahan_baku_names' => $bahanBakuNames,
                         'jenis_items' => $jenisItemsList,
                         'aksesoris' => $rabProduk->rabKontrakAksesoris->map(function ($aksesoris) {
                             // Calculate harga satuan from harga total (already includes markup)
@@ -200,10 +209,12 @@ class RabKontrakController extends Controller
             'rabKontrakProduks.itemPekerjaanProduk.produk',
             'rabKontrakProduks.itemPekerjaanProduk.jenisItems.jenisItem',
             'rabKontrakProduks.itemPekerjaanProduk.jenisItems.items.item',
+            'rabKontrakProduks.itemPekerjaanProduk.bahanBakus.item',
             'rabKontrakProduks.rabKontrakAksesoris.itemPekerjaanItem.item'
         ])->findOrFail($rabKontrakId);
 
         $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
+        $bahanBakuJenisItem = JenisItem::where('nama_jenis_item', 'Bahan Baku')->first();
 
         // Create mapping of item_pekerjaan_produk_id to markup_satuan
         $markupMap = [];
@@ -212,12 +223,19 @@ class RabKontrakController extends Controller
         }
 
         // Prepare data
-        $produks = $rabKontrak->rabKontrakProduks->map(function ($rabProduk) use ($aksesorisJenisItem, $markupMap) {
+        $produks = $rabKontrak->rabKontrakProduks->map(function ($rabProduk) use ($aksesorisJenisItem, $bahanBakuJenisItem, $markupMap) {
             $markupMultiplier = $markupMap[$rabProduk->item_pekerjaan_produk_id] ?? 1;
+
+            // Get bahan baku names from selected bahan baku
+            $bahanBakuNames = $rabProduk->itemPekerjaanProduk->bahanBakus
+                ->map(fn($bb) => $bb->item->nama_item)
+                ->toArray();
 
             $jenisItemsList = [];
             foreach ($rabProduk->itemPekerjaanProduk->jenisItems as $jenisItem) {
-                if ($jenisItem->jenis_item_id !== $aksesorisJenisItem->id) {
+                // Exclude Aksesoris and Bahan Baku jenis
+                if ($jenisItem->jenis_item_id !== $aksesorisJenisItem->id && 
+                    ($bahanBakuJenisItem === null || $jenisItem->jenis_item_id !== $bahanBakuJenisItem->id)) {
                     $itemsList = [];
                     foreach ($jenisItem->items as $item) {
                         $hargaSatuanWithMarkup = $item->item->harga * $markupMultiplier;
@@ -250,6 +268,7 @@ class RabKontrakController extends Controller
                 'harga_total_aksesoris' => $rabProduk->harga_total_aksesoris,
                 'harga_akhir' => $rabProduk->harga_akhir,
                 'jenis_items' => $jenisItemsList,
+                'bahan_baku_names' => $bahanBakuNames,
                 'aksesoris' => $rabProduk->rabKontrakAksesoris->map(function ($aksesoris) {
                     // Calculate harga satuan from harga total (already includes markup)
                     $hargaSatuanWithMarkup = $aksesoris->qty_aksesoris > 0

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use App\Models\SurveyResults;
+use App\Models\JenisPengukuran;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
 
@@ -87,6 +88,7 @@ class SurveyResultsController extends Controller
     public function create(string $id)
     {
         $order = Order::with(['jenisInterior', 'surveyResults', 'users.role'])->findOrFail($id);
+        $jenisPengukuran = JenisPengukuran::all();
 
         // Check if user has clicked Response button first
         if (!$order->surveyResults) {
@@ -100,9 +102,13 @@ class SurveyResultsController extends Controller
                 ->with('info', 'Survey data already exists. You can edit it.');
         }
 
+        $jenisPengukuran = JenisPengukuran::all();
+
         return Inertia::render('SurveyResults/Create', [
             'order' => $order,
             'survey' => $order->surveyResults,
+            'jenisPengukuran' => $jenisPengukuran, 
+            'selectedPengukuranIds' => [],
         ]);
     }
 
@@ -114,43 +120,74 @@ class SurveyResultsController extends Controller
         $validated = $request->validate([
             'survey_id' => 'required|exists:survey_results,id',
             'feedback' => 'nullable|string',
-            'layout' => 'nullable|file|mimes:pdf,jpg,jpeg,png,dwg,dxf|max:10240',
-            'foto_lokasi' => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
+            'layout_files' => 'nullable|array',
+            'layout_files.*' => 'file|mimes:pdf,jpg,jpeg,png,dwg,dxf|max:10240',
+            'foto_lokasi_files' => 'nullable|array',
+            'foto_lokasi_files.*' => 'file|mimes:jpg,jpeg,png|max:5120',
             'mom_file' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
+
+            // many-to-many
+            'jenis_pengukuran_ids' => 'nullable|array',
+            'jenis_pengukuran_ids.*' => 'exists:jenis_pengukuran,id',
         ]);
 
         $survey = SurveyResults::findOrFail($validated['survey_id']);
 
-        // Handle layout file upload
-        if ($request->hasFile('layout')) {
-            $validated['layout'] = $request->file('layout')->store('survey_layouts', 'public');
-            \Log::info('Layout file uploaded:', ['file' => $validated['layout']]);
-        }
+        // Simpan pivot IDs, sebelum dihapus
+        $jenisPengukuranIds = $validated['jenis_pengukuran_ids'] ?? [];
 
-        // Handle foto lokasi upload
-        if ($request->hasFile('foto_lokasi')) {
-            $validated['foto_lokasi'] = $request->file('foto_lokasi')->store('survey_photos', 'public');
-            \Log::info('Foto lokasi uploaded:', ['file' => $validated['foto_lokasi']]);
-        }
-
-        // Remove survey_id from data
+        // Hapus dari validated agar tidak masuk ke update()
+        unset($validated['jenis_pengukuran_ids']);
         unset($validated['survey_id']);
+        unset($validated['layout_files']);
+        unset($validated['foto_lokasi_files']);
+
+        // Upload layout files (multiple)
+        $layoutFilesPaths = [];
+        if ($request->hasFile('layout_files')) {
+            foreach ($request->file('layout_files') as $file) {
+                $path = $file->store('survey_layouts', 'public');
+                $layoutFilesPaths[] = [
+                    'path' => $path,
+                    'original_name' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+        }
+        $validated['layout_files'] = !empty($layoutFilesPaths) ? $layoutFilesPaths : null;
+
+        // Upload foto lokasi files (multiple)
+        $fotoLokasiFilesPaths = [];
+        if ($request->hasFile('foto_lokasi_files')) {
+            foreach ($request->file('foto_lokasi_files') as $file) {
+                $path = $file->store('survey_photos', 'public');
+                $fotoLokasiFilesPaths[] = [
+                    'path' => $path,
+                    'original_name' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+        }
+        $validated['foto_lokasi_files'] = !empty($fotoLokasiFilesPaths) ? $fotoLokasiFilesPaths : null;
 
         // Update survey result
         $survey->update($validated);
 
-        // Handle MOM file upload to Order table
+        // Pengukuran relasi many-to-many
+        $survey->jenisPengukuran()->sync($jenisPengukuranIds);
+
+        // Handle MOM file upload (ke order)
         if ($request->hasFile('mom_file')) {
             $order = $survey->order;
-            
-            // Delete old file if exists
+
             if ($order->mom_file && Storage::disk('public')->exists($order->mom_file)) {
                 Storage::disk('public')->delete($order->mom_file);
             }
-            
+
             $momFilePath = $request->file('mom_file')->store('mom_files', 'public');
             $order->update(['mom_file' => $momFilePath]);
-            \Log::info('MOM file uploaded to order:', ['file' => $momFilePath]);
         }
 
         return redirect()->route('survey-results.index')->with('success', 'Survey Results created successfully.');
@@ -161,11 +198,12 @@ class SurveyResultsController extends Controller
      */
     public function show($id)
     {
-        $survey = SurveyResults::with(['order.jenisInterior', 'order.users.role'])
+        $survey = SurveyResults::with(['order.jenisInterior', 'order.users.role', 'jenisPengukuran'])
             ->findOrFail($id);
 
         return Inertia::render('SurveyResults/Show', [
             'survey' => $survey,
+            'selectedPengukuranIds' => $survey->jenisPengukuran->pluck('id')->toArray()
         ]);
     }
 
@@ -174,11 +212,16 @@ class SurveyResultsController extends Controller
      */
     public function edit($id)
     {
-        $survey = SurveyResults::with(['order.jenisInterior', 'order.users.role'])
-            ->findOrFail($id);
+        $survey = SurveyResults::with(['order.jenisInterior', 'order.users.role', 'jenisPengukuran'])->findOrFail($id);
+        
+        $jenisPengukuran = JenisPengukuran::all();
+
+        $selectedPengukuranIds = $survey->jenisPengukuran->pluck('id')->toArray();
 
         return Inertia::render('SurveyResults/Edit', [
             'survey' => $survey,
+            'jenisPengukuran' => $jenisPengukuran,
+            'selectedPengukuranIds' => $selectedPengukuranIds,
         ]);
     }
 
@@ -191,41 +234,65 @@ class SurveyResultsController extends Controller
 
         $validated = $request->validate([
             'feedback' => 'nullable|string',
-            'layout' => 'nullable|file|mimes:pdf,jpg,jpeg,png,dwg,dxf|max:10240',
-            'foto_lokasi' => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
+            'layout_files' => 'nullable|array',
+            'layout_files.*' => 'file|mimes:pdf,jpg,jpeg,png,dwg,dxf|max:10240',
+            'foto_lokasi_files' => 'nullable|array',
+            'foto_lokasi_files.*' => 'file|mimes:jpg,jpeg,png|max:5120',
             'mom_file' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
+
+            // ⬅️ validasi jenis pengukuran
+            'jenis_pengukuran_ids' => 'nullable|array',
+            'jenis_pengukuran_ids.*' => 'exists:jenis_pengukuran,id',
         ]);
 
-        // Handle layout file upload
-        if ($request->hasFile('layout')) {
-            // Delete old file
-            if ($survey->layout && Storage::disk('public')->exists($survey->layout)) {
-                Storage::disk('public')->delete($survey->layout);
-            }
-            $validated['layout'] = $request->file('layout')->store('survey_layouts', 'public');
-        }
+        // Remove file arrays from validated before update
+        unset($validated['layout_files']);
+        unset($validated['foto_lokasi_files']);
 
-        // Handle foto lokasi upload
-        if ($request->hasFile('foto_lokasi')) {
-            // Delete old file
-            if ($survey->foto_lokasi && Storage::disk('public')->exists($survey->foto_lokasi)) {
-                Storage::disk('public')->delete($survey->foto_lokasi);
+        // Handle layout files (append to existing)
+        $existingLayoutFiles = $survey->layout_files ?? [];
+        if ($request->hasFile('layout_files')) {
+            foreach ($request->file('layout_files') as $file) {
+                $path = $file->store('survey_layouts', 'public');
+                $existingLayoutFiles[] = [
+                    'path' => $path,
+                    'original_name' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
             }
-            $validated['foto_lokasi'] = $request->file('foto_lokasi')->store('survey_photos', 'public');
         }
+        $validated['layout_files'] = !empty($existingLayoutFiles) ? $existingLayoutFiles : null;
 
-        // Update survey
+        // Handle foto lokasi files (append to existing)
+        $existingFotoFiles = $survey->foto_lokasi_files ?? [];
+        if ($request->hasFile('foto_lokasi_files')) {
+            foreach ($request->file('foto_lokasi_files') as $file) {
+                $path = $file->store('survey_photos', 'public');
+                $existingFotoFiles[] = [
+                    'path' => $path,
+                    'original_name' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+        }
+        $validated['foto_lokasi_files'] = !empty($existingFotoFiles) ? $existingFotoFiles : null;
+
+        // Update survey main data
         $survey->update($validated);
 
-        // Handle MOM file upload to Order table
+        // ⬅️ jenis pengukuran
+        $survey->jenisPengukuran()->sync($request->jenis_pengukuran_ids);
+
+        // Upload MOM file
         if ($request->hasFile('mom_file')) {
             $order = $survey->order;
-            
-            // Delete old file if exists
+
             if ($order->mom_file && Storage::disk('public')->exists($order->mom_file)) {
                 Storage::disk('public')->delete($order->mom_file);
             }
-            
+
             $momFilePath = $request->file('mom_file')->store('mom_files', 'public');
             $order->update(['mom_file' => $momFilePath]);
         }
@@ -240,16 +307,59 @@ class SurveyResultsController extends Controller
     {
         $survey = SurveyResults::findOrFail($id);
 
-        // Delete associated files
-        if ($survey->layout && Storage::disk('public')->exists($survey->layout)) {
-            Storage::disk('public')->delete($survey->layout);
+        // Delete layout files
+        if ($survey->layout_files) {
+            foreach ($survey->layout_files as $file) {
+                if (isset($file['path']) && Storage::disk('public')->exists($file['path'])) {
+                    Storage::disk('public')->delete($file['path']);
+                }
+            }
         }
-        if ($survey->foto_lokasi && Storage::disk('public')->exists($survey->foto_lokasi)) {
-            Storage::disk('public')->delete($survey->foto_lokasi);
+
+        // Delete foto lokasi files
+        if ($survey->foto_lokasi_files) {
+            foreach ($survey->foto_lokasi_files as $file) {
+                if (isset($file['path']) && Storage::disk('public')->exists($file['path'])) {
+                    Storage::disk('public')->delete($file['path']);
+                }
+            }
         }
 
         $survey->delete();
 
         return redirect()->route('survey-results.index')->with('success', 'Survey Results deleted successfully.');
+    }
+
+    /**
+     * Delete a single file from layout_files or foto_lokasi_files
+     */
+    public function deleteFile($id, $fileIndex)
+    {
+        $survey = SurveyResults::findOrFail($id);
+        $fileType = request()->query('type'); // 'layout' or 'foto'
+
+        if ($fileType === 'layout') {
+            $files = $survey->layout_files ?? [];
+            if (isset($files[$fileIndex])) {
+                if (isset($files[$fileIndex]['path']) && Storage::disk('public')->exists($files[$fileIndex]['path'])) {
+                    Storage::disk('public')->delete($files[$fileIndex]['path']);
+                }
+                array_splice($files, $fileIndex, 1);
+                $survey->update(['layout_files' => !empty($files) ? array_values($files) : null]);
+                return back()->with('success', 'Layout file deleted successfully.');
+            }
+        } elseif ($fileType === 'foto') {
+            $files = $survey->foto_lokasi_files ?? [];
+            if (isset($files[$fileIndex])) {
+                if (isset($files[$fileIndex]['path']) && Storage::disk('public')->exists($files[$fileIndex]['path'])) {
+                    Storage::disk('public')->delete($files[$fileIndex]['path']);
+                }
+                array_splice($files, $fileIndex, 1);
+                $survey->update(['foto_lokasi_files' => !empty($files) ? array_values($files) : null]);
+                return back()->with('success', 'Photo file deleted successfully.');
+            }
+        }
+
+        return back()->with('error', 'File not found.');
     }
 }

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Commitment Fee PDF</title>
+    <style>
+        body {
+            font-family: "Times New Roman", serif;
+            font-size: 14px;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+        .page {
+            width: 210mm;
+            height: 297mm;
+            padding: 50px 70px;
+            box-sizing: border-box;
+            page-break-after: always;
+        }
+        .center { text-align: center; }
+        .right { text-align: right; }
+
+        /* HEADER SURAT */
+        .header {
+            border-bottom: 1.5px solid #cfcfcf;
+            padding-bottom: 8px;
+            margin-bottom: 25px;
+        }
+        .logo-left { float: left; }
+        .logo-left img { width: 120px; }
+        .logo-right { float: right; text-align: right; }
+        .logo-right h2 { margin: 0; font-size: 16px; }
+        .logo-right div { font-size: 12px; }
+
+        /* TABLE */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        table td {
+            padding: 4px 2px;
+            vertical-align: top;
+        }
+        table th {
+            border: 1px solid #000;
+            padding: 6px;
+            text-align: left;
+        }
+
+        .red-bar {
+            width: 100%;
+            height: 25px;
+            background-color: #be1e2d;
+            margin-top: 5px;
+            margin-bottom: 25px;
+        }
+
+        .signature {
+            margin-top: 50px;
+            text-align: left; 
+        }
+        .signature img {
+            width: 120px;
+            display: block; /* biar tidak ikut align teks */
+            margin-top: 5px;
+        }
+
+        .kwitansi-footer { width: 100%; margin-top: 30px; }
+        .nominal-box {
+            border: 1px solid #000;
+            width: 180px;
+            height: 35px;
+            text-align: center;
+            line-height: 35px;
+            float: left;
+        }
+        .signature-box { text-align: center; float: right; width: 200px; }
+        .clear { clear: both; }
+    </style>
+</head>
+<body>
+
+<!-- HALAMAN 1 — Surat Pengajuan Commitment Fee -->
+<div class="page">
+    <div class="header">
+        <div class="logo-left">
+            <img src="{{ $logoUrl ?? '' }}" alt="Logo">
+        </div>
+        <div class="logo-right">
+            <h2>INTERIOR & ARCHITECT</h2>
+            <div>CONSULTANT</div>
+        </div>
+        <div class="clear"></div>
+    </div>
+
+    <div class="right">{{ $today }}</div>
+
+    <p>No: {{ $nomor_surat ?? '' }}<br>
+       Hal: Pengajuan Commitment Fee Project Interior</p>
+
+    <p>Kepada Yth,<br>
+       <strong>{{ $customerName }}</strong><br>
+       Di {{ $customer_additional_info }}</p>
+
+    <p>Dengan hormat,</p>
+
+    <p>Sehubungan dengan rencana pelaksanaan project interior <strong>{{ $projectName }}</strong>, bersama ini kami bermaksud mengajukan <strong>Commitment Fee</strong> sebesar <strong>Rp. {{ $nominal }},- ({{ $nominalTerbilang }})</strong>.</p>
+
+    <p>Commitment Fee ini bertujuan sebagai tanda keseriusan dan komitmen awal dalam proses perencanaan dan persiapan pekerjaan interior, serta akan diperhitungkan dalam nilai kontrak setelah project disetujui untuk dilaksanakan.</p>
+
+    <p>Pembayaran dapat dilakukan melalui rekening berikut:</p>
+
+    <table>
+        <tr><td>Bank</td><td>: {{ $bank }}</td></tr>
+        <tr><td>No. Rekening</td><td>: {{ $rekening }}</td></tr>
+        <tr><td>Atas Nama</td><td>: {{ $atasNama }}</td></tr>
+    </table>
+
+    <p>Demikian surat ini kami sampaikan. Atas perhatian dan kerja samanya kami ucapkan terima kasih.</p>
+
+    <div class="signature">
+        <p>Hormat Kami,</p>
+        <p><strong>{{ $companyName }}</strong></p>
+        <img src="{{ $signatureUrl ?? '' }}" alt="Tanda Tangan">
+        <p><strong>{{ $direkturName }}</strong><br>Direktur</p>
+    </div>
+</div>
+
+<!-- HALAMAN 2 — INVOICE -->
+<div class="page">
+    <div class="header">
+        <div class="logo-left">
+            <img src="{{ $logoUrl ?? '' }}" alt="Logo">
+        </div>
+        <div class="logo-right">
+            <strong>Powered by : {{ $companyName }}</strong><br>
+            {{ $companyAddress }}<br>
+            Tlp: {{ $companyPhone }} Email: {{ $companyEmail }}
+        </div>
+        <div class="clear"></div>
+    </div>
+
+    <div class="red-bar"></div>
+
+    <h2 class="center">INVOICE</h2>
+
+    <p>No: {{ $nomor_invoice ?? '' }}<br>
+       <div class="right">{{ $today }}</div></p>
+
+    <p>Kepada : <strong>{{ $customerName }}</strong><br>
+       Hal : Pembuatan Design dan Interior Rumah</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>URAIAN</th>
+                <th>JUMLAH</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>- Total Pembayaran Commitment Fee</td>
+                <td>Rp. {{ $nominal }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>({{ $nominalTerbilang }})</p>
+
+    <p><strong>Pembayaran ditransfer melalui rekening:</strong></p>
+    <table>
+        <tr><td>Bank</td><td>: {{ $bank }}</td></tr>
+        <tr><td>No. Rekening</td><td>: {{ $rekening }}</td></tr>
+        <tr><td>Atas Nama</td><td>: {{ $atasNama }}</td></tr>
+    </table>
+
+    <div class="signature">
+        <p>Hormat Kami,</p>
+        <p><strong>{{ $companyName }}</strong></p>
+        <img src="{{ $signatureUrl ?? '' }}" alt="Tanda Tangan">
+        <p><strong>{{ $direkturName }}</strong><br>Direktur</p>
+    </div>
+</div>
+
+<!-- HALAMAN 3 — KWITANSI -->
+<div class="page">
+    <div class="header">
+        <div class="logo-left">
+            <img src="{{ $logoUrl ?? '' }}" alt="Logo">
+        </div>
+        <div class="logo-right">
+            <strong>Powered by : {{ $companyName }}</strong><br>
+            {{ $companyAddress }}<br>
+            Tlp: {{ $companyPhone }} Email: {{ $companyEmail }}
+        </div>
+        <div class="clear"></div>
+    </div>
+
+    <div class="red-bar"></div>
+
+    <h3 class="center">KWITANSI</h3>
+    <p class="center">No. {{ $nomor_kwitansi ?? '' }}</p>
+
+    <table>
+        <tr>
+            <td>Sudah terima dari</td>
+            <td>: <strong>{{ $customerName }}</strong></td>
+        </tr>
+        <tr>
+            <td>Uang Sebesar</td>
+            <td>: <strong>{{ $nominalTerbilang }}</strong></td>
+        </tr>
+        <tr>
+            <td>Untuk Pembayaran</td>
+            <td>: Commitment Fee Desain dan Interior Rumah</td>
+        </tr>
+    </table>
+
+    <div class="kwitansi-footer">
+        <div class="nominal-box">
+            Rp {{ $nominal }},-
+        </div>
+        <div class="signature-box">
+            <p>{{ $today }}</p>
+            <img src="{{ $stampUrl ?? '' }}" alt="Materai/Stempel">
+            <p><strong>{{ $direkturName }}</strong><br>Direktur Utama</p>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>
+
+</body>
+</html>

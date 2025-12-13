@@ -145,6 +145,18 @@ export default function Sidebar({
             ),
             gradient: 'from-orange-400 to-orange-600',
         },
+        {
+            name: 'Jenis Pengukuran',
+            href: '/jenis-pengukuran',
+            page: 'jenis-pengukuran',
+            permission: null,
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042L5.96 9H9a2 2 0 100-4H6.75A2.75 2.75 0 004.75 2.5a2.5 2.5 0 00-2.466 2.667L1.897 5H1a1 1 0 000 2v3a1 1 0 001 1h1.17l.04.04a.997.997 0 00.042.01L5.96 18H3a1 1 0 100 2h14a1 1 0 100-2h-2.22l-.305-1.222a.997.997 0 00-.01-.042L14.04 11H11a2 2 0 100 4h2.25a2.75 2.75 0 002.25 2.5 2.5 2.5 0 002.466-2.667l.04-.40H19a1 1 0 100-2v-3a1 1 0 00-1-1h-1.17l-.04-.04a.997.997 0 00-.042-.01L14.04 2H17a1 1 0 100-2H3z" />
+                </svg>
+            ),
+            gradient: 'from-yellow-400 to-yellow-600',
+        },
     ];
 
     const operationsMenus = [
@@ -281,6 +293,18 @@ export default function Sidebar({
             gradient: 'from-purple-400 to-purple-600',
         },
         {
+            name: 'Workplan',
+            href: '/workplan',
+            page: 'workplan',
+            permission: 'workplan.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+            ),
+            gradient: 'from-sky-400 to-sky-600',
+        },
+        {
             name: 'Project Management',
             href: '/project-management',
             page: 'project-management',
@@ -292,6 +316,7 @@ export default function Sidebar({
             ),
             gradient: 'from-teal-400 to-teal-600',
         },
+        
         {
             name: 'Defect Management',
             href: '/defect-management',

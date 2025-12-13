@@ -147,6 +147,25 @@
             font-size: 18px;
             margin-top: 20px;
         }
+        .summary-box {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+        }
+        .summary-label {
+            color: #4a5568;
+        }
+        .summary-value {
+            font-weight: bold;
+            color: #2d3748;
+        }
     </style>
 </head>
 <body>
@@ -176,42 +195,92 @@
                     <td class="separator">:</td>
                     <td>{{ $order->customer_name }}</td>
                 </tr>
+                <tr>
+                    <td class="label">Item Pekerjaan</td>
+                    <td class="separator">:</td>
+                    <td>Item Pekerjaan #{{ $item_pekerjaan->id }}</td>
+                </tr>
             </table>
         </div>
 
         <div class="section">
-            <div class="section-title">📦 DETAIL PRODUK</div>
+            <div class="section-title">📦 DAFTAR PRODUK</div>
             <table class="product-table">
                 <thead>
                     <tr>
+                        <th style="width: 30px;">No</th>
                         <th>Nama Produk</th>
-                        <th>Quantity</th>
+                        <th>Qty</th>
                         <th>Dimensi (P×L×T)</th>
+                        <th>Progress</th>
                         <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
+                    @foreach($produks as $index => $produk)
                     <tr>
+                        <td style="text-align: center;">{{ $index + 1 }}</td>
                         <td>{{ $produk->produk->nama_produk }}</td>
-                        <td>{{ $produk->quantity }} unit</td>
+                        <td style="text-align: center;">{{ $produk->quantity }}</td>
                         <td>{{ $produk->panjang }} × {{ $produk->lebar }} × {{ $produk->tinggi }} cm</td>
-                        <td><span style="color: #38a169; font-weight: bold;">✓ SELESAI</span></td>
+                        <td style="text-align: center;">{{ $produk->progress }}%</td>
+                        <td>
+                            @if($produk->is_completed)
+                                <span style="color: #38a169; font-weight: bold;">✓ SELESAI</span>
+                            @else
+                                <span style="color: #e53e3e;">{{ $produk->current_stage ?? 'Belum Dimulai' }}</span>
+                            @endif
+                        </td>
                     </tr>
+                    @endforeach
                 </tbody>
             </table>
+
+            <div class="summary-box">
+                <table style="width: 100%;">
+                    <tr>
+                        <td class="summary-label">Total Produk</td>
+                        <td class="summary-value" style="text-align: right;">{{ $produks->count() }} item</td>
+                    </tr>
+                    <tr>
+                        <td class="summary-label">Produk Selesai</td>
+                        <td class="summary-value" style="text-align: right;">{{ $produks->where('is_completed', true)->count() }} item</td>
+                    </tr>
+                    <tr>
+                        <td class="summary-label">Progress Item Pekerjaan</td>
+                        <td class="summary-value" style="text-align: right;">{{ $item_pekerjaan->progress }}%</td>
+                    </tr>
+                </table>
+            </div>
         </div>
 
         <div class="section stages-section">
             <div class="section-title">🔄 TAHAPAN YANG TELAH DILALUI</div>
-            @foreach($stage_evidences as $stage => $evidences)
+            <p style="margin-bottom: 10px; color: #718096;">Semua produk telah melalui tahapan berikut:</p>
+            @php
+                // Collect all unique stages from all products
+                $allStages = collect();
+                foreach($produks as $produk) {
+                    if($produk->stageEvidences) {
+                        foreach($produk->stageEvidences->groupBy('stage')->keys() as $stage) {
+                            $allStages->push($stage);
+                        }
+                    }
+                }
+                $uniqueStages = $allStages->unique();
+            @endphp
+            @forelse($uniqueStages as $stage)
                 <span class="stage-item completed">✓ {{ $stage }}</span>
-            @endforeach
+            @empty
+                <span class="stage-item">Install QC (Completed)</span>
+            @endforelse
         </div>
 
         <div class="section">
             <div class="section-title">📝 PERNYATAAN</div>
             <p style="text-align: justify; line-height: 1.8;">
-                Dengan ini menyatakan bahwa pekerjaan produk <strong>{{ $produk->produk->nama_produk }}</strong> 
+                Dengan ini menyatakan bahwa seluruh pekerjaan pada <strong>Item Pekerjaan #{{ $item_pekerjaan->id }}</strong> 
+                yang terdiri dari <strong>{{ $produks->count() }} produk</strong>
                 telah selesai dikerjakan dan diserahterimakan dalam kondisi baik sesuai dengan spesifikasi yang telah disepakati.
                 Berita Acara Serah Terima ini dibuat sebagai bukti resmi bahwa pekerjaan telah selesai dan diterima dengan baik.
             </p>

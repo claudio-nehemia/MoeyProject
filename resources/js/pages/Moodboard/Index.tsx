@@ -11,11 +11,19 @@ interface Team {
     role: string;
 }
 
+interface EstimasiFile {
+    id: number;
+    file_path: string;
+    original_name: string;
+    url: string;
+}
+
 interface MoodboardFile {
     id: number;
     file_path: string;
     original_name: string;
     url: string;
+    estimasi_file: EstimasiFile | null;
 }
 
 interface Moodboard {
@@ -519,6 +527,33 @@ export default function Index({ orders }: Props) {
                                                                             >
                                                                                 ✓ Terima Desain Ini
                                                                             </button>
+                                                                        )}
+                                                                    </div>
+
+                                                                    <div
+                                                                        className={`mt-2 rounded-lg border p-2 ${file.estimasi_file
+                                                                            ? 'border-emerald-200 bg-emerald-50'
+                                                                            : 'border-stone-200 bg-white'}`}
+                                                                    >
+                                                                        {file.estimasi_file ? (
+                                                                            <div className="flex items-center justify-between gap-2">
+                                                                                <div className="min-w-0">
+                                                                                    <p className="text-[11px] font-semibold text-emerald-900">File Estimasi</p>
+                                                                                    <p className="text-[11px] text-emerald-700 truncate">{file.estimasi_file.original_name}</p>
+                                                                                </div>
+                                                                                <a
+                                                                                    href={file.estimasi_file.url}
+                                                                                    target="_blank"
+                                                                                    rel="noopener noreferrer"
+                                                                                    className="flex-shrink-0 inline-flex items-center px-2 py-1 text-[11px] font-semibold text-white bg-emerald-500 hover:bg-emerald-600 rounded"
+                                                                                >
+                                                                                    📥 Unduh
+                                                                                </a>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <p className="text-[11px] text-stone-600">
+                                                                                Belum ada file estimasi yang diupload untuk desain ini.
+                                                                            </p>
                                                                         )}
                                                                     </div>
                                                                 </div>

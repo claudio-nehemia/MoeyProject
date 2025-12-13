@@ -36,6 +36,7 @@ interface Survey {
 interface Props {
     order: Order;
     survey: Survey;
+    jenisPengukuran: { id: number; nama_pengukuran: string }[];
 }
 
 export default function Create({ order, survey }: Props) {
@@ -49,9 +50,10 @@ export default function Create({ order, survey }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         survey_id: survey.id,
         feedback: '',
-        layout: null as File | null,
-        foto_lokasi: null as File | null,
+        layout_files: [] as File[],
+        foto_lokasi_files: [] as File[],
         mom_file: null as File | null,
+        jenis_pengukuran_ids: [] as number[],
     });
 
     const handleSubmit: FormEventHandler = (e) => {
@@ -60,8 +62,8 @@ export default function Create({ order, survey }: Props) {
         console.log('=== DEBUG CREATE SURVEY ===');
         console.log('Survey ID:', data.survey_id);
         console.log('Feedback:', data.feedback);
-        console.log('Has layout:', data.layout ? 'Yes' : 'No');
-        console.log('Has foto_lokasi:', data.foto_lokasi ? 'Yes' : 'No');
+        console.log('Layout files count:', data.layout_files.length);
+        console.log('Foto lokasi files count:', data.foto_lokasi_files.length);
         console.log('Has mom_file:', data.mom_file ? 'Yes' : 'No');
 
         router.post('/survey-results', data, {
@@ -234,38 +236,112 @@ export default function Create({ order, survey }: Props) {
                                     {errors.feedback && <p className="text-red-500 text-xs mt-1">{errors.feedback}</p>}
                                 </div>
 
-                                {/* Layout File */}
+                                {/* Layout Files (Multiple) */}
                                 <div>
-                                    <label className="block text-sm font-semibold text-stone-700 mb-2">
-                                        Layout File
+                                    <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-3">
+                                        <svg className="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        Layout Files (Multiple)
                                     </label>
                                     <input
                                         type="file"
+                                        multiple
                                         accept=".pdf,.jpg,.jpeg,.png,.dwg,.dxf"
-                                        onChange={(e) => setData('layout', e.target.files?.[0] || null)}
+                                        onChange={(e) => {
+                                            const files = Array.from(e.target.files || []);
+                                            setData('layout_files', files);
+                                        }}
                                         className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-cyan-100 file:text-cyan-700 hover:file:bg-cyan-200"
                                     />
                                     <p className="text-xs text-stone-500 mt-2">
-                                        Supported formats: PDF, JPG, PNG, DWG, DXF (Max 10MB)
+                                        Upload multiple layout files. Supported: PDF, Images, CAD (Max 10MB each)
                                     </p>
-                                    {errors.layout && <p className="text-red-500 text-xs mt-1">{errors.layout}</p>}
+                                    {data.layout_files.length > 0 && (
+                                        <div className="mt-3 space-y-2">
+                                            <p className="text-xs font-semibold text-stone-700">Selected files ({data.layout_files.length}):</p>
+                                            {data.layout_files.map((file, index) => (
+                                                <div key={index} className="flex items-center gap-2 text-xs text-stone-600 bg-cyan-50 px-3 py-2 rounded-lg">
+                                                    <svg className="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                    <span className="flex-1 truncate">{file.name}</span>
+                                                    <span className="text-stone-500">({(file.size / 1024).toFixed(1)} KB)</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {errors.layout_files && <p className="text-red-500 text-xs mt-1">{errors.layout_files}</p>}
                                 </div>
 
-                                {/* Foto Lokasi */}
+                                {/* Foto Lokasi (Multiple) */}
                                 <div>
-                                    <label className="block text-sm font-semibold text-stone-700 mb-2">
-                                        Foto Lokasi / Site Photo
+                                    <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-3">
+                                        <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        Foto Lokasi (Multiple)
                                     </label>
                                     <input
                                         type="file"
+                                        multiple
                                         accept=".jpg,.jpeg,.png"
-                                        onChange={(e) => setData('foto_lokasi', e.target.files?.[0] || null)}
+                                        onChange={(e) => {
+                                            const files = Array.from(e.target.files || []);
+                                            setData('foto_lokasi_files', files);
+                                        }}
                                         className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200"
                                     />
                                     <p className="text-xs text-stone-500 mt-2">
-                                        Supported formats: JPG, PNG (Max 5MB)
+                                        Upload multiple photos. Supported: JPG, PNG (Max 5MB each)
                                     </p>
-                                    {errors.foto_lokasi && <p className="text-red-500 text-xs mt-1">{errors.foto_lokasi}</p>}
+                                    {data.foto_lokasi_files.length > 0 && (
+                                        <div className="mt-3 space-y-2">
+                                            <p className="text-xs font-semibold text-stone-700">Selected files ({data.foto_lokasi_files.length}):</p>
+                                            {data.foto_lokasi_files.map((file, index) => (
+                                                <div key={index} className="flex items-center gap-2 text-xs text-stone-600 bg-emerald-50 px-3 py-2 rounded-lg">
+                                                    <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                    <span className="flex-1 truncate">{file.name}</span>
+                                                    <span className="text-stone-500">({(file.size / 1024).toFixed(1)} KB)</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {errors.foto_lokasi_files && <p className="text-red-500 text-xs mt-1">{errors.foto_lokasi_files}</p>}
+                                </div>
+
+                                {/* Jenis Pengukuran */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-stone-700 mb-2">
+                                        Jenis Pengukuran
+                                    </label>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {typeof window !== 'undefined' && (window as any).jenisPengukuran?.map((jp: { id: number; nama_pengukuran: string }) => (
+                                            <label
+                                                key={jp.id}
+                                                className="flex items-center gap-2 p-3 border-2 border-stone-200 rounded-xl cursor-pointer hover:border-cyan-500 transition-colors"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    value={jp.id}
+                                                    checked={data.jenis_pengukuran_ids?.includes(jp.id) || false}
+                                                    onChange={(e) => {
+                                                        const current = data.jenis_pengukuran_ids || [];
+                                                        if (e.target.checked) {
+                                                            setData('jenis_pengukuran_ids', [...current, jp.id]);
+                                                        } else {
+                                                            setData('jenis_pengukuran_ids', current.filter((id) => id !== jp.id));
+                                                        }
+                                                    }}
+                                                    className="h-4 w-4 text-cyan-600 border-stone-300 rounded focus:ring-cyan-500"
+                                                />
+                                                <span className="text-stone-700 text-sm">{jp.nama_pengukuran}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    {errors.jenis_pengukuran_ids && <p className="text-red-500 text-xs mt-1">{errors.jenis_pengukuran_ids}</p>}
                                 </div>
 
                                 {/* MOM File */}
