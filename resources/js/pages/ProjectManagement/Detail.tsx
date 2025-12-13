@@ -33,7 +33,7 @@ type Produk = {
     bast_date: string | null;
     bast_pdf_path: string | null;
     stage_evidences: Record<string, StageEvidence[]>;
-    workplan_items: WorkplanItem[]; // 🔥 NEW
+    workplan_items: WorkplanItem[];
 };
 
 
@@ -53,14 +53,17 @@ type Order = {
     item_pekerjaans: Item[];
 };
 
+type KontrakStatus = 'overdue' | 'urgent' | 'warning' | 'normal' | null;
+
 type KontrakInfo = {
     id: number;
     durasi_kontrak: number;
     tanggal_mulai: string | null;
     tanggal_selesai: string | null;
     sisa_hari: number | null;
-    deadline_status: 'overdue' | 'urgent' | 'warning' | 'normal' | null;
+    deadline_status: KontrakStatus;
 } | null;
+
 type WorkplanItem = {
     id: number;
     nama_tahapan: string;
@@ -71,6 +74,50 @@ type WorkplanItem = {
     status: 'planned' | 'in_progress' | 'done' | 'cancelled' | string;
     catatan: string | null;
 };
+
+// =================================================================
+// START HELPER FUNCTIONS
+// =================================================================
+
+const getDeadlineStatusColor = (status: KontrakStatus) => {
+    switch (status) {
+        case 'overdue':
+            // MERAH untuk overdue/terlambat
+            return 'bg-red-100 text-red-800 border-red-500'; 
+        case 'urgent':
+            return 'bg-orange-100 text-orange-800 border-orange-300';
+        case 'warning':
+            return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+        case 'normal':
+            return 'bg-green-100 text-green-800 border-green-300';
+        default:
+            return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+};
+
+const getDeadlineIcon = (status: KontrakStatus) => {
+    switch (status) {
+        case 'overdue':
+            return '🚨'; 
+        case 'urgent':
+            return '🔴';
+        case 'warning':
+            return '🟡';
+        case 'normal':
+            return '🟢';
+        default:
+            return '⏳';
+    }
+};
+
+const getDeadlineText = (status: KontrakStatus, sisaHari: number | null) => {
+    if (sisaHari === null) return 'Belum ditentukan';
+    if (status === 'overdue') return `Terlambat ${Math.abs(sisaHari)} hari`;
+    if (sisaHari === 0) return 'Deadline hari ini!';
+    return `${sisaHari} hari lagi`;
+};
+
+// END HELPER FUNCTIONS
 
 export default function Detail({
     order,
@@ -110,14 +157,12 @@ export default function Detail({
     const [workplanItems, setWorkplanItems] = useState<WorkplanItem[]>([]);
     const [loadingWorkplan, setLoadingWorkplan] = useState(false);
 
-    // Ketika buka modal → load data workplan dari produk
     useEffect(() => {
         if (selectedProduk) {
             setWorkplanItems(selectedProduk.workplan_items || []);
         }
     }, [showWorkplanModal, selectedProduk]);
 
-    // Tambah baris baru
     const addWorkplanItem = () => {
         setWorkplanItems([
             ...workplanItems,
@@ -134,14 +179,12 @@ export default function Detail({
         ]);
     };
 
-    // Hapus baris
     const removeWorkplanItem = (index: number) => {
         const updated = workplanItems.filter((_, i) => i !== index)
             .map((row, idx) => ({ ...row, urutan: idx + 1 }));
         setWorkplanItems(updated);
     };
 
-    // Update field
     const updateWorkplanItem = (
         index: number,
         field: keyof WorkplanItem,
@@ -164,7 +207,6 @@ export default function Detail({
         setWorkplanItems(updated);
     };
 
-    // Submit ke backend
     const handleSubmitWorkplan = (e: React.FormEvent, produkId: number) => {
         e.preventDefault();
         setLoadingWorkplan(true);
@@ -181,7 +223,6 @@ export default function Detail({
         );
     };
 
-    // update status workplan
     const updateWorkplanStatus = (id: number, status: string) => {
         router.post(
             `/workplan/${id}/update-status`,
@@ -250,7 +291,7 @@ export default function Detail({
         }
     };
 
-        const addDefectItem = () => {
+    const addDefectItem = () => {
         setDefectItems([...defectItems, { photo: null, notes: '' }]);
     };
 
@@ -334,43 +375,7 @@ export default function Detail({
             minimumFractionDigits: 0,
         }).format(amount);
     };
-
-    const getDeadlineStatusColor = (status: string | null) => {
-        switch (status) {
-            case 'overdue':
-                return 'bg-red-100 text-red-800 border-red-300';
-            case 'urgent':
-                return 'bg-orange-100 text-orange-800 border-orange-300';
-            case 'warning':
-                return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-            case 'normal':
-                return 'bg-green-100 text-green-800 border-green-300';
-            default:
-                return 'bg-gray-100 text-gray-800 border-gray-300';
-        }
-    };
-
-    const getDeadlineIcon = (status: string | null) => {
-        switch (status) {
-            case 'overdue':
-                return '⚠️';
-            case 'urgent':
-                return '🔴';
-            case 'warning':
-                return '🟡';
-            case 'normal':
-                return '🟢';
-            default:
-                return '⏳';
-        }
-    };
-
-    const getDeadlineText = (status: string | null, sisaHari: number | null) => {
-        if (sisaHari === null) return 'Belum ditentukan';
-        if (status === 'overdue') return `Terlambat ${Math.abs(sisaHari)} hari`;
-        if (sisaHari === 0) return 'Deadline hari ini!';
-        return `${sisaHari} hari lagi`;
-    };
+    
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -443,9 +448,11 @@ export default function Detail({
                                             </p>
                                         </div>
                                         
-                                        {/* Kontrak Info */}
+                                        {/* Kontrak Info DENGAN PERBAIKAN WARNA OVERDUE */}
                                         {kontrak && (
-                                            <div className={`rounded-xl p-4 shadow-md backdrop-blur-sm border-2 ${getDeadlineStatusColor(kontrak.deadline_status)}`}>
+                                            <div 
+                                                className={`rounded-xl p-4 shadow-md backdrop-blur-sm border-2 ${getDeadlineStatusColor(kontrak.deadline_status)}`}
+                                            >
                                                 <p className="mb-2 text-xs font-semibold tracking-wide uppercase">
                                                     📅 Durasi Kontrak
                                                 </p>
@@ -677,14 +684,7 @@ export default function Detail({
                                                                                     d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                                                                                 />
                                                                             </svg>
-                                                                            {/* <span className="text-sm">
-                                                                                Harga:
-                                                                            </span>
-                                                                            <span className="ml-2 font-bold">
-                                                                                {formatRupiah(
-                                                                                    produk.total_harga,
-                                                                                )}
-                                                                            </span> */}
+                                                                            {/* Total Harga dihilangkan dari kode aslinya, jadi dikomentari atau diubah */}
                                                                         </div>
                                                                     </div>
 
@@ -796,7 +796,6 @@ export default function Detail({
                                                                                         {produk.weight_percentage.toFixed(
                                                                                             1,
                                                                                         )}
-
                                                                                         %
                                                                                     </div>
                                                                                 </div>
@@ -836,13 +835,11 @@ export default function Detail({
                                                                                     {produk.actual_contribution.toFixed(
                                                                                         1,
                                                                                     )}
-
                                                                                     %
                                                                                     /{' '}
                                                                                     {produk.weight_percentage.toFixed(
                                                                                         1,
                                                                                     )}
-
                                                                                     %
                                                                                 </span>
                                                                             </div>
@@ -866,7 +863,6 @@ export default function Detail({
                                                                                 {
                                                                                     produk.progress
                                                                                 }
-
                                                                                 %
                                                                             </span>
                                                                         </div>
@@ -968,11 +964,9 @@ export default function Detail({
                                                                                     Bobot:{' '}
                                                                                     {
                                                                                         stages[
-                                                                                            produk
-                                                                                                .current_stage
+                                                                                            produk.current_stage
                                                                                         ]
                                                                                     }
-
                                                                                     %
                                                                                 </div>
                                                                             )}
@@ -987,7 +981,7 @@ export default function Detail({
                                                                                 </div>
                                                                             )}
                                                                             
-                                                                            {/* Next Button */}
+                                                                            {/* Next Button Logic */}
                                                                             <button
                                                                                 disabled={
                                                                                     isUpdating ||
@@ -999,11 +993,11 @@ export default function Detail({
                                                                                         ).indexOf(
                                                                                             produk.current_stage,
                                                                                         ) ===
-                                                                                            Object.keys(
-                                                                                                stages,
-                                                                                            )
-                                                                                                .length -
-                                                                                                1)
+                                                                                        Object.keys(
+                                                                                            stages,
+                                                                                        )
+                                                                                            .length -
+                                                                                            1)
                                                                                 }
                                                                                 onClick={() => {
                                                                                     const currentIndex =
@@ -1036,11 +1030,11 @@ export default function Detail({
                                                                                         ).indexOf(
                                                                                             produk.current_stage,
                                                                                         ) ===
-                                                                                            Object.keys(
-                                                                                                stages,
-                                                                                            )
-                                                                                                .length -
-                                                                                                1)
+                                                                                        Object.keys(
+                                                                                            stages,
+                                                                                        )
+                                                                                            .length -
+                                                                                            1)
                                                                                         ? 'cursor-not-allowed bg-gray-100 text-gray-400'
                                                                                         : 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-md hover:scale-105 hover:from-green-500 hover:to-emerald-600 hover:shadow-lg'
                                                                                 }`}
@@ -1064,24 +1058,19 @@ export default function Detail({
                                                                             </button>
                                                                         </div>
 
+                                                                        {/* Report Defect */}
                                                                         {produk.can_report_defect && (
                                                                             <div className="mt-4 border-t border-gray-200 pt-4">
                                                                                 {produk.has_active_defect ? (
                                                                                     <div className="flex items-center gap-2">
                                                                                         <span className="flex-1 text-sm font-medium text-orange-600">
-                                                                                            ⚠️
-                                                                                            Ada
-                                                                                            defect
-                                                                                            yang
-                                                                                            sedang
-                                                                                            ditangani
+                                                                                            ⚠️ Ada defect yang sedang ditangani
                                                                                         </span>
                                                                                         <Link
                                                                                             href={`/defect-management/${produk.defect_id}`}
                                                                                             className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600"
                                                                                         >
-                                                                                            Lihat
-                                                                                            Defect
+                                                                                            Lihat Defect
                                                                                         </Link>
                                                                                     </div>
                                                                                 ) : (
@@ -1092,549 +1081,229 @@ export default function Detail({
                                                                                         }}
                                                                                         className="w-full rounded-lg bg-gradient-to-r from-red-500 to-orange-600 px-4 py-2 font-medium text-white shadow-lg hover:from-red-600 hover:to-orange-700"
                                                                                     >
-                                                                                        🔍
-                                                                                        Report
-                                                                                        Defect
+                                                                                        🔍 Report Defect
                                                                                     </button>
                                                                                 )}
                                                                             </div>
                                                                         )}
-                                                                        {showDefectModal === produk.id && (
-                                                                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                                                                                <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white">
-                                                                                    <div className="p-6">
-                                                                                        <h2 className="mb-4 text-2xl font-bold">
-                                                                                            Report
-                                                                                            Defect
-                                                                                            -{' '}
-                                                                                            {
-                                                                                                selectedProduk?.nama_produk
-                                                                                            }
-                                                                                        </h2>
-
-                                                                                        <form
-                                                                                            onSubmit={
-                                                                                                handleSubmitDefect
-                                                                                            }
-                                                                                        >
-                                                                                            <input
-                                                                                                type="hidden"
-                                                                                                name="item_pekerjaan_produk_id"
-                                                                                                value={
-                                                                                                    selectedProduk?.id || ''
-                                                                                                }
-                                                                                            />
-                                                                                            <input
-                                                                                                type="hidden"
-                                                                                                name="qc_stage"
-                                                                                                value={
-                                                                                                    selectedProduk?.current_stage || ''
-                                                                                                }
-                                                                                            />
-
-                                                                                            {/* Dynamic Defect Items */}
-                                                                                            {defectItems.map(
-                                                                                                (
-                                                                                                    item,
-                                                                                                    index,
-                                                                                                ) => (
-                                                                                                    <div
-                                                                                                        key={
-                                                                                                            index
-                                                                                                        }
-                                                                                                        className="mb-4 rounded-lg border-2 border-gray-200 p-4"
-                                                                                                    >
-                                                                                                        <div className="mb-2 flex items-center justify-between">
-                                                                                                            <h3 className="font-semibold">
-                                                                                                                Cacat
-                                                                                                                #
-                                                                                                                {index +
-                                                                                                                    1}
-                                                                                                            </h3>
-                                                                                                            {defectItems.length >
-                                                                                                                1 && (
-                                                                                                                <button
-                                                                                                                    type="button"
-                                                                                                                    onClick={() =>
-                                                                                                                        removeDefectItem(
-                                                                                                                            index,
-                                                                                                                        )
-                                                                                                                    }
-                                                                                                                    className="text-red-600 hover:text-red-800"
-                                                                                                                >
-                                                                                                                    🗑️
-                                                                                                                    Hapus
-                                                                                                                </button>
-                                                                                                            )}
-                                                                                                        </div>
-
-                                                                                                        <div className="mb-2">
-                                                                                                            <label className="mb-1 block text-sm font-medium">
-                                                                                                                Foto
-                                                                                                                Cacat
-                                                                                                            </label>
-                                                                                                            <input
-                                                                                                                type="file"
-                                                                                                                accept="image/*"
-                                                                                                                required
-                                                                                                                onChange={(e) =>
-                                                                                                                    updateDefectItem(
-                                                                                                                        index,
-                                                                                                                        'photo',
-                                                                                                                        e.target.files?.[0] || null,
-                                                                                                                    )
-                                                                                                                }
-                                                                                                                className="w-full rounded-lg border border-gray-300 p-2"
-                                                                                                            />
-                                                                                                        </div>
-
-                                                                                                        <div>
-                                                                                                            <label className="mb-1 block text-sm font-medium">
-                                                                                                                Catatan
-                                                                                                                Cacat
-                                                                                                            </label>
-                                                                                                            <textarea
-                                                                                                                required
-                                                                                                                value={
-                                                                                                                    item.notes
-                                                                                                                }
-                                                                                                                onChange={(
-                                                                                                                    e,
-                                                                                                                ) =>
-                                                                                                                    updateDefectItem(
-                                                                                                                        index,
-                                                                                                                        'notes',
-                                                                                                                        e
-                                                                                                                            .target
-                                                                                                                            .value,
-                                                                                                                    )
-                                                                                                                }
-                                                                                                                className="w-full rounded-lg border border-gray-300 p-2"
-                                                                                                                rows={
-                                                                                                                    3
-                                                                                                                }
-                                                                                                                placeholder="Jelaskan cacat yang ditemukan..."
-                                                                                                            />
-                                                                                                        </div>
-                                                                                                    </div>
-                                                                                                ),
-                                                                                            )}
-
-                                                                                            <button
-                                                                                                type="button"
-                                                                                                onClick={
-                                                                                                    addDefectItem
-                                                                                                }
-                                                                                                className="mb-4 w-full rounded-lg border-2 border-dashed border-gray-300 px-4 py-2 font-medium text-gray-600 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600"
-                                                                                            >
-                                                                                                +
-                                                                                                Tambah
-                                                                                                Cacat
-                                                                                                Lain
-                                                                                            </button>
-
-                                                                                            <div className="flex gap-3">
-                                                                                                <button
-                                                                                                    type="button"
-                                                                                                    onClick={() => {
-                                                                                                        setShowDefectModal(null);
-                                                                                                        setSelectedProduk(null);
-                                                                                                    }}
-                                                                                                    className="flex-1 rounded-lg border border-gray-300 px-4 py-2 hover:bg-gray-50"
-                                                                                                >
-                                                                                                    Batal
-                                                                                                </button>
-                                                                                                <button
-                                                                                                    type="submit"
-                                                                                                    className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-                                                                                                >
-                                                                                                    Submit
-                                                                                                    Defect
-                                                                                                </button>
-                                                                                            </div>
-                                                                                        </form>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        )}
                                                                     </div>
-                                                                    
-                                                                   
-
-
-                                                                    {/* Stage Progress Modal */}
-                                                                    {showStageModal ===
-                                                                        produk.id && (
-                                                                        <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border-2 border-gray-200 bg-white shadow-2xl lg:w-96">
-                                                                            <div className="max-h-[800px] overflow-y-auto p-4">
-                                                                                <div className="mb-4 flex items-center justify-between border-b border-gray-200 pb-3">
-                                                                                    <h4 className="text-sm font-bold text-gray-900">
-                                                                                        Pilih
-                                                                                        Tahapan
-                                                                                    </h4>
-                                                                                    <button
-                                                                                        onClick={() =>
-                                                                                            setShowStageModal(
-                                                                                                null,
-                                                                                            )
-                                                                                        }
-                                                                                        className="text-gray-400 transition-colors hover:text-gray-600"
-                                                                                    >
-                                                                                        <svg
-                                                                                            className="h-5 w-5"
-                                                                                            fill="none"
-                                                                                            stroke="currentColor"
-                                                                                            viewBox="0 0 24 24"
-                                                                                        >
-                                                                                            <path
-                                                                                                strokeLinecap="round"
-                                                                                                strokeLinejoin="round"
-                                                                                                strokeWidth={
-                                                                                                    2
-                                                                                                }
-                                                                                                d="M6 18L18 6M6 6l12 12"
-                                                                                            />
-                                                                                        </svg>
-                                                                                    </button>
-                                                                                </div>
-
-                                                                                <div className="space-y-2 pb-2">
-                                                                                    {Object.entries(
-                                                                                        stages,
-                                                                                    ).map(
-                                                                                        (
-                                                                                            [
-                                                                                                stage,
-                                                                                                weight,
-                                                                                            ],
-                                                                                            index,
-                                                                                        ) => {
-                                                                                            const isActive =
-                                                                                                produk.current_stage ===
-                                                                                                stage;
-                                                                                            const stageProgress =
-                                                                                                Object.keys(
-                                                                                                    stages,
-                                                                                                ).indexOf(
-                                                                                                    stage,
-                                                                                                );
-                                                                                            const currentProgress =
-                                                                                                produk.current_stage
-                                                                                                    ? Object.keys(
-                                                                                                          stages,
-                                                                                                      ).indexOf(
-                                                                                                          produk.current_stage,
-                                                                                                      )
-                                                                                                    : -1;
-                                                                                            const isPassed =
-                                                                                                stageProgress <
-                                                                                                currentProgress;
-                                                                                            const isFinalStage =
-                                                                                                weight ===
-                                                                                                0; // BAST
-
-                                                                                            return (
-                                                                                                <button
-                                                                                                    key={
-                                                                                                        stage
-                                                                                                    }
-                                                                                                    onClick={() =>
-                                                                                                        openStageUpdateModal(
-                                                                                                            produk.id,
-                                                                                                            stage,
-                                                                                                        )
-                                                                                                    }
-                                                                                                    className={`w-full transform rounded-xl p-3 text-left transition-all duration-200 hover:scale-[1.02] ${
-                                                                                                        isFinalStage
-                                                                                                            ? isActive
-                                                                                                                ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg ring-2 ring-purple-300'
-                                                                                                                : 'border-2 border-dashed border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 text-purple-700 hover:shadow-md'
-                                                                                                            : isActive
-                                                                                                              ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg'
-                                                                                                              : isPassed
-                                                                                                                ? 'border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 hover:shadow-md'
-                                                                                                                : 'bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-md'
-                                                                                                    }`}
-                                                                                                >
-                                                                                                    <div className="flex items-center justify-between">
-                                                                                                        <div className="flex items-center space-x-3">
-                                                                                                            <div
-                                                                                                                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
-                                                                                                                    isFinalStage
-                                                                                                                        ? isActive
-                                                                                                                            ? 'bg-white text-purple-600'
-                                                                                                                            : 'bg-purple-200 text-purple-700'
-                                                                                                                        : isActive
-                                                                                                                          ? 'bg-white text-blue-600'
-                                                                                                                          : isPassed
-                                                                                                                            ? 'bg-green-500 text-white'
-                                                                                                                            : 'bg-gray-200 text-gray-600'
-                                                                                                                }`}
-                                                                                                            >
-                                                                                                                {isFinalStage
-                                                                                                                    ? '🏁'
-                                                                                                                    : isPassed
-                                                                                                                      ? '✓'
-                                                                                                                      : index +
-                                                                                                                        1}
-                                                                                                            </div>
-                                                                                                            <div className="flex flex-col">
-                                                                                                                <span className="font-semibold">
-                                                                                                                    {
-                                                                                                                        stage
-                                                                                                                    }
-                                                                                                                </span>
-                                                                                                                {isFinalStage && (
-                                                                                                                    <span className="text-xs opacity-75">
-                                                                                                                        Serah
-                                                                                                                        Terima
-                                                                                                                    </span>
-                                                                                                                )}
-                                                                                                            </div>
-                                                                                                        </div>
-                                                                                                        <div
-                                                                                                            className={`rounded-full px-3 py-1 text-xs font-bold ${
-                                                                                                                isFinalStage
-                                                                                                                    ? isActive
-                                                                                                                        ? 'bg-white/20 text-white'
-                                                                                                                        : 'bg-purple-200 text-purple-800'
-                                                                                                                    : isActive
-                                                                                                                      ? 'bg-white/20 text-white'
-                                                                                                                      : isPassed
-                                                                                                                        ? 'bg-green-200 text-green-800'
-                                                                                                                        : 'bg-gray-200 text-gray-600'
-                                                                                                            }`}
-                                                                                                        >
-                                                                                                            {isFinalStage
-                                                                                                                ? '✓ Selesai'
-                                                                                                                : `${weight}%`}
-                                                                                                        </div>
-                                                                                                    </div>
-                                                                                                </button>
-                                                                                            );
-                                                                                        },
-                                                                                    )}
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
                                                                 </div>
+                                                            </div>
 
-                                                                {/* Workplan Section */}
-                                                                <div className="lg:col-span-4 mt-4 border-t border-gray-300 pt-4">
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            setSelectedProduk(produk);
-                                                                            setShowWorkplanModal(produk.id);
-                                                                        }}
-                                                                        className="w-full rounded-lg bg-gradient-to-r from-teal-500 to-cyan-600 px-4 py-2 text-white font-semibold shadow-lg hover:from-teal-600 hover:to-cyan-700 transition-all"
-                                                                    >
-                                                                        📅 Kelola Timeline Workplan
-                                                                    </button>
+                                                            {/* Workplan Section */}
+                                                            <div className="lg:col-span-4 mt-4 border-t border-gray-300 pt-4">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedProduk(produk);
+                                                                        setShowWorkplanModal(produk.id);
+                                                                    }}
+                                                                    className="w-full rounded-lg bg-gradient-to-r from-teal-500 to-cyan-600 px-4 py-2 text-white font-semibold shadow-lg hover:from-teal-600 hover:to-cyan-700 transition-all"
+                                                                >
+                                                                    📅 Kelola Timeline Workplan
+                                                                </button>
 
-                                                                    {/* Ringkasan Workplan */}
-                                                                    {produk.workplan_items?.length > 0 && (
-                                                                        <div className="mt-3 space-y-2">
-                                                                            {produk.workplan_items.map((wp) => {
-                                                                                const statusClass = {
-                                                                                    done: 'bg-green-600',
-                                                                                    in_progress: 'bg-blue-600',
-                                                                                    cancelled: 'bg-red-600',
-                                                                                    planned: 'bg-gray-500',
-                                                                                }[wp.status];
+                                                                {/* Ringkasan Workplan */}
+                                                                {produk.workplan_items?.length > 0 && (
+                                                                    <div className="mt-3 space-y-2">
+                                                                        {produk.workplan_items.map((wp) => {
+                                                                            const statusClass = {
+                                                                                done: 'bg-green-600',
+                                                                                in_progress: 'bg-blue-600',
+                                                                                cancelled: 'bg-red-600',
+                                                                                planned: 'bg-gray-500',
+                                                                            }[wp.status];
 
-                                                                                return (
-                                                                                    <div
-                                                                                        key={wp.id || `${wp.nama_tahapan}-${wp.urutan}`}
-                                                                                        className="rounded-lg border border-gray-200 bg-white px-3 py-3 text-xs"
-                                                                                    >
-                                                                                        <div className="flex justify-between items-center">
-                                                                                            <div>
-                                                                                                <p className="font-semibold text-gray-800">{wp.nama_tahapan}</p>
-                                                                                                <p className="text-gray-500">
-                                                                                                    {wp.start_date ?? '-'} → {wp.end_date ?? '-'}
-                                                                                                    {' • '}
-                                                                                                    {wp.duration_days ?? 0} hari
-                                                                                                </p>
-                                                                                            </div>
-
-                                                                                            <span className={`px-2 py-1 rounded text-white text-[10px] font-bold ${statusClass}`}>
-                                                                                                {wp.status}
-                                                                                            </span>
-                                                                                        </div>
-
-                                                                                        {/* 🔥 Tombol Aksi */}
-                                                                                        <div className="mt-2 flex flex-wrap gap-1">
-                                                                                            
-                                                                                            {/* In Progress */}
-                                                                                            <button
-                                                                                                onClick={() => updateWorkplanStatus(wp.id, 'in_progress')}
-                                                                                                className="px-2 py-1 rounded bg-blue-600 text-white text-[10px] font-bold hover:bg-blue-700"
-                                                                                            >
-                                                                                                In Progress
-                                                                                            </button>
-
-                                                                                            {/* Complete */}
-                                                                                            <button
-                                                                                                onClick={() => updateWorkplanStatus(wp.id, 'done')}
-                                                                                                className="px-2 py-1 rounded bg-green-600 text-white text-[10px] font-bold hover:bg-green-700"
-                                                                                            >
-                                                                                                Complete
-                                                                                            </button>
-
-                                                                                            {/* Extend */}
-                                                                                            <button
-                                                                                                onClick={() => updateWorkplanStatus(wp.id, 'planned')}
-                                                                                                className="px-2 py-1 rounded bg-yellow-500 text-white text-[10px] font-bold hover:bg-yellow-600"
-                                                                                            >
-                                                                                                Extend
-                                                                                            </button>
-
-                                                                                            {/* Cancel */}
-                                                                                            <button
-                                                                                                onClick={() => updateWorkplanStatus(wp.id, 'cancelled')}
-                                                                                                className="px-2 py-1 rounded bg-red-600 text-white text-[10px] font-bold hover:bg-red-700"
-                                                                                            >
-                                                                                                Cancel
-                                                                                            </button>
-
-                                                                                        </div>
-                                                                                    </div>
-                                                                                );
-                                                                            })}
-                                                                        </div>
-                                                                    )}
-
-
-                                                                </div>
-
-                                                                {/* Workplan Modal */}
-                                                                {showWorkplanModal === produk.id && selectedProduk && (
-                                                                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-                                                                        <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-xl p-6">
-                                                                            <h2 className="text-2xl font-bold mb-4">
-                                                                                Timeline Workplan – {selectedProduk.nama_produk}
-                                                                            </h2>
-
-                                                                            <form
-                                                                                onSubmit={(e) => handleSubmitWorkplan(e, selectedProduk.id)}
-                                                                                className="space-y-4"
-                                                                            >
-                                                                                {workplanItems.map((wp, index) => (
-                                                                                    <div key={index} className="border-2 border-gray-200 rounded-lg p-4">
-                                                                                        <div className="flex justify-between mb-2">
-                                                                                            <h3 className="font-semibold text-gray-700">
-                                                                                                Tahapan #{index + 1}
-                                                                                            </h3>
-
-                                                                                            {workplanItems.length > 1 && (
-                                                                                                <button
-                                                                                                    type="button"
-                                                                                                    onClick={() => removeWorkplanItem(index)}
-                                                                                                    className="text-red-600 hover:text-red-800"
-                                                                                                >
-                                                                                                    🗑️ Hapus
-                                                                                                </button>
-                                                                                            )}
-                                                                                        </div>
-
-                                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                                                            <div>
-                                                                                                <label className="text-sm font-medium">Nama Tahapan</label>
-                                                                                                <input
-                                                                                                    type="text"
-                                                                                                    className="w-full border rounded-lg p-2"
-                                                                                                    required
-                                                                                                    value={wp.nama_tahapan}
-                                                                                                    onChange={(e) =>
-                                                                                                        updateWorkplanItem(index, 'nama_tahapan', e.target.value)
-                                                                                                    }
-                                                                                                />
-                                                                                            </div>
-
-                                                                                            <div>
-                                                                                                <label className="text-sm font-medium">Status</label>
-                                                                                                <select
-                                                                                                    className="w-full border rounded-lg p-2"
-                                                                                                    value={wp.status}
-                                                                                                    onChange={(e) =>
-                                                                                                        updateWorkplanItem(index, 'status', e.target.value)
-                                                                                                    }
-                                                                                                >
-                                                                                                    <option value="planned">Planned</option>
-                                                                                                    <option value="in_progress">In Progress</option>
-                                                                                                    <option value="done">Done</option>
-                                                                                                    <option value="cancelled">Cancelled</option>
-                                                                                                </select>
-                                                                                            </div>
-
-                                                                                            <div>
-                                                                                                <label className="text-sm font-medium">Tanggal Mulai</label>
-                                                                                                <input
-                                                                                                    type="date"
-                                                                                                    className="w-full border rounded-lg p-2"
-                                                                                                    value={wp.start_date || ''}
-                                                                                                    onChange={(e) =>
-                                                                                                        updateWorkplanItem(index, 'start_date', e.target.value)
-                                                                                                    }
-                                                                                                />
-                                                                                            </div>
-
-                                                                                            <div>
-                                                                                                <label className="text-sm font-medium">Tanggal Selesai</label>
-                                                                                                <input
-                                                                                                    type="date"
-                                                                                                    className="w-full border rounded-lg p-2"
-                                                                                                    value={wp.end_date || ''}
-                                                                                                    onChange={(e) =>
-                                                                                                        updateWorkplanItem(index, 'end_date', e.target.value)
-                                                                                                    }
-                                                                                                />
-                                                                                            </div>
-                                                                                        </div>
-
-                                                                                        <div className="mt-3">
-                                                                                            <label className="text-sm font-medium">Catatan</label>
-                                                                                            <textarea
-                                                                                                className="w-full border rounded-lg p-2"
-                                                                                                rows={3}
-                                                                                                value={wp.catatan || ''}
-                                                                                                onChange={(e) =>
-                                                                                                    updateWorkplanItem(index, 'catatan', e.target.value)
-                                                                                                }
-                                                                                            />
-                                                                                        </div>
-                                                                                    </div>
-                                                                                ))}
-
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={addWorkplanItem}
-                                                                                    className="w-full border-2 border-dashed rounded-lg p-3 text-gray-600 hover:border-teal-500 hover:text-teal-600"
+                                                                            return (
+                                                                                <div
+                                                                                    key={wp.id || `${wp.nama_tahapan}-${wp.urutan}`}
+                                                                                    className="rounded-lg border border-gray-200 bg-white px-3 py-3 text-xs"
                                                                                 >
-                                                                                    + Tambah Tahapan Workplan
-                                                                                </button>
+                                                                                    <div className="flex justify-between items-center">
+                                                                                        <div>
+                                                                                            <p className="font-semibold text-gray-800">{wp.nama_tahapan}</p>
+                                                                                            <p className="text-gray-500">
+                                                                                                {wp.start_date ?? '-'} → {wp.end_date ?? '-'}
+                                                                                                {' • '}
+                                                                                                {wp.duration_days ?? 0} hari
+                                                                                            </p>
+                                                                                        </div>
 
-                                                                                <div className="flex gap-3 mt-4">
-                                                                                    <button
-                                                                                        type="button"
-                                                                                        onClick={() => setShowWorkplanModal(null)}
-                                                                                        className="flex-1 border rounded-lg py-2 hover:bg-gray-50"
-                                                                                    >
-                                                                                        Batal
-                                                                                    </button>
-                                                                                    <button
-                                                                                        type="submit"
-                                                                                        className="flex-1 bg-teal-600 text-white rounded-lg py-2 hover:bg-teal-700"
-                                                                                    >
-                                                                                        Simpan Workplan
-                                                                                    </button>
+                                                                                        <span className={`px-2 py-1 rounded text-white text-[10px] font-bold ${statusClass}`}>
+                                                                                            {wp.status}
+                                                                                        </span>
+                                                                                    </div>
+
+                                                                                    {/* 🔥 Tombol Aksi Workplan (hanya tampil di sini, bukan di modal) */}
+                                                                                    <div className="mt-2 flex flex-wrap gap-1">
+                                                                                        
+                                                                                        {/* Tombol In Progress */}
+                                                                                        <button
+                                                                                            onClick={() => updateWorkplanStatus(wp.id, 'in_progress')}
+                                                                                            className="px-2 py-1 rounded bg-blue-600 text-white text-[10px] font-bold hover:bg-blue-700"
+                                                                                        >
+                                                                                            In Progress
+                                                                                        </button>
+
+                                                                                        {/* Tombol Complete */}
+                                                                                        <button
+                                                                                            onClick={() => updateWorkplanStatus(wp.id, 'done')}
+                                                                                            className="px-2 py-1 rounded bg-green-600 text-white text-[10px] font-bold hover:bg-green-700"
+                                                                                        >
+                                                                                            Complete
+                                                                                        </button>
+
+                                                                                        {/* Tombol Extend/Planned */}
+                                                                                        <button
+                                                                                            onClick={() => updateWorkplanStatus(wp.id, 'planned')}
+                                                                                            className="px-2 py-1 rounded bg-yellow-500 text-white text-[10px] font-bold hover:bg-yellow-600"
+                                                                                        >
+                                                                                            Extend
+                                                                                        </button>
+
+                                                                                        {/* Tombol Cancel */}
+                                                                                        <button
+                                                                                            onClick={() => updateWorkplanStatus(wp.id, 'cancelled')}
+                                                                                            className="px-2 py-1 rounded bg-red-600 text-white text-[10px] font-bold hover:bg-red-700"
+                                                                                        >
+                                                                                            Cancel
+                                                                                        </button>
+                                                                                    </div>
                                                                                 </div>
-                                                                            </form>
-                                                                        </div>
+                                                                            );
+                                                                        })}
                                                                     </div>
                                                                 )}
+
+
                                                             </div>
+
+                                                            {/* Workplan Modal */}
+                                                            {showWorkplanModal === produk.id && selectedProduk && (
+                                                                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+                                                                    <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-xl p-6">
+                                                                        <h2 className="text-2xl font-bold mb-4">
+                                                                            Timeline Workplan – {selectedProduk.nama_produk}
+                                                                        </h2>
+
+                                                                        <form
+                                                                            onSubmit={(e) => handleSubmitWorkplan(e, selectedProduk.id)}
+                                                                            className="space-y-4"
+                                                                        >
+                                                                            {workplanItems.map((wp, index) => (
+                                                                                <div key={index} className="border-2 border-gray-200 rounded-lg p-4">
+                                                                                    <div className="flex justify-between mb-2">
+                                                                                        <h3 className="font-semibold text-gray-700">
+                                                                                            Tahapan #{index + 1}
+                                                                                        </h3>
+
+                                                                                        {workplanItems.length > 1 && (
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                onClick={() => removeWorkplanItem(index)}
+                                                                                                className="text-red-600 hover:text-red-800"
+                                                                                            >
+                                                                                                🗑️ Hapus
+                                                                                            </button>
+                                                                                        )}
+                                                                                    </div>
+
+                                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                                                        <div>
+                                                                                            <label className="text-sm font-medium">Nama Tahapan</label>
+                                                                                            <input
+                                                                                                type="text"
+                                                                                                className="w-full border rounded-lg p-2"
+                                                                                                required
+                                                                                                value={wp.nama_tahapan}
+                                                                                                onChange={(e) =>
+                                                                                                    updateWorkplanItem(index, 'nama_tahapan', e.target.value)
+                                                                                                }
+                                                                                            />
+                                                                                        </div>
+
+                                                                                        <div>
+                                                                                            <label className="text-sm font-medium">Status</label>
+                                                                                            <select
+                                                                                                className="w-full border rounded-lg p-2"
+                                                                                                value={wp.status}
+                                                                                                onChange={(e) =>
+                                                                                                    updateWorkplanItem(index, 'status', e.target.value)
+                                                                                                }
+                                                                                            >
+                                                                                                <option value="planned">Planned</option>
+                                                                                                <option value="in_progress">In Progress</option>
+                                                                                                <option value="done">Done</option>
+                                                                                                <option value="cancelled">Cancelled</option>
+                                                                                            </select>
+                                                                                        </div>
+
+                                                                                        <div>
+                                                                                            <label className="text-sm font-medium">Tanggal Mulai</label>
+                                                                                            <input
+                                                                                                type="date"
+                                                                                                className="w-full border rounded-lg p-2"
+                                                                                                value={wp.start_date || ''}
+                                                                                                onChange={(e) =>
+                                                                                                    updateWorkplanItem(index, 'start_date', e.target.value)
+                                                                                                }
+                                                                                            />
+                                                                                        </div>
+
+                                                                                        <div>
+                                                                                            <label className="text-sm font-medium">Tanggal Selesai</label>
+                                                                                            <input
+                                                                                                type="date"
+                                                                                                className="w-full border rounded-lg p-2"
+                                                                                                value={wp.end_date || ''}
+                                                                                                onChange={(e) =>
+                                                                                                    updateWorkplanItem(index, 'end_date', e.target.value)
+                                                                                                }
+                                                                                            />
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    <div className="mt-3">
+                                                                                        <label className="text-sm font-medium">Catatan</label>
+                                                                                        <textarea
+                                                                                            className="w-full border rounded-lg p-2"
+                                                                                            rows={3}
+                                                                                            value={wp.catatan || ''}
+                                                                                            onChange={(e) =>
+                                                                                                updateWorkplanItem(index, 'catatan', e.target.value)
+                                                                                            }
+                                                                                            placeholder="Jelaskan cacat yang ditemukan..."
+                                                                                        />
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={addWorkplanItem}
+                                                                                className="w-full border-2 border-dashed rounded-lg p-3 text-gray-600 hover:border-teal-500 hover:text-teal-600"
+                                                                            >
+                                                                                + Tambah Tahapan Workplan
+                                                                            </button>
+
+                                                                            <div className="flex gap-3 mt-4">
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => setShowWorkplanModal(null)}
+                                                                                    className="flex-1 border rounded-lg py-2 hover:bg-gray-50"
+                                                                                >
+                                                                                    Batal
+                                                                                </button>
+                                                                                <button
+                                                                                    type="submit"
+                                                                                    className="flex-1 bg-teal-600 text-white rounded-lg py-2 hover:bg-teal-700"
+                                                                                >
+                                                                                    Simpan Workplan
+                                                                                </button>
+                                                                            </div>
+                                                                        </form>
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     );
                                                 },
@@ -1817,6 +1486,144 @@ export default function Detail({
                     </div>
                 </div>
             )}
+
+            {/* Defect Modal */}
+             {showDefectModal === selectedProduk?.id && selectedProduk && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white">
+                        <div className="p-6">
+                            <h2 className="mb-4 text-2xl font-bold">
+                                Report Defect - {selectedProduk.nama_produk}
+                            </h2>
+
+                            <form onSubmit={handleSubmitDefect}>
+                                <input
+                                    type="hidden"
+                                    name="item_pekerjaan_produk_id"
+                                    value={selectedProduk.id}
+                                />
+                                <input
+                                    type="hidden"
+                                    name="qc_stage"
+                                    value={selectedProduk.current_stage || ''}
+                                />
+
+                                {/* Dynamic Defect Items */}
+                                {defectItems.map(
+                                    (
+                                        item,
+                                        index,
+                                    ) => (
+                                        <div
+                                            key={
+                                                index
+                                            }
+                                            className="mb-4 rounded-lg border-2 border-gray-200 p-4"
+                                        >
+                                            <div className="mb-2 flex items-center justify-between">
+                                                <h3 className="font-semibold">
+                                                    Cacat #
+                                                    {index +
+                                                        1}
+                                                </h3>
+                                                {defectItems.length >
+                                                    1 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                removeDefectItem(
+                                                                    index,
+                                                                )
+                                                            }
+                                                            className="text-red-600 hover:text-red-800"
+                                                        >
+                                                            🗑️ Hapus
+                                                        </button>
+                                                    )}
+                                            </div>
+
+                                            <div className="mb-2">
+                                                <label className="mb-1 block text-sm font-medium">
+                                                    Foto Cacat
+                                                </label>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    required
+                                                    onChange={(e) =>
+                                                        updateDefectItem(
+                                                            index,
+                                                            'photo',
+                                                            e.target.files?.[0] || null,
+                                                        )
+                                                    }
+                                                    className="w-full rounded-lg border border-gray-300 p-2"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="mb-1 block text-sm font-medium">
+                                                    Catatan Cacat
+                                                </label>
+                                                <textarea
+                                                    required
+                                                    value={
+                                                        item.notes
+                                                    }
+                                                    onChange={(
+                                                        e,
+                                                    ) =>
+                                                        updateDefectItem(
+                                                            index,
+                                                            'notes',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    className="w-full rounded-lg border border-gray-300 p-2"
+                                                    rows={
+                                                        3
+                                                    }
+                                                    placeholder="Jelaskan cacat yang ditemukan..."
+                                                />
+                                            </div>
+                                        </div>
+                                    ),
+                                )}
+
+                                <button
+                                    type="button"
+                                    onClick={
+                                        addDefectItem
+                                    }
+                                    className="mb-4 w-full rounded-lg border-2 border-dashed border-gray-300 px-4 py-2 font-medium text-gray-600 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600"
+                                >
+                                    + Tambah Cacat Lain
+                                </button>
+
+                                <div className="flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowDefectModal(null);
+                                            setSelectedProduk(null);
+                                        }}
+                                        className="flex-1 rounded-lg border border-gray-300 px-4 py-2 hover:bg-gray-50"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+                                    >
+                                        Submit Defect
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
 
             <style>{`
                 @keyframes shimmer {
