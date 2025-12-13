@@ -259,10 +259,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:commitment-fee.edit')->name('commitment-fee.upload-payment');
         Route::post('commitment-fee/reset-fee/{commitmentFee}', [CommitmentFeeController::class, 'resetFee'])
         ->middleware('permission:commitment-fee.edit')->name('commitment-fee.reset-fee');
-    });
         Route::get('commitment-fee/{id}/print', [CommitmentFeeController::class, 'print'])
             ->name('commitment-fee.print');
-        });
+    });
+        
 
     // DESAIN FINAL ROUTES
     Route::middleware(['permission:desain-final.index'])->group(function () {
