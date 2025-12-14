@@ -771,6 +771,49 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Update Survey Ulang',
                 'group' => 'Operations - Survey Ulang'
             ],
+
+            // Survey Schedule
+            [
+                'name' => 'survey-schedule.index',
+                'display_name' => 'View Tanggal Survey',
+                'group' => 'surveys - Tanggal Survey'
+            ],
+
+            [
+                'name' => 'survey-schedule.start',
+                'display_name' => 'Start Tanggal Survey',
+                'group' => 'surveys - Tanggal Survey'
+            ],
+
+            [
+                'name' => 'survey-schedule.create',
+                'display_name' => 'Create Tanggal Survey',
+                'group' => 'surveys - Tanggal Survey'
+            ],
+
+            [
+                'name' => 'survey-schedule.store',
+                'display_name' => 'Store Tanggal Survey',
+                'group' => 'surveys - Tanggal Survey'
+            ],
+
+            [
+                'name' => 'survey-schedule.show',
+                'display_name' => 'Show Tanggal Survey',
+                'group' => 'surveys - Tanggal Survey'
+            ],
+
+            [
+                'name' => 'survey-schedule.edit',
+                'display_name' => 'Edit Tanggal Survey',
+                'group' => 'surveys - Tanggal Survey'
+            ],
+
+            [
+                'name' => 'survey-schedule.update',
+                'display_name' => 'Update Tanggal Survey',
+                'group' => 'surveys - Tanggal Survey'
+            ],
             
             // PDF Export Permissions
             [

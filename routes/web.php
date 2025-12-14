@@ -29,6 +29,7 @@ use App\Http\Controllers\ProjectManagementController;
 use App\Http\Controllers\JenisPengukuranController;
 use App\Http\Controllers\WorkplanItemController;
 use App\Http\Controllers\SurveyUlangController;
+use App\Http\Controllers\SurveyScheduleController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -482,6 +483,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/rab-vendor/{id}/pdf', [RabVendorController::class, 'exportPdf'])->name('rab-vendor.pdf');
         Route::get('/invoice/{id}/export-pdf', [InvoiceController::class, 'exportPdf'])->name('invoice.pdf');
     });
+
+    Route::middleware(['permission:survey-schedule.index'])->group(function () {
+
+        Route::get('/survey-schedule', 
+            [SurveyScheduleController::class, 'index']
+        )->name('survey-schedule.index');
+
+        Route::post('/survey-schedule/{order}',
+        [SurveyScheduleController::class, 'store']
+    )->name('survey-schedule.store');
+
+    });
+
 });
 
 require __DIR__ . '/settings.php';
