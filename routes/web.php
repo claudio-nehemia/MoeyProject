@@ -484,17 +484,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/invoice/{id}/export-pdf', [InvoiceController::class, 'exportPdf'])->name('invoice.pdf');
     });
 
-    Route::middleware(['permission:survey-schedule.index'])->group(function () {
+    Route::prefix('survey-schedule')->name('survey-schedule.')->group(function () {
 
-        Route::get('/survey-schedule', 
-            [SurveyScheduleController::class, 'index']
-        )->name('survey-schedule.index');
+            Route::get('/',
+                [SurveyScheduleController::class, 'index']
+            )
+            ->middleware('permission:survey-schedule.index')
+            ->name('index');
 
-        Route::post('/survey-schedule/{order}',
-        [SurveyScheduleController::class, 'store']
-    )->name('survey-schedule.store');
+            Route::post('/{order}',
+                [SurveyScheduleController::class, 'store']
+            )
+            ->middleware('permission:survey-schedule.store')
+            ->name('store');
 
     });
+
 
 });
 

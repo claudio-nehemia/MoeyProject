@@ -9,14 +9,16 @@ use Inertia\Inertia;
 class SurveyScheduleController extends Controller
 {
     /**
-     * List order yang sudah DP tapi belum ada tanggal survey
+     * List order yang sudah DP / Commitment
+     * (baik yang BELUM maupun SUDAH ada tanggal survey)
      */
     public function index()
     {
         $orders = Order::whereNotNull('payment_status')
-            ->whereRaw("LOWER(payment_status) LIKE '%dp%' 
-                        OR LOWER(payment_status) LIKE '%commitment%'")
-            ->whereNull('tanggal_survey')
+            ->whereRaw("
+                LOWER(payment_status) LIKE '%dp%'
+                OR LOWER(payment_status) LIKE '%commitment%'
+            ")
             ->orderBy('id', 'desc')
             ->get()
             ->map(fn ($o) => [
@@ -24,7 +26,7 @@ class SurveyScheduleController extends Controller
                 'nama_project' => $o->nama_project,
                 'company_name' => $o->company_name,
                 'customer_name' => $o->customer_name,
-                'payment_status' => $o->payment_status,
+                'tanggal_survey' => $o->tanggal_survey, // ⬅️ PENTING
             ]);
 
         return Inertia::render('SurveySchedule/Index', [
@@ -33,12 +35,12 @@ class SurveyScheduleController extends Controller
     }
 
     /**
-     * Update tanggal survey (PM only)
+     * Simpan tanggal survey
      */
     public function store(Request $request, Order $order)
     {
         $request->validate([
-            'tanggal_survey' => 'required|date',
+            'tanggal_survey' => ['required', 'date'],
         ]);
 
         $order->update([
@@ -49,5 +51,4 @@ class SurveyScheduleController extends Controller
 
         return back()->with('success', 'Tanggal survey berhasil disimpan.');
     }
-
 }

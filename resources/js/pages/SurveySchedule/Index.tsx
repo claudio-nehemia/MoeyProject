@@ -8,6 +8,7 @@ interface Order {
     nama_project: string;
     company_name: string;
     customer_name: string;
+    tanggal_survey: string | null;
 }
 
 export default function Index({ orders }: { orders: Order[] }) {
@@ -26,10 +27,11 @@ export default function Index({ orders }: { orders: Order[] }) {
         if (!selectedOrder || !tanggalSurvey) return;
 
         router.post(
-            route('survey-schedule.store', selectedOrder.id),
+            `/survey-schedule/${selectedOrder.id}`,
             { tanggal_survey: tanggalSurvey },
             {
                 preserveScroll: true,
+                preserveState: true,
                 onSuccess: () => {
                     setSelectedOrder(null);
                     setTanggalSurvey('');
@@ -53,10 +55,7 @@ export default function Index({ orders }: { orders: Order[] }) {
 
             <div className="p-4 lg:ml-60">
                 <div className="mt-10 max-w-4xl mx-auto">
-                    <h1
-                        className="text-3xl font-light text-stone-800 mb-2"
-                        style={{ fontFamily: "'Playfair Display', serif" }}
-                    >
+                    <h1 className="text-3xl font-light text-stone-800 mb-2">
                         Input Tanggal Survey
                     </h1>
                     <p className="text-sm text-stone-600 mb-6">
@@ -65,7 +64,7 @@ export default function Index({ orders }: { orders: Order[] }) {
 
                     {orders.length === 0 ? (
                         <div className="rounded-xl bg-white border p-6 text-center text-sm text-stone-600">
-                            Semua order sudah memiliki jadwal survey.
+                            Tidak ada order.
                         </div>
                     ) : (
                         <div className="space-y-4">
@@ -83,12 +82,24 @@ export default function Index({ orders }: { orders: Order[] }) {
                                         </p>
                                     </div>
 
-                                    <button
-                                        onClick={() => setSelectedOrder(order)}
-                                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
-                                    >
-                                        Input Tanggal
-                                    </button>
+                                    {/* ACTION / STATUS */}
+                                    {order.tanggal_survey ? (
+                                        <div className="text-right">
+                                            <p className="text-sm font-medium text-green-600">
+                                                ✔ Survey dijadwalkan
+                                            </p>
+                                            <p className="text-xs text-stone-500">
+                                                {new Date(order.tanggal_survey).toLocaleDateString('id-ID')}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => setSelectedOrder(order)}
+                                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
+                                        >
+                                            Input Tanggal
+                                        </button>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -96,7 +107,7 @@ export default function Index({ orders }: { orders: Order[] }) {
                 </div>
             </div>
 
-            {/* MODAL */}
+            {/* MODAL INPUT */}
             {selectedOrder && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
                     <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
