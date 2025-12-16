@@ -563,7 +563,7 @@ export default function Show({ invoice }: Props) {
                         </div>
 
                         {/* Upload Foto BAST dengan Klien - Hanya untuk tahap terakhir/pelunasan */}
-                        {invoice.is_last_step && invoice.status === 'pending' && (
+                        {invoice.is_last_step && (
                             <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
                                 <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-4">
                                     <h3 className="text-xl font-bold text-white flex items-center gap-2">
@@ -611,7 +611,7 @@ export default function Show({ invoice }: Props) {
                                                 Lihat Foto
                                             </a>
                                         </div>
-                                    ) : (
+                                    ) : invoice.status === 'pending' ? (
                                         <form onSubmit={handleUploadBastFotoKlien} className="space-y-6">
                                             <div className="bg-amber-50 rounded-xl p-4 border border-amber-200 mb-4">
                                                 <div className="flex items-start gap-3">
@@ -681,6 +681,20 @@ export default function Show({ invoice }: Props) {
                                                 )}
                                             </button>
                                         </form>
+                                    ) : (
+                                        <div className="bg-red-50 rounded-xl p-6 border border-red-200">
+                                            <div className="flex items-start gap-3">
+                                                <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                </svg>
+                                                <div>
+                                                    <p className="font-semibold text-red-800">Foto BAST dengan Klien Belum Diupload</p>
+                                                    <p className="text-sm text-red-700 mt-1">
+                                                        Foto dokumentasi BAST dengan klien tidak diupload sebelum pembayaran dilakukan.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                             </div>
