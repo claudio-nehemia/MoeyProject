@@ -108,4 +108,17 @@ class User extends Authenticatable
         }
         return true;
     }
+
+    public function surveyScheduleUsers()
+    {
+        return $this->hasMany(SurveyScheduleUser::class);
+    }
+
+    public function surveyOrders()
+    {
+        return $this->belongsToMany(
+            Order::class,
+            'survey_schedule_users'
+        )->withTimestamps();
+    }
 }
