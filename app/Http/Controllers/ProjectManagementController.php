@@ -438,6 +438,7 @@ class ProjectManagementController extends Controller
             ->whereIn('status', ['none', 'rejected'])
             ->sortByDesc('created_at')
             ->first();
+            
 
         if (!$pengajuanPerpanjangan) {
             return back()->withErrors(['pengajuan' => 'Tidak dapat mengajukan perpanjangan saat ini']);

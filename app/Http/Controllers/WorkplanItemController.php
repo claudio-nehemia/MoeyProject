@@ -188,6 +188,8 @@ class WorkplanItemController extends Controller
         ]);
 
         DB::transaction(function () use ($validated) {
+            $lastItemPekerjaan = null;
+            
             foreach ($validated['item_pekerjaans'] as $ipData) {
                 // Update timeline di ItemPekerjaan
                 $itemPekerjaan = ItemPekerjaan::find($ipData['id']);
@@ -195,6 +197,8 @@ class WorkplanItemController extends Controller
                     'workplan_start_date' => $ipData['workplan_start_date'],
                     'workplan_end_date' => $ipData['workplan_end_date'],
                 ]);
+                
+                $lastItemPekerjaan = $itemPekerjaan;
 
                 // Update workplan items per produk
                 foreach ($ipData['produks'] as $produkData) {
@@ -226,12 +230,14 @@ class WorkplanItemController extends Controller
                 }
             }
 
-            PengajuanPerpanjanganTimeline::create([
-                'item_pekerjaan_id' => $itemPekerjaan->id,
-                'status' => 'none',
-                'reason' => null,
-            ]);
-
+            // Create pengajuan perpanjangan timeline untuk store (create baru)
+            if ($lastItemPekerjaan) {
+                PengajuanPerpanjanganTimeline::create([
+                    'item_pekerjaan_id' => $lastItemPekerjaan->id,
+                    'status' => 'none',
+                    'reason' => null,
+                ]);
+            }
         });
 
         return redirect()->route('workplan.index')
@@ -248,16 +254,93 @@ class WorkplanItemController extends Controller
     }
 
     /**
-     * Update: Update workplan (sama seperti store)
+     * Update: Update workplan
      */
     public function update(Request $request, $orderId)
     {
-        if ($orderId->moodboard->itemPekerjaans->pengajuanPerpanjanganTimelines->firstWhere('status', 'accepted')) {
-            return $this->store($request, $orderId);
-        }
-        
-        return redirect()->back()->withErrors(['error' => 'Tidak dapat mengubah workplan saat ada pengajuan perpanjangan yang sedang diproses.']);
+        $validated = $request->validate([
+            'item_pekerjaans' => 'required|array',
+            'item_pekerjaans.*.id' => 'required|exists:item_pekerjaans,id',
+            'item_pekerjaans.*.workplan_start_date' => 'required|date',
+            'item_pekerjaans.*.workplan_end_date' => 'required|date|after_or_equal:item_pekerjaans.*.workplan_start_date',
+            'item_pekerjaans.*.produks' => 'required|array',
+            'item_pekerjaans.*.produks.*.id' => 'required|exists:item_pekerjaan_produks,id',
+            'item_pekerjaans.*.produks.*.workplan_items' => 'required|array|min:1',
+            'item_pekerjaans.*.produks.*.workplan_items.*.nama_tahapan' => 'required|string|max:255',
+            'item_pekerjaans.*.produks.*.workplan_items.*.start_date' => 'nullable|date',
+            'item_pekerjaans.*.produks.*.workplan_items.*.end_date' => 'nullable|date',
+            'item_pekerjaans.*.produks.*.workplan_items.*.status' => 'required|string|in:planned,in_progress,done,cancelled',
+            'item_pekerjaans.*.produks.*.workplan_items.*.catatan' => 'nullable|string',
+        ]);
 
+        DB::transaction(function () use ($validated) {
+            $lastItemPekerjaan = null;
+            
+            foreach ($validated['item_pekerjaans'] as $ipData) {
+                // Update timeline di ItemPekerjaan
+                $itemPekerjaan = ItemPekerjaan::find($ipData['id']);
+                $itemPekerjaan->update([
+                    'workplan_start_date' => $ipData['workplan_start_date'],
+                    'workplan_end_date' => $ipData['workplan_end_date'],
+                ]);
+                
+                $lastItemPekerjaan = $itemPekerjaan;
+
+                // Update workplan items per produk
+                foreach ($ipData['produks'] as $produkData) {
+                    $produk = ItemPekerjaanProduk::find($produkData['id']);
+                    
+                    // Hapus workplan lama dan buat baru
+                    $produk->workplanItems()->delete();
+
+                    foreach ($produkData['workplan_items'] as $index => $item) {
+                        $start = !empty($item['start_date']) ? Carbon::parse($item['start_date']) : null;
+                        $end = !empty($item['end_date']) ? Carbon::parse($item['end_date']) : null;
+
+                        $duration = null;
+                        if ($start && $end) {
+                            $duration = $start->diffInDays($end) + 1;
+                        }
+
+                        WorkplanItem::create([
+                            'item_pekerjaan_produk_id' => $produk->id,
+                            'nama_tahapan' => $item['nama_tahapan'],
+                            'start_date' => $start,
+                            'end_date' => $end,
+                            'duration_days' => $duration,
+                            'urutan' => $index + 1,
+                            'status' => $item['status'],
+                            'catatan' => $item['catatan'] ?? null,
+                        ]);
+                    }
+                }
+            }
+
+            // Update pengajuan perpanjangan timeline untuk update (update existing)
+            if ($lastItemPekerjaan) {
+                $existingPengajuan = PengajuanPerpanjanganTimeline::where('item_pekerjaan_id', $lastItemPekerjaan->id)
+                    ->latest()
+                    ->first();
+                
+                if ($existingPengajuan) {
+                    // Update pengajuan yang sudah ada
+                    $existingPengajuan->update([
+                        'status' => 'none',
+                        'reason' => null,
+                    ]);
+                } else {
+                    // Jika belum ada, buat baru
+                    PengajuanPerpanjanganTimeline::create([
+                        'item_pekerjaan_id' => $lastItemPekerjaan->id,
+                        'status' => 'none',
+                        'reason' => null,
+                    ]);
+                }
+            }
+        });
+
+        return redirect()->route('workplan.index')
+            ->with('success', 'Workplan berhasil diperbarui.');
     }
 
     /**
