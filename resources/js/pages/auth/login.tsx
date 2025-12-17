@@ -318,8 +318,8 @@ export default function Login({
                                                 </Label>
                                                 {canResetPassword && (
                                                     <TextLink
-                                                        href={request()}
-                                                        classNaoute('password.request't-xs font-medium hover:underline text-emerald-400 transition-all hover:text-emerald-300"
+                                                        href={route('password.request')}
+                                                        className="text-xs font-medium hover:underline text-emerald-400 transition-all hover:text-emerald-300"
                                                         tabIndex={5}
                                                     >
                                                         Forgot password?
@@ -352,6 +352,8 @@ export default function Login({
                                         {/* Remember Me */}
                                         <div className="flex items-center space-x-3 animate-fadeInUp" style={{ animationDelay: '0.3s' }}>
                                             <Checkbox
+                                                id="remember"
+                                                name="remember"
                                                 checked={data.remember}
                                                 onCheckedChange={(checked) => setData('remember', checked as boolean)}
                                                 tabIndex={3}
@@ -382,9 +384,7 @@ export default function Login({
                                                 </span>
                                             </span>
                                         </Button>
-                                    </f     </>
-                                )}
-                            </Form>
+                                    </form>
                         </div>
                     </div>
 
