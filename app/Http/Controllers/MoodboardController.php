@@ -562,9 +562,9 @@ class MoodboardController extends Controller
             Log::info('=== ACCEPT DESAIN END ===');
 
             $notificationService = new NotificationService();
-            $notificationService->sendFinalDesignRequestNotification($moodboard->order);
+            $notificationService->sendCommitmentFeeRequestNotification($moodboard->order);
 
-            return back()->with('success', 'Desain kasar diterima. Siap untuk upload desain final.');
+            return back()->with('success', 'Desain kasar diterima. Menunggu commitment fee.');
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('Validation error: ', $e->errors());
             throw $e;

@@ -11,10 +11,11 @@ use Illuminate\Http\Request;
 use App\Models\ItemPekerjaan;
 use App\Models\ItemPekerjaanItem;
 use App\Models\ItemPekerjaanProduk;
-use App\Models\ItemPekerjaanProdukBahanBaku;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
+use App\Services\NotificationService;
 use App\Models\ItemPekerjaanJenisItem;
+use App\Models\ItemPekerjaanProdukBahanBaku;
 
 class ItemPekerjaanController extends Controller
 {
@@ -270,6 +271,9 @@ class ItemPekerjaanController extends Controller
             $statusMessage = $validated['status'] === 'draft' 
                 ? 'Data item pekerjaan berhasil disimpan sebagai draft.' 
                 : 'Data item pekerjaan berhasil dipublish.';
+
+            $notificationService = new NotificationService();
+            $notificationService->sendRabInternalRequestNotification($itemPekerjaan->moodboard->order);
 
             return redirect()->route('item-pekerjaan.index')
                 ->with('success', $statusMessage);

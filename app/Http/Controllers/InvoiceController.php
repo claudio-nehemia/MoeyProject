@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\NotificationService;
 
 class InvoiceController extends Controller
 {
@@ -480,6 +481,12 @@ class InvoiceController extends Controller
             $order->update([
                 'payment_status' => $terminText,
             ]);
+
+            // Send survey ulang notification HANYA untuk pembayaran pertama (termin step 1)
+            if ($invoice->termin_step === 1) {
+                $notificationService = new NotificationService();
+                $notificationService->sendSurveyUlangRequestNotification($order);
+            }
         });
 
         return back()->with('success', 'Bukti bayar berhasil diupload!');

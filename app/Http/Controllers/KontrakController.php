@@ -3,10 +3,11 @@
 namespace App\Http\Controllers;
 
 use Inertia\Inertia;
+use App\Models\Termin;
 use App\Models\Kontrak;
 use Illuminate\Http\Request;
 use App\Models\ItemPekerjaan;
-use App\Models\Termin;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Storage;
 
 class KontrakController extends Controller
@@ -279,6 +280,9 @@ class KontrakController extends Controller
             'signed_contract_path' => $path,
             'signed_at' => now(),
         ]);
+
+        $notificationService = new NotificationService();
+        $notificationService->sendInvoiceRequestNotification($kontrak->itemPekerjaan->moodboard->order);
 
         return back()->with('success', 'Kontrak yang sudah ditandatangani berhasil diupload!');
     }

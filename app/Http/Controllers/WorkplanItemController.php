@@ -11,6 +11,7 @@ use App\Models\ItemPekerjaan;
 use Illuminate\Support\Facades\DB;
 use App\Models\ItemPekerjaanProduk;
 use App\Models\PengajuanPerpanjanganTimeline;
+use App\Services\NotificationService;
 
 class WorkplanItemController extends Controller
 {
@@ -240,8 +241,13 @@ class WorkplanItemController extends Controller
             }
         });
 
+        // Kirim notifikasi project management request ke Supervisor & PM
+        $order = Order::findOrFail($orderId);
+        $notificationService = new NotificationService();
+        $notificationService->sendProjectManagementRequestNotification($order);
+
         return redirect()->route('workplan.index')
-            ->with('success', 'Workplan berhasil disimpan.');
+            ->with('success', 'Workplan berhasil disimpan. Notifikasi project management telah dikirim ke Supervisor dan Project Manager.');
     }
 
     /**
@@ -339,8 +345,13 @@ class WorkplanItemController extends Controller
             }
         });
 
+        // Kirim notifikasi project management request ke Supervisor & PM
+        $order = Order::findOrFail($orderId);
+        $notificationService = new NotificationService();
+        $notificationService->sendProjectManagementRequestNotification($order);
+
         return redirect()->route('workplan.index')
-            ->with('success', 'Workplan berhasil diperbarui.');
+            ->with('success', 'Workplan berhasil diperbarui. Notifikasi project management telah dikirim ke Supervisor dan Project Manager.');
     }
 
     /**

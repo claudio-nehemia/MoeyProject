@@ -48,6 +48,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/unread-count', [NotificationController::class, 'unreadCount'])->name('unread-count');
             Route::post('/{id}/mark-as-read', [NotificationController::class, 'markAsRead'])->name('mark-as-read');
             Route::post('/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('mark-all-as-read');
+            Route::post('/{id}/response', [NotificationController::class, 'handleResponse'])->name('response');
             Route::delete('/{id}', [NotificationController::class, 'destroy'])->name('destroy');
         });
     });

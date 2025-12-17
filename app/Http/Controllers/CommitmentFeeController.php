@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use App\Models\CommitmentFee;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use App\Services\NotificationService;
 
 class CommitmentFeeController extends Controller
 {
@@ -148,6 +149,10 @@ class CommitmentFeeController extends Controller
                 $commitmentFee->moodboard->order->update([
                     'payment_status' => 'Commitment Fee',
                 ]);
+
+                // Send notification to designer for final design
+                $notificationService = new NotificationService();
+                $notificationService->sendFinalDesignRequestNotification($commitmentFee->moodboard->order);
             }
 
             Log::info('Payment proof uploaded, status: completed');

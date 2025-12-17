@@ -7,6 +7,7 @@ use App\Models\Moodboard;
 use Illuminate\Http\Request;
 use App\Models\MoodboardFile;
 use Illuminate\Support\Facades\Log;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Storage;
 
 class DesainFinalController extends Controller
@@ -187,6 +188,9 @@ class DesainFinalController extends Controller
             Log::info('Desain final accepted');
             Log::info('Moodboard final: ' . $moodboard->moodboard_final);
             Log::info('=== ACCEPT DESAIN FINAL END ===');
+
+            $notificationService = new NotificationService();
+            $notificationService->sendItemPekerjaanRequestNotification($moodboard->order);
 
             return back()->with('success', 'Desain final diterima.');
         } catch (\Illuminate\Validation\ValidationException $e) {

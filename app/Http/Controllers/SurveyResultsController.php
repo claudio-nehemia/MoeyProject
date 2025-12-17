@@ -301,6 +301,9 @@ class SurveyResultsController extends Controller
             $order->update(['mom_file' => $momFilePath]);
         }
 
+        $notificationService = new NotificationService();
+        $notificationService->sendMoodboardRequestNotification($survey->order);
+
         return redirect()->route('survey-results.index')->with('success', 'Survey Results updated successfully.');
     }
 

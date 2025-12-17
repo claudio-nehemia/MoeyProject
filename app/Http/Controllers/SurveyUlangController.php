@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use Inertia\Inertia;
 use App\Models\Order;
 use App\Models\SurveyUlang;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
+use App\Services\NotificationService;
 
 class SurveyUlangController extends Controller
 {
@@ -16,6 +17,7 @@ class SurveyUlangController extends Controller
             ->where(function ($q) {
                 $q->whereRaw("LOWER(payment_status) LIKE '%commitment%'");
             })
+            ->orWhereRaw("LOWER(payment_status) LIKE '%dp%'")
             ->orWhere(function ($q) {
                 $q->whereRaw("LOWER(tahapan_proyek) = 'survey_ulang'");
             })
@@ -99,8 +101,11 @@ class SurveyUlangController extends Controller
             'tahapan_proyek' => 'survey_ulang', // tetap di survey ulang sampai user lanjut
         ]);
 
+        // Kirim notifikasi workplan request ke Project Manager
+        $notificationService = new NotificationService();
+        $notificationService->sendWorkplanRequestNotification($order);
 
-        return redirect()->route('survey-ulang.index')->with('success', 'Survey ulang berhasil disimpan.');
+        return redirect()->route('survey-ulang.index')->with('success', 'Survey ulang berhasil disimpan. Notifikasi workplan telah dikirim ke Project Manager.');
     }
 
     // 📌 Halaman Show

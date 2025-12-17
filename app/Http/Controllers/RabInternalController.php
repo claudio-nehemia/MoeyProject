@@ -3,17 +3,18 @@
 namespace App\Http\Controllers;
 
 use Inertia\Inertia;
-use App\Models\RabInternal;
-use App\Models\RabProduk;
-use App\Models\RabAksesoris;
-use App\Models\ItemPekerjaan;
-use App\Models\ItemPekerjaanProduk;
-use App\Models\ItemPekerjaanJenisItem;
-use App\Models\ItemPekerjaanItem;
 use App\Models\JenisItem;
+use App\Models\RabProduk;
+use App\Models\RabInternal;
+use App\Models\RabAksesoris;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use App\Models\ItemPekerjaan;
+use App\Models\ItemPekerjaanItem;
 use Illuminate\Support\Facades\DB;
+use App\Models\ItemPekerjaanProduk;
+use Illuminate\Support\Facades\Log;
+use App\Services\NotificationService;
+use App\Models\ItemPekerjaanJenisItem;
 
 class RabInternalController extends Controller
 {
@@ -607,6 +608,9 @@ class RabInternalController extends Controller
             'submitted_by' => auth()->user()->name ?? 'System',
             'submitted_at' => now(),
         ]);
+
+        $notificationService = new NotificationService();
+        $notificationService->sendKontrakRequestNotification($itemPekerjaan->moodboard->order->id);
 
         return redirect()->back()
             ->with('success', 'RAB berhasil di-submit! Semua RAB (Internal, Kontrak, Vendor, Jasa) telah ACC.');

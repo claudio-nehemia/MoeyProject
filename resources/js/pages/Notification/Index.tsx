@@ -1,7 +1,9 @@
 import { Head, router } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
+import Navbar from '@/components/Navbar';
+import Sidebar from '@/components/Sidebar';
 import { Bell, CheckCheck, Trash2, Clock } from 'lucide-react';
 import axios from 'axios';
+import { useEffect, useState } from 'react';
 
 interface Notification {
     id: number;
@@ -33,6 +35,29 @@ interface Props {
 }
 
 export default function Index({ notifications, unreadCount }: Props) {
+    const [sidebarOpen, setSidebarOpen] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth >= 1024;
+        }
+        return true;
+    });
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+        
+        const handleResize = () => {
+            if (window.innerWidth >= 1024) {
+                setSidebarOpen(true);
+            } else {
+                setSidebarOpen(false);
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     const handleMarkAsRead = async (id: number) => {
         try {
             await axios.post(`/notifications/${id}/mark-as-read`);
@@ -47,10 +72,25 @@ export default function Index({ notifications, unreadCount }: Props) {
         if (!notification.is_read) {
             handleMarkAsRead(notification.id);
         }
+    };
+
+    const handleResponse = async (notificationId: number, e?: React.MouseEvent) => {
+        if (e) {
+            e.stopPropagation();
+        }
         
-        // Navigate to action URL if exists
-        if (notification.data?.action_url) {
-            router.visit(notification.data.action_url);
+        try {
+            router.post(`/notifications/${notificationId}/response`, {}, {
+                preserveScroll: false,
+                onSuccess: () => {
+                    console.log('Response handled successfully');
+                },
+                onError: (errors) => {
+                    console.error('Error handling response:', errors);
+                }
+            });
+        } catch (error) {
+            console.error('Error handling response:', error);
         }
     };
 
@@ -84,6 +124,8 @@ export default function Index({ notifications, unreadCount }: Props) {
                 return '💰';
             case 'design_approval':
                 return '✅';
+            case 'commitment_fee_request':
+                return '💳';
             case 'final_design_request':
                 return '🎯';
             default:
@@ -103,6 +145,8 @@ export default function Index({ notifications, unreadCount }: Props) {
                 return 'bg-emerald-50 border-emerald-200';
             case 'design_approval':
                 return 'bg-amber-50 border-amber-200';
+            case 'commitment_fee_request':
+                return 'bg-indigo-50 border-indigo-200';
             case 'final_design_request':
                 return 'bg-rose-50 border-rose-200';
             default:
@@ -130,38 +174,41 @@ export default function Index({ notifications, unreadCount }: Props) {
     };
 
     return (
-        <AppLayout>
+        <div className="min-h-screen bg-stone-50">
             <Head title="Notifikasi" />
+            <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
             
-            <div className="p-6">
-                {/* Header */}
-                <div className="mb-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg">
-                                <Bell className="w-6 h-6 text-white" />
+            <div className={`transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : 'ml-0'} pt-16`}>
+                <div className="p-6">
+                    {/* Header */}
+                    <div className="mb-6">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg">
+                                    <Bell className="w-6 h-6 text-white" />
+                                </div>
+                                <div>
+                                    <h1 className="text-2xl font-bold text-stone-800" style={{ fontFamily: "'Playfair Display', serif" }}>
+                                        Notifikasi
+                                    </h1>
+                                    <p className="text-sm text-stone-600">
+                                        {unreadCount > 0 ? `${unreadCount} notifikasi belum dibaca` : 'Tidak ada notifikasi baru'}
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <h1 className="text-2xl font-bold text-stone-800" style={{ fontFamily: "'Playfair Display', serif" }}>
-                                    Notifikasi
-                                </h1>
-                                <p className="text-sm text-stone-600">
-                                    {unreadCount > 0 ? `${unreadCount} notifikasi belum dibaca` : 'Tidak ada notifikasi baru'}
-                                </p>
-                            </div>
+                            
+                            {unreadCount > 0 && (
+                                <button
+                                    onClick={handleMarkAllAsRead}
+                                    className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-all shadow-sm"
+                                >
+                                    <CheckCheck className="w-4 h-4" />
+                                    <span className="text-sm font-medium">Tandai Semua Dibaca</span>
+                                </button>
+                            )}
                         </div>
-                        
-                        {unreadCount > 0 && (
-                            <button
-                                onClick={handleMarkAllAsRead}
-                                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-all shadow-sm"
-                            >
-                                <CheckCheck className="w-4 h-4" />
-                                <span className="text-sm font-medium">Tandai Semua Dibaca</span>
-                            </button>
-                        )}
                     </div>
-                </div>
 
                 {/* Notifications List */}
                 <div className="space-y-3">
@@ -209,11 +256,14 @@ export default function Index({ notifications, unreadCount }: Props) {
                                             </div>
                                         )}
                                         
-                                        {notification.data?.action_url && (
-                                            <div className="flex items-center gap-2 text-xs text-amber-600 font-medium mt-2">
-                                                <span>Klik untuk langsung response →</span>
-                                            </div>
-                                        )}
+                                        {/* Response Button */}
+                                        <button
+                                            onClick={(e) => handleResponse(notification.id, e)}
+                                            className="w-full mt-2 mb-3 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                                        >
+                                            <span>Response Sekarang</span>
+                                            <span>→</span>
+                                        </button>
                                         
                                         {/* Footer */}
                                         <div className="flex items-center justify-between gap-3 pt-2 border-t border-stone-200">
@@ -272,6 +322,7 @@ export default function Index({ notifications, unreadCount }: Props) {
                     </div>
                 )}
             </div>
-        </AppLayout>
+            </div>
+        </div>
     );
 }
