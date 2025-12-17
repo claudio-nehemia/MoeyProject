@@ -8,6 +8,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Head, useForm } from '@inertiajs/react';
 import { Mail, Lock, Sparkles } from 'lucide-react';
 import { FormEventHandler, useState } from 'react';
+import { request as passwordRequest } from '@/routes/password';
 
 interface LoginProps {
     status?: string;
@@ -318,7 +319,7 @@ export default function Login({
                                                 </Label>
                                                 {canResetPassword && (
                                                     <TextLink
-                                                        href={route('password.request')}
+                                                        href={passwordRequest.definition.url}
                                                         className="text-xs font-medium hover:underline text-emerald-400 transition-all hover:text-emerald-300"
                                                         tabIndex={5}
                                                     >
