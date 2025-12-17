@@ -406,7 +406,7 @@ export default function Show({ invoice }: Props) {
                                                             </td>
                                                             <td className="px-6 py-4">
                                                                 <div className="inline-flex items-center gap-1 text-xs bg-gray-100 px-3 py-1.5 rounded-lg font-medium text-gray-700">
-                                                                    📏 {item.dimensi.panjang} × {item.dimensi.lebar} × {item.dimensi.tinggi} cm
+                                                                    📏 {item.dimensi.panjang} × {item.dimensi.lebar} × {item.dimensi.tinggi} m
                                                                 </div>
                                                             </td>
                                                             <td className="px-6 py-4 text-right">
