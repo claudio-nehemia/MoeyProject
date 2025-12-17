@@ -9,6 +9,7 @@ import { Head, useForm } from '@inertiajs/react';
 import { Mail, Lock, Sparkles } from 'lucide-react';
 import { FormEventHandler, useState } from 'react';
 import { request as passwordRequest } from '@/routes/password';
+import { login as loginRoute } from '@/routes';
 
 interface LoginProps {
     status?: string;
@@ -33,7 +34,7 @@ export default function Login({
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
 
-        post(route('login'), {
+        post(loginRoute.definition.url, {
             onFinish: () => reset('password'),
         });
     };
