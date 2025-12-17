@@ -679,4 +679,64 @@ class InvoiceController extends Controller
         return redirect()->route('invoice.index')
             ->with('success', 'Invoice berhasil dihapus');
     }
+
+    /**
+     * Regenerate invoice dengan data terbaru (harga kontrak, dimensi, dll)
+     */
+    public function regenerate($invoiceId)
+    {
+        $invoice = Invoice::with([
+            'itemPekerjaan.moodboard.commitmentFee',
+            'itemPekerjaan.kontrak.termin',
+            'rabKontrak.rabKontrakProduks'
+        ])->findOrFail($invoiceId);
+
+        // Only allow regenerating pending invoices
+        if ($invoice->status === 'paid') {
+            return back()->with('error', 'Invoice yang sudah terbayar tidak dapat di-regenerate.');
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Get fresh data from kontrak and RAB
+            $hargaKontrak = (float) ($invoice->itemPekerjaan->kontrak?->harga_kontrak ?? 0);
+            
+            // Fallback to RAB if no harga kontrak
+            if ($hargaKontrak <= 0) {
+                $hargaKontrak = (float) $invoice->rabKontrak->rabKontrakProduks->sum('harga_akhir');
+            }
+
+            // Get commitment fee from moodboard
+            $commitmentFee = $invoice->itemPekerjaan->moodboard?->commitmentFee;
+            $commitmentFeeAmount = (float) ($commitmentFee?->total_fee ?? 0);
+            $commitmentFeePaid = $commitmentFee?->payment_status === 'completed';
+
+            // Sisa pembayaran = Harga Kontrak - Commitment Fee (if paid)
+            $sisaPembayaran = $commitmentFeePaid ? max(0, $hargaKontrak - $commitmentFeeAmount) : $hargaKontrak;
+
+            // Calculate new total amount based on termin percentage
+            $newTotalAmount = $sisaPembayaran * ($invoice->termin_persentase / 100);
+
+            // Delete old bukti bayar if exists (since we're regenerating)
+            if ($invoice->bukti_bayar) {
+                Storage::disk('public')->delete($invoice->bukti_bayar);
+            }
+
+            // Update invoice with fresh data
+            $invoice->update([
+                'total_amount' => $newTotalAmount,
+                'bukti_bayar' => null,
+                'paid_at' => null,
+                'status' => 'pending'
+            ]);
+
+            DB::commit();
+
+            return back()->with('success', 'Invoice berhasil di-regenerate dengan data terbaru. Total amount: ' . number_format($newTotalAmount, 0, ',', '.'));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal regenerate invoice: ' . $e->getMessage());
+        }
+    }
 }
