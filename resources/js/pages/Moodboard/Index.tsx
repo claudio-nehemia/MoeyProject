@@ -463,10 +463,29 @@ export default function Index({ orders }: Props) {
                                                             File Kasar ({moodboard.kasar_files.length}):
                                                         </p>
                                                         <div className="space-y-2">
-                                                            {moodboard.kasar_files.map((file, idx) => (
-                                                                <div key={file.id} className="border border-stone-200 rounded-lg p-2 bg-stone-50">
+                                                            {moodboard.kasar_files.map((file, idx) => {
+                                                                const isAcceptedFile = moodboard.moodboard_kasar === file.file_path;
+                                                                return (
+                                                                <div 
+                                                                    key={file.id} 
+                                                                    className={`border-2 rounded-lg p-2 transition-all ${
+                                                                        isAcceptedFile 
+                                                                            ? 'border-emerald-400 bg-emerald-50 shadow-md' 
+                                                                            : 'border-stone-200 bg-stone-50'
+                                                                    }`}
+                                                                >
+                                                                    {isAcceptedFile && (
+                                                                        <div className="mb-2 flex items-center gap-1.5 bg-emerald-500 text-white px-2 py-1 rounded-md">
+                                                                            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                                            </svg>
+                                                                            <span className="text-xs font-bold">DESAIN TERPILIH</span>
+                                                                        </div>
+                                                                    )}
                                                                     <div className="flex items-center gap-2 mb-2">
-                                                                        <div className="flex-shrink-0 w-16 h-16 rounded overflow-hidden bg-stone-200">
+                                                                        <div className={`flex-shrink-0 w-16 h-16 rounded overflow-hidden ${
+                                                                            isAcceptedFile ? 'ring-2 ring-emerald-400' : 'bg-stone-200'
+                                                                        }`}>
                                                                             <img
                                                                                 src={file.url}
                                                                                 alt={file.original_name}
@@ -557,7 +576,8 @@ export default function Index({ orders }: Props) {
                                                                         )}
                                                                     </div>
                                                                 </div>
-                                                            ))}
+                                                            )
+                                                            })}
                                                         </div>
                                                     </div>
                                                 )}
