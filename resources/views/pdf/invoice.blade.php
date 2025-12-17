@@ -398,7 +398,7 @@
         <h1>INVOICE</h1>
         <h2>MOEY INTERIOR</h2>
         <div class="termin-badge">
-            {{ $terminInfo['termin_nama'] ?? 'Termin' }} - Tahap {{ $invoice->termin_step }} dari {{ $terminInfo['total_steps'] ?? 1 }}
+             Tahap {{ $invoice->termin_step }} dari {{ $terminInfo['total_steps'] ?? 1 }}
         </div>
         <br>
         <div class="status-badge status-{{ $invoice->status === 'paid' ? 'paid' : 'pending' }}">
