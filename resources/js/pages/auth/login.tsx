@@ -5,9 +5,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { Form, Head } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import { Mail, Lock, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { FormEventHandler, useState } from 'react';
 
 interface LoginProps {
     status?: string;
@@ -22,6 +22,20 @@ export default function Login({
 }: LoginProps) {
     const [emailFocused, setEmailFocused] = useState(false);
     const [passwordFocused, setPasswordFocused] = useState(false);
+
+    const { data, setData, post, processing, errors, reset } = useForm({
+        email: '',
+        password: '',
+        remember: false,
+    });
+
+    const submit: FormEventHandler = (e) => {
+        e.preventDefault();
+
+        post(route('login'), {
+            onFinish: () => reset('password'),
+        });
+    };
 
     return (
         <>
@@ -255,14 +269,11 @@ export default function Login({
                             )}
 
                             {/* Login Form */}
-                            <Form
-                                {...store.form()}
-                                resetOnSuccess={['password']}
+                            <form
+                                onSubmit={submit}
                                 className="flex flex-col gap-6"
                             >
-                                {({ processing, errors }) => (
-                                    <>
-                                        {/* Email Field */}
+                                {/* Email Field */}
                                         <div className="space-y-3 animate-fadeInUp" style={{ animationDelay: '0.1s' }}>
                                             <Label 
                                                 htmlFor="email" 
@@ -282,6 +293,8 @@ export default function Login({
                                                         required
                                                         autoFocus
                                                         tabIndex={1}
+                                                        value={data.email}
+                                                        onChange={(e) => setData('email', e.target.value)}
                                                         autoComplete="email"
                                                         placeholder="email@example.com"
                                                         onFocus={() => setEmailFocused(true)}
@@ -306,7 +319,7 @@ export default function Login({
                                                 {canResetPassword && (
                                                     <TextLink
                                                         href={request()}
-                                                        className="text-xs font-medium hover:underline text-emerald-400 transition-all hover:text-emerald-300"
+                                                        classNaoute('password.request't-xs font-medium hover:underline text-emerald-400 transition-all hover:text-emerald-300"
                                                         tabIndex={5}
                                                     >
                                                         Forgot password?
@@ -319,6 +332,8 @@ export default function Login({
                                                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 transition-all duration-300 group-focus-within:text-emerald-400" />
                                                     <Input
                                                         id="password"
+                                                        value={data.password}
+                                                        onChange={(e) => setData('password', e.target.value)}
                                                         type="password"
                                                         name="password"
                                                         required
@@ -337,8 +352,8 @@ export default function Login({
                                         {/* Remember Me */}
                                         <div className="flex items-center space-x-3 animate-fadeInUp" style={{ animationDelay: '0.3s' }}>
                                             <Checkbox
-                                                id="remember"
-                                                name="remember"
+                                                checked={data.remember}
+                                                onCheckedChange={(checked) => setData('remember', checked as boolean)}
                                                 tabIndex={3}
                                                 className="border-2 border-slate-300 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 rounded-md transition-all duration-300"
                                             />
@@ -367,7 +382,7 @@ export default function Login({
                                                 </span>
                                             </span>
                                         </Button>
-                                    </>
+                                    </f     </>
                                 )}
                             </Form>
                         </div>
