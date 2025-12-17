@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use Inertia\Inertia;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use App\Models\SurveyResults;
 use App\Models\JenisPengukuran;
-use Inertia\Inertia;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Storage;
 
 class SurveyResultsController extends Controller
@@ -189,6 +190,9 @@ class SurveyResultsController extends Controller
             $momFilePath = $request->file('mom_file')->store('mom_files', 'public');
             $order->update(['mom_file' => $momFilePath]);
         }
+    
+        $notificationService = new NotificationService();
+        $notificationService->sendMoodboardRequestNotification($survey->order);
 
         return redirect()->route('survey-results.index')->with('success', 'Survey Results created successfully.');
     }

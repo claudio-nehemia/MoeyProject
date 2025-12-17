@@ -21,15 +21,16 @@ use App\Http\Controllers\RabVendorController;
 use App\Http\Controllers\RabKontrakController;
 use App\Http\Controllers\DesainFinalController;
 use App\Http\Controllers\RabInternalController;
+use App\Http\Controllers\SurveyUlangController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\WorkplanItemController;
 use App\Http\Controllers\CommitmentFeeController;
 use App\Http\Controllers\ItemPekerjaanController;
 use App\Http\Controllers\JenisInteriorController;
 use App\Http\Controllers\SurveyResultsController;
-use App\Http\Controllers\ProjectManagementController;
-use App\Http\Controllers\JenisPengukuranController;
-use App\Http\Controllers\WorkplanItemController;
-use App\Http\Controllers\SurveyUlangController;
 use App\Http\Controllers\SurveyScheduleController;
+use App\Http\Controllers\JenisPengukuranController;
+use App\Http\Controllers\ProjectManagementController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -39,8 +40,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // DASHBOARD = all role
     Route::get('dashboard', function () {
         return Inertia::render('dashboard');
-    })->name('dashboard'); 
+    })->name('dashboard');
 
+    Route::middleware(['auth'])->group(function () {
+        Route::prefix('notifications')->name('notifications.')->group(function () {
+            Route::get('/', [NotificationController::class, 'index'])->name('index');
+            Route::get('/unread-count', [NotificationController::class, 'unreadCount'])->name('unread-count');
+            Route::post('/{id}/mark-as-read', [NotificationController::class, 'markAsRead'])->name('mark-as-read');
+            Route::post('/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('mark-all-as-read');
+            Route::delete('/{id}', [NotificationController::class, 'destroy'])->name('destroy');
+        });
+    });
 
     // MASTER DATA ROUTES = Admin
     // Divisi Routes
@@ -61,7 +71,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('permission:role.index')->name('role.allPermissions');
     Route::get('role/create', [RoleController::class, 'create'])
         ->middleware('permission:role.create')->name('role.create');
-    
+
     Route::middleware(['permission:role.index'])->group(function () {
         Route::get('role', [RoleController::class, 'index'])->name('role.index');
         Route::get('role/{role}', [RoleController::class, 'show'])->name('role.show');
@@ -200,12 +210,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('permission:moodboard.index')->name('moodboard.index');
     Route::get('moodboard/{id}', [MoodboardController::class, 'show'])
         ->middleware('permission:moodboard.show')->name('moodboard.show');
-    
+
     Route::middleware(['permission:moodboard.response'])->group(function () {
         Route::post('moodboard/response/{orderId}', [MoodboardController::class, 'responseMoodboard'])
             ->name('moodboard.response');
     });
-    
+
     Route::middleware(['permission:moodboard.upload-kasar'])->group(function () {
         Route::post('moodboard/desain-kasar', [MoodboardController::class, 'uploadDesainKasar'])
             ->name('moodboard.uploadDesainKasar');
@@ -216,22 +226,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/moodboard/file-kasar/{fileId}/replace', [MoodboardController::class, 'replaceFileKasar'])
             ->name('moodboard.replace-file-kasar');
     });
-    
+
     Route::middleware(['permission:moodboard.upload-final'])->group(function () {
         Route::post('moodboard/desain-final/{moodboardId}', [MoodboardController::class, 'uploadDesainFinal'])
             ->name('moodboard.uploadDesainFinal');
     });
-    
+
     Route::middleware(['permission:moodboard.revise'])->group(function () {
         Route::post('moodboard/revise/{moodboardId}', [MoodboardController::class, 'reviseMoodboard'])
             ->name('moodboard.revise');
     });
-    
+
     Route::middleware(['permission:moodboard.accept'])->group(function () {
         Route::post('moodboard/accept/{moodboardId}', [MoodboardController::class, 'acceptDesain'])
             ->name('moodboard.accept');
     });
-    
+
     Route::delete('moodboard/{moodboardId}', [MoodboardController::class, 'destroy'])
         ->middleware('permission:moodboard.delete')->name('moodboard.delete');
 
@@ -259,11 +269,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('commitment-fee/upload-payment/{commitmentFeeId}', [CommitmentFeeController::class, 'uploadPayment'])
             ->middleware('permission:commitment-fee.edit')->name('commitment-fee.upload-payment');
         Route::post('commitment-fee/reset-fee/{commitmentFee}', [CommitmentFeeController::class, 'resetFee'])
-        ->middleware('permission:commitment-fee.edit')->name('commitment-fee.reset-fee');
+            ->middleware('permission:commitment-fee.edit')->name('commitment-fee.reset-fee');
         Route::get('commitment-fee/{id}/print', [CommitmentFeeController::class, 'print'])
             ->name('commitment-fee.print');
     });
-        
+
 
     // DESAIN FINAL ROUTES
     Route::middleware(['permission:desain-final.index'])->group(function () {
@@ -287,7 +297,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('item-pekerjaan', [ItemPekerjaanController::class, 'index'])->name('item-pekerjaan.index');
         Route::get('item-pekerjaan/{itemPekerjaanId}/show', [ItemPekerjaanController::class, 'show'])
             ->name('item-pekerjaan.show');
-        
+
         Route::middleware(['permission:item-pekerjaan.create'])->group(function () {
             Route::post('item-pekerjaan/response/{moodboardId}', [ItemPekerjaanController::class, 'responseItemPekerjaan'])
                 ->name('item-pekerjaan.response');
@@ -296,7 +306,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('item-pekerjaan/store', [ItemPekerjaanController::class, 'store'])
                 ->name('item-pekerjaan.store');
         });
-        
+
         Route::middleware(['permission:item-pekerjaan.edit'])->group(function () {
             Route::get('item-pekerjaan/{itemPekerjaanId}/edit', [ItemPekerjaanController::class, 'edit'])
                 ->name('item-pekerjaan.edit');
@@ -310,7 +320,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('rab-internal', [RabInternalController::class, 'index'])->name('rab-internal.index');
         Route::get('rab-internal/{rabInternalId}/show', [RabInternalController::class, 'show'])
             ->middleware('permission:rab-internal.show')->name('rab-internal.show');
-        
+
         Route::middleware(['permission:rab-internal.create'])->group(function () {
             Route::post('rab-internal/response/{itemPekerjaanId}', [RabInternalController::class, 'responseRabInternal'])
                 ->name('rab-internal.response');
@@ -321,7 +331,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('rab-internal/{rabInternalId}/submit', [RabInternalController::class, 'submit'])
                 ->name('rab-internal.submit');
         });
-        
+
         Route::middleware(['permission:rab-internal.edit'])->group(function () {
             Route::get('rab-internal/{rabInternalId}/edit', [RabInternalController::class, 'edit'])
                 ->name('rab-internal.edit');
@@ -377,7 +387,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('permission:kontrak.edit')->put('kontrak/{kontrak}', [KontrakController::class, 'update'])->name('kontrak.update');
     Route::middleware('permission:kontrak.delete')->delete('kontrak/{kontrak}', [KontrakController::class, 'destroy'])->name('kontrak.destroy');
     Route::middleware('permission:kontrak.show')->get('kontrak/{kontrak}/print', [KontrakController::class, 'print'])->name('kontrak.print');
-    
+
     // Signed Contract Routes
     Route::middleware('permission:kontrak.edit')->post('kontrak/{kontrak}/upload-signed', [KontrakController::class, 'uploadSignedContract'])->name('kontrak.upload-signed');
     Route::middleware('permission:kontrak.show')->get('kontrak/{kontrak}/download-signed', [KontrakController::class, 'downloadSignedContract'])->name('kontrak.download-signed');
@@ -432,28 +442,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // SUERVEY ULANG
     Route::middleware(['permission:survey-ulang.index'])
-    ->prefix('survey-ulang')
-    ->name('survey-ulang.')
-    ->group(function () {
+        ->prefix('survey-ulang')
+        ->name('survey-ulang.')
+        ->group(function () {
 
-        // INDEX
-        Route::get('/', [SurveyUlangController::class, 'index'])->name('index');
+            // INDEX
+            Route::get('/', [SurveyUlangController::class, 'index'])->name('index');
 
-        // START
-        Route::post('/{order}/start', [SurveyUlangController::class, 'start'])->name('start');
+            // START
+            Route::post('/{order}/start', [SurveyUlangController::class, 'start'])->name('start');
 
-        // CREATE + STORE
-        Route::get('/create/{order}', [SurveyUlangController::class, 'create'])->name('create');
-        Route::post('/create/{order}', [SurveyUlangController::class, 'store'])->name('store');
+            // CREATE + STORE
+            Route::get('/create/{order}', [SurveyUlangController::class, 'create'])->name('create');
+            Route::post('/create/{order}', [SurveyUlangController::class, 'store'])->name('store');
 
-        // SHOW
-        Route::get('/show/{surveyUlang}', [SurveyUlangController::class, 'show'])->name('show');
+            // SHOW
+            Route::get('/show/{surveyUlang}', [SurveyUlangController::class, 'show'])->name('show');
 
-        // EDIT + UPDATE
-        Route::get('/edit/{surveyUlang}', [SurveyUlangController::class, 'edit'])->name('edit');
-        Route::put('/edit/{surveyUlang}', [SurveyUlangController::class, 'update'])->name('update');
+            // EDIT + UPDATE
+            Route::get('/edit/{surveyUlang}', [SurveyUlangController::class, 'edit'])->name('edit');
+            Route::put('/edit/{surveyUlang}', [SurveyUlangController::class, 'update'])->name('update');
 
-    });
+        });
 
     // DEFECT ROUTES
     Route::middleware(['permission:defect.index'])->group(function () {
@@ -468,7 +478,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:defect.delete')->name('defect.repair.delete');
         Route::patch('/defects/{id}/status', [DefectController::class, 'updateStatus'])
             ->middleware('permission:defect.edit')->name('defect.status.update');
-        
+
         // Approve & Reject Repair Routes
         Route::post('/defect-repairs/{id}/approve', [DefectController::class, 'approveRepair'])
             ->middleware('permission:defect.approve')->name('defect.repair.approve');
@@ -486,15 +496,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('survey-schedule')->name('survey-schedule.')->group(function () {
 
-            Route::get('/',
-                [SurveyScheduleController::class, 'index']
-            )
+        Route::get(
+            '/',
+            [SurveyScheduleController::class, 'index']
+        )
             ->middleware('permission:survey-schedule.index')
             ->name('index');
 
-            Route::post('/{order}',
-                [SurveyScheduleController::class, 'store']
-            )
+        Route::post(
+            '/{order}',
+            [SurveyScheduleController::class, 'store']
+        )
             ->middleware('permission:survey-schedule.store')
             ->name('store');
 

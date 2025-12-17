@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use App\Models\User;
 use Inertia\Inertia;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use App\Models\JenisInterior;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Storage;
-use Carbon\Carbon;
 
 class OrderController extends Controller
 {
@@ -111,6 +112,8 @@ class OrderController extends Controller
             \Log::info('Attaching users to order:', ['user_ids' => $userIds]);
             $order->users()->attach($userIds);
             \Log::info('Users attached successfully');
+            $notificationService = new NotificationService();
+            $notificationService->sendSurveyRequestNotification($order);
         } else {
             \Log::warning('No user_ids to attach - skipping team assignment');
         }
