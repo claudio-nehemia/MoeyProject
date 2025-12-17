@@ -19,7 +19,7 @@ interface ItemModalProps {
 
 interface JenisItem {
     id: number;
-    nama_item: string;
+    nama_jenis_item: string;
 }
 
 export default function ItemModal({
@@ -38,7 +38,7 @@ export default function ItemModal({
     useEffect(() => {
         if (show) {
             setLoading(true);
-            fetch('/jenis-item/create')
+            fetch('/api/jenis-item')
                 .then((res) => res.json())
                 .then((data) => {
                     setJenisItems(data);
@@ -132,7 +132,7 @@ export default function ItemModal({
                             </option>
                             {jenisItems.map((jenis) => (
                                 <option key={jenis.id} value={jenis.id}>
-                                    {jenis.nama_item}
+                                    {jenis.nama_jenis_item}
                                 </option>
                             ))}
                         </select>

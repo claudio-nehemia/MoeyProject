@@ -113,8 +113,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Jenis Item Routes
     Route::middleware(['permission:jenis-item.index'])->group(function () {
         Route::get('jenis-item', [JenisItemController::class, 'index'])->name('jenis-item.index');
-        Route::get('/api/jenis-item', [ItemController::class, 'getJenisItems'])->name('jenis-item.fetch');
     });
+    Route::get('/api/jenis-item', [ItemController::class, 'getJenisItems'])
+        ->middleware('auth')->name('jenis-item.fetch');
+    Route::get('jenis-item/create', [JenisItemController::class, 'index'])
+        ->middleware('permission:jenis-item.create')->name('jenis-item.create');
     Route::post('jenis-item', [JenisItemController::class, 'store'])
         ->middleware('permission:jenis-item.create')->name('jenis-item.store');
     Route::put('jenis-item/{jenisItem}', [JenisItemController::class, 'update'])
