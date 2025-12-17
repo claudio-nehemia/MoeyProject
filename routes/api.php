@@ -20,11 +20,11 @@ Route::prefix('auth')->group(function () {
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
-    // Notifications
-    Route::prefix('notifications')->group(function () {
-        Route::get('/', [NotificationApiController::class, 'index']);
-        Route::get('/unread-count', [NotificationApiController::class, 'unreadCount']);
-        Route::post('/{id}/mark-as-read', [NotificationApiController::class, 'markAsRead']);
-        Route::post('/mark-all-as-read', [NotificationApiController::class, 'markAllAsRead']);
+    // Mobile Notifications API
+    Route::prefix('mobile/notifications')->name('api.mobile.notifications.')->group(function () {
+        Route::get('/', [NotificationApiController::class, 'index'])->name('index');
+        Route::get('/unread-count', [NotificationApiController::class, 'unreadCount'])->name('unread-count');
+        Route::post('/{id}/mark-as-read', [NotificationApiController::class, 'markAsRead'])->name('mark-as-read');
+        Route::post('/mark-all-as-read', [NotificationApiController::class, 'markAllAsRead'])->name('mark-all-as-read');
     });
 });
