@@ -610,7 +610,7 @@ class RabInternalController extends Controller
         ]);
 
         $notificationService = new NotificationService();
-        $notificationService->sendKontrakRequestNotification($itemPekerjaan->moodboard->order->id);
+        $notificationService->sendKontrakRequestNotification($itemPekerjaan->moodboard->order);
 
         return redirect()->back()
             ->with('success', 'RAB berhasil di-submit! Semua RAB (Internal, Kontrak, Vendor, Jasa) telah ACC.');
