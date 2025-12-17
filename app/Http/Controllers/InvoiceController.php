@@ -691,11 +691,6 @@ class InvoiceController extends Controller
             'rabKontrak.rabKontrakProduks'
         ])->findOrFail($invoiceId);
 
-        // Only allow regenerating pending invoices
-        if ($invoice->status === 'paid') {
-            return back()->with('error', 'Invoice yang sudah terbayar tidak dapat di-regenerate.');
-        }
-
         try {
             DB::beginTransaction();
 
