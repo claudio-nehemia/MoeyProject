@@ -31,6 +31,7 @@ use App\Http\Controllers\SurveyResultsController;
 use App\Http\Controllers\SurveyScheduleController;
 use App\Http\Controllers\JenisPengukuranController;
 use App\Http\Controllers\ProjectManagementController;
+use App\Http\Controllers\GambarKerjaController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -502,20 +503,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('survey-schedule')->name('survey-schedule.')->group(function () {
 
-        Route::get(
-            '/',
-            [SurveyScheduleController::class, 'index']
-        )
+        Route::get('/',[SurveyScheduleController::class, 'index'])
             ->middleware('permission:survey-schedule.index')
             ->name('index');
 
-        Route::post(
-            '/{order}',
-            [SurveyScheduleController::class, 'store']
-        )
+        Route::post('/{order}',[SurveyScheduleController::class, 'store'])
             ->middleware('permission:survey-schedule.store')
             ->name('store');
 
+    });
+
+    
+
+    Route::prefix('gambar-kerja')->name('gambar-kerja.')->group(function () {
+        Route::get('/', [GambarKerjaController::class, 'index'])
+            ->middleware('permission:gambar-kerja.index')
+            ->name('index');
+        Route::post('/response/{order}', [GambarKerjaController::class, 'response'])
+            ->middleware('permission:gambar-kerja.response')
+            ->name('response');
+        Route::post('/upload/{order}', [GambarKerjaController::class, 'upload'])
+            ->middleware('permission:gambar-kerja.upload')
+            ->name('upload');
     });
 
 

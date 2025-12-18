@@ -814,6 +814,26 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Update Tanggal Survey',
                 'group' => 'surveys - Tanggal Survey'
             ],
+
+            // Gambar Kerja
+            [
+                'name' => 'gambar-kerja.index',
+                'display_name' => 'View Gambar Kerja',
+                'group' => 'drafters - Gambar Kerja'
+            ],
+
+            [
+                'name' => 'gambar-kerja.upload',
+                'display_name' => 'Upload Gambar Kerja',
+                'group' => 'drafters - Gambar Kerja'
+            ],
+
+            [
+                'name' => 'gambar-kerja.response',
+                'display_name' => 'Response Gambar Kerja',
+                'group' => 'drafters - Gambar Kerja'
+            ],
+
             
             // PDF Export Permissions
             [
