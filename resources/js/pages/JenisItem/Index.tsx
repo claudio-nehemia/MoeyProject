@@ -241,7 +241,7 @@ useEffect(() => {
                                         </td>
                                         <td className="px-5 py-3 whitespace-nowrap">
                                             <div className="flex items-center gap-2">
-                                                <Link
+                                                {/* <Link
                                                     href={`/jenis-item/${jenisItem.id}`}
                                                     className="inline-flex items-center px-2.5 py-1.5 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors text-xs font-medium shadow-sm"
                                                 >
@@ -250,7 +250,7 @@ useEffect(() => {
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                     </svg>
                                                     View
-                                                </Link>
+                                                </Link> */}
                                                 <button
                                                     onClick={() => openEditModal(jenisItem)}
                                                     className="px-2.5 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-xs font-medium shadow-sm"

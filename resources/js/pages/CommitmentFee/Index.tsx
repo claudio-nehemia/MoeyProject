@@ -494,6 +494,16 @@ export default function Index({ moodboards }: Props) {
                                                         >
                                                             Revisi Total Fee
                                                         </button>
+
+                                                        {/* Tombol cetak commitment fee */}
+                                                        <a
+                                                            href={`/commitment-fee/${moodboard.commitmentFee.id}/print`} target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-700"
+                                                        >
+                                                            Cetak Commitment Fee
+                                                        </a>
+
                                                         <button
                                                             onClick={() =>
                                                                 handleOpenPaymentModal(
@@ -508,6 +518,14 @@ export default function Index({ moodboards }: Props) {
                                                 ) : (
                                                     // Tombol Reset/Revisi Mayor (saat completed)
                                                     <>
+                                                        {/* Tombol cetak commitment fee */}
+                                                        <a
+                                                                href={`/commitment-fee/${moodboard.commitmentFee.id}/print`} target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-700"
+                                                            >
+                                                                Cetak Commitment Fee
+                                                        </a>
                                                         <a
                                                             href={`/storage/${moodboard.commitmentFee.payment_proof!}`} 
                                                             target="_blank"

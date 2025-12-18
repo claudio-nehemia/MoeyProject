@@ -263,12 +263,12 @@ export default function Index({ jenisPengukuran }: Props) {
 
                                         <td className="px-5 py-3 whitespace-nowrap">
                                             <div className="flex items-center gap-2">
-                                                <Link
+                                                {/* <Link
                                                     href={`/jenis-pengukuran/${item.id}`}
                                                     className="inline-flex items-center px-2.5 py-1.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-xs font-medium shadow-sm"
                                                 >
                                                     View
-                                                </Link>
+                                                </Link> */}
 
                                                 <button
                                                     onClick={() => openEditModal(item)}
