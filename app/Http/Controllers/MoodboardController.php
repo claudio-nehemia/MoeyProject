@@ -8,6 +8,7 @@ use App\Models\Moodboard;
 use Illuminate\Http\Request;
 use App\Models\MoodboardFile;
 use Illuminate\Support\Facades\Log;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Storage;
 
 class MoodboardController extends Controller
@@ -163,6 +164,9 @@ class MoodboardController extends Controller
                     $firstFile = $request->file('moodboard_kasar')[0];
                     $moodboard->moodboard_kasar = $firstFile->store('moodboards', 'public');
                 }
+
+                $notificationService = new NotificationService();
+                $notificationService->sendEstimasiRequestNotification($moodboard->order);
             }
 
             $moodboard->status = 'pending';
@@ -557,7 +561,10 @@ class MoodboardController extends Controller
             Log::info('Estimated cost: ' . $moodboard->estimasi->estimated_cost);
             Log::info('=== ACCEPT DESAIN END ===');
 
-            return back()->with('success', 'Desain kasar diterima. Siap untuk upload desain final.');
+            $notificationService = new NotificationService();
+            $notificationService->sendCommitmentFeeRequestNotification($moodboard->order);
+
+            return back()->with('success', 'Desain kasar diterima. Menunggu commitment fee.');
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('Validation error: ', $e->errors());
             throw $e;

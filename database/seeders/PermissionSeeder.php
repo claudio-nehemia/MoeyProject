@@ -659,6 +659,16 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Unlock Next Payment Step',
                 'group' => 'Operations - Project Management'
             ],
+            [
+                'name' => 'project-management.request-perpanjangan',
+                'display_name' => 'Request Timeline Extension',
+                'group' => 'Operations - Project Management'
+            ],
+            [
+                'name' => 'project-management.response-perpanjangan',
+                'display_name' => 'Respond to Timeline Extension',
+                'group' => 'Operations - Project Management'
+            ],
             
             // Workplan Permissions
             [
@@ -760,6 +770,49 @@ class PermissionSeeder extends Seeder
                 'name' => 'survey-ulang.update',
                 'display_name' => 'Update Survey Ulang',
                 'group' => 'Operations - Survey Ulang'
+            ],
+
+            // Survey Schedule
+            [
+                'name' => 'survey-schedule.index',
+                'display_name' => 'View Tanggal Survey',
+                'group' => 'surveys - Tanggal Survey'
+            ],
+
+            [
+                'name' => 'survey-schedule.start',
+                'display_name' => 'Start Tanggal Survey',
+                'group' => 'surveys - Tanggal Survey'
+            ],
+
+            [
+                'name' => 'survey-schedule.create',
+                'display_name' => 'Create Tanggal Survey',
+                'group' => 'surveys - Tanggal Survey'
+            ],
+
+            [
+                'name' => 'survey-schedule.store',
+                'display_name' => 'Store Tanggal Survey',
+                'group' => 'surveys - Tanggal Survey'
+            ],
+
+            [
+                'name' => 'survey-schedule.show',
+                'display_name' => 'Show Tanggal Survey',
+                'group' => 'surveys - Tanggal Survey'
+            ],
+
+            [
+                'name' => 'survey-schedule.edit',
+                'display_name' => 'Edit Tanggal Survey',
+                'group' => 'surveys - Tanggal Survey'
+            ],
+
+            [
+                'name' => 'survey-schedule.update',
+                'display_name' => 'Update Tanggal Survey',
+                'group' => 'surveys - Tanggal Survey'
             ],
             
             // PDF Export Permissions

@@ -2,14 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ItemPekerjaan;
-use App\Models\ItemPekerjaanProduk;
+use Carbon\Carbon;
+use Inertia\Inertia;
 use App\Models\Order;
 use App\Models\WorkplanItem;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
+use App\Models\ItemPekerjaan;
 use Illuminate\Support\Facades\DB;
-use Inertia\Inertia;
+use App\Models\ItemPekerjaanProduk;
+use App\Models\PengajuanPerpanjanganTimeline;
+use App\Services\NotificationService;
 
 class WorkplanItemController extends Controller
 {
@@ -34,6 +36,7 @@ class WorkplanItemController extends Controller
             'moodboard.itemPekerjaans.produks.workplanItems',
             'moodboard.itemPekerjaans.invoices',
             'moodboard.itemPekerjaans.kontrak',
+            'moodboard.itemPekerjaans.pengajuanPerpanjanganTimelines',
         ])
             ->whereHas('moodboard.itemPekerjaans.invoices', function ($q) {
                 // Sudah ada pembayaran termin (bukan commitment fee, tahap >= 1)
@@ -48,6 +51,11 @@ class WorkplanItemController extends Controller
                         $p->workplanItems->count() > 0
                     )->count();
                     
+                    // Get latest pengajuan perpanjangan
+                    $latestPengajuan = $ip->pengajuanPerpanjanganTimelines
+                        ->sortByDesc('created_at')
+                        ->first();
+
                     return [
                         'id' => $ip->id,
                         'total_produks' => $totalProduks,
@@ -57,6 +65,12 @@ class WorkplanItemController extends Controller
                         'workplan_end_date' => $ip->workplan_end_date?->format('Y-m-d'),
                         'has_kontrak' => $ip->kontrak !== null,
                         'kontrak_durasi' => $ip->kontrak?->durasi_kontrak,
+                        'pengajuan_perpanjangans' => $latestPengajuan ? [[
+                            'id' => $latestPengajuan->id,
+                            'item_pekerjaan_id' => $latestPengajuan->item_pekerjaan_id,
+                            'status' => $latestPengajuan->status,
+                            'reason' => $latestPengajuan->reason,
+                        ]] : [],
                     ];
                 });
 
@@ -175,6 +189,8 @@ class WorkplanItemController extends Controller
         ]);
 
         DB::transaction(function () use ($validated) {
+            $lastItemPekerjaan = null;
+            
             foreach ($validated['item_pekerjaans'] as $ipData) {
                 // Update timeline di ItemPekerjaan
                 $itemPekerjaan = ItemPekerjaan::find($ipData['id']);
@@ -182,6 +198,8 @@ class WorkplanItemController extends Controller
                     'workplan_start_date' => $ipData['workplan_start_date'],
                     'workplan_end_date' => $ipData['workplan_end_date'],
                 ]);
+                
+                $lastItemPekerjaan = $itemPekerjaan;
 
                 // Update workplan items per produk
                 foreach ($ipData['produks'] as $produkData) {
@@ -212,10 +230,24 @@ class WorkplanItemController extends Controller
                     }
                 }
             }
+
+            // Create pengajuan perpanjangan timeline untuk store (create baru)
+            if ($lastItemPekerjaan) {
+                PengajuanPerpanjanganTimeline::create([
+                    'item_pekerjaan_id' => $lastItemPekerjaan->id,
+                    'status' => 'none',
+                    'reason' => null,
+                ]);
+            }
         });
 
+        // Kirim notifikasi project management request ke Supervisor & PM
+        $order = Order::findOrFail($orderId);
+        $notificationService = new NotificationService();
+        $notificationService->sendProjectManagementRequestNotification($order);
+
         return redirect()->route('workplan.index')
-            ->with('success', 'Workplan berhasil disimpan.');
+            ->with('success', 'Workplan berhasil disimpan. Notifikasi project management telah dikirim ke Supervisor dan Project Manager.');
     }
 
     /**
@@ -228,11 +260,98 @@ class WorkplanItemController extends Controller
     }
 
     /**
-     * Update: Update workplan (sama seperti store)
+     * Update: Update workplan
      */
     public function update(Request $request, $orderId)
     {
-        return $this->store($request, $orderId);
+        $validated = $request->validate([
+            'item_pekerjaans' => 'required|array',
+            'item_pekerjaans.*.id' => 'required|exists:item_pekerjaans,id',
+            'item_pekerjaans.*.workplan_start_date' => 'required|date',
+            'item_pekerjaans.*.workplan_end_date' => 'required|date|after_or_equal:item_pekerjaans.*.workplan_start_date',
+            'item_pekerjaans.*.produks' => 'required|array',
+            'item_pekerjaans.*.produks.*.id' => 'required|exists:item_pekerjaan_produks,id',
+            'item_pekerjaans.*.produks.*.workplan_items' => 'required|array|min:1',
+            'item_pekerjaans.*.produks.*.workplan_items.*.nama_tahapan' => 'required|string|max:255',
+            'item_pekerjaans.*.produks.*.workplan_items.*.start_date' => 'nullable|date',
+            'item_pekerjaans.*.produks.*.workplan_items.*.end_date' => 'nullable|date',
+            'item_pekerjaans.*.produks.*.workplan_items.*.status' => 'required|string|in:planned,in_progress,done,cancelled',
+            'item_pekerjaans.*.produks.*.workplan_items.*.catatan' => 'nullable|string',
+        ]);
+
+        DB::transaction(function () use ($validated) {
+            $lastItemPekerjaan = null;
+            
+            foreach ($validated['item_pekerjaans'] as $ipData) {
+                // Update timeline di ItemPekerjaan
+                $itemPekerjaan = ItemPekerjaan::find($ipData['id']);
+                $itemPekerjaan->update([
+                    'workplan_start_date' => $ipData['workplan_start_date'],
+                    'workplan_end_date' => $ipData['workplan_end_date'],
+                ]);
+                
+                $lastItemPekerjaan = $itemPekerjaan;
+
+                // Update workplan items per produk
+                foreach ($ipData['produks'] as $produkData) {
+                    $produk = ItemPekerjaanProduk::find($produkData['id']);
+                    
+                    // Hapus workplan lama dan buat baru
+                    $produk->workplanItems()->delete();
+
+                    foreach ($produkData['workplan_items'] as $index => $item) {
+                        $start = !empty($item['start_date']) ? Carbon::parse($item['start_date']) : null;
+                        $end = !empty($item['end_date']) ? Carbon::parse($item['end_date']) : null;
+
+                        $duration = null;
+                        if ($start && $end) {
+                            $duration = $start->diffInDays($end) + 1;
+                        }
+
+                        WorkplanItem::create([
+                            'item_pekerjaan_produk_id' => $produk->id,
+                            'nama_tahapan' => $item['nama_tahapan'],
+                            'start_date' => $start,
+                            'end_date' => $end,
+                            'duration_days' => $duration,
+                            'urutan' => $index + 1,
+                            'status' => $item['status'],
+                            'catatan' => $item['catatan'] ?? null,
+                        ]);
+                    }
+                }
+            }
+
+            // Update pengajuan perpanjangan timeline untuk update (update existing)
+            if ($lastItemPekerjaan) {
+                $existingPengajuan = PengajuanPerpanjanganTimeline::where('item_pekerjaan_id', $lastItemPekerjaan->id)
+                    ->latest()
+                    ->first();
+                
+                if ($existingPengajuan) {
+                    // Update pengajuan yang sudah ada
+                    $existingPengajuan->update([
+                        'status' => 'none',
+                        'reason' => null,
+                    ]);
+                } else {
+                    // Jika belum ada, buat baru
+                    PengajuanPerpanjanganTimeline::create([
+                        'item_pekerjaan_id' => $lastItemPekerjaan->id,
+                        'status' => 'none',
+                        'reason' => null,
+                    ]);
+                }
+            }
+        });
+
+        // Kirim notifikasi project management request ke Supervisor & PM
+        $order = Order::findOrFail($orderId);
+        $notificationService = new NotificationService();
+        $notificationService->sendProjectManagementRequestNotification($order);
+
+        return redirect()->route('workplan.index')
+            ->with('success', 'Workplan berhasil diperbarui. Notifikasi project management telah dikirim ke Supervisor dan Project Manager.');
     }
 
     /**

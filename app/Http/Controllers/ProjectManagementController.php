@@ -3,11 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use App\Models\ItemPekerjaanProduk;
-use App\Models\StageEvidence;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use App\Models\StageEvidence;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\ItemPekerjaanProduk;
+use Illuminate\Support\Facades\Storage;
+use App\Models\PengajuanPerpanjanganTimeline;
 
 class ProjectManagementController extends Controller
 {
@@ -59,6 +60,7 @@ class ProjectManagementController extends Controller
             'moodboard.itemPekerjaans.rabVendor.rabVendorProduks',
             'moodboard.itemPekerjaans.kontrak.termin',
             'moodboard.itemPekerjaans.invoices',
+            'moodboard.itemPekerjaans.pengajuanPerpanjanganTimelines',
             'moodboard.commitmentFee',
         ])->findOrFail($id);
 
@@ -94,7 +96,7 @@ class ProjectManagementController extends Controller
             // ================================
             $paymentInfo = $this->getPaymentInfo($itemPekerjaan, $order);
 
-            $produks = $itemPekerjaan->produks->map(function ($produk) use ($totalHargaItem) {
+            $produks = $itemPekerjaan->produks->sortBy('id')->values()->map(function ($produk) use ($totalHargaItem) {
                 // ================================
                 // 🔢 Perhitungan bobot & progress
                 // ================================
@@ -198,6 +200,17 @@ class ProjectManagementController extends Controller
                 ];
             });
 
+            // Get latest pengajuan perpanjangan for this item pekerjaan
+            $latestPengajuan = $itemPekerjaan->pengajuanPerpanjanganTimelines
+                ->sortByDesc('created_at')
+                ->first();
+
+            $pengajuanPerpanjangan = $latestPengajuan ? [
+                'id' => $latestPengajuan->id,
+                'status' => $latestPengajuan->status,
+                'reason' => $latestPengajuan->reason,
+            ] : null;
+
             return [
                 'id'                   => $itemPekerjaan->id,
                 'produks'              => $produks,
@@ -213,6 +226,12 @@ class ProjectManagementController extends Controller
                 'bast_number'          => $itemPekerjaan->bast_number,
                 'bast_date'            => $itemPekerjaan->bast_date?->format('d M Y'),
                 'bast_pdf_path'        => $itemPekerjaan->bast_pdf_path,
+                // BAST Foto dengan Klien (untuk pelunasan)
+                'has_bast_foto_klien'  => $itemPekerjaan->has_bast_foto_klien,
+                'bast_foto_klien'      => $itemPekerjaan->bast_foto_klien,
+                'bast_foto_klien_uploaded_at' => $itemPekerjaan->bast_foto_klien_uploaded_at?->format('d M Y H:i'),
+                // Pengajuan Perpanjangan Timeline
+                'pengajuan_perpanjangan' => $pengajuanPerpanjangan,
             ];
         });
 
@@ -375,6 +394,94 @@ class ProjectManagementController extends Controller
     }
 
     /**
+     * Upload foto BAST dengan klien (diperlukan untuk pelunasan/tahap terakhir)
+     */
+    public function uploadBastFotoKlien(Request $request, $itemPekerjaanId)
+    {
+        $request->validate([
+            'bast_foto_klien' => 'required|image|mimes:jpeg,png,jpg|max:5120', // 5MB
+        ]);
+
+        $itemPekerjaan = \App\Models\ItemPekerjaan::findOrFail($itemPekerjaanId);
+
+        // Check if BAST document exists first
+        if (!$itemPekerjaan->has_bast) {
+            return back()->withErrors(['bast_foto_klien' => 'BAST dokumen harus dibuat terlebih dahulu']);
+        }
+
+        // Delete old photo if exists
+        if ($itemPekerjaan->bast_foto_klien) {
+            Storage::disk('public')->delete($itemPekerjaan->bast_foto_klien);
+        }
+
+        // Store new photo
+        $path = $request->file('bast_foto_klien')->store('bast-foto-klien', 'public');
+
+        $itemPekerjaan->update([
+            'bast_foto_klien' => $path,
+            'bast_foto_klien_uploaded_at' => now(),
+        ]);
+
+        return back()->with('success', 'Foto BAST dengan klien berhasil diupload');
+    }
+
+    public function requestPerpanjanganTimeline(Request $request, $itemPekerjaanId)
+    {
+        $request->validate([
+            'reason' => 'nullable|string|max:1000',
+        ]);
+
+        $itemPekerjaan = \App\Models\ItemPekerjaan::with('pengajuanPerpanjanganTimelines')->findOrFail($itemPekerjaanId);
+
+        // Cari pengajuan dengan status 'none' atau 'rejected' (bisa diajukan ulang)
+        $pengajuanPerpanjangan = $itemPekerjaan->pengajuanPerpanjanganTimelines
+            ->whereIn('status', ['none', 'rejected'])
+            ->sortByDesc('created_at')
+            ->first();
+            
+
+        if (!$pengajuanPerpanjangan) {
+            return back()->withErrors(['pengajuan' => 'Tidak dapat mengajukan perpanjangan saat ini']);
+        }
+
+        // Update status ke pending
+        $pengajuanPerpanjangan->update([
+            'status' => 'pending',
+            'reason' => $request->reason,
+        ]);
+
+        return back()->with('success', 'Permohonan perpanjangan timeline berhasil diajukan');
+    }
+
+    public function acceptPerpanjanganTimeline($pengajuanId)
+    {
+        $pengajuan = PengajuanPerpanjanganTimeline::findOrFail($pengajuanId);
+
+        $pengajuan->update([
+            'status' => 'approved',
+        ]);
+
+        return back()->with('success', 'Permohonan perpanjangan timeline disetujui');
+    }
+
+
+    public function rejectPerpanjanganTimeline(Request $request, $pengajuanId)
+    {
+        $request->validate([
+            'reason' => 'nullable|string|max:1000',
+        ]);
+
+        $pengajuan = PengajuanPerpanjanganTimeline::findOrFail($pengajuanId);
+
+        $pengajuan->update([
+            'status' => 'rejected',
+            'reason' => $request->reason,
+        ]);
+
+        return back()->with('success', 'Permohonan perpanjangan timeline ditolak');
+    }
+
+    /**
      * Get payment info for an item pekerjaan
      */
     private function getPaymentInfo($itemPekerjaan, $order)
@@ -418,6 +525,9 @@ class ProjectManagementController extends Controller
 
         // Check if item pekerjaan has BAST (now at item level, not per product)
         $hasBast = $itemPekerjaan->has_bast;
+        
+        // Check if BAST foto klien exists (required for final payment)
+        $hasBastFotoKlien = $itemPekerjaan->has_bast_foto_klien;
 
         // Build steps info
         $stepsInfo = [];
@@ -438,16 +548,19 @@ class ProjectManagementController extends Controller
             } elseif ($invoice && $invoice->status === 'pending') {
                 $status = 'pending';
             } elseif ($isLastStep) {
-                // TAHAP TERAKHIR: Otomatis available jika BAST sudah ada & tahap sebelumnya sudah dibayar
+                // TAHAP TERAKHIR: Memerlukan BAST dokumen DAN foto BAST dengan klien
                 if (!$hasBast) {
                     $status = 'waiting_bast';
                     $lockedReason = 'Menunggu BAST Item Pekerjaan dibuat';
+                } elseif (!$hasBastFotoKlien) {
+                    $status = 'waiting_bast_foto';
+                    $lockedReason = 'Upload foto BAST dengan klien terlebih dahulu';
                 } elseif ($lastPaidStep < $totalSteps - 1) {
                     // Previous steps not all paid
                     $status = 'locked';
                     $lockedReason = 'Bayar tahap sebelumnya dulu';
                 } else {
-                    // BAST ada & semua tahap sebelumnya sudah dibayar
+                    // BAST ada, foto BAST klien ada & semua tahap sebelumnya sudah dibayar
                     $status = 'available';
                     $canPay = true;
                 }

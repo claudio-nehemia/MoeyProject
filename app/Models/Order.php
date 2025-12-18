@@ -71,4 +71,17 @@ class Order extends Model
     {
         return $this->hasOne(SurveyUlang::class);
     }
+
+    public function surveyScheduleUsers()
+    {
+        return $this->hasMany(SurveyScheduleUser::class);
+    }
+
+    public function surveyUsers()
+    {
+        return $this->belongsToMany(
+            \App\Models\User::class,
+            'survey_schedule_users'
+        );
+    }
 }

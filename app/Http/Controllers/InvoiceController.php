@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\NotificationService;
 
 class InvoiceController extends Controller
 {
@@ -347,6 +348,12 @@ class InvoiceController extends Controller
         // Calculate totals
         $totalPaid = $allInvoices->where('status', 'paid')->sum('total_amount');
 
+        // Check if this is the last step and needs BAST foto klien
+        $isLastStep = $invoice->termin_step === $totalSteps;
+        $itemPekerjaan = $invoice->itemPekerjaan;
+        $hasBastFotoKlien = !empty($itemPekerjaan->bast_foto_klien);
+        $bastFotoKlienUrl = $itemPekerjaan->bast_foto_klien ? Storage::url($itemPekerjaan->bast_foto_klien) : null;
+
         return Inertia::render('Invoice/Show', [
             'invoice' => [
                 'id' => $invoice->id,
@@ -379,6 +386,12 @@ class InvoiceController extends Controller
                 ],
                 'termin_nama' => $termin?->nama_tipe,
                 'all_invoices' => $allInvoices,
+                // BAST foto klien info (untuk tahap terakhir/pelunasan)
+                'is_last_step' => $isLastStep,
+                'item_pekerjaan_id' => $itemPekerjaan->id,
+                'has_bast_foto_klien' => $hasBastFotoKlien,
+                'bast_foto_klien' => $bastFotoKlienUrl,
+                'bast_foto_klien_uploaded_at' => $itemPekerjaan->bast_foto_klien_uploaded_at?->format('d M Y H:i'),
                 'items' => $invoice->rabKontrak->rabKontrakProduks->map(function ($rabProduk) use ($aksesorisJenisItem) {
                     $jenisItemsList = [];
                     foreach ($rabProduk->itemPekerjaanProduk->jenisItems as $jenisItem) {
@@ -436,6 +449,15 @@ class InvoiceController extends Controller
             'bukti_bayar' => 'required|file|mimes:jpeg,png,jpg,pdf|max:5120', // 5MB
         ]);
 
+        // Check if this is the last step - require BAST foto klien
+        $termin = $invoice->itemPekerjaan->kontrak?->termin;
+        $totalSteps = count($termin?->tahapan ?? []);
+        $isLastStep = $invoice->termin_step === $totalSteps;
+
+        if ($isLastStep && empty($invoice->itemPekerjaan->bast_foto_klien)) {
+            return back()->with('error', 'Untuk pembayaran tahap terakhir/pelunasan, upload foto BAST dengan klien terlebih dahulu.');
+        }
+
         DB::transaction(function () use ($request, $invoice) {
             // Delete old bukti bayar if exists
             if ($invoice->bukti_bayar) {
@@ -459,6 +481,12 @@ class InvoiceController extends Controller
             $order->update([
                 'payment_status' => $terminText,
             ]);
+
+            // Send survey ulang notification HANYA untuk pembayaran pertama (termin step 1)
+            if ($invoice->termin_step === 1) {
+                $notificationService = new NotificationService();
+                $notificationService->sendSurveyUlangRequestNotification($order);
+            }
         });
 
         return back()->with('success', 'Bukti bayar berhasil diupload!');
@@ -600,6 +628,38 @@ class InvoiceController extends Controller
         return $pdf->download($filename);
     }
 
+    /**
+     * Upload foto BAST dengan klien (diperlukan untuk pembayaran tahap terakhir/pelunasan)
+     */
+    public function uploadBastFotoKlien(Request $request, $itemPekerjaanId)
+    {
+        $request->validate([
+            'bast_foto_klien' => 'required|image|mimes:jpeg,png,jpg|max:5120', // 5MB
+        ]);
+
+        $itemPekerjaan = ItemPekerjaan::findOrFail($itemPekerjaanId);
+
+        // Check if BAST document exists first
+        if (!$itemPekerjaan->has_bast) {
+            return back()->with('error', 'BAST dokumen harus dibuat terlebih dahulu');
+        }
+
+        // Delete old photo if exists
+        if ($itemPekerjaan->bast_foto_klien) {
+            Storage::disk('public')->delete($itemPekerjaan->bast_foto_klien);
+        }
+
+        // Store new photo
+        $path = $request->file('bast_foto_klien')->store('bast-foto-klien', 'public');
+
+        $itemPekerjaan->update([
+            'bast_foto_klien' => $path,
+            'bast_foto_klien_uploaded_at' => now(),
+        ]);
+
+        return back()->with('success', 'Foto BAST dengan klien berhasil diupload. Sekarang Anda dapat upload bukti pembayaran.');
+    }
+
     public function destroy($invoiceId)
     {
         $invoice = Invoice::findOrFail($invoiceId);
@@ -618,5 +678,60 @@ class InvoiceController extends Controller
 
         return redirect()->route('invoice.index')
             ->with('success', 'Invoice berhasil dihapus');
+    }
+
+    /**
+     * Regenerate invoice dengan data terbaru (harga kontrak, dimensi, dll)
+     */
+    public function regenerate($invoiceId)
+    {
+        $invoice = Invoice::with([
+            'itemPekerjaan.moodboard.commitmentFee',
+            'itemPekerjaan.kontrak.termin',
+            'rabKontrak.rabKontrakProduks'
+        ])->findOrFail($invoiceId);
+
+        try {
+            DB::beginTransaction();
+
+            // Get fresh data from kontrak and RAB
+            $hargaKontrak = (float) ($invoice->itemPekerjaan->kontrak?->harga_kontrak ?? 0);
+            
+            // Fallback to RAB if no harga kontrak
+            if ($hargaKontrak <= 0) {
+                $hargaKontrak = (float) $invoice->rabKontrak->rabKontrakProduks->sum('harga_akhir');
+            }
+
+            // Get commitment fee from moodboard
+            $commitmentFee = $invoice->itemPekerjaan->moodboard?->commitmentFee;
+            $commitmentFeeAmount = (float) ($commitmentFee?->total_fee ?? 0);
+            $commitmentFeePaid = $commitmentFee?->payment_status === 'completed';
+
+            // Sisa pembayaran = Harga Kontrak - Commitment Fee (if paid)
+            $sisaPembayaran = $commitmentFeePaid ? max(0, $hargaKontrak - $commitmentFeeAmount) : $hargaKontrak;
+
+            // Calculate new total amount based on termin percentage
+            $newTotalAmount = $sisaPembayaran * ($invoice->termin_persentase / 100);
+
+            // Delete old bukti bayar if exists (since we're regenerating)
+            if ($invoice->bukti_bayar) {
+                Storage::disk('public')->delete($invoice->bukti_bayar);
+            }
+
+            // Update invoice with fresh data
+            $invoice->update([
+                'total_amount' => $newTotalAmount,
+                'bukti_bayar' => null,
+                'paid_at' => null,
+                'status' => 'pending'
+            ]);
+
+            DB::commit();
+
+            return back()->with('success', 'Invoice berhasil di-regenerate dengan data terbaru. Total amount: ' . number_format($newTotalAmount, 0, ',', '.'));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal regenerate invoice: ' . $e->getMessage());
+        }
     }
 }

@@ -26,7 +26,7 @@ class ItemController extends Controller
      */
     public function create()
     {
-        $jenisItems = JenisItem::select('id', 'nama_item')->get();
+        $jenisItems = JenisItem::select('id', 'nama_jenis_item')->get();
         return response()->json($jenisItems);
     }
 

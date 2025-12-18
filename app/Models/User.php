@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable;
+    use HasFactory, Notifiable, TwoFactorAuthenticatable, HasApiTokens;
 
     /**
      * The attributes that are mass assignable.
@@ -56,9 +57,10 @@ class User extends Authenticatable
         return $this->belongsTo(Role::class, 'role_id');
     }
 
-    public function orders() {
+    public function orders()
+    {
         return $this->belongsToMany(Order::class, 'order_teams')
-                    ->withTimestamps();
+            ->withTimestamps();
     }
 
     /**
@@ -107,5 +109,33 @@ class User extends Authenticatable
             }
         }
         return true;
+    }
+
+    public function surveyScheduleUsers()
+    {
+        return $this->hasMany(SurveyScheduleUser::class);
+    }
+
+    public function surveyOrders()
+    {
+        return $this->belongsToMany(
+            Order::class,
+            'survey_schedule_users'
+        )->withTimestamps();
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class)->orderBy('created_at', 'desc');
+    }
+
+    public function unreadNotifications()
+    {
+        return $this->hasMany(Notification::class)->where('is_read', false);
+    }
+
+    public function unreadNotificationsCount()
+    {
+        return $this->unreadNotifications()->count();
     }
 }

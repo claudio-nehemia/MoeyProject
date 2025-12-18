@@ -18,34 +18,44 @@ export default function Create({ order }: { order: Order }) {
     const [foto, setFoto] = useState<File[]>([]);
     const [loading, setLoading] = useState(false);
 
-    const handleAddTemuan = () => setTemuan([...temuan, '']);
-    const handleRemoveTemuan = (index: number) =>
+    // ---------------------
+    // TEMUAN HANDLER
+    // ---------------------
+    const addTemuan = () => setTemuan([...temuan, ""]);
+
+    const removeTemuan = (index: number) =>
         setTemuan(temuan.filter((_, i) => i !== index));
 
-    const handleTemuanChange = (index: number, value: string) => {
-        const upd = [...temuan];
-        upd[index] = value;
-        setTemuan(upd);
+    const updateTemuan = (index: number, value: string) => {
+        const newArr = [...temuan];
+        newArr[index] = value;
+        setTemuan(newArr);
     };
 
+    // ---------------------
+    // FOTO HANDLER
+    // ---------------------
     const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files) return;
         setFoto([...foto, ...Array.from(e.target.files)]);
     };
 
+    // ---------------------
+    // SUBMIT FORM
+    // ---------------------
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
         setLoading(true);
 
-        const formData = new FormData();
-        formData.append('catatan', catatan);
-        formData.append('temuan', JSON.stringify(temuan));
+        const form = new FormData();
+        form.append('catatan', catatan);
 
-        foto.forEach((file, index) => {
-            formData.append(`foto[${index}]`, file);
-        });
+        temuan.forEach((t, i) => form.append(`temuan[${i}]`, t));
+        foto.forEach((file, i) => form.append(`foto[${i}]`, file));
 
-        router.post(`/survey-ulang/${order.id}`, formData, {
+        // URL PASTI BENAR sesuai routes terbaru
+        router.post(`/survey-ulang/create/${order.id}`, form, {
             forceFormData: true,
             onFinish: () => setLoading(false),
         });
@@ -53,58 +63,61 @@ export default function Create({ order }: { order: Order }) {
 
     return (
         <>
-            <Head title="Survey Ulang - Create" />
+            <Head title="Survey Ulang - Input" />
 
             <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
             <Sidebar isOpen={sidebarOpen} currentPage="survey-ulang" />
 
             <div className="p-4 lg:ml-60">
-                <div className="mt-10 max-w-3xl mx-auto bg-white shadow rounded-xl p-6">
-                    <h1 className="text-2xl font-bold mb-4">
-                        Survey Ulang — {order.nama_project}
-                    </h1>
-                    <p className="text-sm text-gray-600 mb-6">
-                        Company: {order.company_name} — Customer: {order.customer_name}
-                    </p>
+                <div className="mt-12 max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6 sm:p-8">
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        {/* Catatan */}
+                    {/* Header */}
+                    <div className="mb-6">
+                        <h1 className="text-2xl sm:text-3xl font-semibold text-stone-800">
+                            Input Survey Ulang
+                        </h1>
+                        <p className="text-stone-500 mt-1 text-sm">
+                            Project: <b>{order.nama_project}</b> — {order.company_name}
+                        </p>
+                    </div>
+
+                    {/* FORM */}
+                    <form onSubmit={handleSubmit} className="space-y-6">
+
+                        {/* CATATAN */}
                         <div>
-                            <label className="font-semibold text-sm">Catatan Umum</label>
+                            <label className="block font-medium mb-1 text-sm">Catatan Umum</label>
                             <textarea
-                                className="w-full rounded border p-2 mt-1"
-                                rows={3}
+                                rows={4}
+                                className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-indigo-500"
+                                placeholder="Tulis catatan tambahan..."
                                 value={catatan}
                                 onChange={(e) => setCatatan(e.target.value)}
-                                placeholder="Tulis catatan survey ulang..."
                             />
                         </div>
 
-                        {/* Temuan */}
+                        {/* TEMUAN */}
                         <div>
-                            <label className="font-semibold text-sm mb-1 block">
-                                Temuan Lapangan
-                            </label>
+                            <label className="block font-medium mb-1 text-sm">Temuan Lapangan</label>
 
-                            <div className="space-y-2">
-                                {temuan.map((t, index) => (
-                                    <div key={index} className="flex gap-2">
+                            <div className="space-y-3">
+                                {temuan.map((t, i) => (
+                                    <div key={i} className="flex gap-2">
                                         <input
                                             type="text"
-                                            className="flex-1 rounded border p-2"
-                                            placeholder={`Temuan #${index + 1}`}
+                                            placeholder={`Temuan #${i + 1}`}
+                                            className="flex-1 border rounded-lg p-2 focus:ring-2 focus:ring-indigo-400"
                                             value={t}
-                                            onChange={(e) =>
-                                                handleTemuanChange(index, e.target.value)
-                                            }
+                                            onChange={(e) => updateTemuan(i, e.target.value)}
                                         />
+
                                         {temuan.length > 1 && (
                                             <button
                                                 type="button"
-                                                className="text-red-600 text-sm"
-                                                onClick={() => handleRemoveTemuan(index)}
+                                                onClick={() => removeTemuan(i)}
+                                                className="px-3 py-2 text-red-600"
                                             >
-                                                Hapus
+                                                ✕
                                             </button>
                                         )}
                                     </div>
@@ -112,59 +125,58 @@ export default function Create({ order }: { order: Order }) {
 
                                 <button
                                     type="button"
-                                    onClick={handleAddTemuan}
-                                    className="text-blue-600 text-sm font-semibold"
+                                    onClick={addTemuan}
+                                    className="text-indigo-600 font-semibold text-sm"
                                 >
                                     + Tambah Temuan
                                 </button>
                             </div>
                         </div>
 
-                        {/* Foto */}
+                        {/* FOTO */}
                         <div>
-                            <label className="font-semibold text-sm mb-1 block">
-                                Upload Foto
-                            </label>
+                            <label className="block font-medium mb-1 text-sm">Upload Foto</label>
                             <input
                                 type="file"
                                 multiple
                                 accept="image/*"
                                 onChange={handleFotoChange}
-                                className="border p-2 rounded w-full"
+                                className="border p-2 rounded-lg w-full"
                             />
 
-                            {/* Preview */}
                             {foto.length > 0 && (
-                                <div className="grid grid-cols-2 gap-2 mt-3">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
                                     {foto.map((file, i) => (
                                         <img
                                             key={i}
                                             src={URL.createObjectURL(file)}
-                                            className="rounded shadow"
+                                            className="w-full h-28 object-cover rounded-lg shadow"
                                         />
                                     ))}
                                 </div>
                             )}
                         </div>
 
-                        <div className="pt-4 flex justify-end gap-3">
+                        {/* BUTTONS */}
+                        <div className="flex justify-end gap-3 pt-4">
                             <button
                                 type="button"
                                 onClick={() => router.get('/survey-ulang')}
-                                className="px-4 py-2 rounded border"
+                                className="px-4 py-2 rounded border text-sm"
                             >
                                 Batal
                             </button>
 
                             <button
                                 type="submit"
-                                className="px-5 py-2 rounded bg-blue-600 text-white"
                                 disabled={loading}
+                                className="px-5 py-2 rounded bg-indigo-600 text-white text-sm shadow hover:bg-indigo-700"
                             >
                                 {loading ? 'Menyimpan...' : 'Simpan Survey Ulang'}
                             </button>
                         </div>
                     </form>
+
                 </div>
             </div>
         </>
