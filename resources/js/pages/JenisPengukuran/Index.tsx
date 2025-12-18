@@ -81,26 +81,44 @@ export default function Index({ jenisPengukuran }: Props) {
         reset();
     };
 
-    const handleSubmit: FormEventHandler = (e) => {
-        e.preventDefault();
+    // const handleSubmit: FormEventHandler = (e) => {
+    //     e.preventDefault();
 
-        if (deleteMode && selectedJenisPengukuran) {
-            router.delete(`/jenis-pengukuran/${selectedJenisPengukuran.id}`, {
-                onSuccess: closeModal,
-            });
-            return;
-        }
+    //     if (deleteMode && selectedJenisPengukuran) {
+    //         router.delete(`/jenis-pengukuran/${selectedJenisPengukuran.id}`, {
+    //             onSuccess: closeModal,
+    //         });
+    //         return;
+    //     }
 
-        if (editMode && selectedJenisPengukuran) {
-            put(`/jenis-pengukuran/${selectedJenisPengukuran.id}`, {
-                onSuccess: closeModal,
-            });
-        } else {
-            post("/jenis-pengukuran", {
-                onSuccess: closeModal,
-            });
-        }
-    };
+    //     if (editMode && selectedJenisPengukuran) {
+    //         put(`/jenis-pengukuran/${selectedJenisPengukuran.id}`, {
+    //             onSuccess: closeModal,
+    //         });
+    //     } else {
+    //         post("/jenis-pengukuran", {
+    //             onSuccess: closeModal,
+    //         });
+    //     }
+    // };
+    const handleSubmit = () => {
+    if (deleteMode && selectedJenisPengukuran) {
+        router.delete(`/jenis-pengukuran/${selectedJenisPengukuran.id}`, {
+            onSuccess: closeModal,
+        });
+        return;
+    }
+
+    if (editMode && selectedJenisPengukuran) {
+        put(`/jenis-pengukuran/${selectedJenisPengukuran.id}`, {
+            onSuccess: closeModal,
+        });
+    } else {
+        post("/jenis-pengukuran", {
+            onSuccess: closeModal,
+        });
+    }
+};
 
     const openDeleteModal = (item: JenisPengukuran) => {
         setSelectedJenisPengukuran(item);
