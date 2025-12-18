@@ -3,6 +3,8 @@ import { Head, router } from '@inertiajs/react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 
+/* ================= TYPES ================= */
+
 interface GambarKerja {
     id: number;
     gambar_kerja: string | null;
@@ -23,6 +25,32 @@ interface Order {
 interface Props {
     orders: Order[];
 }
+
+/* ================= HELPER ================= */
+
+const getFileUrl = (path: string) => {
+    if (!path) return '';
+
+    // sudah full url
+    if (path.startsWith('http')) {
+        return path;
+    }
+
+    // sudah ada /storage di depan
+    if (path.startsWith('/storage')) {
+        return path;
+    }
+
+    // sudah ada storage/ tapi tanpa slash
+    if (path.startsWith('storage/')) {
+        return `/${path}`;
+    }
+
+    // pure path dari DB
+    return `/storage/${path}`;
+};
+
+/* ================= COMPONENT ================= */
 
 export default function GambarKerjaIndex({ orders }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(
@@ -47,7 +75,6 @@ export default function GambarKerjaIndex({ orders }: Props) {
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    // 🔥 WAJIB reload supaya FE dapet gambar_kerja baru
                     router.reload({ only: ['orders'] });
                 },
                 onFinish: () => setLoading(false),
@@ -119,59 +146,111 @@ export default function GambarKerjaIndex({ orders }: Props) {
                                 key={order.id}
                                 className="bg-white border rounded-xl p-4 shadow-sm"
                             >
-                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                    <div>
-                                        <p className="font-semibold text-stone-900">
-                                            {order.nama_project}
-                                        </p>
-                                        <p className="text-sm text-stone-600">
-                                            {order.company_name} •{' '}
-                                            {order.customer_name}
-                                        </p>
-
-                                        {gk?.response_time && (
-                                            <p className="mt-1 text-xs text-indigo-600">
-                                                Response oleh{' '}
-                                                <span className="font-semibold">
-                                                    {gk.response_by}
-                                                </span>{' '}
-                                                (
-                                                {new Date(
-                                                    gk.response_time,
-                                                ).toLocaleDateString('id-ID')}
-                                                )
+                                <div className="flex flex-col gap-3">
+                                    {/* INFO */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                        <div>
+                                            <p className="font-semibold text-stone-900">
+                                                {order.nama_project}
                                             </p>
-                                        )}
+                                            <p className="text-sm text-stone-600">
+                                                {order.company_name} •{' '}
+                                                {order.customer_name}
+                                            </p>
+
+                                            {gk?.response_time && (
+                                                <p className="mt-1 text-xs text-indigo-600">
+                                                    Response oleh{' '}
+                                                    <span className="font-semibold">
+                                                        {gk.response_by}
+                                                    </span>{' '}
+                                                    (
+                                                    {new Date(
+                                                        gk.response_time,
+                                                    ).toLocaleDateString(
+                                                        'id-ID',
+                                                    )}
+                                                    )
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        {/* ACTION */}
+                                        <div className="flex items-center gap-2">
+                                            {!gk && (
+                                                <button
+                                                    onClick={() =>
+                                                        handleResponse(order)
+                                                    }
+                                                    disabled={loading}
+                                                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"
+                                                >
+                                                    Response
+                                                </button>
+                                            )}
+
+                                            {gk &&
+                                                gk.status === 'pending' && (
+                                                    <button
+                                                        onClick={() =>
+                                                            setSelectedOrder(
+                                                                order,
+                                                            )
+                                                        }
+                                                        className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"
+                                                    >
+                                                        Upload Gambar Kerja
+                                                    </button>
+                                                )}
+
+                                            {gk &&
+                                                gk.status === 'uploaded' && (
+                                                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700">
+                                                        ✓ Gambar Kerja Uploaded
+                                                    </span>
+                                                )}
+                                        </div>
                                     </div>
 
-                                    {/* ACTION */}
-                                    {!gk && (
-                                        <button
-                                            onClick={() =>
-                                                handleResponse(order)
-                                            }
-                                            disabled={loading}
-                                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"
-                                        >
-                                            Response
-                                        </button>
-                                    )}
+                                    {/* PREVIEW */}
+                                    {gk?.gambar_kerja && (
+                                        <div className="mt-3 rounded-lg border bg-stone-50 p-3">
+                                            <p className="text-xs font-semibold text-stone-600 mb-2">
+                                                Preview Gambar Kerja
+                                            </p>
 
-                                    {gk && gk.status === 'pending' && (
-                                        <button
-                                            onClick={() =>
-                                                setSelectedOrder(order)
-                                            }
-                                            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"
-                                        >
-                                            Upload Gambar Kerja
-                                        </button>
-                                    )}
+                                            {gk.gambar_kerja.match(
+                                                /\.(jpg|jpeg|png)$/i,
+                                            ) ? (
+                                                <img
+                                                    src={getFileUrl(
+                                                        gk.gambar_kerja,
+                                                    )}
+                                                    alt="Gambar Kerja"
+                                                    className="max-h-48 rounded-lg border object-contain bg-white"
+                                                />
+                                            ) : (
+                                                <a
+                                                    href={getFileUrl(
+                                                        gk.gambar_kerja,
+                                                    )}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-2 text-sm text-indigo-600 hover:underline"
+                                                >
+                                                    📄 Lihat Gambar Kerja (PDF)
+                                                </a>
+                                            )}
 
-                                    {gk && gk.status === 'uploaded' && (
-                                        <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700">
-                                            ✓ Gambar Kerja Uploaded
-                                        </span>
+                                            {gk.notes && (
+                                                <p className="mt-2 text-xs text-stone-600">
+                                                    <span className="font-semibold">
+                                                        Catatan:
+                                                    </span>{' '}
+                                                    {gk.notes}
+                                                </p>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -180,7 +259,7 @@ export default function GambarKerjaIndex({ orders }: Props) {
                 </div>
             </main>
 
-            {/* ================= MODAL UPLOAD ================= */}
+            {/* MODAL UPLOAD */}
             {selectedOrder && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3">
                     <div className="bg-white w-full max-w-md rounded-xl shadow-xl">
