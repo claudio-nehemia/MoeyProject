@@ -23,17 +23,30 @@ class JenisPengukuranController extends Controller
     /**
      * Store a newly created resource in storage.
      */
+    // public function store(Request $request)
+    // {
+    //     $request->validate([
+    //         'nama_pengukuran' => 'required|string|max:255',
+    //     ]);
+
+    //     JenisPengukuran::create([
+    //         'nama_pengukuran' => $request->nama_pengukuran,
+    //     ]);
+
+    //     return redirect()->back()->with('success', 'Jenis Pengukuran created successfully.');
+    // }
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'nama_pengukuran' => 'required|string|max:255',
         ]);
 
-        JenisPengukuran::create([
-            'nama_pengukuran' => $request->nama_pengukuran,
-        ]);
+        $jenis = JenisPengukuran::create($validated);
 
-        return redirect()->back()->with('success', 'Jenis Pengukuran created successfully.');
+        return redirect()->back()->with([
+            'success' => 'Jenis Pengukuran created successfully.',
+            'newJenisPengukuran' => $jenis,
+        ]);
     }
 
     /**
