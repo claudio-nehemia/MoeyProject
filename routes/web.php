@@ -32,6 +32,7 @@ use App\Http\Controllers\SurveyScheduleController;
 use App\Http\Controllers\JenisPengukuranController;
 use App\Http\Controllers\ProjectManagementController;
 use App\Http\Controllers\GambarKerjaController;
+use App\Http\Controllers\ApprovalRabController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -525,6 +526,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/upload/{order}', [GambarKerjaController::class, 'upload'])
             ->middleware('permission:gambar-kerja.upload')
             ->name('upload');
+    });
+
+    Route::prefix('approval-material')->name('approval-material.')->group(function () {
+        Route::get('/', [ApprovalRabController::class, 'index'])
+        ->middleware('permission:approval-material.index')
+        ->name('index');
+        Route::get('/{itemPekerjaan}/edit', [ApprovalRabController::class, 'edit'])
+        ->middleware('permission:approval-material.edit')
+        ->name('edit');
+        Route::put('/{itemPekerjaan}', [ApprovalRabController::class, 'update'])
+        ->middleware('permission:approval-material.update')
+        ->name('update');
     });
 
 
