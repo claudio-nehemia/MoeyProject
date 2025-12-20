@@ -368,32 +368,31 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                                                                 👁️ Lihat
                                                             </a>
                                                             {!moodboard.moodboard_final && (
-                                                                <>
-                                                                    <button
-                                                                        onClick={() => handleAcceptDesain(moodboard, file)}
-                                                                        disabled={loading}
-                                                                        className="flex-1 px-2 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded transition-all disabled:opacity-50"
-                                                                    >
-                                                                        ✓ Terima
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => openReplaceModal(file)}
-                                                                        disabled={loading}
-                                                                        className="px-2 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded transition-all disabled:opacity-50"
-                                                                        title="Ganti file"
-                                                                    >
-                                                                        🔄
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleDeleteFile(file)}
-                                                                        disabled={loading}
-                                                                        className="px-2 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 rounded transition-all disabled:opacity-50"
-                                                                        title="Hapus file"
-                                                                    >
-                                                                        🗑️
-                                                                    </button>
-                                                                </>
+                                                                <button
+                                                                    onClick={() => handleAcceptDesain(moodboard, file)}
+                                                                    disabled={loading}
+                                                                    className="flex-1 px-2 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded transition-all disabled:opacity-50"
+                                                                >
+                                                                    ✓ Terima
+                                                                </button>
                                                             )}
+                                                            {/* Button Replace dan Delete tetap muncul walaupun sudah approved */}
+                                                            <button
+                                                                onClick={() => openReplaceModal(file)}
+                                                                disabled={loading}
+                                                                className="px-2 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded transition-all disabled:opacity-50"
+                                                                title="Ganti file"
+                                                            >
+                                                                🔄
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteFile(file)}
+                                                                disabled={loading}
+                                                                className="px-2 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 rounded transition-all disabled:opacity-50"
+                                                                title="Hapus file"
+                                                            >
+                                                                🗑️
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -432,43 +431,23 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                                         </div>
                                     )}
 
-                                    {/* Action Buttons - Only show if responded */}
+                                    {/* Action Buttons - Tetap bisa upload dan revisi walaupun sudah approved */}
                                     {moodboard.has_response_final && (
                                         <div className="flex gap-2">
-                                            {!moodboard.moodboard_final && (
-                                                <>
-                                                    <button
-                                                        onClick={() => openUploadModal(moodboard)}
-                                                        disabled={loading}
-                                                        className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 rounded-lg transition-all disabled:opacity-50"
-                                                    >
-                                                        {moodboard.final_files.length > 0 ? `+ Tambah File (${moodboard.final_files.length})` : 'Upload Desain Final'}
-                                                    </button>
-                                                    {moodboard.final_files.length > 0 && (
-                                                        <button
-                                                            onClick={() => openReviseModal(moodboard)}
-                                                            disabled={loading}
-                                                            className="px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-lg transition-all disabled:opacity-50"
-                                                        >
-                                                            🔄 Revisi
-                                                        </button>
-                                                    )}
-                                                </>
-                                            )}
-                                            {moodboard.moodboard_final && (
-                                                <>
-                                                    <div className="flex-1 text-center py-2 text-sm text-emerald-700 font-medium bg-emerald-50 rounded-lg border border-emerald-200">
-                                                        ✓ Desain final sudah disetujui
-                                                    </div>
-                                                    <button
-                                                        onClick={() => openReviseModal(moodboard)}
-                                                        disabled={loading}
-                                                        className="px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-lg transition-all disabled:opacity-50"
-                                                    >
-                                                        🔄 Revisi
-                                                    </button>
-                                                </>
-                                            )}
+                                            <button
+                                                onClick={() => openUploadModal(moodboard)}
+                                                disabled={loading}
+                                                className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 rounded-lg transition-all disabled:opacity-50"
+                                            >
+                                                {moodboard.final_files.length > 0 ? `+ Tambah File (${moodboard.final_files.length})` : 'Upload Desain Final'}
+                                            </button>
+                                            <button
+                                                onClick={() => openReviseModal(moodboard)}
+                                                disabled={loading}
+                                                className="px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-lg transition-all disabled:opacity-50"
+                                            >
+                                                🔄 Revisi
+                                            </button>
                                         </div>
                                     )}
                                 </div>

@@ -1,17 +1,17 @@
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import { Head, router } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ItemPekerjaanCard } from './components';
 import {
     ItemPekerjaan,
     ItemPekerjaanData,
     Order,
-    RuanganData,
     ProdukData,
+    RuanganData,
     calculateMaxDays,
-    getDefaultWorkplanItems,
     getDefaultRuanganTimeline,
+    getDefaultWorkplanItems,
 } from './components/types';
 
 interface Props {
@@ -24,33 +24,78 @@ export default function Create({ order, itemPekerjaans }: Props) {
     const [processing, setProcessing] = useState(false);
 
     // State untuk data item pekerjaan dengan workplan (grouped by ruangan)
-    const [itemPekerjaanData, setItemPekerjaanData] = useState<ItemPekerjaanData[]>([]);
+    const [itemPekerjaanData, setItemPekerjaanData] = useState<
+        ItemPekerjaanData[]
+    >([]);
 
     // Initialize data dari props - group by ruangan
     useEffect(() => {
-        const data = itemPekerjaans.map(ip => {
+        const data = itemPekerjaans.map((ip) => {
             // Group produks by ruangan
             const ruanganMap = new Map<string, ProdukData[]>();
-            
-            ip.produks.forEach(p => {
+
+            ip.produks.forEach((p) => {
                 const ruanganName = p.nama_ruangan || 'Tanpa Ruangan';
                 if (!ruanganMap.has(ruanganName)) {
                     ruanganMap.set(ruanganName, []);
                 }
+
+                let workplanItems =
+                    p.workplan_items && p.workplan_items.length > 0
+                        ? p.workplan_items
+                        : getDefaultWorkplanItems();
+
+                // Auto-set start dates
+                workplanItems = workplanItems.sort(
+                    (a, b) => a.urutan - b.urutan,
+                );
+                workplanItems = workplanItems.map((item, index) => {
+                    if (index === 0) {
+                        // Step pertama gunakan timeline project
+                        return {
+                            ...item,
+                            start_date:
+                                item.start_date ||
+                                ip.workplan_start_date ||
+                                null,
+                        };
+                    }
+
+                    // Step selanjutnya gunakan end_date step sebelumnya
+                    const prevItem = workplanItems[index - 1];
+                    if (prevItem.end_date && !item.start_date) {
+                        const newStartDate = prevItem.end_date;
+                        return {
+                            ...item,
+                            start_date: newStartDate,
+                            // Recalculate duration if end_date exists
+                            duration_days:
+                                item.end_date && newStartDate
+                                    ? calculateMaxDays(
+                                          newStartDate,
+                                          item.end_date,
+                                      )
+                                    : item.duration_days,
+                        };
+                    }
+
+                    return item;
+                });
+
                 ruanganMap.get(ruanganName)!.push({
                     id: p.id,
                     nama_produk: p.nama_produk,
                     nama_ruangan: p.nama_ruangan,
                     quantity: p.quantity,
                     dimensi: p.dimensi,
-                    workplan_items: p.workplan_items && p.workplan_items.length > 0
-                        ? p.workplan_items
-                        : getDefaultWorkplanItems(),
+                    workplan_items: workplanItems,
                 });
             });
 
             // Convert map to array of RuanganData
-            const ruangans: RuanganData[] = Array.from(ruanganMap.entries()).map(([nama_ruangan, produks]) => ({
+            const ruangans: RuanganData[] = Array.from(
+                ruanganMap.entries(),
+            ).map(([nama_ruangan, produks]) => ({
                 nama_ruangan,
                 produks,
                 timeline: getDefaultRuanganTimeline(),
@@ -61,7 +106,10 @@ export default function Create({ order, itemPekerjaans }: Props) {
                 nama_item: ip.nama_item || `Item Pekerjaan #${ip.id}`,
                 workplan_start_date: ip.workplan_start_date || '',
                 workplan_end_date: ip.workplan_end_date || '',
-                max_days: calculateMaxDays(ip.workplan_start_date || '', ip.workplan_end_date || ''),
+                max_days: calculateMaxDays(
+                    ip.workplan_start_date || '',
+                    ip.workplan_end_date || '',
+                ),
                 kontrak: ip.kontrak,
                 ruangans,
             };
@@ -70,79 +118,206 @@ export default function Create({ order, itemPekerjaans }: Props) {
     }, [itemPekerjaans]);
 
     // Update timeline for item pekerjaan
-    const updateItemPekerjaanTimeline = (ipId: number, field: 'workplan_start_date' | 'workplan_end_date', value: string) => {
-        setItemPekerjaanData(prev => prev.map(ip => {
-            if (ip.id !== ipId) return ip;
+    const updateItemPekerjaanTimeline = (
+        ipId: number,
+        field: 'workplan_start_date' | 'workplan_end_date',
+        value: string,
+    ) => {
+        setItemPekerjaanData((prev) =>
+            prev.map((ip) => {
+                if (ip.id !== ipId) return ip;
 
-            const updated = { ...ip, [field]: value };
-            updated.max_days = calculateMaxDays(
-                field === 'workplan_start_date' ? value : ip.workplan_start_date,
-                field === 'workplan_end_date' ? value : ip.workplan_end_date
-            );
-            return updated;
-        }));
+                const updated = { ...ip, [field]: value };
+                updated.max_days = calculateMaxDays(
+                    field === 'workplan_start_date'
+                        ? value
+                        : ip.workplan_start_date,
+                    field === 'workplan_end_date'
+                        ? value
+                        : ip.workplan_end_date,
+                );
+
+                // Jika workplan_start_date berubah, update start_date step pertama di semua produk
+                if (field === 'workplan_start_date' && value) {
+                    updated.ruangans = updated.ruangans.map((ruangan) => ({
+                        ...ruangan,
+                        produks: ruangan.produks.map((produk) => {
+                            const sortedItems = [...produk.workplan_items].sort(
+                                (a, b) => a.urutan - b.urutan,
+                            );
+                            if (sortedItems.length > 0 && sortedItems[0]) {
+                                sortedItems[0] = {
+                                    ...sortedItems[0],
+                                    start_date: value,
+                                };
+
+                                // Recalculate duration if end_date exists
+                                if (sortedItems[0].end_date) {
+                                    sortedItems[0].duration_days =
+                                        calculateMaxDays(
+                                            value,
+                                            sortedItems[0].end_date,
+                                        );
+                                }
+                            }
+
+                            return {
+                                ...produk,
+                                workplan_items: sortedItems,
+                            };
+                        }),
+                    }));
+                }
+
+                return updated;
+            }),
+        );
     };
 
+    // Update ruangan timeline
     // Update ruangan timeline
     const updateRuanganTimeline = (
         ipId: number,
         ruanganIndex: number,
         tahapan: string,
         field: 'start_date' | 'end_date',
-        value: string
+        value: string,
     ) => {
-        setItemPekerjaanData(prev => prev.map(ip => {
-            if (ip.id !== ipId) return ip;
+        setItemPekerjaanData((prev) =>
+            prev.map((ip) => {
+                if (ip.id !== ipId) return ip;
 
-            const newRuangans = [...ip.ruangans];
-            newRuangans[ruanganIndex] = {
-                ...newRuangans[ruanganIndex],
-                timeline: {
-                    ...newRuangans[ruanganIndex].timeline,
-                    [tahapan]: {
-                        ...newRuangans[ruanganIndex].timeline[tahapan],
-                        [field]: value,
-                    },
-                },
-            };
+                const newRuangans = [...ip.ruangans];
+                const currentRuangan = { ...newRuangans[ruanganIndex] };
+                const newTimeline = { ...currentRuangan.timeline };
 
-            return { ...ip, ruangans: newRuangans };
-        }));
+                // Update field yang diubah
+                newTimeline[tahapan] = {
+                    ...newTimeline[tahapan],
+                    [field]: value,
+                };
+
+                // Jika end_date berubah, update start_date step berikutnya
+                if (field === 'end_date' && value) {
+                    const tahapanOrder = [
+                        'Potong',
+                        'Rangkai',
+                        'Finishing',
+                        'Finishing QC',
+                        'Packing',
+                        'Pengiriman',
+                        'Trap',
+                        'Install',
+                        'Install QC',
+                    ];
+
+                    const currentIndex = tahapanOrder.indexOf(tahapan);
+
+                    // Cari step berikutnya yang ada di timeline
+                    for (
+                        let i = currentIndex + 1;
+                        i < tahapanOrder.length;
+                        i++
+                    ) {
+                        const nextTahapan = tahapanOrder[i];
+                        if (newTimeline[nextTahapan]) {
+                            // Auto-set start_date step berikutnya = end_date step ini
+                            newTimeline[nextTahapan] = {
+                                ...newTimeline[nextTahapan],
+                                start_date: value,
+                            };
+                            break; // Hanya update step berikutnya langsung
+                        }
+                    }
+                }
+
+                currentRuangan.timeline = newTimeline;
+                newRuangans[ruanganIndex] = currentRuangan;
+
+                return { ...ip, ruangans: newRuangans };
+            }),
+        );
     };
 
     // Apply ruangan timeline to all produks in that ruangan
-    const applyRuanganTimelineToProduks = (ipId: number, ruanganIndex: number, tahapan: string) => {
-        setItemPekerjaanData(prev => prev.map(ip => {
-            if (ip.id !== ipId) return ip;
+    const applyRuanganTimelineToProduks = (
+        ipId: number,
+        ruanganIndex: number,
+        tahapan: string,
+    ) => {
+        setItemPekerjaanData((prev) =>
+            prev.map((ip) => {
+                if (ip.id !== ipId) return ip;
 
-            const ruangan = ip.ruangans[ruanganIndex];
-            const timeline = ruangan.timeline[tahapan];
-            if (!timeline.start_date || !timeline.end_date) return ip;
+                const ruangan = ip.ruangans[ruanganIndex];
+                const timeline = ruangan.timeline[tahapan];
+                if (!timeline.start_date || !timeline.end_date) return ip;
 
-            // Calculate duration
-            const duration = calculateMaxDays(timeline.start_date, timeline.end_date);
+                // Calculate duration
+                const duration = calculateMaxDays(
+                    timeline.start_date,
+                    timeline.end_date,
+                );
 
-            const newRuangans = [...ip.ruangans];
-            newRuangans[ruanganIndex] = {
-                ...ruangan,
-                produks: ruangan.produks.map(produk => ({
-                    ...produk,
-                    workplan_items: produk.workplan_items.map(item => {
-                        if (item.nama_tahapan === tahapan) {
-                            return {
-                                ...item,
-                                start_date: timeline.start_date,
-                                end_date: timeline.end_date,
-                                duration_days: duration,
-                            };
+                const newRuangans = [...ip.ruangans];
+                newRuangans[ruanganIndex] = {
+                    ...ruangan,
+                    produks: ruangan.produks.map((produk) => {
+                        let updatedItems = produk.workplan_items.map((item) => {
+                            if (item.nama_tahapan === tahapan) {
+                                return {
+                                    ...item,
+                                    start_date: timeline.start_date,
+                                    end_date: timeline.end_date,
+                                    duration_days: duration,
+                                };
+                            }
+                            return item;
+                        });
+
+                        // Auto-adjust start_dates untuk step berikutnya
+                        updatedItems = updatedItems.sort(
+                            (a, b) => a.urutan - b.urutan,
+                        );
+                        for (let i = 0; i < updatedItems.length; i++) {
+                            if (i === 0) {
+                                // Step pertama gunakan timeline project
+                                if (!updatedItems[i].start_date) {
+                                    updatedItems[i] = {
+                                        ...updatedItems[i],
+                                        start_date: ip.workplan_start_date,
+                                    };
+                                }
+                            } else {
+                                // Step selanjutnya gunakan end_date step sebelumnya
+                                const prevItem = updatedItems[i - 1];
+                                if (prevItem.end_date) {
+                                    const prevEndDate = prevItem.end_date;
+                                    updatedItems[i] = {
+                                        ...updatedItems[i],
+                                        start_date: prevEndDate,
+                                    };
+                                    // Recalculate duration if end_date exists
+                                    if (
+                                        updatedItems[i].end_date &&
+                                        prevEndDate
+                                    ) {
+                                        updatedItems[i].duration_days =
+                                            calculateMaxDays(
+                                                prevEndDate,
+                                                updatedItems[i].end_date!,
+                                            );
+                                    }
+                                }
+                            }
                         }
-                        return item;
+                        return { ...produk, workplan_items: updatedItems };
                     }),
-                })),
-            };
+                };
 
-            return { ...ip, ruangans: newRuangans };
-        }));
+                return { ...ip, ruangans: newRuangans };
+            }),
+        );
     };
 
     // Update workplan item
@@ -152,104 +327,203 @@ export default function Create({ order, itemPekerjaans }: Props) {
         produkId: number,
         itemIndex: number,
         field: string,
-        value: any
+        value: any,
     ) => {
-        setItemPekerjaanData(prev => prev.map(ip => {
-            if (ip.id !== ipId) return ip;
+        setItemPekerjaanData((prev) =>
+            prev.map((ip) => {
+                if (ip.id !== ipId) return ip;
 
-            const newRuangans = ip.ruangans.map((ruangan, rIdx) => {
-                if (rIdx !== ruanganIndex) return ruangan;
+                const newRuangans = ip.ruangans.map((ruangan, rIdx) => {
+                    if (rIdx !== ruanganIndex) return ruangan;
 
-                return {
-                    ...ruangan,
-                    produks: ruangan.produks.map(p => {
-                        if (p.id !== produkId) return p;
+                    return {
+                        ...ruangan,
+                        produks: ruangan.produks.map((p) => {
+                            if (p.id !== produkId) return p;
 
-                        const newItems = [...p.workplan_items];
-                        newItems[itemIndex] = { ...newItems[itemIndex], [field]: value };
+                            const newItems = [...p.workplan_items];
+                            newItems[itemIndex] = {
+                                ...newItems[itemIndex],
+                                [field]: value,
+                            };
 
-                        // Auto-calculate duration when dates change
-                        if (field === 'start_date' || field === 'end_date') {
-                            const item = newItems[itemIndex];
-                            if (item.start_date && item.end_date) {
-                                newItems[itemIndex].duration_days = calculateMaxDays(item.start_date, item.end_date);
-                            } else {
-                                newItems[itemIndex].duration_days = null;
+                            // Auto-calculate duration when dates change
+                            if (
+                                field === 'start_date' ||
+                                field === 'end_date'
+                            ) {
+                                const item = newItems[itemIndex];
+                                if (item.start_date && item.end_date) {
+                                    newItems[itemIndex].duration_days =
+                                        calculateMaxDays(
+                                            item.start_date,
+                                            item.end_date,
+                                        );
+                                } else {
+                                    newItems[itemIndex].duration_days = null;
+                                }
+
+                                // Jika end_date berubah, update start_date step berikutnya
+                                if (field === 'end_date' && value) {
+                                    const currentUrutan =
+                                        newItems[itemIndex].urutan;
+                                    const nextItemIndex = newItems.findIndex(
+                                        (i) => i.urutan === currentUrutan + 1,
+                                    );
+
+                                    if (nextItemIndex !== -1) {
+                                        // Auto-set start_date step berikutnya = end_date step ini
+                                        newItems[nextItemIndex] = {
+                                            ...newItems[nextItemIndex],
+                                            start_date: value,
+                                        };
+
+                                        // Hitung ulang duration jika ada end_date
+                                        if (newItems[nextItemIndex].end_date) {
+                                            newItems[
+                                                nextItemIndex
+                                            ].duration_days = calculateMaxDays(
+                                                value,
+                                                newItems[nextItemIndex]
+                                                    .end_date,
+                                            );
+                                        }
+                                    }
+                                }
                             }
-                        }
 
-                        return { ...p, workplan_items: newItems };
-                    }),
-                };
-            });
+                            return { ...p, workplan_items: newItems };
+                        }),
+                    };
+                });
 
-            return { ...ip, ruangans: newRuangans };
-        }));
+                return { ...ip, ruangans: newRuangans };
+            }),
+        );
     };
 
     // Add new workplan item for a produk
-    const addWorkplanItem = (ipId: number, ruanganIndex: number, produkId: number) => {
-        setItemPekerjaanData(prev => prev.map(ip => {
-            if (ip.id !== ipId) return ip;
+    const addWorkplanItem = (
+        ipId: number,
+        ruanganIndex: number,
+        produkId: number,
+    ) => {
+        setItemPekerjaanData((prev) =>
+            prev.map((ip) => {
+                if (ip.id !== ipId) return ip;
 
-            const newRuangans = ip.ruangans.map((ruangan, rIdx) => {
-                if (rIdx !== ruanganIndex) return ruangan;
+                const newRuangans = ip.ruangans.map((ruangan, rIdx) => {
+                    if (rIdx !== ruanganIndex) return ruangan;
 
-                return {
-                    ...ruangan,
-                    produks: ruangan.produks.map(p => {
-                        if (p.id !== produkId) return p;
+                    return {
+                        ...ruangan,
+                        produks: ruangan.produks.map((p) => {
+                            if (p.id !== produkId) return p;
 
-                        const maxUrutan = Math.max(...p.workplan_items.map(i => i.urutan), 0);
-                        return {
-                            ...p,
-                            workplan_items: [
-                                ...p.workplan_items,
-                                {
-                                    id: null,
-                                    nama_tahapan: '',
-                                    start_date: null,
-                                    end_date: null,
-                                    duration_days: null,
-                                    urutan: maxUrutan + 1,
-                                    status: 'planned' as const,
-                                    catatan: null,
-                                },
-                            ],
-                        };
-                    }),
-                };
-            });
+                            const maxUrutan = Math.max(
+                                ...p.workplan_items.map((i) => i.urutan),
+                                0,
+                            );
+                            const lastItem = p.workplan_items.find(
+                                (i) => i.urutan === maxUrutan,
+                            );
 
-            return { ...ip, ruangans: newRuangans };
-        }));
+                            // Set start_date dari end_date item terakhir
+                            const newStartDate = lastItem?.end_date || null;
+
+                            return {
+                                ...p,
+                                workplan_items: [
+                                    ...p.workplan_items,
+                                    {
+                                        id: null,
+                                        nama_tahapan: '',
+                                        start_date: newStartDate,
+                                        end_date: null,
+                                        duration_days: null,
+                                        urutan: maxUrutan + 1,
+                                        status: 'planned' as const,
+                                        catatan: null,
+                                    },
+                                ],
+                            };
+                        }),
+                    };
+                });
+
+                return { ...ip, ruangans: newRuangans };
+            }),
+        );
     };
 
     // Remove workplan item
-    const removeWorkplanItem = (ipId: number, ruanganIndex: number, produkId: number, itemIndex: number) => {
-        setItemPekerjaanData(prev => prev.map(ip => {
-            if (ip.id !== ipId) return ip;
+    const removeWorkplanItem = (
+        ipId: number,
+        ruanganIndex: number,
+        produkId: number,
+        itemIndex: number,
+    ) => {
+        setItemPekerjaanData((prev) =>
+            prev.map((ip) => {
+                if (ip.id !== ipId) return ip;
 
-            const newRuangans = ip.ruangans.map((ruangan, rIdx) => {
-                if (rIdx !== ruanganIndex) return ruangan;
+                const newRuangans = ip.ruangans.map((ruangan, rIdx) => {
+                    if (rIdx !== ruanganIndex) return ruangan;
 
-                return {
-                    ...ruangan,
-                    produks: ruangan.produks.map(p => {
-                        if (p.id !== produkId) return p;
+                    return {
+                        ...ruangan,
+                        produks: ruangan.produks.map((p) => {
+                            if (p.id !== produkId) return p;
 
-                        const newItems = p.workplan_items.filter((_, i) => i !== itemIndex);
-                        // Re-order urutan
-                        newItems.forEach((item, idx) => {
-                            item.urutan = idx + 1;
-                        });
-                        return { ...p, workplan_items: newItems };
-                    }),
-                };
-            });
+                            const newItems = p.workplan_items.filter(
+                                (_, i) => i !== itemIndex,
+                            );
+                            // Re-order urutan
+                            newItems.forEach((item, idx) => {
+                                item.urutan = idx + 1;
+                            });
 
-            return { ...ip, ruangans: newRuangans };
-        }));
+                            // Auto-adjust start_dates setelah delete
+                            for (let i = 0; i < newItems.length; i++) {
+                                if (i === 0) {
+                                    // Step pertama gunakan timeline project jika belum ada
+                                    if (
+                                        !newItems[i].start_date &&
+                                        ip.workplan_start_date
+                                    ) {
+                                        newItems[i].start_date =
+                                            ip.workplan_start_date;
+                                    }
+                                } else {
+                                    // Step selanjutnya gunakan end_date step sebelumnya
+                                    const prevItem = newItems[i - 1];
+                                    if (prevItem.end_date) {
+                                        const prevEndDate = prevItem.end_date;
+                                        newItems[i].start_date = prevEndDate;
+
+                                        // Recalculate duration if end_date exists
+                                        if (
+                                            newItems[i].end_date &&
+                                            prevEndDate
+                                        ) {
+                                            newItems[i].duration_days =
+                                                calculateMaxDays(
+                                                    prevEndDate,
+                                                    newItems[i].end_date!,
+                                                );
+                                        }
+                                    }
+                                }
+                            }
+
+                            return { ...p, workplan_items: newItems };
+                        }),
+                    };
+                });
+
+                return { ...ip, ruangans: newRuangans };
+            }),
+        );
     };
 
     // Validate form before submit
@@ -267,22 +541,31 @@ export default function Create({ order, itemPekerjaans }: Props) {
                 for (const p of ruangan.produks) {
                     for (const item of p.workplan_items) {
                         if (!item.nama_tahapan.trim()) {
-                            alert(`Nama tahapan harus diisi untuk produk "${p.nama_produk}" di ruangan "${ruangan.nama_ruangan}"!`);
+                            alert(
+                                `Nama tahapan harus diisi untuk produk "${p.nama_produk}" di ruangan "${ruangan.nama_ruangan}"!`,
+                            );
                             return false;
                         }
 
                         // Validate dates are within timeline
                         if (item.start_date) {
                             const startDate = new Date(item.start_date);
-                            if (startDate < ipStartDate || startDate > ipEndDate) {
-                                alert(`Tanggal mulai tahapan "${item.nama_tahapan}" pada produk "${p.nama_produk}" harus dalam rentang timeline project!`);
+                            if (
+                                startDate < ipStartDate ||
+                                startDate > ipEndDate
+                            ) {
+                                alert(
+                                    `Tanggal mulai tahapan "${item.nama_tahapan}" pada produk "${p.nama_produk}" harus dalam rentang timeline project!`,
+                                );
                                 return false;
                             }
                         }
                         if (item.end_date) {
                             const endDate = new Date(item.end_date);
                             if (endDate < ipStartDate || endDate > ipEndDate) {
-                                alert(`Tanggal selesai tahapan "${item.nama_tahapan}" pada produk "${p.nama_produk}" harus dalam rentang timeline project!`);
+                                alert(
+                                    `Tanggal selesai tahapan "${item.nama_tahapan}" pada produk "${p.nama_produk}" harus dalam rentang timeline project!`,
+                                );
                                 return false;
                             }
                         }
@@ -303,14 +586,14 @@ export default function Create({ order, itemPekerjaans }: Props) {
 
         // Flatten ruangans back to produks for submission
         const submitData = {
-            item_pekerjaans: itemPekerjaanData.map(ip => ({
+            item_pekerjaans: itemPekerjaanData.map((ip) => ({
                 id: ip.id,
                 workplan_start_date: ip.workplan_start_date,
                 workplan_end_date: ip.workplan_end_date,
-                produks: ip.ruangans.flatMap(ruangan =>
-                    ruangan.produks.map(p => ({
+                produks: ip.ruangans.flatMap((ruangan) =>
+                    ruangan.produks.map((p) => ({
                         id: p.id,
-                        workplan_items: p.workplan_items.map(item => ({
+                        workplan_items: p.workplan_items.map((item) => ({
                             id: item.id,
                             nama_tahapan: item.nama_tahapan,
                             start_date: item.start_date,
@@ -320,7 +603,7 @@ export default function Create({ order, itemPekerjaans }: Props) {
                             status: item.status,
                             catatan: item.catatan,
                         })),
-                    }))
+                    })),
                 ),
             })),
         };
@@ -348,12 +631,26 @@ export default function Create({ order, itemPekerjaans }: Props) {
             <main className="px-2 pt-12 pb-6 pl-0 transition-all sm:px-4 sm:pl-60">
                 {/* Header */}
                 <div className="mb-6">
-                    <div className="flex items-center gap-2 text-sm text-stone-500 mb-2">
-                        <a href="/workplan" className="hover:text-amber-600">Workplan</a>
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    <div className="mb-2 flex items-center gap-2 text-sm text-stone-500">
+                        <a href="/workplan" className="hover:text-amber-600">
+                            Workplan
+                        </a>
+                        <svg
+                            className="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 5l7 7-7 7"
+                            />
                         </svg>
-                        <span className="text-stone-900 font-medium">Buat Workplan</span>
+                        <span className="font-medium text-stone-900">
+                            Buat Workplan
+                        </span>
                     </div>
 
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -361,7 +658,7 @@ export default function Create({ order, itemPekerjaans }: Props) {
                             <h1 className="text-2xl font-bold text-stone-900 sm:text-3xl">
                                 Buat Workplan
                             </h1>
-                            <p className="text-sm text-stone-600 mt-1">
+                            <p className="mt-1 text-sm text-stone-600">
                                 {order.nama_project} • {order.company_name}
                             </p>
                         </div>
@@ -379,7 +676,9 @@ export default function Create({ order, itemPekerjaans }: Props) {
                                 ipIndex={ipIndex}
                                 onUpdateTimeline={updateItemPekerjaanTimeline}
                                 onUpdateRuanganTimeline={updateRuanganTimeline}
-                                onApplyRuanganTimelineToProduks={applyRuanganTimelineToProduks}
+                                onApplyRuanganTimelineToProduks={
+                                    applyRuanganTimelineToProduks
+                                }
                                 onUpdateWorkplanItem={updateWorkplanItem}
                                 onAddWorkplanItem={addWorkplanItem}
                                 onRemoveWorkplanItem={removeWorkplanItem}
@@ -402,16 +701,41 @@ export default function Create({ order, itemPekerjaans }: Props) {
                         >
                             {processing ? (
                                 <>
-                                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                    <svg
+                                        className="h-4 w-4 animate-spin"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <circle
+                                            className="opacity-25"
+                                            cx="12"
+                                            cy="12"
+                                            r="10"
+                                            stroke="currentColor"
+                                            strokeWidth="4"
+                                        />
+                                        <path
+                                            className="opacity-75"
+                                            fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                        />
                                     </svg>
                                     Menyimpan...
                                 </>
                             ) : (
                                 <>
-                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    <svg
+                                        className="h-4 w-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M5 13l4 4L19 7"
+                                        />
                                     </svg>
                                     Simpan Workplan
                                 </>
