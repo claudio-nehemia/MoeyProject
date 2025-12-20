@@ -11,6 +11,7 @@ class ItemPekerjaanItem extends Model
         'item_id',
         'quantity',
         'notes',
+        'keterangan_material',
     ];
 
     public function itemPekerjaanJenisItem()

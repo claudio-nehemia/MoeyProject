@@ -834,6 +834,25 @@ class PermissionSeeder extends Seeder
                 'group' => 'drafters - Gambar Kerja'
             ],
 
+            // Approval Material
+            [
+                'name' => 'approval-material.index',
+                'display_name' => 'View Approval Material',
+                'group' => 'Operations - Approval Material'
+            ],
+
+            [
+                'name' => 'approval-material.edit',
+                'display_name' => 'Edit Approval Material',
+                'group' => 'Operations - Approval Material'
+            ],
+
+            [
+                'name' => 'approval-material.update',
+                'display_name' => 'Update Approval Material',
+                'group' => 'Operations - Approval Material'
+            ],
+
             
             // PDF Export Permissions
             [
