@@ -39,7 +39,13 @@ class Notification extends Model
 
     const TYPE_INVOICE_REQUEST = 'invoice_request';
 
+    const TYPE_SURVEY_SCHEDULE_REQUEST = 'survey_schedule_request'; 
+
     const TYPE_SURVEY_ULANG_REQUEST = 'survey_ulang_request';
+
+    const TYPE_GAMBAR_KERJA_REQUEST = 'gambar_kerja_request';
+
+    const TYPE_APPROVAL_MATERIAL_REQUEST = 'approval_material_request';
 
     const TYPE_WORKPLAN_REQUEST = 'workplan_request';
 

@@ -4,10 +4,11 @@ namespace App\Http\Controllers;
 
 use Inertia\Inertia;
 use App\Models\Order;
-use App\Models\SurveyUlang;
 use App\Models\GambarKerja;
-use App\Models\GambarKerjaFile;
+use App\Models\SurveyUlang;
 use Illuminate\Http\Request;
+use App\Models\GambarKerjaFile;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Storage;
 
 class GambarKerjaController extends Controller
@@ -99,6 +100,10 @@ class GambarKerjaController extends Controller
             'notes'  => $request->notes,
             'status' => 'uploaded',
         ]);
+
+        $notificationService = new NotificationService(); 
+        
+        $notificationService->sendApprovalMaterialRequestNotification($order);
 
         return back()->with('success', 'Gambar kerja berhasil disimpan.');
     }

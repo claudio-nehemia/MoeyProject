@@ -63,11 +63,13 @@ class KontrakController extends Controller
                         ? Storage::url($itemPekerjaan->kontrak->signed_contract_path) 
                         : null,
                     'signed_at' => $itemPekerjaan->kontrak->signed_at?->format('d M Y H:i'),
-                    'termin' => [
-                        'id' => $itemPekerjaan->kontrak->termin->id ?? null,
-                        'nama' => $itemPekerjaan->kontrak->termin->nama_tipe ?? null,
+                    'response_time' => $itemPekerjaan->kontrak->response_time?->format('d M Y H:i'),
+                    'response_by' => $itemPekerjaan->kontrak->response_by,
+                    'termin' => $itemPekerjaan->kontrak->termin ? [
+                        'id' => $itemPekerjaan->kontrak->termin->id,
+                        'nama' => $itemPekerjaan->kontrak->termin->nama_tipe,
                         'tahapan' => $itemPekerjaan->kontrak->termin->tahapan ?? [],
-                    ],
+                    ] : null,
                 ] : null,
             ];
         });
@@ -100,10 +102,11 @@ class KontrakController extends Controller
             'termin_id.exists' => 'Termin yang dipilih tidak ditemukan.',
         ]);
 
-        // Check if kontrak already exists
-        $existingKontrak = Kontrak::where('item_pekerjaan_id', $validated['item_pekerjaan_id'])->first();
-        if ($existingKontrak) {
-            return back()->withErrors(['error' => 'Kontrak untuk Item Pekerjaan ini sudah ada.']);
+        // Get existing kontrak (yang sudah dibuat di response())
+        $kontrak = Kontrak::where('item_pekerjaan_id', $validated['item_pekerjaan_id'])->first();
+        
+        if (!$kontrak) {
+            return back()->withErrors(['error' => 'Kontrak belum di-response. Silakan response terlebih dahulu.']);
         }
 
         // Get harga_kontrak from RAB Kontrak grand total
@@ -113,34 +116,51 @@ class KontrakController extends Controller
         }
         
         $hargaKontrak = $itemPekerjaan->rabKontrak->rabKontrakProduks->sum('harga_akhir');
-        $validated['harga_kontrak'] = $hargaKontrak;
         
         // Set tanggal mulai dan tanggal selesai berdasarkan durasi kontrak
+        $validated['harga_kontrak'] = $hargaKontrak;
         $validated['tanggal_mulai'] = now();
         $validated['tanggal_selesai'] = now()->addDays($validated['durasi_kontrak']);
 
         try {
-            $kontrak = Kontrak::create($validated);
-            \Log::info('Kontrak Created:', $kontrak->toArray());
+            // UPDATE kontrak yang sudah ada (bukan create baru)
+            $kontrak->update($validated);
+            \Log::info('Kontrak Updated:', $kontrak->fresh()->toArray());
 
             // Update tahapan_proyek to 'kontrak'
             $itemPekerjaan->moodboard->order->update([
                 'tahapan_proyek' => 'kontrak',
             ]);
             
-            return redirect()->route('kontrak.index')->with('success', 'Kontrak berhasil dibuat!');
+            return redirect()->route('kontrak.index')->with('success', 'Kontrak berhasil dilengkapi!');
         } catch (\Exception $e) {
-            \Log::error('Kontrak Creation Error:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-            return back()->withErrors(['error' => 'Gagal membuat kontrak: ' . $e->getMessage()]);
+            \Log::error('Kontrak Update Error:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return back()->withErrors(['error' => 'Gagal melengkapi kontrak: ' . $e->getMessage()]);
         }
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Kontrak $kontrak)
+    public function response(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'item_pekerjaan_id' => 'required|exists:item_pekerjaans,id',
+        ]);
+
+        // Check if kontrak sudah ada
+        $existingKontrak = Kontrak::where('item_pekerjaan_id', $validated['item_pekerjaan_id'])->first();
+        if ($existingKontrak) {
+            return back()->withErrors(['error' => 'Kontrak sudah pernah di-response.']);
+        }
+
+        Kontrak::create([
+            'item_pekerjaan_id' => $validated['item_pekerjaan_id'],
+            'response_time' => now(),
+            'response_by' => auth()->user()->name,
+        ]);
+
+        return back()->with('success', 'Response kontrak berhasil.');
     }
 
     /**

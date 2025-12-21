@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use Inertia\Inertia;
+use Illuminate\Http\Request;
 use App\Models\ItemPekerjaan;
 use App\Models\ItemPekerjaanItem;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
+use App\Services\NotificationService;
 
 class ApprovalRabController extends Controller
 {
@@ -98,6 +99,11 @@ class ApprovalRabController extends Controller
                 'keterangan_material' => $item['keterangan_material'],
             ]);
         }
+
+        $notificationService = new NotificationService();
+        $notificationService->sendWorkplanRequestNotification(
+            ItemPekerjaan::find($id)->moodboard->order
+        );
 
         return redirect()->route('approval-material.index')
             ->with('success', 'Approval material berhasil disimpan');

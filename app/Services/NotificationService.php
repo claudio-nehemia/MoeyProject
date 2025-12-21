@@ -273,9 +273,8 @@ class NotificationService
         }
     }
 
-    public function sendSurveyUlangRequestNotification(Order $order)
+    public function sendSurveyScheduleRequestNotification(Order $order)
     {
-        // Get surveyor/drafter from order team
         $pms = User::whereHas('role', function ($query) {
             $query->where('nama_role', 'Project Manager');
         })->get();
@@ -284,14 +283,80 @@ class NotificationService
             Notification::create([
                 'user_id' => $pm->id,
                 'order_id' => $order->id,
+                'type' => Notification::TYPE_SURVEY_SCHEDULE_REQUEST,
+                'title' => 'Survey Schedule Request - ' . $order->nama_project,
+                'message' => 'Anda ditugaskan untuk menjadwalkan ulang survey pada project "' . $order->nama_project . '". Silakan atur jadwal survey.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/survey-schedule',
+                ],
+            ]);
+        }
+    }
+
+    public function sendSurveyUlangRequestNotification(Order $order)
+    {
+        // Get drafter/surveyor from order team
+        $teams = $order->surveyUsers()->whereHas('role', function ($query) {
+            $query->whereIn('nama_role', ['Surveyor', 'Drafter', 'Desainer']);
+        })->get();
+
+        foreach ($teams as $team) {
+            Notification::create([
+                'user_id' => $team->id,
+                'order_id' => $order->id,
                 'type' => Notification::TYPE_SURVEY_ULANG_REQUEST,
-                'title' => 'Survey Ulang Request - ' . $order->nama_project,
-                'message' => 'Anda ditugaskan untuk melakukan survey ulang pada project "' . $order->nama_project . '". Silakan lengkapi data survey ulang.',
+                'title' => 'Survey Request - ' . $order->nama_project,
+                'message' => 'Anda ditugaskan untuk melakukan survey pada project "' . $order->nama_project . '". Silakan lengkapi data survey.',
                 'data' => [
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
                     'tanggal_survey' => $order->tanggal_survey,
                     'action_url' => '/survey-results',
+                ],
+            ]);
+        }
+    }
+
+    public function sendGambarKerjaRequestNotification(Order $order)
+    {
+        $teams = $order->surveyUsers()->whereHas('role', function ($query) {
+            $query->whereIn('nama_role', ['Surveyor', 'Drafter', 'Desainer']);
+        })->get();
+        foreach ($teams as $team) {
+            Notification::create([
+                'user_id' => $team->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_GAMBAR_KERJA_REQUEST,
+                'title' => 'Gambar Kerja Request - ' . $order->nama_project,
+                'message' => 'Survey ulang telah selesai untuk project "' . $order->nama_project . '". Silakan buat gambar kerja.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/gambar-kerja',
+                ],
+            ]);
+        }
+    }
+
+    public function sendApprovalMaterialRequestNotification(Order $order)
+    {
+        $drafters = $order->surveyUsers()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Drafter');
+        })->get();
+
+        foreach ($drafters as $drafter) {
+            Notification::create([
+                'user_id' => $drafter->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_APPROVAL_MATERIAL_REQUEST,
+                'title' => 'Approval Material Request - ' . $order->nama_project,
+                'message' => 'Gambar kerja telah selesai untuk project "' . $order->nama_project . '". Silakan lakukan approval material.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/approval-material',
                 ],
             ]);
         }
@@ -364,29 +429,6 @@ class NotificationService
         
         \Log::info('=== END SEND PROJECT MANAGEMENT NOTIFICATION ===');
     }
-
-    // public function sendSurveyScheduleRequestNotification(Order $order)
-    // {
-    //     // Get surveyor/drafter from order team
-    //     $surveyors = $order->users()->whereHas('role', function ($query) {
-    //         $query->whereIn('nama_role', ['Surveyor', 'Drafter']);
-    //     })->get();
-
-    //     foreach ($surveyors as $surveyor) {
-    //         Notification::create([
-    //             'user_id' => $surveyor->id,
-    //             'order_id' => $order->id,
-    //             'type' => Notification::TYPE_SURVEY_SCHEDULE_REQUEST,
-    //             'title' => 'Survey Schedule Request - ' . $order->nama_project,
-    //             'message' => 'Anda ditugaskan untuk menjadwalkan survey pada project "' . $order->nama_project . '". Silakan atur jadwal survey.',
-    //             'data' => [
-    //                 'order_name' => $order->nama_project,
-    //                 'customer_name' => $order->customer_name,
-    //                 'action_url' => '/survey-schedule',
-    //             ],
-    //         ]);
-    //     }
-    // }
 
     /**
      * Mark notification as read

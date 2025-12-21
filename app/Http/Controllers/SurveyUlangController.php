@@ -103,7 +103,7 @@ class SurveyUlangController extends Controller
 
         // Kirim notifikasi workplan request ke Project Manager
         $notificationService = new NotificationService();
-        $notificationService->sendWorkplanRequestNotification($order);
+        $notificationService->sendGambarKerjaRequestNotification($order);
 
         return redirect()->route('survey-ulang.index')->with('success', 'Survey ulang berhasil disimpan. Notifikasi workplan telah dikirim ke Project Manager.');
     }
