@@ -5,13 +5,19 @@ import Sidebar from '@/components/Sidebar';
 
 /* ================= TYPES ================= */
 
+interface GambarKerjaFile {
+    id: number;
+    original_name: string;
+    url: string;
+}
+
 interface GambarKerja {
     id: number;
-    gambar_kerja: string | null;
     response_time: string | null;
     response_by: string | null;
     status: 'pending' | 'uploaded';
     notes: string | null;
+    files: GambarKerjaFile[];
 }
 
 interface Order {
@@ -28,27 +34,7 @@ interface Props {
 
 /* ================= HELPER ================= */
 
-const getFileUrl = (path: string) => {
-    if (!path) return '';
-
-    // sudah full url
-    if (path.startsWith('http')) {
-        return path;
-    }
-
-    // sudah ada /storage di depan
-    if (path.startsWith('/storage')) {
-        return path;
-    }
-
-    // sudah ada storage/ tapi tanpa slash
-    if (path.startsWith('storage/')) {
-        return `/${path}`;
-    }
-
-    // pure path dari DB
-    return `/storage/${path}`;
-};
+const isImage = (name: string) => /\.(jpg|jpeg|png)$/i.test(name);
 
 /* ================= COMPONENT ================= */
 
@@ -58,54 +44,42 @@ export default function GambarKerjaIndex({ orders }: Props) {
     );
 
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-    const [file, setFile] = useState<File | null>(null);
+    const [files, setFiles] = useState<File[]>([]);
     const [notes, setNotes] = useState('');
     const [loading, setLoading] = useState(false);
 
     /* ================= RESPONSE ================= */
     const handleResponse = (order: Order) => {
-        if (!confirm(`Response gambar kerja untuk "${order.nama_project}"?`)) {
-            return;
-        }
+        if (!confirm(`Response gambar kerja untuk "${order.nama_project}"?`)) return;
 
         setLoading(true);
-        router.post(
-            `/gambar-kerja/response/${order.id}`,
-            {},
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    router.reload({ only: ['orders'] });
-                },
-                onFinish: () => setLoading(false),
-            },
-        );
+        router.post(`/gambar-kerja/response/${order.id}`, {}, {
+            preserveScroll: true,
+            onSuccess: () => router.reload({ only: ['orders'] }),
+            onFinish: () => setLoading(false),
+        });
     };
 
     /* ================= UPLOAD ================= */
     const handleUpload = () => {
-        if (!selectedOrder || !file) return;
+        if (!selectedOrder || files.length === 0) return;
 
         setLoading(true);
 
         const formData = new FormData();
-        formData.append('gambar_kerja', file);
+        files.forEach((f) => formData.append('files[]', f));
         formData.append('notes', notes);
 
-        router.post(
-            `/gambar-kerja/upload/${selectedOrder.id}`,
-            formData as any,
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    setSelectedOrder(null);
-                    setFile(null);
-                    setNotes('');
-                    router.reload({ only: ['orders'] });
-                },
-                onFinish: () => setLoading(false),
+        router.post(`/gambar-kerja/upload/${selectedOrder.id}`, formData as any, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setSelectedOrder(null);
+                setFiles([]);
+                setNotes('');
+                router.reload({ only: ['orders'] });
             },
-        );
+            onFinish: () => setLoading(false),
+        });
     };
 
     return (
@@ -140,6 +114,7 @@ export default function GambarKerjaIndex({ orders }: Props) {
 
                     {orders.map((order) => {
                         const gk = order.gambar_kerja;
+                        const filesList = gk?.files ?? [];
 
                         return (
                             <div
@@ -154,8 +129,7 @@ export default function GambarKerjaIndex({ orders }: Props) {
                                                 {order.nama_project}
                                             </p>
                                             <p className="text-sm text-stone-600">
-                                                {order.company_name} •{' '}
-                                                {order.customer_name}
+                                                {order.company_name} • {order.customer_name}
                                             </p>
 
                                             {gk?.response_time && (
@@ -165,11 +139,7 @@ export default function GambarKerjaIndex({ orders }: Props) {
                                                         {gk.response_by}
                                                     </span>{' '}
                                                     (
-                                                    {new Date(
-                                                        gk.response_time,
-                                                    ).toLocaleDateString(
-                                                        'id-ID',
-                                                    )}
+                                                    {new Date(gk.response_time).toLocaleDateString('id-ID')}
                                                     )
                                                 </p>
                                             )}
@@ -179,9 +149,7 @@ export default function GambarKerjaIndex({ orders }: Props) {
                                         <div className="flex items-center gap-2">
                                             {!gk && (
                                                 <button
-                                                    onClick={() =>
-                                                        handleResponse(order)
-                                                    }
+                                                    onClick={() => handleResponse(order)}
                                                     disabled={loading}
                                                     className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"
                                                 >
@@ -189,69 +157,70 @@ export default function GambarKerjaIndex({ orders }: Props) {
                                                 </button>
                                             )}
 
-                                            {gk &&
-                                                gk.status === 'pending' && (
-                                                    <button
-                                                        onClick={() =>
-                                                            setSelectedOrder(
-                                                                order,
-                                                            )
-                                                        }
-                                                        className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"
-                                                    >
-                                                        Upload Gambar Kerja
-                                                    </button>
-                                                )}
-
-                                            {gk &&
-                                                gk.status === 'uploaded' && (
-                                                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700">
-                                                        ✓ Gambar Kerja Uploaded
-                                                    </span>
-                                                )}
+                                            {gk && (
+                                                <button
+                                                    onClick={() => setSelectedOrder(order)}
+                                                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"
+                                                >
+                                                    {filesList.length > 0
+                                                        ? 'Edit / Tambah File'
+                                                        : 'Upload Gambar Kerja'}
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
 
-                                    {/* PREVIEW */}
-                                    {gk?.gambar_kerja && (
+                                    {/* PREVIEW FILES */}
+                                    {filesList.length > 0 && (
                                         <div className="mt-3 rounded-lg border bg-stone-50 p-3">
                                             <p className="text-xs font-semibold text-stone-600 mb-2">
-                                                Preview Gambar Kerja
+                                                Preview Gambar Kerja ({filesList.length})
                                             </p>
 
-                                            {gk.gambar_kerja.match(
-                                                /\.(jpg|jpeg|png)$/i,
-                                            ) ? (
-                                                <img
-                                                    src={getFileUrl(
-                                                        gk.gambar_kerja,
-                                                    )}
-                                                    alt="Gambar Kerja"
-                                                    className="max-h-48 rounded-lg border object-contain bg-white"
-                                                />
-                                            ) : (
-                                                <a
-                                                    href={getFileUrl(
-                                                        gk.gambar_kerja,
-                                                    )}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-flex items-center gap-2 text-sm text-indigo-600 hover:underline"
-                                                >
-                                                    📄 Lihat Gambar Kerja (PDF)
-                                                </a>
-                                            )}
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                {filesList.map((f) => {
+                                                    const isImage = f.original_name.match(
+                                                        /\.(jpg|jpeg|png)$/i
+                                                    );
 
-                                            {gk.notes && (
+                                                    return (
+                                                        <a
+                                                            key={f.id}
+                                                            href={`/gambar-kerja/show/${f.id}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="group block border rounded-lg bg-white p-2 hover:shadow"
+                                                        >
+                                                            {isImage ? (
+                                                                <img
+                                                                    src={f.url}
+                                                                    alt={f.original_name}
+                                                                    className="h-24 w-full object-contain rounded"
+                                                                />
+                                                            ) : (
+                                                                <div className="h-24 flex flex-col items-center justify-center text-xs text-stone-600">
+                                                                    📄 PDF
+                                                                </div>
+                                                            )}
+
+                                                            <p className="mt-1 text-[11px] text-center truncate text-stone-700">
+                                                                {f.original_name}
+                                                            </p>
+                                                        </a>
+
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {gk?.notes && (
                                                 <p className="mt-2 text-xs text-stone-600">
-                                                    <span className="font-semibold">
-                                                        Catatan:
-                                                    </span>{' '}
+                                                    <span className="font-semibold">Catatan:</span>{' '}
                                                     {gk.notes}
                                                 </p>
                                             )}
                                         </div>
                                     )}
+
                                 </div>
                             </div>
                         );
@@ -264,9 +233,7 @@ export default function GambarKerjaIndex({ orders }: Props) {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3">
                     <div className="bg-white w-full max-w-md rounded-xl shadow-xl">
                         <div className="px-5 py-4 border-b border-stone-300">
-                            <h2 className="text-lg font-bold">
-                                Upload Gambar Kerja
-                            </h2>
+                            <h2 className="text-lg font-bold">Upload Gambar Kerja</h2>
                             <p className="text-sm text-stone-600">
                                 {selectedOrder.nama_project}
                             </p>
@@ -275,9 +242,14 @@ export default function GambarKerjaIndex({ orders }: Props) {
                         <div className="p-5 space-y-4">
                             <input
                                 type="file"
+                                multiple
                                 accept=".jpg,.jpeg,.png,.pdf"
                                 onChange={(e) =>
-                                    setFile(e.target.files?.[0] || null)
+                                    setFiles(
+                                        e.target.files
+                                            ? Array.from(e.target.files)
+                                            : [],
+                                    )
                                 }
                                 className="w-full text-sm"
                             />
@@ -300,7 +272,7 @@ export default function GambarKerjaIndex({ orders }: Props) {
                             </button>
                             <button
                                 onClick={handleUpload}
-                                disabled={!file || loading}
+                                disabled={files.length === 0 || loading}
                                 className="flex-1 bg-indigo-600 text-white rounded-lg py-2 text-sm font-semibold disabled:opacity-50"
                             >
                                 {loading ? 'Uploading...' : 'Upload'}

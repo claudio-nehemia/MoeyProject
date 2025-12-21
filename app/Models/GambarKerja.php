@@ -6,11 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class GambarKerja extends Model
 {
-    protected $table = 'gambar_kerjas'; 
-    
     protected $fillable = [
         'order_id',
-        'gambar_kerja',
         'response_time',
         'response_by',
         'status',
@@ -20,5 +17,10 @@ class GambarKerja extends Model
     public function order()
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function files()
+    {
+        return $this->hasMany(GambarKerjaFile::class);
     }
 }
