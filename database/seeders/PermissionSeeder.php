@@ -834,6 +834,18 @@ class PermissionSeeder extends Seeder
                 'group' => 'drafters - Gambar Kerja'
             ],
 
+            [
+                'name' => 'gambar-kerja.delete',
+                'display_name' => 'Delete Gambar Kerja',
+                'group' => 'drafters - Gambar Kerja'
+            ],
+
+            [
+                'name' => 'gambar-kerja.show',
+                'display_name' => 'Show Gambar Kerja',
+                'group' => 'drafters - Gambar Kerja'
+            ],
+
             // Approval Material
             [
                 'name' => 'approval-material.index',

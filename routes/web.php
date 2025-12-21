@@ -526,6 +526,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/upload/{order}', [GambarKerjaController::class, 'upload'])
             ->middleware('permission:gambar-kerja.upload')
             ->name('upload');
+        Route::delete('/gambar-kerja/file/{file}', [GambarKerjaController::class, 'deleteFile'])
+            ->middleware('permission:gambar-kerja.delete')
+            ->name('delete');
+        Route::get('/show/{file}', [GambarKerjaController::class, 'showFile'])
+            ->middleware('permission:gambar-kerja.show')
+            ->name('show');
     });
 
     Route::prefix('approval-material')->name('approval-material.')->group(function () {
