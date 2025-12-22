@@ -26,5 +26,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/unread-count', [NotificationApiController::class, 'unreadCount'])->name('unread-count');
         Route::post('/{id}/mark-as-read', [NotificationApiController::class, 'markAsRead'])->name('mark-as-read');
         Route::post('/mark-all-as-read', [NotificationApiController::class, 'markAllAsRead'])->name('mark-all-as-read');
+        Route::post('/{id}/handle-response', [NotificationApiController::class, 'handleResponse']);
     });
 });

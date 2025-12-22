@@ -75,6 +75,20 @@ export default function ProdukModal({
         return 0;
     };
 
+    // Format number with thousand separators
+    const formatNumber = (value: string): string => {
+        // Remove all non-digit characters
+        const numbers = value.replace(/\D/g, '');
+        // Format with thousand separators
+        return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    };
+
+    // Parse formatted number back to plain string
+    const parseFormattedNumber = (value: string): string => {
+        // Remove dots and return plain number string
+        return value.replace(/\./g, '');
+    };
+
     // Hitung total harga dasar dari semua bahan baku
     const calculateTotalHargaDasar = (): number => {
         return (data.bahan_baku || []).reduce((sum: number, bahan: BahanBakuData) => {
@@ -155,8 +169,10 @@ export default function ProdukModal({
 
     const updateBahanBakuHarga = (itemId: number, field: 'harga_dasar' | 'harga_jasa', value: string) => {
         const currentBahan = data.bahan_baku || [];
+        // Store the unformatted value
+        const plainValue = parseFormattedNumber(value);
         const newBahan = currentBahan.map(b => 
-            b.item_id === itemId ? { ...b, [field]: value } : b
+            b.item_id === itemId ? { ...b, [field]: plainValue } : b
         );
         onDataChange('bahan_baku', newBahan);
     };
@@ -292,14 +308,12 @@ export default function ProdukModal({
                                                             <div className="relative">
                                                                 <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-stone-500 text-xs">Rp</span>
                                                                 <input
-                                                                    type="number"
-                                                                    value={bahanData?.harga_dasar ?? ''}
+                                                                    type="text"
+                                                                    value={bahanData?.harga_dasar ? formatNumber(bahanData.harga_dasar) : ''}
                                                                     onChange={(e) => updateBahanBakuHarga(item.id, 'harga_dasar', e.target.value)}
                                                                     className="w-full pl-8 pr-2 py-1.5 text-xs border border-stone-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
                                                                     placeholder="0"
                                                                     disabled={processing}
-                                                                    min="0"
-                                                                    step="0.01"
                                                                 />
                                                             </div>
                                                         </div>
@@ -308,14 +322,12 @@ export default function ProdukModal({
                                                             <div className="relative">
                                                                 <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-stone-500 text-xs">Rp</span>
                                                                 <input
-                                                                    type="number"
-                                                                    value={bahanData?.harga_jasa ?? ''}
+                                                                    type="text"
+                                                                    value={bahanData?.harga_jasa ? formatNumber(bahanData.harga_jasa) : ''}
                                                                     onChange={(e) => updateBahanBakuHarga(item.id, 'harga_jasa', e.target.value)}
                                                                     className="w-full pl-8 pr-2 py-1.5 text-xs border border-stone-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
                                                                     placeholder="0"
                                                                     disabled={processing}
-                                                                    min="0"
-                                                                    step="0.01"
                                                                 />
                                                             </div>
                                                         </div>
