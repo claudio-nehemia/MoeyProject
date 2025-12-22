@@ -306,7 +306,10 @@ class RabVendorController extends Controller
 
         $pdf = Pdf::loadView('pdf.rab-vendor', $data)->setPaper('a4', 'landscape');
 
-        return $pdf->stream("RAB-Vendor-{$rabVendor->id}.pdf");
+        $filename = 'RAB-Vendor-'. $rabVendor->itemPekerjaan->moodboard->order->nama_project. '-' . date('YmdHis') . '.pdf';
+
+        return $pdf->download($filename);
+
     }
 
     public function destroy($rabVendorId)
