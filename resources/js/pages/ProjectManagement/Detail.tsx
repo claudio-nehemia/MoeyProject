@@ -98,6 +98,9 @@ type Item = {
     bast_number: string | null;
     bast_date: string | null;
     bast_pdf_path: string | null;
+    has_bast_foto_klien: boolean;
+    bast_foto_klien: string | null;
+    bast_foto_klien_uploaded_at: string | null;
     pengajuan_perpanjangan: PengajuanPerpanjangan | null;
 };
 
@@ -148,6 +151,9 @@ export default function Detail({
     const [stageEvidence, setStageEvidence] = useState<File | null>(null);
     const [stageNotes, setStageNotes] = useState('');
     const [generatingBast, setGeneratingBast] = useState<number | null>(null);
+    const [showBastFotoModal, setShowBastFotoModal] = useState<string | null>(
+        null,
+    );
 
     // State for evidence viewer modal
     const [showEvidenceModal, setShowEvidenceModal] = useState<{
@@ -495,153 +501,197 @@ export default function Detail({
                                 Kembali
                             </button>
                             {order.item_pekerjaans.map((itemPekerjaan) => {
-    const statusPerpanjangan: 'none' | 'pending' | 'approved' | 'rejected' =
-        itemPekerjaan.pengajuan_perpanjangan?.status || 'none';
+                                const statusPerpanjangan:
+                                    | 'none'
+                                    | 'pending'
+                                    | 'approved'
+                                    | 'rejected' =
+                                    itemPekerjaan.pengajuan_perpanjangan
+                                        ?.status || 'none';
 
-    const handleRequestPerpanjangan = (): void => {
-        if (
-            confirm(
-                'Apakah Anda yakin ingin mengajukan perpanjangan timeline?',
-            )
-        ) {
-            router.put(
-                `/item-pekerjaan/${itemPekerjaan.id}/request-perpanjangan`,
-                {},
-                {
-                    onSuccess: (): void => {
-                        alert(
-                            'Pengajuan perpanjangan berhasil dikirim',
-                        );
-                    },
-                    onError: (errors: any): void => {
-                        console.error('Error:', errors);
-                        alert(
-                            'Gagal mengajukan perpanjangan. Silakan coba lagi.',
-                        );
-                    },
-                },
-            );
-        }
-    };
+                                const handleRequestPerpanjangan = (): void => {
+                                    if (
+                                        confirm(
+                                            'Apakah Anda yakin ingin mengajukan perpanjangan timeline?',
+                                        )
+                                    ) {
+                                        router.put(
+                                            `/item-pekerjaan/${itemPekerjaan.id}/request-perpanjangan`,
+                                            {},
+                                            {
+                                                onSuccess: (): void => {
+                                                    alert(
+                                                        'Pengajuan perpanjangan berhasil dikirim',
+                                                    );
+                                                },
+                                                onError: (
+                                                    errors: any,
+                                                ): void => {
+                                                    console.error(
+                                                        'Error:',
+                                                        errors,
+                                                    );
+                                                    alert(
+                                                        'Gagal mengajukan perpanjangan. Silakan coba lagi.',
+                                                    );
+                                                },
+                                            },
+                                        );
+                                    }
+                                };
 
-    const handleApprovePerpanjangan = (): void => {
-        if (
-            confirm(
-                'Apakah Anda yakin ingin menerima pengajuan perpanjangan?',
-            )
-        ) {
-            // Pastikan pengajuan_perpanjangan dan id-nya ada
-            if (!itemPekerjaan.pengajuan_perpanjangan?.id) {
-                alert('Data pengajuan tidak ditemukan');
-                return;
-            }
+                                const handleApprovePerpanjangan = (): void => {
+                                    if (
+                                        confirm(
+                                            'Apakah Anda yakin ingin menerima pengajuan perpanjangan?',
+                                        )
+                                    ) {
+                                        // Pastikan pengajuan_perpanjangan dan id-nya ada
+                                        if (
+                                            !itemPekerjaan
+                                                .pengajuan_perpanjangan?.id
+                                        ) {
+                                            alert(
+                                                'Data pengajuan tidak ditemukan',
+                                            );
+                                            return;
+                                        }
 
-            router.put(
-                `/item-pekerjaan/${itemPekerjaan.pengajuan_perpanjangan.id}/acc-perpanjangan`,
-                {},
-                {
-                    onSuccess: (): void => {
-                        alert(
-                            'Pengajuan perpanjangan berhasil diterima',
-                        );
-                    },
-                    onError: (errors: any): void => {
-                        console.error('Error:', errors);
-                        alert(
-                            'Gagal menerima pengajuan. Silakan coba lagi.',
-                        );
-                    },
-                },
-            );
-        }
-    };
+                                        router.put(
+                                            `/item-pekerjaan/${itemPekerjaan.pengajuan_perpanjangan.id}/acc-perpanjangan`,
+                                            {},
+                                            {
+                                                onSuccess: (): void => {
+                                                    alert(
+                                                        'Pengajuan perpanjangan berhasil diterima',
+                                                    );
+                                                },
+                                                onError: (
+                                                    errors: any,
+                                                ): void => {
+                                                    console.error(
+                                                        'Error:',
+                                                        errors,
+                                                    );
+                                                    alert(
+                                                        'Gagal menerima pengajuan. Silakan coba lagi.',
+                                                    );
+                                                },
+                                            },
+                                        );
+                                    }
+                                };
 
-    const handleRejectPerpanjangan = (): void => {
-        if (
-            confirm(
-                'Apakah Anda yakin ingin menolak pengajuan perpanjangan?',
-            )
-        ) {
-            // Pastikan pengajuan_perpanjangan dan id-nya ada
-            if (!itemPekerjaan.pengajuan_perpanjangan?.id) {
-                alert('Data pengajuan tidak ditemukan');
-                return;
-            }
+                                const handleRejectPerpanjangan = (): void => {
+                                    if (
+                                        confirm(
+                                            'Apakah Anda yakin ingin menolak pengajuan perpanjangan?',
+                                        )
+                                    ) {
+                                        // Pastikan pengajuan_perpanjangan dan id-nya ada
+                                        if (
+                                            !itemPekerjaan
+                                                .pengajuan_perpanjangan?.id
+                                        ) {
+                                            alert(
+                                                'Data pengajuan tidak ditemukan',
+                                            );
+                                            return;
+                                        }
 
-            router.put(
-                `/item-pekerjaan/${itemPekerjaan.pengajuan_perpanjangan.id}/reject-perpanjangan`,
-                {},
-                {
-                    onSuccess: (): void => {
-                        alert('Pengajuan perpanjangan ditolak');
-                    },
-                    onError: (errors: any): void => {
-                        console.error('Error:', errors);
-                        alert(
-                            'Gagal menolak pengajuan. Silakan coba lagi.',
-                        );
-                    },
-                },
-            );
-        }
-    };
+                                        router.put(
+                                            `/item-pekerjaan/${itemPekerjaan.pengajuan_perpanjangan.id}/reject-perpanjangan`,
+                                            {},
+                                            {
+                                                onSuccess: (): void => {
+                                                    alert(
+                                                        'Pengajuan perpanjangan ditolak',
+                                                    );
+                                                },
+                                                onError: (
+                                                    errors: any,
+                                                ): void => {
+                                                    console.error(
+                                                        'Error:',
+                                                        errors,
+                                                    );
+                                                    alert(
+                                                        'Gagal menolak pengajuan. Silakan coba lagi.',
+                                                    );
+                                                },
+                                            },
+                                        );
+                                    }
+                                };
 
-    return (
-        <div key={itemPekerjaan.id} className="mb-6">
-            {/* Jika status none - tampilkan tombol ajukan perpanjangan */}
-            {statusPerpanjangan === 'none' && (
-                <button
-                    onClick={handleRequestPerpanjangan}
-                    className="inline-flex transform items-center rounded-xl border-2 border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-gray-50 hover:shadow-lg"
-                >
-                    Ajukan Perpanjangan Timeline
-                </button>
-            )}
+                                return (
+                                    <div
+                                        key={itemPekerjaan.id}
+                                        className="mb-6"
+                                    >
+                                        {/* Jika status none - tampilkan tombol ajukan perpanjangan */}
+                                        {statusPerpanjangan === 'none' && (
+                                            <button
+                                                onClick={
+                                                    handleRequestPerpanjangan
+                                                }
+                                                className="inline-flex transform items-center rounded-xl border-2 border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-gray-50 hover:shadow-lg"
+                                            >
+                                                Ajukan Perpanjangan Timeline
+                                            </button>
+                                        )}
 
-            {/* Jika status pending - tampilkan tombol terima dan tolak */}
-            {statusPerpanjangan === 'pending' && (
-                <div className="flex gap-3">
-                    <button
-                        onClick={handleApprovePerpanjangan}
-                        className="inline-flex transform items-center rounded-xl border-2 border-green-500 bg-green-50 px-5 py-3 text-sm font-semibold text-green-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-green-100 hover:shadow-lg"
-                    >
-                        Terima
-                    </button>
-                    <button
-                        onClick={handleRejectPerpanjangan}
-                        className="inline-flex transform items-center rounded-xl border-2 border-red-500 bg-red-50 px-5 py-3 text-sm font-semibold text-red-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-red-100 hover:shadow-lg"
-                    >
-                        Tolak
-                    </button>
-                </div>
-            )}
+                                        {/* Jika status pending - tampilkan tombol terima dan tolak */}
+                                        {statusPerpanjangan === 'pending' && (
+                                            <div className="flex gap-3">
+                                                <button
+                                                    onClick={
+                                                        handleApprovePerpanjangan
+                                                    }
+                                                    className="inline-flex transform items-center rounded-xl border-2 border-green-500 bg-green-50 px-5 py-3 text-sm font-semibold text-green-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-green-100 hover:shadow-lg"
+                                                >
+                                                    Terima
+                                                </button>
+                                                <button
+                                                    onClick={
+                                                        handleRejectPerpanjangan
+                                                    }
+                                                    className="inline-flex transform items-center rounded-xl border-2 border-red-500 bg-red-50 px-5 py-3 text-sm font-semibold text-red-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-red-100 hover:shadow-lg"
+                                                >
+                                                    Tolak
+                                                </button>
+                                            </div>
+                                        )}
 
-            {/* Jika status approved - tampilkan pesan dan tombol atur timeline */}
-            {statusPerpanjangan === 'approved' && (
-                <div className="space-y-3">
-                    <div className="inline-flex items-center rounded-xl border-2 border-green-500 bg-green-50 px-5 py-3 text-sm font-semibold text-green-700">
-                        Pengajuan diterima, silahkan atur timeline
-                    </div>
-                </div>
-            )}
+                                        {/* Jika status approved - tampilkan pesan dan tombol atur timeline */}
+                                        {statusPerpanjangan === 'approved' && (
+                                            <div className="space-y-3">
+                                                <div className="inline-flex items-center rounded-xl border-2 border-green-500 bg-green-50 px-5 py-3 text-sm font-semibold text-green-700">
+                                                    Pengajuan diterima, silahkan
+                                                    atur timeline
+                                                </div>
+                                            </div>
+                                        )}
 
-            {/* Jika status rejected - tampilkan pesan dan tombol ajukan lagi */}
-            {statusPerpanjangan === 'rejected' && (
-                <div className="space-y-3">
-                    <div className="inline-flex items-center rounded-xl border-2 border-red-500 bg-red-50 px-5 py-3 text-sm font-semibold text-red-700">
-                        Pengajuan anda ditolak
-                    </div>
-                    <button
-                        onClick={handleRequestPerpanjangan}
-                        className="ml-3 inline-flex transform items-center rounded-xl border-2 border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-gray-50 hover:shadow-lg"
-                    >
-                        Ajukan Perpanjangan Timeline
-                    </button>
-                </div>
-            )}
-        </div>
-    );
-})}
+                                        {/* Jika status rejected - tampilkan pesan dan tombol ajukan lagi */}
+                                        {statusPerpanjangan === 'rejected' && (
+                                            <div className="space-y-3">
+                                                <div className="inline-flex items-center rounded-xl border-2 border-red-500 bg-red-50 px-5 py-3 text-sm font-semibold text-red-700">
+                                                    Pengajuan anda ditolak
+                                                </div>
+                                                <button
+                                                    onClick={
+                                                        handleRequestPerpanjangan
+                                                    }
+                                                    className="ml-3 inline-flex transform items-center rounded-xl border-2 border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-gray-50 hover:shadow-lg"
+                                                >
+                                                    Ajukan Perpanjangan Timeline
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
 
                             <div
                                 className={`${getProgressBgColor(order.progress)} relative overflow-hidden rounded-2xl border-2 border-gray-200 p-8 shadow-xl`}
@@ -1363,6 +1413,116 @@ export default function Detail({
                                                         </button>
                                                     )}
                                                 </div>
+
+                                                {/* ✅ FOTO BAST DENGAN KLIEN - HANYA TAMPIL JIKA BAST SUDAH DIBUAT */}
+                                                {item.has_bast && (
+                                                    <>
+                                                        <div className="my-4 border-t border-purple-200" />
+
+                                                        <div>
+                                                            <h5 className="mb-3 flex items-center text-sm font-semibold text-purple-900">
+                                                                <span className="mr-2">
+                                                                    📷
+                                                                </span>
+                                                                Foto BAST dengan
+                                                                Klien
+                                                            </h5>
+
+                                                            {item.has_bast_foto_klien ? (
+                                                                // ✅ Tampilkan preview foto jika sudah ada
+                                                                <div className="flex items-center gap-4 rounded-lg border border-green-200 bg-green-50 p-3">
+                                                                    <img
+                                                                        src={`/storage/${item.bast_foto_klien}`}
+                                                                        alt="BAST Foto Klien"
+                                                                        className="h-20 w-20 cursor-pointer rounded-lg border-2 border-green-300 object-cover shadow-md transition-transform hover:scale-105"
+                                                                        onClick={() =>
+                                                                            setShowBastFotoModal(
+                                                                                item.bast_foto_klien,
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <div className="flex-1">
+                                                                        <p className="text-sm font-semibold text-green-800">
+                                                                            ✅
+                                                                            Foto
+                                                                            sudah
+                                                                            diupload
+                                                                        </p>
+                                                                        <p className="text-xs text-green-600">
+                                                                            Diupload:{' '}
+                                                                            {
+                                                                                item.bast_foto_klien_uploaded_at
+                                                                            }
+                                                                        </p>
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={() =>
+                                                                            setShowBastFotoModal(
+                                                                                item.bast_foto_klien,
+                                                                            )
+                                                                        }
+                                                                        className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-md transition-colors hover:bg-green-700"
+                                                                    >
+                                                                        <svg
+                                                                            className="h-4 w-4"
+                                                                            fill="none"
+                                                                            stroke="currentColor"
+                                                                            viewBox="0 0 24 24"
+                                                                        >
+                                                                            <path
+                                                                                strokeLinecap="round"
+                                                                                strokeLinejoin="round"
+                                                                                strokeWidth={
+                                                                                    2
+                                                                                }
+                                                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                                            />
+                                                                            <path
+                                                                                strokeLinecap="round"
+                                                                                strokeLinejoin="round"
+                                                                                strokeWidth={
+                                                                                    2
+                                                                                }
+                                                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                                            />
+                                                                        </svg>
+                                                                        Lihat
+                                                                        Foto
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                // ✅ Tampilkan pesan jika belum ada foto
+                                                                <div className="rounded-lg border-2 border-dashed border-orange-300 bg-orange-50 p-4">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100">
+                                                                            <span className="text-2xl">
+                                                                                ⚠️
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="flex-1">
+                                                                            <p className="text-sm font-semibold text-orange-800">
+                                                                                Foto
+                                                                                BAST
+                                                                                dengan
+                                                                                klien
+                                                                                belum
+                                                                                diupload
+                                                                            </p>
+                                                                            <p className="text-xs text-orange-600">
+                                                                                Upload
+                                                                                diperlukan
+                                                                                untuk
+                                                                                pembayaran
+                                                                                tahap
+                                                                                terakhir
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -2713,6 +2873,52 @@ export default function Detail({
                                     Tutup
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {showBastFotoModal && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+                    onClick={() => setShowBastFotoModal(null)}
+                >
+                    <div
+                        className="relative max-w-5xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Close Button */}
+                        <button
+                            onClick={() => setShowBastFotoModal(null)}
+                            className="absolute -top-12 right-0 flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-white backdrop-blur-sm transition-all hover:bg-white/20"
+                        >
+                            <span className="text-sm font-medium">Tutup</span>
+                            <svg
+                                className="h-5 w-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
+                            </svg>
+                        </button>
+
+                        {/* Image */}
+                        <img
+                            src={`/storage/${showBastFotoModal}`}
+                            alt="BAST Foto dengan Klien"
+                            className="max-h-[85vh] w-auto rounded-2xl shadow-2xl"
+                        />
+
+                        {/* Caption */}
+                        <div className="mt-4 rounded-lg bg-white/10 p-3 text-center backdrop-blur-sm">
+                            <p className="text-sm font-medium text-white">
+                                📷 Foto BAST dengan Klien
+                            </p>
                         </div>
                     </div>
                 </div>

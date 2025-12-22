@@ -84,4 +84,9 @@ class Order extends Model
             'survey_schedule_users'
         );
     }
+
+    public function gambarKerja()
+    {
+        return $this->hasOne(GambarKerja::class);
+    }
 }

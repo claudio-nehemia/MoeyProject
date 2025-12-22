@@ -31,6 +31,8 @@ use App\Http\Controllers\SurveyResultsController;
 use App\Http\Controllers\SurveyScheduleController;
 use App\Http\Controllers\JenisPengukuranController;
 use App\Http\Controllers\ProjectManagementController;
+use App\Http\Controllers\GambarKerjaController;
+use App\Http\Controllers\ApprovalRabController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -389,10 +391,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('permission:kontrak.show')->get('kontrak/{kontrak}', [KontrakController::class, 'show'])->name('kontrak.show');
     Route::middleware('permission:kontrak.edit')->get('kontrak/{kontrak}/edit', [KontrakController::class, 'edit'])->name('kontrak.edit');
     Route::middleware('permission:kontrak.edit')->put('kontrak/{kontrak}', [KontrakController::class, 'update'])->name('kontrak.update');
+    Route::middleware('permission:kontrak.edit')->post('kontrak/response', [KontrakController::class, 'response'])->name('kontrak.response');
     Route::middleware('permission:kontrak.delete')->delete('kontrak/{kontrak}', [KontrakController::class, 'destroy'])->name('kontrak.destroy');
     Route::middleware('permission:kontrak.show')->get('kontrak/{kontrak}/print', [KontrakController::class, 'print'])->name('kontrak.print');
 
-    // Signed Contract Routes
+// Signed Contract Routes
     Route::middleware('permission:kontrak.edit')->post('kontrak/{kontrak}/upload-signed', [KontrakController::class, 'uploadSignedContract'])->name('kontrak.upload-signed');
     Route::middleware('permission:kontrak.show')->get('kontrak/{kontrak}/download-signed', [KontrakController::class, 'downloadSignedContract'])->name('kontrak.download-signed');
     Route::middleware('permission:kontrak.edit')->delete('kontrak/{kontrak}/delete-signed', [KontrakController::class, 'deleteSignedContract'])->name('kontrak.delete-signed');
@@ -502,20 +505,46 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('survey-schedule')->name('survey-schedule.')->group(function () {
 
-        Route::get(
-            '/',
-            [SurveyScheduleController::class, 'index']
-        )
+        Route::get('/',[SurveyScheduleController::class, 'index'])
             ->middleware('permission:survey-schedule.index')
             ->name('index');
 
-        Route::post(
-            '/{order}',
-            [SurveyScheduleController::class, 'store']
-        )
+        Route::post('/{order}',[SurveyScheduleController::class, 'store'])
             ->middleware('permission:survey-schedule.store')
             ->name('store');
 
+    });
+
+    
+
+    Route::prefix('gambar-kerja')->name('gambar-kerja.')->group(function () {
+        Route::get('/', [GambarKerjaController::class, 'index'])
+            ->middleware('permission:gambar-kerja.index')
+            ->name('index');
+        Route::post('/response/{order}', [GambarKerjaController::class, 'response'])
+            ->middleware('permission:gambar-kerja.response')
+            ->name('response');
+        Route::post('/upload/{order}', [GambarKerjaController::class, 'upload'])
+            ->middleware('permission:gambar-kerja.upload')
+            ->name('upload');
+        Route::delete('/gambar-kerja/file/{file}', [GambarKerjaController::class, 'deleteFile'])
+            ->middleware('permission:gambar-kerja.delete')
+            ->name('delete');
+        Route::get('/show/{file}', [GambarKerjaController::class, 'showFile'])
+            ->middleware('permission:gambar-kerja.show')
+            ->name('show');
+    });
+
+    Route::prefix('approval-material')->name('approval-material.')->group(function () {
+        Route::get('/', [ApprovalRabController::class, 'index'])
+        ->middleware('permission:approval-material.index')
+        ->name('index');
+        Route::get('/{itemPekerjaan}/edit', [ApprovalRabController::class, 'edit'])
+        ->middleware('permission:approval-material.edit')
+        ->name('edit');
+        Route::put('/{itemPekerjaan}', [ApprovalRabController::class, 'update'])
+        ->middleware('permission:approval-material.update')
+        ->name('update');
     });
 
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -64,6 +65,10 @@ class SurveyScheduleController extends Controller
 
         // SYNC TIM SURVEY
         $order->surveyUsers()->sync($validated['survey_schedule_users']);
+
+        $notificationService = new NotificationService();
+
+        $notificationService->sendSurveyUlangRequestNotification($order);
 
         return redirect()
             ->route('survey-schedule.index')

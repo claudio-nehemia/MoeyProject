@@ -485,7 +485,7 @@ class InvoiceController extends Controller
             // Send survey ulang notification HANYA untuk pembayaran pertama (termin step 1)
             if ($invoice->termin_step === 1) {
                 $notificationService = new NotificationService();
-                $notificationService->sendSurveyUlangRequestNotification($order);
+                $notificationService->sendSurveyScheduleRequestNotification($order);
             }
         });
 

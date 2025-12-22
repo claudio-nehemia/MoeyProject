@@ -50,6 +50,17 @@ export default function Index({ moodboards }: Props) {
     const [showImagePreview, setShowImagePreview] = useState(false);
     const [previewImage, setPreviewImage] = useState('');
 
+    // Format number with thousand separators
+    const formatNumber = (value: string): string => {
+        const numbers = value.replace(/\D/g, '');
+        return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    };
+
+    // Parse formatted number back to plain string
+    const parseFormattedNumber = (value: string): string => {
+        return value.replace(/\./g, '');
+    };
+
     const handleResponse = (moodboard: Moodboard) => {
         if (confirm('Yakin akan membuat response Commitment Fee?')) {
             router.post(
@@ -66,8 +77,8 @@ export default function Index({ moodboards }: Props) {
         setSelectedMoodboard(moodboard);
         setIsEditMode(isEdit);
 
-        // Perbaikan Type Safety: Gunakan Non-Null Assertion Operator (!)
         if (isEdit && moodboard.commitmentFee?.total_fee !== null) {
+            // Store plain number for editing
             setTotalFee(String(moodboard.commitmentFee!.total_fee));
         } else {
             setTotalFee('');
@@ -82,8 +93,10 @@ export default function Index({ moodboards }: Props) {
         if (!selectedMoodboard?.commitmentFee) return;
 
         const commitmentFeeId = selectedMoodboard.commitmentFee.id;
+        
+        // Parse the formatted number back to plain number for submission
+        const plainFee = parseFormattedNumber(totalFee);
 
-        // Tentukan endpoint berdasarkan mode
         const endpoint = isEditMode
             ? `/commitment-fee/revise-fee/${commitmentFeeId}`
             : `/commitment-fee/update-fee/${commitmentFeeId}`;
@@ -91,7 +104,7 @@ export default function Index({ moodboards }: Props) {
         router.post(
             endpoint,
             {
-                total_fee: totalFee,
+                total_fee: plainFee,
             },
             {
                 preserveScroll: true,
@@ -105,7 +118,6 @@ export default function Index({ moodboards }: Props) {
         );
     };
 
-    // FUNGSI BARU UNTUK MERESET FEE SETELAH STATUS COMPLETE
     const handleResetFee = (moodboard: Moodboard) => {
         if (!moodboard.commitmentFee) return;
 
@@ -116,10 +128,8 @@ export default function Index({ moodboards }: Props) {
                 {
                     preserveScroll: true,
                     onSuccess: () => {
-                        // Setelah reset di backend, kita arahkan user untuk mengisi fee lagi
-                        router.visit(window.location.pathname, { // Refresh halaman
+                        router.visit(window.location.pathname, {
                             onFinish: () => {
-                                // Opsional: Tambahkan notifikasi toast di sini jika Inertia mendukung
                             }
                         });
                     }
@@ -192,7 +202,6 @@ export default function Index({ moodboards }: Props) {
 
                 <div className="pt-16 lg:pl-64">
                     <div className="px-4 py-8 sm:px-6 lg:px-8">
-                        {/* Header */}
                         <div className="mb-8">
                             <h1 className="text-3xl font-bold text-gray-900">
                                 Commitment Fee
@@ -203,7 +212,6 @@ export default function Index({ moodboards }: Props) {
                             </p>
                         </div>
 
-                        {/* Moodboard List */}
                         <div className="space-y-4">
                             {moodboards.length === 0 ? (
                                 <div className="rounded-lg bg-white p-8 text-center shadow">
@@ -218,7 +226,6 @@ export default function Index({ moodboards }: Props) {
                                         className="rounded-lg bg-white shadow transition-shadow hover:shadow-md"
                                     >
                                         <div className="p-6">
-                                            {/* Order Info */}
                                             <div className="mb-4 flex items-start justify-between">
                                                 <div className="flex-1">
                                                     <h3 className="text-lg font-semibold text-gray-900">
@@ -254,7 +261,6 @@ export default function Index({ moodboards }: Props) {
                                                     </div>
                                                 </div>
 
-                                                {/* Status Badge */}
                                                 {moodboard.commitmentFee && (
                                                     <span
                                                         className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${
@@ -275,9 +281,7 @@ export default function Index({ moodboards }: Props) {
                                                 )}
                                             </div>
 
-                                            {/* Moodboard Kasar & Estimasi Preview (Tidak Berubah) */}
                                             <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                                                {/* Moodboard Kasar */}
                                                 {moodboard.moodboard_kasar && (
                                                     <div className="rounded-lg border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-4">
                                                         <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-purple-900">
@@ -313,7 +317,6 @@ export default function Index({ moodboards }: Props) {
                                                                 className="h-48 w-full rounded-lg object-cover shadow-md transition-transform group-hover:scale-110"
                                                             />
 
-                                                            {/* FIXED OVERLAY */}
                                                             <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-black opacity-0 transition-opacity group-hover:opacity-40">
                                                                 <svg
                                                                     className="h-12 w-12 text-white opacity-0 drop-shadow-lg transition-opacity group-hover:opacity-100"
@@ -340,7 +343,6 @@ export default function Index({ moodboards }: Props) {
                                                     </div>
                                                 )}
 
-                                                {/* Estimasi Cost */}
                                                 {moodboard.estimasi && (
                                                     <div className="rounded-lg border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-4">
                                                         <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-blue-900">
@@ -404,7 +406,6 @@ export default function Index({ moodboards }: Props) {
                                                 )}
                                             </div>
 
-                                            {/* Commitment Fee Details */}
                                             {moodboard.commitmentFee && (
                                                 <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
                                                     <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
@@ -432,7 +433,6 @@ export default function Index({ moodboards }: Props) {
                                                                 )}
                                                             </p>
                                                         </div>
-                                                        {/* Perbaikan Type Safety: Cek total_fee !== null */}
                                                         {moodboard.commitmentFee
                                                             .total_fee !== null && (
                                                             <div className="md:col-span-2">
@@ -440,7 +440,6 @@ export default function Index({ moodboards }: Props) {
                                                                     Total Fee
                                                                 </p>
                                                                 <p className="text-lg font-semibold text-gray-900">
-                                                                    {/* Aman menggunakan ! karena sudah dicek !== null */}
                                                                     {formatCurrency(
                                                                         moodboard.commitmentFee.total_fee!,
                                                                     )}
@@ -451,7 +450,6 @@ export default function Index({ moodboards }: Props) {
                                                 </div>
                                             )}
 
-                                            {/* Actions */}
                                             <div className="flex flex-wrap gap-3">
                                                 {!moodboard.commitmentFee ? (
                                                     <button
@@ -481,13 +479,12 @@ export default function Index({ moodboards }: Props) {
                                                       'pending' &&
                                                   !moodboard.commitmentFee
                                                       .payment_proof ? (
-                                                    // Tombol Revisi Minor & Upload Pembayaran (saat pending)
                                                     <>
                                                         <button
                                                             onClick={() =>
                                                                 handleOpenFeeModal(
                                                                     moodboard,
-                                                                    true, // Aktifkan mode edit/revisi minor
+                                                                    true,
                                                                 )
                                                             }
                                                             className="rounded-lg bg-yellow-500 px-4 py-2 font-medium text-white transition-colors hover:bg-yellow-600"
@@ -516,7 +513,6 @@ export default function Index({ moodboards }: Props) {
                                                         </button>
                                                     </>
                                                 ) : (
-                                                    // Tombol Reset/Revisi Mayor (saat completed)
                                                     <>
                                                         {/* Tombol cetak commitment fee */}
                                                         <a
@@ -553,7 +549,6 @@ export default function Index({ moodboards }: Props) {
                     </div>
                 </div>
 
-                {/* Image Preview Modal (Tidak Berubah) */}
                 {showImagePreview && (
                     <div
                         className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
@@ -588,7 +583,6 @@ export default function Index({ moodboards }: Props) {
                     </div>
                 )}
 
-                {/* Fee Modal (Direvisi Judul dan Tombol) */}
                 {showFeeModal && selectedMoodboard && (
                     <div
                         className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
@@ -608,16 +602,21 @@ export default function Index({ moodboards }: Props) {
                                 <label className="mb-2 block text-sm font-medium text-gray-700">
                                     Total Fee (IDR)
                                 </label>
-                                <input
-                                    type="number"
-                                    value={totalFee}
-                                    onChange={(e) =>
-                                        setTotalFee(e.target.value)
-                                    }
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
-                                    placeholder="Masukkan nominal fee"
-                                    min="0"
-                                />
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
+                                        Rp
+                                    </span>
+                                    <input
+                                        type="text"
+                                        value={totalFee ? formatNumber(totalFee) : ''}
+                                        onChange={(e) => setTotalFee(parseFormattedNumber(e.target.value))}
+                                        className="w-full rounded-lg border border-gray-300 pl-10 pr-4 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+                                        placeholder="0"
+                                    />
+                                </div>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Contoh: 1.000.000 atau 500.000
+                                </p>
                             </div>
                             <div className="flex gap-3">
                                 <button
@@ -625,7 +624,7 @@ export default function Index({ moodboards }: Props) {
                                         setShowFeeModal(false);
                                         setTotalFee('');
                                         setSelectedMoodboard(null);
-                                        setIsEditMode(false); // Reset mode
+                                        setIsEditMode(false);
                                     }}
                                     className="flex-1 rounded-lg bg-gray-200 px-4 py-2 text-gray-800 transition-colors hover:bg-gray-300"
                                 >
@@ -642,7 +641,6 @@ export default function Index({ moodboards }: Props) {
                     </div>
                 )}
 
-                {/* Payment Modal (Tidak Berubah) */}
                 {showPaymentModal && selectedMoodboard && (
                     <div
                         className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"

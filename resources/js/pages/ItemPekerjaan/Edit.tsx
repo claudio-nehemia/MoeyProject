@@ -128,31 +128,31 @@ export default function Edit({
     const getDefaultJenisItems = (): FormJenisItem[] => {
         const defaultNames = ['finishing dalam', 'finishing luar', 'aksesoris'];
         const defaultJenisItems: FormJenisItem[] = [];
-        
+
         defaultNames.forEach((name, index) => {
-            const jenisItem = jenisItems.find(ji => 
-                ji.nama_jenis_item.toLowerCase() === name
+            const jenisItem = jenisItems.find(
+                (ji) => ji.nama_jenis_item.toLowerCase() === name,
             );
             if (jenisItem) {
                 defaultJenisItems.push({
                     temp_id: Date.now() + index,
                     jenis_item_id: jenisItem.id.toString(),
                     jenis_item_name: jenisItem.nama_jenis_item,
-                    items: []
+                    items: [],
                 });
             }
         });
-        
+
         return defaultJenisItems;
     };
 
     // Initialize form with existing data - group by ruangan
     useEffect(() => {
         const ruanganMap = new Map<string, ProdukData[]>();
-        
+
         itemPekerjaan.produks.forEach((p) => {
             const ruanganName = p.nama_ruangan || 'Ruangan Tanpa Nama';
-            
+
             const produkData: ProdukData = {
                 id: p.id,
                 temp_id: Date.now() + Math.random() * 1000,
@@ -177,23 +177,24 @@ export default function Edit({
                     })),
                 })),
             };
-            
+
             if (!ruanganMap.has(ruanganName)) {
                 ruanganMap.set(ruanganName, []);
             }
             ruanganMap.get(ruanganName)!.push(produkData);
         });
-        
+
         const initialRuangans: RuanganData[] = [];
         let ruanganIdx = 0;
         ruanganMap.forEach((prods, ruanganName) => {
             initialRuangans.push({
                 temp_id: Date.now() + ruanganIdx++,
-                nama_ruangan: ruanganName === 'Ruangan Tanpa Nama' ? '' : ruanganName,
+                nama_ruangan:
+                    ruanganName === 'Ruangan Tanpa Nama' ? '' : ruanganName,
                 produks: prods,
             });
         });
-        
+
         setRuangans(initialRuangans);
     }, [itemPekerjaan]);
 
@@ -247,27 +248,39 @@ export default function Edit({
         );
     };
 
-    const removeProdukFromRuangan = (ruanganTempId: number, produkTempId: number) => {
+    const removeProdukFromRuangan = (
+        ruanganTempId: number,
+        produkTempId: number,
+    ) => {
         setRuangans(
             ruangans.map((r) =>
                 r.temp_id === ruanganTempId
                     ? {
                           ...r,
-                          produks: r.produks.filter((p) => p.temp_id !== produkTempId),
+                          produks: r.produks.filter(
+                              (p) => p.temp_id !== produkTempId,
+                          ),
                       }
                     : r,
             ),
         );
     };
 
-    const updateProdukInRuangan = (ruanganTempId: number, produkTempId: number, field: string, value: any) => {
+    const updateProdukInRuangan = (
+        ruanganTempId: number,
+        produkTempId: number,
+        field: string,
+        value: any,
+    ) => {
         setRuangans(
             ruangans.map((r) =>
                 r.temp_id === ruanganTempId
                     ? {
                           ...r,
                           produks: r.produks.map((p) =>
-                              p.temp_id === produkTempId ? { ...p, [field]: value } : p,
+                              p.temp_id === produkTempId
+                                  ? { ...p, [field]: value }
+                                  : p,
                           ),
                       }
                     : r,
@@ -276,7 +289,11 @@ export default function Edit({
     };
 
     // ============ Bahan Baku Functions ============
-    const toggleBahanBakuInRuangan = (ruanganTempId: number, produkTempId: number, bahanBakuId: number) => {
+    const toggleBahanBakuInRuangan = (
+        ruanganTempId: number,
+        produkTempId: number,
+        bahanBakuId: number,
+    ) => {
         setRuangans(
             ruangans.map((r) =>
                 r.temp_id === ruanganTempId
@@ -285,11 +302,14 @@ export default function Edit({
                           produks: r.produks.map((p) => {
                               if (p.temp_id === produkTempId) {
                                   const selected = p.selected_bahan_bakus || [];
-                                  const isSelected = selected.includes(bahanBakuId);
+                                  const isSelected =
+                                      selected.includes(bahanBakuId);
                                   return {
                                       ...p,
                                       selected_bahan_bakus: isSelected
-                                          ? selected.filter((id) => id !== bahanBakuId)
+                                          ? selected.filter(
+                                                (id) => id !== bahanBakuId,
+                                            )
                                           : [...selected, bahanBakuId],
                                   };
                               }
@@ -301,7 +321,11 @@ export default function Edit({
         );
     };
 
-    const selectAllBahanBakuInRuangan = (ruanganTempId: number, produkTempId: number, bahanBakuIds: number[]) => {
+    const selectAllBahanBakuInRuangan = (
+        ruanganTempId: number,
+        produkTempId: number,
+        bahanBakuIds: number[],
+    ) => {
         setRuangans(
             ruangans.map((r) =>
                 r.temp_id === ruanganTempId
@@ -318,7 +342,10 @@ export default function Edit({
         );
     };
 
-    const clearAllBahanBakuInRuangan = (ruanganTempId: number, produkTempId: number) => {
+    const clearAllBahanBakuInRuangan = (
+        ruanganTempId: number,
+        produkTempId: number,
+    ) => {
         setRuangans(
             ruangans.map((r) =>
                 r.temp_id === ruanganTempId
@@ -336,7 +363,10 @@ export default function Edit({
     };
 
     // ============ Jenis Item Functions ============
-    const addJenisItemInRuangan = (ruanganTempId: number, produkTempId: number) => {
+    const addJenisItemInRuangan = (
+        ruanganTempId: number,
+        produkTempId: number,
+    ) => {
         setRuangans(
             ruangans.map((r) =>
                 r.temp_id === ruanganTempId
@@ -363,7 +393,11 @@ export default function Edit({
         );
     };
 
-    const removeJenisItemInRuangan = (ruanganTempId: number, produkTempId: number, jenisItemTempId: number) => {
+    const removeJenisItemInRuangan = (
+        ruanganTempId: number,
+        produkTempId: number,
+        jenisItemTempId: number,
+    ) => {
         setRuangans(
             ruangans.map((r) =>
                 r.temp_id === ruanganTempId
@@ -374,7 +408,8 @@ export default function Edit({
                                   ? {
                                         ...p,
                                         jenisItems: p.jenisItems.filter(
-                                            (j) => j.temp_id !== jenisItemTempId,
+                                            (j) =>
+                                                j.temp_id !== jenisItemTempId,
                                         ),
                                     }
                                   : p,
@@ -385,7 +420,12 @@ export default function Edit({
         );
     };
 
-    const updateJenisItemInRuangan = (ruanganTempId: number, produkTempId: number, jenisItemTempId: number, value: string) => {
+    const updateJenisItemInRuangan = (
+        ruanganTempId: number,
+        produkTempId: number,
+        jenisItemTempId: number,
+        value: string,
+    ) => {
         const selectedJI = jenisItems.find((ji) => ji.id.toString() === value);
         setRuangans(
             ruangans.map((r) =>
@@ -401,7 +441,9 @@ export default function Edit({
                                                 ? {
                                                       ...j,
                                                       jenis_item_id: value,
-                                                      jenis_item_name: selectedJI?.nama_jenis_item || '',
+                                                      jenis_item_name:
+                                                          selectedJI?.nama_jenis_item ||
+                                                          '',
                                                   }
                                                 : j,
                                         ),
@@ -415,7 +457,11 @@ export default function Edit({
     };
 
     // ============ Item Functions ============
-    const addItemInRuangan = (ruanganTempId: number, produkTempId: number, jenisItemTempId: number) => {
+    const addItemInRuangan = (
+        ruanganTempId: number,
+        produkTempId: number,
+        jenisItemTempId: number,
+    ) => {
         setRuangans(
             ruangans.map((r) =>
                 r.temp_id === ruanganTempId
@@ -432,7 +478,8 @@ export default function Edit({
                                                       items: [
                                                           ...j.items,
                                                           {
-                                                              temp_id: Date.now(),
+                                                              temp_id:
+                                                                  Date.now(),
                                                               item_id: '',
                                                               quantity: 1,
                                                               notes: '',
@@ -450,7 +497,12 @@ export default function Edit({
         );
     };
 
-    const removeItemInRuangan = (ruanganTempId: number, produkTempId: number, jenisItemTempId: number, itemTempId: number) => {
+    const removeItemInRuangan = (
+        ruanganTempId: number,
+        produkTempId: number,
+        jenisItemTempId: number,
+        itemTempId: number,
+    ) => {
         setRuangans(
             ruangans.map((r) =>
                 r.temp_id === ruanganTempId
@@ -465,7 +517,9 @@ export default function Edit({
                                                 ? {
                                                       ...j,
                                                       items: j.items.filter(
-                                                          (i) => i.temp_id !== itemTempId,
+                                                          (i) =>
+                                                              i.temp_id !==
+                                                              itemTempId,
                                                       ),
                                                   }
                                                 : j,
@@ -479,7 +533,14 @@ export default function Edit({
         );
     };
 
-    const updateItemInRuangan = (ruanganTempId: number, produkTempId: number, jenisItemTempId: number, itemTempId: number, field: string, value: any) => {
+    const updateItemInRuangan = (
+        ruanganTempId: number,
+        produkTempId: number,
+        jenisItemTempId: number,
+        itemTempId: number,
+        field: string,
+        value: any,
+    ) => {
         setRuangans(
             ruangans.map((r) =>
                 r.temp_id === ruanganTempId
@@ -494,8 +555,13 @@ export default function Edit({
                                                 ? {
                                                       ...j,
                                                       items: j.items.map((i) =>
-                                                          i.temp_id === itemTempId
-                                                              ? { ...i, [field]: value }
+                                                          i.temp_id ===
+                                                          itemTempId
+                                                              ? {
+                                                                    ...i,
+                                                                    [field]:
+                                                                        value,
+                                                                }
                                                               : i,
                                                       ),
                                                   }
@@ -523,17 +589,27 @@ export default function Edit({
                     produk_id: parseInt(p.produk_id.toString()),
                     nama_ruangan: ruangan.nama_ruangan || null,
                     quantity: p.quantity,
-                    panjang: p.panjang ? parseFloat(p.panjang.toString()) : null,
+                    panjang: p.panjang
+                        ? parseFloat(p.panjang.toString())
+                        : null,
                     lebar: p.lebar ? parseFloat(p.lebar.toString()) : null,
                     tinggi: p.tinggi ? parseFloat(p.tinggi.toString()) : null,
                     bahan_bakus: p.selected_bahan_bakus || [],
                     jenisItems: p.jenisItems
-                        .filter((j) => j.jenis_item_name?.toLowerCase() !== 'bahan baku')
+                        .filter(
+                            (j) =>
+                                j.jenis_item_name?.toLowerCase() !==
+                                'bahan baku',
+                        )
                         .map((j) => {
-                            const isAksesoris = j.jenis_item_name?.toLowerCase() === 'aksesoris';
+                            const isAksesoris =
+                                j.jenis_item_name?.toLowerCase() ===
+                                'aksesoris';
                             return {
                                 id: j.id,
-                                jenis_item_id: parseInt(j.jenis_item_id.toString()),
+                                jenis_item_id: parseInt(
+                                    j.jenis_item_id.toString(),
+                                ),
                                 items: j.items.map((i) => ({
                                     id: i.id,
                                     item_id: parseInt(i.item_id.toString()),
@@ -560,17 +636,25 @@ export default function Edit({
 
         setLoading(true);
 
-        router.put(`/item-pekerjaan/${itemPekerjaan.id}/update`, {
-            status: status,
-            produks: allProduks,
-        }, {
-            onSuccess: () => setLoading(false),
-            onError: (errors) => {
-                console.error(errors);
-                alert('Gagal update data');
-                setLoading(false);
+        router.put(
+            `/item-pekerjaan/${itemPekerjaan.id}/update`,
+            {
+                status: status,
+                produks: allProduks,
             },
-        });
+            {
+                preserveState: false, // ← TAMBAHKAN INI
+                preserveScroll: true,
+                onSuccess: () => {
+                    // Tidak perlu setLoading(false) karena akan redirect
+                },
+                onError: (errors) => {
+                    console.error(errors);
+                    alert('Gagal update data');
+                    setLoading(false);
+                },
+            },
+        );
     };
 
     // ============ Count total produks ============
@@ -587,48 +671,85 @@ export default function Edit({
                 onClose={() => setSidebarOpen(false)}
             />
 
-            <div className={`min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pt-16 transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : 'ml-0'}`}>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div
+                className={`min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pt-16 transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : 'ml-0'}`}
+            >
+                <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                     {/* Header */}
                     <div className="mb-8">
                         <div className="flex items-center gap-4">
                             <button
                                 onClick={() => router.visit('/item-pekerjaan')}
-                                className="flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-sm border border-slate-200 text-slate-600 transition-all hover:bg-slate-50 hover:shadow-md"
+                                className="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md"
                             >
-                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                <svg
+                                    className="h-5 w-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M15 19l-7-7 7-7"
+                                    />
                                 </svg>
                             </button>
                             <div>
-                                <h1 className="text-3xl font-bold text-slate-800">Edit Item Pekerjaan</h1>
-                                <p className="text-slate-500 mt-1">
-                                    {itemPekerjaan.moodboard.order.nama_project} • {itemPekerjaan.moodboard.order.company_name}
+                                <h1 className="text-3xl font-bold text-slate-800">
+                                    Edit Item Pekerjaan
+                                </h1>
+                                <p className="mt-1 text-slate-500">
+                                    {itemPekerjaan.moodboard.order.nama_project}{' '}
+                                    •{' '}
+                                    {itemPekerjaan.moodboard.order.company_name}
                                 </p>
                             </div>
                         </div>
                     </div>
 
                     {/* Add Ruangan Button */}
-                    <div className="mb-6 flex justify-between items-center">
-                        <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                            <span className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    <div className="mb-6 flex items-center justify-between">
+                        <h2 className="flex items-center gap-2 text-xl font-semibold text-slate-800">
+                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
+                                <svg
+                                    className="h-5 w-5 text-blue-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                                    />
                                 </svg>
                             </span>
                             Daftar Ruangan
                             <span className="text-sm font-normal text-slate-500">
-                                ({ruangans.length} ruangan, {totalProduks} produk)
+                                ({ruangans.length} ruangan, {totalProduks}{' '}
+                                produk)
                             </span>
                         </h2>
                         <button
                             type="button"
                             onClick={addRuangan}
-                            className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-3 font-medium text-white shadow-lg transition-all hover:shadow-xl"
                         >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            <svg
+                                className="h-5 w-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 4v16m8-8H4"
+                                />
                             </svg>
                             Tambah Ruangan
                         </button>
@@ -636,14 +757,28 @@ export default function Edit({
 
                     {/* Empty State */}
                     {ruangans.length === 0 ? (
-                        <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center">
-                            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                        <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white p-12 text-center">
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+                                <svg
+                                    className="h-8 w-8 text-slate-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                                    />
                                 </svg>
                             </div>
-                            <p className="text-slate-500 mb-2">Belum ada ruangan yang ditambahkan</p>
-                            <p className="text-slate-400 text-sm">Klik "Tambah Ruangan" untuk memulai</p>
+                            <p className="mb-2 text-slate-500">
+                                Belum ada ruangan yang ditambahkan
+                            </p>
+                            <p className="text-sm text-slate-400">
+                                Klik "Tambah Ruangan" untuk memulai
+                            </p>
                         </div>
                     ) : (
                         <div className="space-y-6">
@@ -658,14 +793,30 @@ export default function Edit({
                                     onUpdateRuanganName={updateRuanganName}
                                     onRemoveRuangan={removeRuangan}
                                     onAddProdukToRuangan={addProdukToRuangan}
-                                    onRemoveProdukFromRuangan={removeProdukFromRuangan}
-                                    onUpdateProdukInRuangan={updateProdukInRuangan}
-                                    onToggleBahanBakuInRuangan={toggleBahanBakuInRuangan}
-                                    onSelectAllBahanBakuInRuangan={selectAllBahanBakuInRuangan}
-                                    onClearAllBahanBakuInRuangan={clearAllBahanBakuInRuangan}
-                                    onAddJenisItemInRuangan={addJenisItemInRuangan}
-                                    onRemoveJenisItemInRuangan={removeJenisItemInRuangan}
-                                    onUpdateJenisItemInRuangan={updateJenisItemInRuangan}
+                                    onRemoveProdukFromRuangan={
+                                        removeProdukFromRuangan
+                                    }
+                                    onUpdateProdukInRuangan={
+                                        updateProdukInRuangan
+                                    }
+                                    onToggleBahanBakuInRuangan={
+                                        toggleBahanBakuInRuangan
+                                    }
+                                    onSelectAllBahanBakuInRuangan={
+                                        selectAllBahanBakuInRuangan
+                                    }
+                                    onClearAllBahanBakuInRuangan={
+                                        clearAllBahanBakuInRuangan
+                                    }
+                                    onAddJenisItemInRuangan={
+                                        addJenisItemInRuangan
+                                    }
+                                    onRemoveJenisItemInRuangan={
+                                        removeJenisItemInRuangan
+                                    }
+                                    onUpdateJenisItemInRuangan={
+                                        updateJenisItemInRuangan
+                                    }
                                     onAddItemInRuangan={addItemInRuangan}
                                     onRemoveItemInRuangan={removeItemInRuangan}
                                     onUpdateItemInRuangan={updateItemInRuangan}
@@ -675,11 +826,11 @@ export default function Edit({
                     )}
 
                     {/* Submit Buttons */}
-                    <div className="mt-8 flex gap-4 justify-end">
+                    <div className="mt-8 flex justify-end gap-4">
                         <button
                             type="button"
                             onClick={() => router.visit('/item-pekerjaan')}
-                            className="px-6 py-3 border border-slate-300 rounded-xl text-slate-700 font-medium hover:bg-slate-50 transition-colors"
+                            className="rounded-xl border border-slate-300 px-6 py-3 font-medium text-slate-700 transition-colors hover:bg-slate-50"
                         >
                             Batal
                         </button>
@@ -687,20 +838,45 @@ export default function Edit({
                             type="button"
                             onClick={(e) => handleSubmit(e, 'draft')}
                             disabled={loading || totalProduks === 0}
-                            className="border-2 border-amber-500 bg-amber-50 text-amber-700 px-6 py-3 rounded-xl font-medium hover:bg-amber-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            className="flex items-center gap-2 rounded-xl border-2 border-amber-500 bg-amber-50 px-6 py-3 font-medium text-amber-700 transition-all hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {loading ? (
                                 <>
-                                    <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    <svg
+                                        className="h-5 w-5 animate-spin"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <circle
+                                            className="opacity-25"
+                                            cx="12"
+                                            cy="12"
+                                            r="10"
+                                            stroke="currentColor"
+                                            strokeWidth="4"
+                                        ></circle>
+                                        <path
+                                            className="opacity-75"
+                                            fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                        ></path>
                                     </svg>
                                     Menyimpan...
                                 </>
                             ) : (
                                 <>
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                    <svg
+                                        className="h-5 w-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                                        />
                                     </svg>
                                     Simpan Draft
                                 </>
@@ -710,20 +886,45 @@ export default function Edit({
                             type="button"
                             onClick={(e) => handleSubmit(e, 'published')}
                             disabled={loading || totalProduks === 0}
-                            className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-8 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-8 py-3 font-medium text-white shadow-lg transition-all hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {loading ? (
                                 <>
-                                    <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    <svg
+                                        className="h-5 w-5 animate-spin"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <circle
+                                            className="opacity-25"
+                                            cx="12"
+                                            cy="12"
+                                            r="10"
+                                            stroke="currentColor"
+                                            strokeWidth="4"
+                                        ></circle>
+                                        <path
+                                            className="opacity-75"
+                                            fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                        ></path>
                                     </svg>
                                     Menyimpan...
                                 </>
                             ) : (
                                 <>
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    <svg
+                                        className="h-5 w-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                        />
                                     </svg>
                                     Publish
                                 </>

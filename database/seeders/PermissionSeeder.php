@@ -814,6 +814,57 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Update Tanggal Survey',
                 'group' => 'surveys - Tanggal Survey'
             ],
+
+            // Gambar Kerja
+            [
+                'name' => 'gambar-kerja.index',
+                'display_name' => 'View Gambar Kerja',
+                'group' => 'drafters - Gambar Kerja'
+            ],
+
+            [
+                'name' => 'gambar-kerja.upload',
+                'display_name' => 'Upload Gambar Kerja',
+                'group' => 'drafters - Gambar Kerja'
+            ],
+
+            [
+                'name' => 'gambar-kerja.response',
+                'display_name' => 'Response Gambar Kerja',
+                'group' => 'drafters - Gambar Kerja'
+            ],
+
+            [
+                'name' => 'gambar-kerja.delete',
+                'display_name' => 'Delete Gambar Kerja',
+                'group' => 'drafters - Gambar Kerja'
+            ],
+
+            [
+                'name' => 'gambar-kerja.show',
+                'display_name' => 'Show Gambar Kerja',
+                'group' => 'drafters - Gambar Kerja'
+            ],
+
+            // Approval Material
+            [
+                'name' => 'approval-material.index',
+                'display_name' => 'View Approval Material',
+                'group' => 'Operations - Approval Material'
+            ],
+
+            [
+                'name' => 'approval-material.edit',
+                'display_name' => 'Edit Approval Material',
+                'group' => 'Operations - Approval Material'
+            ],
+
+            [
+                'name' => 'approval-material.update',
+                'display_name' => 'Update Approval Material',
+                'group' => 'Operations - Approval Material'
+            ],
+
             
             // PDF Export Permissions
             [

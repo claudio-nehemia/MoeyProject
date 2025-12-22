@@ -3,9 +3,14 @@
 namespace App\Http\Controllers;
 
 use Inertia\Inertia;
+use App\Models\Kontrak;
 use App\Models\Estimasi;
+use App\Models\GambarKerja;
+use App\Models\RabInternal;
 use App\Models\Notification;
 use Illuminate\Http\Request;
+use App\Models\CommitmentFee;
+use App\Models\ItemPekerjaan;
 use App\Services\NotificationService;
 
 class NotificationController extends Controller
@@ -23,7 +28,14 @@ class NotificationController extends Controller
     public function index(Request $request)
     {
         $notifications = Notification::where('user_id', auth()->id())
-            ->with('order')
+            ->with([
+                'order.surveyResults',
+                'order.moodboard.commitmentFee',
+                'order.moodboard.estimasi',
+                'order.itemPekerjaans.rabInternal',
+                'order.itemPekerjaans.kontrak',
+                'order.gambarKerja',
+            ])
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
@@ -117,11 +129,26 @@ class NotificationController extends Controller
                 return $this->handleKontrakRequest($order);
 
             case Notification::TYPE_INVOICE_REQUEST:
-                return $this->handleInvoceRequest($order);
+                return $this->handleInvoiceRequest($order);
+
+            case Notification::TYPE_SURVEY_SCHEDULE_REQUEST:
+                return $this->handleSurveyScheduleRequest($order);  
 
             case Notification::TYPE_SURVEY_ULANG_REQUEST:
                 return $this->handleSurveyUlangRequest($order);
+
+            case Notification::TYPE_GAMBAR_KERJA_REQUEST:
+                return $this->handleGambarKerjaRequest($order);
+
+            case Notification::TYPE_APPROVAL_MATERIAL_REQUEST:
+                return $this->handleApprovalMaterialRequest($order);
             
+            case Notification::TYPE_WORKPLAN_REQUEST:
+                return $this->handleWorkplanRequest($order);
+
+            case Notification::TYPE_PROJECT_MANAGEMENT_REQUEST:
+                return $this->handleProjectManagementRequest($order);
+
             default:
                 return redirect()->route('notifications.index')
                     ->with('error', 'Unknown notification type.');
@@ -130,6 +157,7 @@ class NotificationController extends Controller
 
     /**
      * Handle survey request notification
+     * CREATES RECORD with response info
      */
     private function handleSurveyRequest($order)
     {
@@ -156,6 +184,7 @@ class NotificationController extends Controller
 
     /**
      * Handle moodboard request notification
+     * CREATES RECORD with response info
      */
     private function handleMoodboardRequest($order)
     {
@@ -181,6 +210,7 @@ class NotificationController extends Controller
 
     /**
      * Handle estimasi request notification
+     * CREATES RECORD with response info
      */
     private function handleEstimasiRequest($order)
     {
@@ -191,10 +221,10 @@ class NotificationController extends Controller
 
         // Create empty estimasi with response info
         $estimasi = Estimasi::create([
-                'moodboard_id' => $order->moodboard->id,
-                'response_by' => auth()->user()->name,
-                'response_time' => now(),
-            ]);
+            'moodboard_id' => $order->moodboard->id,
+            'response_by' => auth()->user()->name,
+            'response_time' => now(),
+        ]);
 
         $order->update([
             'tahapan_proyek' => 'estimasi',
@@ -206,6 +236,7 @@ class NotificationController extends Controller
 
     /**
      * Handle design approval notification
+     * DIRECT REDIRECT - No record creation
      */
     private function handleDesignApproval($order)
     {
@@ -220,6 +251,7 @@ class NotificationController extends Controller
 
     /**
      * Handle commitment fee request notification
+     * CREATES RECORD with response info
      */
     private function handleCommitmentFeeRequest($order)
     {
@@ -235,6 +267,17 @@ class NotificationController extends Controller
                 ->with('info', 'Commitment fee sudah ada untuk project ini.');
         }
 
+        $commitmentFee = CommitmentFee::create([
+            'moodboard_id' => $order->moodboard->id,
+            'response_by' => auth()->user()->name,
+            'response_time' => now(),
+            'payment_status' => 'pending',
+        ]);
+
+        $order->update([
+            'tahapan_proyek' => 'cm_fee',
+        ]);
+
         // Redirect to commitment fee index to respond
         return redirect()->route('commitment-fee.index')
             ->with('success', 'Silakan respond dan isi commitment fee untuk project ini.');
@@ -242,6 +285,7 @@ class NotificationController extends Controller
 
     /**
      * Handle final design request notification
+     * CREATES RECORD with response info
      */
     private function handleFinalDesignRequest($order)
     {
@@ -257,39 +301,113 @@ class NotificationController extends Controller
                 ->with('info', 'Final design sudah ada untuk project ini.');
         }
 
+        $order->moodboard->update([
+            'response_final_time' => now(),
+            'response_final_by' => auth()->user()->name,
+        ]);
+
+        // Update order tahapan
+        $order->update([
+            'tahapan_proyek' => 'desain_final',
+        ]);
+
         // Redirect to moodboard index to upload final design
         return redirect()->route('moodboard.index')
             ->with('success', 'Silakan upload final design untuk project ini.');
     }
 
+    /**
+     * Handle item pekerjaan request notification
+     * CREATES RECORD with response info
+     */
     private function handleItemPekerjaanRequest($order)
     {
+        $itemPekerjaan = ItemPekerjaan::create([
+            'moodboard_id' => $order->moodboard->id,
+            'response_by' => auth()->user()->name,
+            'response_time' => now(),
+        ]);
+            
         // Redirect to item pekerjaan page
         return redirect()->route('item-pekerjaan.index', ['order_id' => $order->id])
-            ->with('info', 'Please manage the item pekerjaan for this order.');
+            ->with('success', 'Response recorded. Please manage the item pekerjaan for this order.');
     }
 
+    /**
+     * Handle RAB internal request notification
+     * CREATES RECORD with response info
+     */
     private function handleRabInternalRequest($order)
     {
+        $rabInternal = RabInternal::create([
+            'item_pekerjaan_id' => $order->itemPekerjaans->first()->id,
+            'response_by' => auth()->user()->name,
+            'response_time' => now(),
+        ]);
+
+        $order->update([
+            'tahapan_proyek' => 'rab',
+        ]);
+        
         // Redirect to RAB Internal page
         return redirect()->route('rab-internal.index', ['order_id' => $order->id])
-            ->with('info', 'Please manage the RAB Internal for this order.');
+            ->with('success', 'Response recorded. Please manage the RAB Internal for this order.');
     }
 
+    /**
+     * Handle kontrak request notification
+     * CREATES RECORD with response info
+     */
     private function handleKontrakRequest($order)
     {
+        // Check if kontrak already exists
+        $itemPekerjaan = $order->itemPekerjaans->first();
+        if ($itemPekerjaan && $itemPekerjaan->kontrak) {
+            return redirect()->route('kontrak.index')
+                ->with('info', 'Kontrak sudah ada untuk project ini.');
+        }
+
+        Kontrak::create([
+            'item_pekerjaan_id' => $itemPekerjaan->id,
+            'response_time' => now(),
+            'response_by' => auth()->user()->name,
+        ]);
+
+        $order->update([
+            'tahapan_proyek' => 'kontrak',
+        ]);
+        
         // Redirect to Kontrak page
         return redirect()->route('kontrak.index', ['order_id' => $order->id])
-            ->with('info', 'Please manage the Kontrak for this order.');
+            ->with('success', 'Response recorded. Please manage the Kontrak for this order.');
     }
 
-    private function handleInvoceRequest($order)
+    /**
+     * Handle invoice request notification
+     * DIRECT REDIRECT - No record creation
+     */
+    private function handleInvoiceRequest($order)
     {
         // Redirect to Invoice page
         return redirect()->route('invoice.index', ['order_id' => $order->id])
             ->with('info', 'Please manage the Invoice for this order.');
     }
 
+    /**
+     * Handle survey schedule request notification
+     * DIRECT REDIRECT - No record creation
+     */
+    private function handleSurveyScheduleRequest($order)
+    {
+        // Redirect to Survey Schedule page
+        return redirect()->route('survey-schedule.index', ['order_id' => $order->id])
+            ->with('info', 'Please schedule a survey for this order.');
+    }
+
+    /**
+     * Handle survey ulang request notification
+     * DIRECT REDIRECT - No record creation
+     */
     private function handleSurveyUlangRequest($order)
     {
         // Redirect to Survey Schedule page
@@ -297,4 +415,64 @@ class NotificationController extends Controller
             ->with('info', 'Please schedule a re-survey for this order.');
     }
 
+    /**
+     * Handle gambar kerja request notification
+     * CREATES RECORD with response info
+     */
+    private function handleGambarKerjaRequest($order)
+    {
+        // Check if gambar kerja already exists
+        if ($order->gambarKerja) {
+            return redirect()->route('gambar-kerja.index')
+                ->with('info', 'Gambar Kerja sudah ada untuk project ini.');
+        }
+
+        GambarKerja::create([
+            'order_id' => $order->id,
+            'status' => 'pending',
+            'response_time' => now(),
+            'response_by' => auth()->user()->name,
+        ]);
+
+        $order->update([
+            'tahapan_proyek' => 'gambar_kerja',
+        ]);
+        
+        // Redirect to Gambar Kerja page
+        return redirect()->route('gambar-kerja.index', ['order_id' => $order->id])
+            ->with('success', 'Response recorded. Please manage the Gambar Kerja for this order.');
+    }
+
+    /**
+     * Handle approval material request notification
+     * DIRECT REDIRECT - No record creation
+     */
+    private function handleApprovalMaterialRequest($order)
+    {
+        // Redirect to Approval Material page
+        return redirect()->route('approval-material.index', ['order_id' => $order->id])
+            ->with('info', 'Please manage the Approval Material for this order.');
+    }
+
+    /**
+     * Handle workplan request notification
+     * DIRECT REDIRECT - No record creation
+     */
+    private function handleWorkplanRequest($order)
+    {
+        // Redirect to Workplan page
+        return redirect()->route('workplan.index', ['order_id' => $order->id])
+            ->with('info', 'Please manage the Workplan for this order.');
+    }
+
+    /**
+     * Handle project management request notification
+     * DIRECT REDIRECT - No record creation
+     */
+    private function handleProjectManagementRequest($order)
+    {
+        // Redirect to Project Management page
+        return redirect()->route('project-management.index', ['order_id' => $order->id])
+            ->with('info', 'Please manage the Project Management for this order.');
+    }
 }

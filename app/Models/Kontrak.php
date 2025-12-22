@@ -15,6 +15,8 @@ class Kontrak extends Model
         'tanggal_selesai',
         'signed_contract_path',
         'signed_at',
+        'response_time',
+        'response_by',
     ];
 
     protected $casts = [
@@ -22,6 +24,7 @@ class Kontrak extends Model
         'tanggal_selesai' => 'date',
         'harga_kontrak' => 'decimal:0',
         'signed_at' => 'datetime',
+        'response_time' => 'datetime',
     ];
 
     public function termin()
