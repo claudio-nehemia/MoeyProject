@@ -1,5 +1,6 @@
 import { useState, FormEventHandler } from 'react';
 import { Head, useForm, router, Link } from '@inertiajs/react';
+import JenisPengukuranModal from '@/components/JenisPengukuranModal';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 
@@ -76,6 +77,22 @@ export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }:
         jenis_pengukuran_ids: selectedPengukuran,
     });
 
+    const [showJenisModal, setShowJenisModal] = useState(false);
+
+    // supaya list checkbox bisa update tanpa reload
+    const [jenisList, setJenisList] = useState(jenisPengukuran);
+
+    const {
+        data: jenisData,
+        setData: setJenisData,
+        post: postJenis,
+        processing: jenisProcessing,
+        errors: jenisErrors,
+        reset: resetJenis,
+    } = useForm({
+        nama_pengukuran: '',
+    });
+
     const handleCheckboxChange = (id: number) => {
         const newSelection = selectedPengukuran.includes(id)
             ? selectedPengukuran.filter(i => i !== id)
@@ -85,6 +102,24 @@ export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }:
         setData('jenis_pengukuran_ids', newSelection);
     };
 
+    const handleCreateJenisPengukuran = () => {
+        postJenis('/jenis-pengukuran', {
+            preserveScroll: true,
+            onSuccess: (page: any) => {
+                const newJenis = page.props.flash?.newJenisPengukuran;
+                if (!newJenis) return;
+
+                setJenisList(prev => [...prev, newJenis]);
+
+                const updated = [...selectedPengukuran, newJenis.id];
+                setSelectedPengukuran(updated);
+                setData('jenis_pengukuran_ids', updated);
+
+                resetJenis();
+                setShowJenisModal(false); // 🔥 PASTI NUTUP
+            },
+        });
+    };
     const handleSubmit: FormEventHandler = (e) => {
         e.preventDefault();
 
@@ -433,16 +468,25 @@ export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }:
                                 {/* Jenis Pengukuran */}
                                 <div>
                                     <label className="block text-sm font-semibold text-stone-700 mb-2">Jenis Pengukuran</label>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowJenisModal(true)}
+                                                className="text-sm text-amber-600 hover:underline"
+                                            >
+                                                + Tambah
+                                            </button>
+                                        </div>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                        {jenisPengukuran.map((item) => (
-                                            <label key={item.id} className="flex items-center gap-2 bg-stone-50 p-3 rounded-lg border border-stone-200 cursor-pointer hover:bg-stone-100">
+                                        {jenisList.map(item => (
+                                            <label key={item.id} className="flex items-center gap-2 bg-stone-50 p-3 rounded-lg border">
                                                 <input
                                                     type="checkbox"
                                                     checked={selectedPengukuran.includes(item.id)}
                                                     onChange={() => handleCheckboxChange(item.id)}
                                                     className="w-4 h-4 accent-amber-600"
                                                 />
-                                                <span className="text-sm text-stone-700">{item.nama_pengukuran}</span>
+                                                <span className="text-sm">{item.nama_pengukuran}</span>
                                             </label>
                                         ))}
                                     </div>
@@ -529,6 +573,20 @@ export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }:
                     </form>
                 </div>
             </div>
+            <JenisPengukuranModal
+                        show={showJenisModal}
+                        editMode={false}
+                        deleteMode={false}
+                        processing={jenisProcessing}
+                        data={jenisData}
+                        errors={jenisErrors}
+                        onClose={() => {
+                        setShowJenisModal(false);
+                        resetJenis();
+                        }}
+                        onSubmit={handleCreateJenisPengukuran}
+                        onDataChange={(field, value) => setJenisData(field as any, value)}
+                        />
         </>
     );
 }

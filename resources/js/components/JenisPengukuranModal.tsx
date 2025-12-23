@@ -12,7 +12,8 @@ interface JenisPengukuranModalProps {
         nama_pengukuran?: string;
     };
     onClose: () => void;
-    onSubmit: FormEventHandler;
+    // onSubmit: FormEventHandler;
+    onSubmit: () => void;
     onDataChange: (field: string, value: string) => void;
 }
 
@@ -89,9 +90,9 @@ export default function JenisPengukuranModal({
                             </button>
                         </div>
                     </form>
-                ) : (
+               ) : (
                     /* NORMAL MODE (CREATE / EDIT) */
-                    <form onSubmit={onSubmit} className="p-6 space-y-4">
+                    <div className="p-6 space-y-4">
                         <div>
                             <label className="block text-sm font-semibold text-stone-700 mb-2">
                                 Nama Pengukuran
@@ -121,14 +122,15 @@ export default function JenisPengukuranModal({
                             </button>
 
                             <button
-                                type="submit"
+                                type="button"
+                                onClick={onSubmit} // ✅ sekarang BENAR
                                 disabled={processing}
-                                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white rounded-lg hover:from-yellow-500 hover:to-yellow-700"
+                                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white rounded-lg"
                             >
                                 {processing ? "Saving..." : editMode ? "Update" : "Create"}
                             </button>
                         </div>
-                    </form>
+                    </div>
                 )}
             </div>
         </div>
