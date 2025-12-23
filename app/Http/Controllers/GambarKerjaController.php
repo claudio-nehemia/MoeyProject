@@ -3,87 +3,63 @@
 namespace App\Http\Controllers;
 
 use Inertia\Inertia;
-use App\Models\Order;
 use App\Models\GambarKerja;
-use App\Models\SurveyUlang;
-use Illuminate\Http\Request;
 use App\Models\GambarKerjaFile;
-use App\Services\NotificationService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class GambarKerjaController extends Controller
 {
-    /* ================= INDEX ================= */
     public function index()
     {
-        $orders = Order::whereHas('surveyUlang')
-            ->orderByDesc('id')
+        $items = GambarKerja::with(['order', 'files'])
+            ->orderByDesc('created_at')
             ->get()
-            ->map(function ($order) {
-                $gk = GambarKerja::with('files')
-                    ->where('order_id', $order->id)
-                    ->first();
+            ->map(function ($item) {
+                $item->files = $item->files->map(function ($file) {
+                    $file->url = Storage::url($file->file_path);
+                    return $file;
+                });
 
-                return [
-                    'id' => $order->id,
-                    'nama_project' => $order->nama_project,
-                    'company_name' => $order->company_name,
-                    'customer_name' => $order->customer_name,
-                    'gambar_kerja' => $gk ? [
-                        'id' => $gk->id,
-                        'status' => $gk->status,
-                        'response_time' => $gk->response_time,
-                        'response_by' => $gk->response_by,
-                        'notes' => $gk->notes,
-                        'files' => $gk->files->map(fn ($f) => [
-                            'id' => $f->id,
-                            'original_name' => $f->original_name,
-                            'uploaded_by' => $f->uploaded_by,
-                            'url' => Storage::url($f->file_path),
-                        ]),
-                    ] : null,
-                ];
+                $item->has_response = !empty($item->response_time);
+                return $item;
             });
 
         return Inertia::render('GambarKerja/Index', [
-            'orders' => $orders,
+            'items' => $items,
         ]);
     }
 
     /* ================= RESPONSE ================= */
-    public function response(Order $order)
+
+    public function response($id)
     {
-        if (!SurveyUlang::where('order_id', $order->id)->exists()) {
-            return back()->with('error', 'Survey ulang belum tersedia.');
+        $gambarKerja = GambarKerja::findOrFail($id);
+
+        if ($gambarKerja->response_time) {
+            return back()->with('error', 'Sudah di-response.');
         }
 
-        if (GambarKerja::where('order_id', $order->id)->exists()) {
-            return back()->with('error', 'Gambar kerja sudah di-response.');
-        }
-
-        GambarKerja::create([
-            'order_id'      => $order->id,
-            'status'        => 'pending',
+        $gambarKerja->update([
             'response_time' => now(),
             'response_by'   => auth()->user()->name,
+            'status'        => 'pending',
         ]);
 
-        $order->update([
-            'tahapan_proyek' => 'gambar_kerja',
-        ]);
-
-        return back()->with('success', 'Response gambar kerja berhasil.');
+        return back()->with('success', 'Gambar kerja di-response.');
     }
 
-    /* ================= UPLOAD / EDIT ================= */
-    public function upload(Request $request, Order $order)
+    /* ================= UPLOAD ================= */
+
+    public function upload(Request $request)
     {
-        $request->validate([
-            'files.*' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
-            'notes'   => 'nullable|string|max:500',
+        $validated = $request->validate([
+            'gambar_kerja_id' => 'required|exists:gambar_kerjas,id',
+            'files'           => 'required|array',
+            'files.*'         => 'file|mimes:jpg,jpeg,png,pdf|max:10240',
         ]);
 
-        $gambarKerja = GambarKerja::where('order_id', $order->id)->firstOrFail();
+        $gambarKerja = GambarKerja::findOrFail($validated['gambar_kerja_id']);
 
         foreach ($request->file('files') as $file) {
             $path = $file->store('gambar-kerja', 'public');
@@ -97,38 +73,59 @@ class GambarKerjaController extends Controller
         }
 
         $gambarKerja->update([
-            'notes'  => $request->notes,
             'status' => 'uploaded',
         ]);
 
-        $notificationService = new NotificationService(); 
-        
-        $notificationService->sendApprovalMaterialRequestNotification($order);
-
-        return back()->with('success', 'Gambar kerja berhasil disimpan.');
+        return back()->with('success', 'File gambar kerja berhasil diupload.');
     }
 
-    /* ================= VIEW FILE ================= */
-    public function showFile(GambarKerjaFile $file)
+    /* ================= APPROVE ================= */
+
+    public function approve($id)
     {
-        // pastikan file ada di storage
-        if (!Storage::disk('public')->exists($file->file_path)) {
-            abort(404, 'File tidak ditemukan');
+        $gambarKerja = GambarKerja::findOrFail($id);
+
+        if ($gambarKerja->files()->count() === 0) {
+            return back()->with('error', 'Belum ada file.');
         }
 
-        $mime = Storage::disk('public')->mimeType($file->file_path);
-        $path = Storage::disk('public')->path($file->file_path);
-
-        // tampilkan langsung di browser (image / pdf)
-        return response()->file($path, [
-            'Content-Type' => $mime,
+        $gambarKerja->update([
+            'status'        => 'approved',
+            'approved_time' => now(),
+            'approved_by'   => auth()->user()->name,
         ]);
+
+        return back()->with('success', 'Gambar kerja disetujui.');
+    }
+
+    /* ================= REVISI ================= */
+
+    public function revisi(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'notes' => 'required|string|max:500',
+        ]);
+
+        $gambarKerja = GambarKerja::findOrFail($id);
+
+        $gambarKerja->update([
+            'revisi_notes' => $validated['notes'],
+            'status'       => 'pending',
+        ]);
+
+        return back()->with('success', 'Catatan revisi disimpan.');
     }
 
     /* ================= DELETE FILE ================= */
-    public function deleteFile(GambarKerjaFile $file)
+
+    public function deleteFile($id)
     {
-        Storage::disk('public')->delete($file->file_path);
+        $file = GambarKerjaFile::findOrFail($id);
+
+        if (Storage::disk('public')->exists($file->file_path)) {
+            Storage::disk('public')->delete($file->file_path);
+        }
+
         $file->delete();
 
         return back()->with('success', 'File berhasil dihapus.');
