@@ -550,6 +550,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/{itemPekerjaan}', [ApprovalRabController::class, 'update'])
         ->middleware('permission:approval-material.update')
         ->name('update');
+        Route::put('/approval-material/bulk-update', [ApprovalRabController::class, 'bulkUpdate'])
+        ->middleware('permission:approval-material.update');
     });
 
 

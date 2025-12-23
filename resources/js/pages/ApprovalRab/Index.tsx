@@ -112,7 +112,7 @@ export default function ApprovalRabIndex({ items }: Props) {
                                             }
                                             className="h-fit rounded-lg bg-amber-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-amber-700"
                                         >
-                                            Isi Keterangan
+                                            Edit Item & Isi Keterangan
                                         </button>
                                     </div>
 
