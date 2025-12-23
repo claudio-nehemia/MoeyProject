@@ -191,14 +191,90 @@
             font-weight: bold;
             text-align: right;
         }
+
+        /* ===============================
+        KOP SURAT
+        =============================== */
+
+        .kop-surat {
+            width: 100%;
+            border-bottom: 3px solid #16a34a;
+            padding-bottom: 14px;
+            margin-bottom: 18px;
+        }
+
+        /* ===============================
+        LOGO AREA (PALING ATAS)
+        =============================== */
+
+        .kop-logo {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .kop-logo img {
+            width: 100%;
+            /* FULL PANJANG */
+            max-width: 100%;
+            /* pastikan tidak kepotong */
+            height: 120px;
+            /* 🔥 NAIKIN TINGGI LOGO */
+            object-fit: contain;
+            /* JAGA PROPORSI */
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* ===============================
+        JUDUL DOKUMEN
+        =============================== */
+
+        .kop-judul {
+            text-align: center;
+            margin-top: 6px;
+        }
+
+        .judul-utama {
+            font-size: 17px;
+            font-weight: bold;
+            color: #7c3aed;
+            /* UNGU */
+            margin: 0 0 3px 0;
+            letter-spacing: 0.5px;
+        }
+
+        .judul-sub {
+            font-size: 13px;
+            font-weight: bold;
+            color: #111827;
+            margin: 0;
+        }
+
+        /* ===============================
+        GARIS PEMISAH HIJAU
+        =============================== */
+
+        .kop-divider {
+            margin-top: 10px;
+            border-top: 2px solid #16a34a;
+        }
     </style>
 </head>
 
 <body>
     <!-- Header -->
-    <div class="header">
-        <h1>RANCANGAN ANGGARAN BIAYA JASA</h1>
-        <h2>MOEY INTERIOR</h2>
+    <div class="kop-surat">
+        <!-- LOGO -->
+        <div class="kop-logo">
+            <img src="{{ public_path('kop-moey.png') }}" alt="MOEY Logo">
+        </div>
+
+        <!-- JUDUL -->
+        <div class="kop-judul">
+            <div class="judul-utama">RANCANGAN ANGGARAN BIAYA JASA</div>
+            <div class="judul-sub">MOEY INTERIOR</div>
+        </div>
     </div>
 
     <!-- Info Section -->
@@ -240,11 +316,11 @@
             </tr>
         </thead>
         <tbody>
-            @foreach($produks as $index => $produk)
+            @foreach ($produks as $index => $produk)
                 @php
                     // Get bahan baku names from selected bahan baku
                     $bahanBakuNames = $produk['bahan_baku_names'] ?? [];
-                    
+
                     // Group items by jenis (only for finishing)
                     $finishingDalamItems = [];
                     $finishingLuarItems = [];
@@ -269,13 +345,14 @@
                     $maxRows = max(count($bahanBakuNames), count($finishingDalamItems), count($finishingLuarItems), 1);
                 @endphp
 
-                @for($rowIndex = 0; $rowIndex < $maxRows; $rowIndex++)
+                @for ($rowIndex = 0; $rowIndex < $maxRows; $rowIndex++)
                     <tr class="{{ $rowIndex === 0 ? 'produk-row' : '' }}">
-                        @if($rowIndex === 0)
+                        @if ($rowIndex === 0)
                             <td rowspan="{{ $maxRows }}">
                                 <div class="produk-name">{{ $index + 1 }}. {{ $produk['nama_produk'] }}</div>
-                                @if($produk['panjang'] && $produk['lebar'] && $produk['tinggi'])
-                                    <div class="produk-dim">{{ $produk['panjang'] }} × {{ $produk['lebar'] }} × {{ $produk['tinggi'] }} cm</div>
+                                @if ($produk['panjang'] && $produk['lebar'] && $produk['tinggi'])
+                                    <div class="produk-dim">{{ $produk['panjang'] }} × {{ $produk['lebar'] }} ×
+                                        {{ $produk['tinggi'] }} cm</div>
                                 @endif
                             </td>
                             <td rowspan="{{ $maxRows }}" class="harga-jasa-cell">
@@ -284,24 +361,24 @@
                         @endif
 
                         <td>
-                            @if(isset($bahanBakuNames[$rowIndex]))
+                            @if (isset($bahanBakuNames[$rowIndex]))
                                 • {{ $bahanBakuNames[$rowIndex] }}
                             @endif
                         </td>
 
                         <td>
-                            @if(isset($finishingDalamItems[$rowIndex]))
+                            @if (isset($finishingDalamItems[$rowIndex]))
                                 • {{ $finishingDalamItems[$rowIndex] }}
                             @endif
                         </td>
 
                         <td>
-                            @if(isset($finishingLuarItems[$rowIndex]))
+                            @if (isset($finishingLuarItems[$rowIndex]))
                                 • {{ $finishingLuarItems[$rowIndex] }}
                             @endif
                         </td>
 
-                        @if($rowIndex === 0)
+                        @if ($rowIndex === 0)
                             <td rowspan="{{ $maxRows }}" class="text-center">
                                 {{ $produk['qty_produk'] }}
                             </td>
