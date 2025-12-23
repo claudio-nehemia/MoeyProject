@@ -1,4 +1,4 @@
-import { useState, FormEventHandler } from 'react';
+import { useState, FormEventHandler, useEffect } from 'react';
 import { Head, useForm, router, Link } from '@inertiajs/react';
 import JenisPengukuranModal from '@/components/JenisPengukuranModal';
 import Navbar from '@/components/Navbar';
@@ -105,21 +105,34 @@ export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }:
     const handleCreateJenisPengukuran = () => {
         postJenis('/jenis-pengukuran', {
             preserveScroll: true,
-            onSuccess: (page: any) => {
-                const newJenis = page.props.flash?.newJenisPengukuran;
-                if (!newJenis) return;
-
-                setJenisList(prev => [...prev, newJenis]);
-
-                const updated = [...selectedPengukuran, newJenis.id];
-                setSelectedPengukuran(updated);
-                setData('jenis_pengukuran_ids', updated);
-
+            onSuccess: async (page: any) => {
                 resetJenis();
-                setShowJenisModal(false); // 🔥 PASTI NUTUP
+                setShowJenisModal(false);
+
+                // fetch list terbaru dari backend
+                try {
+                    const res = await fetch('/jenis-pengukuran');
+                    const latestJenis = await res.json();
+                    setJenisList(latestJenis); // ✅ update state, checkbox re-render
+                } catch (error) {
+                    console.error('Gagal fetch jenis terbaru', error);
+                }
             },
         });
     };
+    
+    useEffect(() => {
+        const fetchJenis = async () => {
+            const res = await fetch('/jenis-pengukuran');
+            const data = await res.json();
+            setJenisList(data);
+        };
+        fetchJenis();
+
+        const interval = setInterval(fetchJenis, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
     const handleSubmit: FormEventHandler = (e) => {
         e.preventDefault();
 
