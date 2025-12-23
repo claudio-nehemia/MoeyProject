@@ -15,11 +15,14 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\KontrakController;
 use App\Http\Controllers\RabJasaController;
 use App\Http\Controllers\EstimasiController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\JenisItemController;
 use App\Http\Controllers\MoodboardController;
 use App\Http\Controllers\RabVendorController;
 use App\Http\Controllers\RabKontrakController;
+use App\Http\Controllers\ApprovalRabController;
 use App\Http\Controllers\DesainFinalController;
+use App\Http\Controllers\GambarKerjaController;
 use App\Http\Controllers\RabInternalController;
 use App\Http\Controllers\SurveyUlangController;
 use App\Http\Controllers\NotificationController;
@@ -31,8 +34,6 @@ use App\Http\Controllers\SurveyResultsController;
 use App\Http\Controllers\SurveyScheduleController;
 use App\Http\Controllers\JenisPengukuranController;
 use App\Http\Controllers\ProjectManagementController;
-use App\Http\Controllers\GambarKerjaController;
-use App\Http\Controllers\ApprovalRabController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -40,9 +41,8 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // DASHBOARD = all role
-    Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
-    })->name('dashboard');
+    Route::get('dashboard',  [DashboardController::class, 'index']
+    )->name('dashboard');
 
     Route::middleware(['auth'])->group(function () {
         Route::prefix('notifications')->name('notifications.')->group(function () {

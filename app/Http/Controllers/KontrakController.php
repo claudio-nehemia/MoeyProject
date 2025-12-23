@@ -130,6 +130,7 @@ class KontrakController extends Controller
             // Update tahapan_proyek to 'kontrak'
             $itemPekerjaan->moodboard->order->update([
                 'tahapan_proyek' => 'kontrak',
+                'project_status' => 'deal',
             ]);
             
             return redirect()->route('kontrak.index')->with('success', 'Kontrak berhasil dilengkapi!');

@@ -657,6 +657,10 @@ class InvoiceController extends Controller
             'bast_foto_klien_uploaded_at' => now(),
         ]);
 
+        $itemPekerjaan->moodboard->order->update([
+            'tahapan_proyek' => 'selesai',
+        ]);
+
         return back()->with('success', 'Foto BAST dengan klien berhasil diupload. Sekarang Anda dapat upload bukti pembayaran.');
     }
 
