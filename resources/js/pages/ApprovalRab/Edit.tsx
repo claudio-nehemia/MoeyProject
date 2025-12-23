@@ -3,41 +3,59 @@ import { Head, router } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 
-export default function ApprovalRabEdit({ itemPekerjaan }: any) {
-    const [sidebarOpen, setSidebarOpen] = useState(
-        typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
-    );
+interface ItemRow {
+    id: number;
+    ruangan: string | null;
+    produk: string;
+    jenis_item: string;
+    item_name: string;
+    quantity: number;
+    keterangan_material: string | null;
+}
 
-    const [items, setItems] = useState(
-        itemPekerjaan.produks.flatMap((p: any) =>
-            p.jenisItems.flatMap((j: any) =>
-                j.items.map((i: any) => ({
-                    id: i.id,
-                    keterangan_material: i.keterangan_material ?? '',
-                }))
-            )
-        )
-    );
+interface Props {
+    itemPekerjaan: {
+        id: number;
+        project_name: string;
+        company_name: string;
+        customer_name: string;
+        items: ItemRow[];
+    };
+}
 
-    const handleChange = (id: number, value: string) => {
-        setItems((prev: any[]) =>
+export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
+    const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
+    const [saving, setSaving] = useState(false);
+    const [items, setItems] = useState<ItemRow[]>(itemPekerjaan.items);
+
+    const updateKeterangan = (id: number, value: string) => {
+        setItems((prev) =>
             prev.map((i) =>
-                i.id === id ? { ...i, keterangan_material: value } : i
-            )
+                i.id === id ? { ...i, keterangan_material: value } : i,
+            ),
         );
     };
 
-    const handleSubmit = () => {
-        router.put(`/approval-material/${itemPekerjaan.id}`, { items });
-    };
-
-    const handleBack = () => {
-        router.get('/approval-material');
+    const handleSave = () => {
+        setSaving(true);
+        router.put(
+            `/approval-material/${itemPekerjaan.id}`,
+            {
+                items: items.map((i) => ({
+                    id: i.id,
+                    keterangan_material: i.keterangan_material,
+                })),
+            },
+            {
+                preserveScroll: true,
+                onFinish: () => setSaving(false),
+            },
+        );
     };
 
     return (
-        <div className="flex h-screen bg-stone-50">
-            <Head title="Approval Material" />
+        <>
+            <Head title="Edit Keterangan Material" />
 
             <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
             <Sidebar
@@ -46,88 +64,78 @@ export default function ApprovalRabEdit({ itemPekerjaan }: any) {
                 onClose={() => setSidebarOpen(false)}
             />
 
-            <main className="pt-12 pl-0 sm:pl-60 px-3 pb-6 w-full overflow-y-auto">
-                {/* HEADER */}
-                <div className="mb-6">
-                    <h1 className="text-2xl sm:text-3xl font-bold text-stone-900">
-                        Approval Material
-                    </h1>
-                    <p className="text-sm text-stone-600">
-                        {itemPekerjaan.order.nama_project} •{' '}
-                        {itemPekerjaan.order.company_name}
-                    </p>
-                </div>
+            <div className="p-3 lg:ml-60">
+                <div className="mt-12 p-3 max-w-6xl">
+                    {/* Header */}
+                    <div className="mb-6">
+                        <h1 className="text-3xl font-light text-stone-800">
+                            Keterangan Material RAB
+                        </h1>
+                        <p className="text-sm text-stone-500">
+                            {itemPekerjaan.project_name} •{' '}
+                            {itemPekerjaan.company_name}
+                        </p>
+                    </div>
 
-                {/* CONTENT */}
-                <div className="space-y-6">
-                    {itemPekerjaan.produks.map((p: any) => (
-                        <div
-                            key={p.id}
-                            className="bg-white border rounded-xl p-4 shadow-sm"
-                        >
-                            <h2 className="font-semibold text-stone-900 mb-3">
-                                {p.nama_produk}
-                            </h2>
-
-                            {p.jenisItems.map((j: any) => (
-                                <div key={j.id} className="mb-4">
-                                    <p className="text-sm font-medium text-stone-700 mb-2">
-                                        {j.jenis_item_name}
-                                    </p>
-
-                                    {j.items.map((i: any) => {
-                                        const current = items.find(
-                                            (x: any) => x.id === i.id
-                                        );
-
-                                        return (
-                                            <div key={i.id} className="mb-3">
-                                                <div className="text-sm text-stone-800">
-                                                    {i.nama_item} (Qty:{' '}
-                                                    {i.quantity})
-                                                </div>
-
-                                                <textarea
-                                                    rows={2}
-                                                    value={
-                                                        current?.keterangan_material ??
-                                                        ''
-                                                    }
-                                                    onChange={(e) =>
-                                                        handleChange(
-                                                            i.id,
-                                                            e.target.value
-                                                        )
-                                                    }
-                                                    placeholder="Keterangan material (contoh: Type 1A, Cap Kuda Terbang)"
-                                                    className="mt-1 w-full border border-indigo-300 bg-indigo-50 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500"
-                                                />
+                    {/* Table */}
+                    <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+                        <table className="w-full text-sm">
+                            <thead className="bg-stone-100 text-stone-700">
+                                <tr>
+                                    <th className="p-3 text-left">Item</th>
+                                    <th className="p-3 text-left">Keterangan Material</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {items.map((row) => (
+                                    <tr key={row.id} className="border-t">
+                                        <td className="p-3">
+                                            <div className="font-medium text-stone-800">
+                                                {row.item_name}
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            ))}
-                        </div>
-                    ))}
-                </div>
+                                            <div className="text-xs text-stone-500">
+                                                {row.produk} • {row.jenis_item} • Qty:{' '}
+                                                {row.quantity}
+                                            </div>
+                                        </td>
+                                        <td className="p-3">
+                                            <textarea
+                                                value={row.keterangan_material || ''}
+                                                onChange={(e) =>
+                                                    updateKeterangan(
+                                                        row.id,
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                rows={2}
+                                                className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:ring-amber-300 focus:border-amber-500"
+                                                placeholder="Contoh: type 1A, cap Kuda Terbang"
+                                            />
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
 
-                {/* ACTION */}
-                <div className="mt-6 flex justify-end gap-3">
-                    <button
-                        onClick={handleBack}
-                        className="px-6 py-2 border border-stone-300 text-stone-700 rounded-lg font-semibold hover:bg-stone-100"
-                    >
-                        ← Kembali
-                    </button>
-
-                    <button
-                        onClick={handleSubmit}
-                        className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700"
-                    >
-                        Simpan Approval
-                    </button>
+                    {/* Action */}
+                    <div className="mt-6 flex justify-end gap-3">
+                        <button
+                            onClick={() => router.visit('/approval-material')}
+                            className="rounded-lg border border-stone-300 px-6 py-2 text-sm text-stone-700 hover:bg-stone-50"
+                        >
+                            Kembali
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="rounded-lg bg-amber-600 px-6 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+                        >
+                            {saving ? 'Menyimpan...' : 'Simpan'}
+                        </button>
+                    </div>
                 </div>
-            </main>
-        </div>
+            </div>
+        </>
     );
 }

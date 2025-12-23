@@ -1,9 +1,16 @@
 import { useState } from 'react';
-import { Head, router } from '@inertiajs/react';
-import Navbar from '@/components/Navbar';
+import { router, Head } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
+import Navbar from '@/components/Navbar';
 
 /* ================= TYPES ================= */
+
+interface Order {
+    id: number;
+    nama_project: string;
+    company_name: string;
+    customer_name: string;
+}
 
 interface GambarKerjaFile {
     id: number;
@@ -13,79 +20,113 @@ interface GambarKerjaFile {
 
 interface GambarKerja {
     id: number;
+    status: 'pending' | 'uploaded' | 'approved';
     response_time: string | null;
     response_by: string | null;
-    status: 'pending' | 'uploaded';
-    notes: string | null;
+    revisi_notes: string | null;
+    approved_time: string | null;
+    approved_by: string | null;
     files: GambarKerjaFile[];
-}
-
-interface Order {
-    id: number;
-    nama_project: string;
-    company_name: string;
-    customer_name: string;
-    gambar_kerja?: GambarKerja | null;
+    order: Order;
 }
 
 interface Props {
-    orders: Order[];
+    items: GambarKerja[];
 }
-
-/* ================= HELPER ================= */
-
-const isImage = (name: string) => /\.(jpg|jpeg|png)$/i.test(name);
 
 /* ================= COMPONENT ================= */
 
-export default function GambarKerjaIndex({ orders }: Props) {
-    const [sidebarOpen, setSidebarOpen] = useState(
-        typeof window !== 'undefined' ? window.innerWidth >= 1024 : true,
-    );
-
-    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-    const [files, setFiles] = useState<File[]>([]);
-    const [notes, setNotes] = useState('');
+export default function GambarKerjaIndex({ items }: Props) {
+    const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
+    const [selectedItem, setSelectedItem] = useState<GambarKerja | null>(null);
+    const [showUploadModal, setShowUploadModal] = useState(false);
+    const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+    const [showReviseModal, setShowReviseModal] = useState(false);
+    const [reviseNotes, setReviseNotes] = useState('');
     const [loading, setLoading] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
-    /* ================= RESPONSE ================= */
-    const handleResponse = (order: Order) => {
-        if (!confirm(`Response gambar kerja untuk "${order.nama_project}"?`)) return;
+    /* ================= FILTER ================= */
 
-        setLoading(true);
-        router.post(`/gambar-kerja/response/${order.id}`, {}, {
-            preserveScroll: true,
-            onSuccess: () => router.reload({ only: ['orders'] }),
-            onFinish: () => setLoading(false),
-        });
+    const filteredItems = items.filter((item) => {
+        const search = searchQuery.toLowerCase();
+        return (
+            item.order.nama_project.toLowerCase().includes(search) ||
+            item.order.customer_name.toLowerCase().includes(search) ||
+            item.order.company_name.toLowerCase().includes(search)
+        );
+    });
+
+    /* ================= ACTIONS ================= */
+
+    const handleResponse = (item: GambarKerja) => {
+        if (window.confirm(`Response gambar kerja untuk project "${item.order.nama_project}"?`)) {
+            setLoading(true);
+            router.post(`/gambar-kerja/response/${item.id}`, {}, {
+                onFinish: () => setLoading(false),
+            });
+        }
     };
 
-    /* ================= UPLOAD ================= */
     const handleUpload = () => {
-        if (!selectedOrder || files.length === 0) return;
+        if (!selectedItem || uploadFiles.length === 0) return;
 
         setLoading(true);
-
         const formData = new FormData();
-        files.forEach((f) => formData.append('files[]', f));
-        formData.append('notes', notes);
+        formData.append('gambar_kerja_id', selectedItem.id.toString());
+        uploadFiles.forEach((file) => {
+            formData.append('files[]', file);
+        });
 
-        router.post(`/gambar-kerja/upload/${selectedOrder.id}`, formData as any, {
-            preserveScroll: true,
+        router.post('/gambar-kerja/upload', formData as any, {
             onSuccess: () => {
-                setSelectedOrder(null);
-                setFiles([]);
-                setNotes('');
-                router.reload({ only: ['orders'] });
+                setUploadFiles([]);
+                setShowUploadModal(false);
+                setSelectedItem(null);
             },
             onFinish: () => setLoading(false),
         });
     };
 
+    const handleApprove = (item: GambarKerja) => {
+        if (window.confirm(`Approve semua gambar kerja untuk project "${item.order.nama_project}"?`)) {
+            setLoading(true);
+            router.post(`/gambar-kerja/approve/${item.id}`, {}, {
+                onFinish: () => setLoading(false),
+            });
+        }
+    };
+
+    const handleRevise = () => {
+        if (!selectedItem || !reviseNotes) return;
+
+        setLoading(true);
+        router.post(`/gambar-kerja/revisi/${selectedItem.id}`, {
+            notes: reviseNotes,
+        }, {
+            onSuccess: () => {
+                setShowReviseModal(false);
+                setSelectedItem(null);
+                setReviseNotes('');
+            },
+            onFinish: () => setLoading(false),
+        });
+    };
+
+    const handleDeleteFile = (fileId: number) => {
+        if (window.confirm('Hapus file ini?')) {
+            setLoading(true);
+            router.delete(`/gambar-kerja/file/${fileId}`, {
+                onFinish: () => setLoading(false),
+            });
+        }
+    };
+
+    /* ================= RENDER ================= */
+
     return (
         <div className="flex h-screen bg-stone-50">
-            <Head title="Gambar Kerja" />
-
+            <Head title="Gambar Kerja Management" />
             <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
             <Sidebar
                 isOpen={sidebarOpen}
@@ -93,194 +134,223 @@ export default function GambarKerjaIndex({ orders }: Props) {
                 onClose={() => setSidebarOpen(false)}
             />
 
-            <main className="pt-12 pl-0 sm:pl-60 px-3 pb-6 w-full overflow-y-auto">
-                {/* HEADER */}
+            <main className="pt-12 pl-0 sm:pl-60 px-2 sm:px-4 pb-6 transition-all w-full overflow-y-auto">
+
+                {/* ================= HEADER ================= */}
                 <div className="mb-6">
-                    <h1 className="text-2xl sm:text-3xl font-bold text-stone-900">
-                        Gambar Kerja
-                    </h1>
-                    <p className="text-sm text-stone-600">
-                        Response dan upload gambar kerja project
-                    </p>
-                </div>
-
-                {/* LIST */}
-                <div className="space-y-4">
-                    {orders.length === 0 && (
-                        <div className="bg-white border rounded-xl p-6 text-center text-sm text-stone-500">
-                            Tidak ada project untuk gambar kerja
+                    <div className="flex items-center gap-2.5 mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center shadow-md">
+                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
                         </div>
-                    )}
-
-                    {orders.map((order) => {
-                        const gk = order.gambar_kerja;
-                        const filesList = gk?.files ?? [];
-
-                        return (
-                            <div
-                                key={order.id}
-                                className="bg-white border rounded-xl p-4 shadow-sm"
-                            >
-                                <div className="flex flex-col gap-3">
-                                    {/* INFO */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                        <div>
-                                            <p className="font-semibold text-stone-900">
-                                                {order.nama_project}
-                                            </p>
-                                            <p className="text-sm text-stone-600">
-                                                {order.company_name} • {order.customer_name}
-                                            </p>
-
-                                            {gk?.response_time && (
-                                                <p className="mt-1 text-xs text-indigo-600">
-                                                    Response oleh{' '}
-                                                    <span className="font-semibold">
-                                                        {gk.response_by}
-                                                    </span>{' '}
-                                                    (
-                                                    {new Date(gk.response_time).toLocaleDateString('id-ID')}
-                                                    )
-                                                </p>
-                                            )}
-                                        </div>
-
-                                        {/* ACTION */}
-                                        <div className="flex items-center gap-2">
-                                            {!gk && (
-                                                <button
-                                                    onClick={() => handleResponse(order)}
-                                                    disabled={loading}
-                                                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"
-                                                >
-                                                    Response
-                                                </button>
-                                            )}
-
-                                            {gk && (
-                                                <button
-                                                    onClick={() => setSelectedOrder(order)}
-                                                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700"
-                                                >
-                                                    {filesList.length > 0
-                                                        ? 'Edit / Tambah File'
-                                                        : 'Upload Gambar Kerja'}
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* PREVIEW FILES */}
-                                    {filesList.length > 0 && (
-                                        <div className="mt-3 rounded-lg border bg-stone-50 p-3">
-                                            <p className="text-xs font-semibold text-stone-600 mb-2">
-                                                Preview Gambar Kerja ({filesList.length})
-                                            </p>
-
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                                {filesList.map((f) => {
-                                                    const isImage = f.original_name.match(
-                                                        /\.(jpg|jpeg|png)$/i
-                                                    );
-
-                                                    return (
-                                                        <a
-                                                            key={f.id}
-                                                            href={`/gambar-kerja/show/${f.id}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="group block border rounded-lg bg-white p-2 hover:shadow"
-                                                        >
-                                                            {isImage ? (
-                                                                <img
-                                                                    src={f.url}
-                                                                    alt={f.original_name}
-                                                                    className="h-24 w-full object-contain rounded"
-                                                                />
-                                                            ) : (
-                                                                <div className="h-24 flex flex-col items-center justify-center text-xs text-stone-600">
-                                                                    📄 PDF
-                                                                </div>
-                                                            )}
-
-                                                            <p className="mt-1 text-[11px] text-center truncate text-stone-700">
-                                                                {f.original_name}
-                                                            </p>
-                                                        </a>
-
-                                                    );
-                                                })}
-                                            </div>
-
-                                            {gk?.notes && (
-                                                <p className="mt-2 text-xs text-stone-600">
-                                                    <span className="font-semibold">Catatan:</span>{' '}
-                                                    {gk.notes}
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </main>
-
-            {/* MODAL UPLOAD */}
-            {selectedOrder && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3">
-                    <div className="bg-white w-full max-w-md rounded-xl shadow-xl">
-                        <div className="px-5 py-4 border-b border-stone-300">
-                            <h2 className="text-lg font-bold">Upload Gambar Kerja</h2>
-                            <p className="text-sm text-stone-600">
-                                {selectedOrder.nama_project}
+                        <div>
+                            <h1 className="text-2xl sm:text-3xl font-bold text-stone-900">
+                                Gambar Kerja Management
+                            </h1>
+                            <p className="text-xs text-stone-600">
+                                Upload dan kelola gambar kerja setiap project
                             </p>
                         </div>
+                    </div>
+                </div>
 
-                        <div className="p-5 space-y-4">
+                {/* ================= SEARCH ================= */}
+                <div className="mb-4">
+                    <div className="relative">
+                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input
+                            type="text"
+                            placeholder="Cari project, customer, atau company..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                    </div>
+                </div>
+
+                {/* ================= LIST ================= */}
+                <div className="grid grid-cols-1 gap-4">
+                    {filteredItems.map((item) => (
+                        <div key={item.id}
+                            className="rounded-xl border-2 bg-white border-stone-200 hover:border-indigo-300 transition-all overflow-hidden">
+                            <div className="p-4 sm:p-5">
+
+                                {/* INFO */}
+                                <div className="mb-4 pb-4 border-b border-stone-200">
+                                    <h3 className="text-lg sm:text-xl font-bold text-stone-900">
+                                        {item.order.nama_project}
+                                    </h3>
+                                    <p className="text-sm text-stone-600">{item.order.company_name}</p>
+                                    <p className="text-xs text-stone-500">
+                                        Customer: {item.order.customer_name}
+                                    </p>
+
+                                    <div className="flex gap-2 mt-2">
+                                        {item.status === 'approved' && (
+                                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                                                ✓ Approved
+                                            </span>
+                                        )}
+                                        {item.response_time && (
+                                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-violet-100 text-violet-700">
+                                                ✓ Responded
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* RESPONSE */}
+                                {!item.response_time && (
+                                    <div className="mb-4 text-center">
+                                        <button
+                                            onClick={() => handleResponse(item)}
+                                            disabled={loading}
+                                            className="px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-violet-500 to-violet-600 rounded-lg"
+                                        >
+                                            Response
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* FILES */}
+                                {item.files.length > 0 && (
+                                    <div className="space-y-2 mb-4">
+                                        {item.files.map((file) => (
+                                            <div key={file.id}
+                                                className="flex items-center gap-2 p-2.5 bg-stone-50 border rounded-lg">
+                                                <img src={file.url}
+                                                    className="w-12 h-12 rounded object-cover" />
+                                                <div className="flex-1 text-xs truncate">
+                                                    {file.original_name}
+                                                </div>
+                                                <a href={file.url} target="_blank"
+                                                    className="text-blue-600 text-xs">
+                                                    👁️ Lihat
+                                                </a>
+                                                <button
+                                                    onClick={() => handleDeleteFile(file.id)}
+                                                    className="text-red-600 text-xs">
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* REVISI */}
+                                {item.revisi_notes && (
+                                    <div className="mb-4 bg-orange-50 border border-orange-200 rounded-lg p-3">
+                                        <p className="text-xs font-semibold text-orange-900 mb-1">
+                                            Catatan Revisi
+                                        </p>
+                                        <p className="text-xs text-orange-700">
+                                            {item.revisi_notes}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* ACTION */}
+                                {item.response_time && (
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => {
+                                                setSelectedItem(item);
+                                                setShowUploadModal(true);
+                                            }}
+                                            className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-lg"
+                                        >
+                                            Upload
+                                        </button>
+
+                                        <button
+                                            onClick={() => {
+                                                setSelectedItem(item);
+                                                setShowReviseModal(true);
+                                            }}
+                                            className="px-4 py-2.5 text-sm font-semibold text-white bg-orange-600 rounded-lg"
+                                        >
+                                            Revisi
+                                        </button>
+
+                                        {item.files.length > 0 && item.status !== 'approved' && (
+                                            <button
+                                                onClick={() => handleApprove(item)}
+                                                className="px-4 py-2.5 text-sm font-semibold text-white bg-emerald-600 rounded-lg"
+                                            >
+                                                Approve
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* ================= UPLOAD MODAL ================= */}
+                {showUploadModal && selectedItem && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+                            <h2 className="text-lg font-bold mb-3">Upload Gambar Kerja</h2>
                             <input
                                 type="file"
                                 multiple
                                 accept=".jpg,.jpeg,.png,.pdf"
                                 onChange={(e) =>
-                                    setFiles(
-                                        e.target.files
-                                            ? Array.from(e.target.files)
-                                            : [],
-                                    )
+                                    setUploadFiles(e.target.files ? Array.from(e.target.files) : [])
                                 }
-                                className="w-full text-sm"
                             />
-
-                            <textarea
-                                value={notes}
-                                onChange={(e) => setNotes(e.target.value)}
-                                placeholder="Catatan (opsional)"
-                                rows={3}
-                                className="w-full border rounded-lg px-3 py-2 text-sm resize-none"
-                            />
-                        </div>
-
-                        <div className="flex gap-2 px-5 pb-5">
-                            <button
-                                onClick={() => setSelectedOrder(null)}
-                                className="flex-1 border rounded-lg py-2 text-sm"
-                            >
-                                Batal
-                            </button>
-                            <button
-                                onClick={handleUpload}
-                                disabled={files.length === 0 || loading}
-                                className="flex-1 bg-indigo-600 text-white rounded-lg py-2 text-sm font-semibold disabled:opacity-50"
-                            >
-                                {loading ? 'Uploading...' : 'Upload'}
-                            </button>
+                            <div className="flex gap-2 mt-4">
+                                <button
+                                    onClick={() => setShowUploadModal(false)}
+                                    className="flex-1 border rounded py-2">
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={handleUpload}
+                                    disabled={loading || uploadFiles.length === 0}
+                                    className="flex-1 bg-indigo-600 text-white rounded py-2">
+                                    Upload
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+
+                {/* ================= REVISE MODAL ================= */}
+                {showReviseModal && selectedItem && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+                            <h2 className="text-lg font-bold mb-3">Catatan Revisi</h2>
+                            <textarea
+                                value={reviseNotes}
+                                onChange={(e) => setReviseNotes(e.target.value)}
+                                className="w-full border rounded p-2 h-24"
+                            />
+                            <div className="flex gap-2 mt-4">
+                                <button
+                                    onClick={() => setShowReviseModal(false)}
+                                    className="flex-1 border rounded py-2">
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={handleRevise}
+                                    disabled={loading || !reviseNotes}
+                                    className="flex-1 bg-orange-600 text-white rounded py-2">
+                                    Kirim Revisi
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+            </main>
         </div>
     );
 }

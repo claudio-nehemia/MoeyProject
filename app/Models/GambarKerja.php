@@ -8,11 +8,21 @@ class GambarKerja extends Model
 {
     protected $fillable = [
         'order_id',
+        'status',                // pending | uploaded | approved
         'response_time',
         'response_by',
-        'status',
         'notes',
+        'revisi_notes',
+        'approved_time',
+        'approved_by',
     ];
+
+    protected $casts = [
+        'response_time' => 'datetime',
+        'approved_time' => 'datetime',
+    ];
+
+    /* ================= RELATIONS ================= */
 
     public function order()
     {
