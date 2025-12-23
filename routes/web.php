@@ -519,20 +519,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('gambar-kerja')->name('gambar-kerja.')->group(function () {
         Route::get('/', [GambarKerjaController::class, 'index'])
-            ->middleware('permission:gambar-kerja.index')
-            ->name('index');
-        Route::post('/response/{order}', [GambarKerjaController::class, 'response'])
-            ->middleware('permission:gambar-kerja.response')
-            ->name('response');
-        Route::post('/upload/{order}', [GambarKerjaController::class, 'upload'])
-            ->middleware('permission:gambar-kerja.upload')
-            ->name('upload');
-        Route::delete('/gambar-kerja/file/{file}', [GambarKerjaController::class, 'deleteFile'])
-            ->middleware('permission:gambar-kerja.delete')
-            ->name('delete');
-        Route::get('/show/{file}', [GambarKerjaController::class, 'showFile'])
-            ->middleware('permission:gambar-kerja.show')
-            ->name('show');
+        ->middleware('permission:gambar-kerja.index')
+        ->name('index');
+
+        Route::post('/response/{id}', [GambarKerjaController::class, 'response'])
+        ->middleware('permission:gambar-kerja.response')
+        ->name('response');
+        Route::post('/upload', [GambarKerjaController::class, 'upload'])
+        ->middleware('permission:gambar-kerja.upload')
+        ->name('upload');
+        Route::post('/approve/{id}', [GambarKerjaController::class, 'approve'])
+        ->middleware('permission:gambar-kerja.approve')
+        ->name('approve');
+        Route::post('/revisi/{id}', [GambarKerjaController::class, 'revisi'])
+        ->middleware('permission:gambar-kerja.revisi')
+        ->name('revisi');
+
+        Route::delete('/file/{id}', [GambarKerjaController::class, 'deleteFile'])
+        ->middleware('permission:gambar-kerja.delete')
+        ->name('delete');
     });
 
     Route::prefix('approval-material')->name('approval-material.')->group(function () {
