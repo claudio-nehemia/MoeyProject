@@ -3,14 +3,20 @@ import { Head, router } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 
+interface ItemOption {
+    id: number;
+    name: string;
+}
+
 interface ItemRow {
     id: number;
-    ruangan: string | null;
+    item_id: number;
+    item_name: string;
     produk: string;
     jenis_item: string;
-    item_name: string;
     quantity: number;
     keterangan_material: string | null;
+    available_items: ItemOption[];
 }
 
 interface Props {
@@ -28,6 +34,14 @@ export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
     const [saving, setSaving] = useState(false);
     const [items, setItems] = useState<ItemRow[]>(itemPekerjaan.items);
 
+    const updateItem = (id: number, itemId: number) => {
+        setItems((prev) =>
+            prev.map((i) =>
+                i.id === id ? { ...i, item_id: itemId } : i,
+            ),
+        );
+    };
+
     const updateKeterangan = (id: number, value: string) => {
         setItems((prev) =>
             prev.map((i) =>
@@ -43,6 +57,7 @@ export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
             {
                 items: items.map((i) => ({
                     id: i.id,
+                    item_id: i.item_id,
                     keterangan_material: i.keterangan_material,
                 })),
             },
@@ -83,24 +98,55 @@ export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
                             <thead className="bg-stone-100 text-stone-700">
                                 <tr>
                                     <th className="p-3 text-left">Item</th>
-                                    <th className="p-3 text-left">Keterangan Material</th>
+                                    <th className="p-3 text-left">Qty</th>
+                                    <th className="p-3 text-left">
+                                        Keterangan Material
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {items.map((row) => (
                                     <tr key={row.id} className="border-t">
+                                        {/* ITEM (EDITABLE) */}
                                         <td className="p-3">
-                                            <div className="font-medium text-stone-800">
-                                                {row.item_name}
-                                            </div>
-                                            <div className="text-xs text-stone-500">
-                                                {row.produk} • {row.jenis_item} • Qty:{' '}
-                                                {row.quantity}
+                                            <select
+                                                value={row.item_id}
+                                                onChange={(e) =>
+                                                    updateItem(
+                                                        row.id,
+                                                        Number(e.target.value),
+                                                    )
+                                                }
+                                                className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm"
+                                            >
+                                                {row.available_items.map(
+                                                    (opt) => (
+                                                        <option
+                                                            key={opt.id}
+                                                            value={opt.id}
+                                                        >
+                                                            {opt.name}
+                                                        </option>
+                                                    ),
+                                                )}
+                                            </select>
+                                            <div className="text-xs text-stone-500 mt-1">
+                                                {row.produk} • {row.jenis_item}
                                             </div>
                                         </td>
+
+                                        {/* QTY (LOCKED) */}
+                                        <td className="p-3 text-stone-700">
+                                            {row.quantity}
+                                        </td>
+
+                                        {/* KETERANGAN */}
                                         <td className="p-3">
                                             <textarea
-                                                value={row.keterangan_material || ''}
+                                                value={
+                                                    row.keterangan_material ||
+                                                    ''
+                                                }
                                                 onChange={(e) =>
                                                     updateKeterangan(
                                                         row.id,
@@ -108,7 +154,7 @@ export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
                                                     )
                                                 }
                                                 rows={2}
-                                                className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:ring-amber-300 focus:border-amber-500"
+                                                className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm"
                                                 placeholder="Contoh: type 1A, cap Kuda Terbang"
                                             />
                                         </td>
@@ -121,7 +167,9 @@ export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
                     {/* Action */}
                     <div className="mt-6 flex justify-end gap-3">
                         <button
-                            onClick={() => router.visit('/approval-material')}
+                            onClick={() =>
+                                router.visit('/approval-material')
+                            }
                             className="rounded-lg border border-stone-300 px-6 py-2 text-sm text-stone-700 hover:bg-stone-50"
                         >
                             Kembali

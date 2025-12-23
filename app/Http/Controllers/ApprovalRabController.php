@@ -21,28 +21,31 @@ class ApprovalRabController extends Controller
             'moodboard.order',
             'produks.jenisItems.items.item',
         ])
-        ->whereHas('rabInternal') // optional
-        ->orderBy('created_at', 'desc')
+        ->whereHas('rabInternal') // opsional, kalau mau hanya yg sudah ada RAB
+        ->orderByDesc('created_at')
         ->get()
         ->map(function ($ip) {
 
             $allItems = $ip->produks
-                ->flatMap(fn ($p) => $p->jenisItems)
-                ->flatMap(fn ($j) => $j->items);
+                ->flatMap(fn ($produk) =>
+                    $produk->jenisItems->flatMap(fn ($jenis) =>
+                        $jenis->items
+                    )
+                );
 
             return [
                 'id' => $ip->id,
                 'project_name' => $ip->moodboard->order->nama_project,
                 'company_name' => $ip->moodboard->order->company_name,
                 'customer_name' => $ip->moodboard->order->customer_name,
-
                 'total_items' => $allItems->count(),
 
-                // 🔥 INI YANG KURANG
+                // ⚠️ INI PENTING → supaya items_preview TIDAK undefined
                 'items_preview' => $allItems
-                    ->take(5) // biar ringan
                     ->map(fn ($item) => [
+                        'id' => $item->id,
                         'item_name' => $item->item->nama_item,
+                        'quantity' => $item->quantity,
                         'keterangan_material' => $item->keterangan_material,
                     ])
                     ->values(),
@@ -56,8 +59,9 @@ class ApprovalRabController extends Controller
 
     /**
      * ======================================================
-     * EDIT – HALAMAN KETERANGAN RAB
+     * EDIT
      * approval-material.edit
+     * (masih bisa dipakai kalau mau halaman detail)
      * ======================================================
      */
     public function edit($itemPekerjaanId)
@@ -65,7 +69,33 @@ class ApprovalRabController extends Controller
         $itemPekerjaan = ItemPekerjaan::with([
             'moodboard.order',
             'produks.jenisItems.items.item',
+            'produks.jenisItems.jenisItem.items', // 🔥 master items
         ])->findOrFail($itemPekerjaanId);
+
+        $items = $itemPekerjaan->produks
+            ->flatMap(fn ($produk) =>
+                $produk->jenisItems->flatMap(fn ($jenis) =>
+                    $jenis->items->map(fn ($item) => [
+                        'id' => $item->id,
+
+                        // 🔥 penting untuk select
+                        'item_id' => $item->item_id,
+                        'item_name' => $item->item->nama_item,
+
+                        'produk' => $produk->produk->nama_produk,
+                        'jenis_item' => $jenis->jenisItem->nama_jenis_item,
+                        'quantity' => $item->quantity,
+                        'keterangan_material' => $item->keterangan_material,
+
+                        // 🔥 list dropdown
+                        'available_items' => $jenis->jenisItem->items->map(fn ($i) => [
+                            'id' => $i->id,
+                            'name' => $i->nama_item,
+                        ])->values(),
+                    ])
+                )
+            )
+            ->values();
 
         return Inertia::render('ApprovalRab/Edit', [
             'itemPekerjaan' => [
@@ -73,30 +103,14 @@ class ApprovalRabController extends Controller
                 'project_name' => $itemPekerjaan->moodboard->order->nama_project,
                 'company_name' => $itemPekerjaan->moodboard->order->company_name,
                 'customer_name' => $itemPekerjaan->moodboard->order->customer_name,
-
-                // flatten ke item-level
-                'items' => $itemPekerjaan->produks
-                    ->flatMap(fn ($produk) =>
-                        $produk->jenisItems->flatMap(fn ($jenis) =>
-                            $jenis->items->map(fn ($item) => [
-                                'id' => $item->id,
-                                'ruangan' => $produk->nama_ruangan,
-                                'produk' => $produk->produk->nama_produk,
-                                'jenis_item' => $jenis->jenisItem->nama_jenis_item,
-                                'item_name' => $item->item->nama_item,
-                                'quantity' => $item->quantity,
-                                'keterangan_material' => $item->keterangan_material,
-                            ])
-                        )
-                    )
-                    ->values(),
+                'items' => $items,
             ],
         ]);
     }
 
     /**
      * ======================================================
-     * UPDATE – SIMPAN KETERANGAN MATERIAL
+     * UPDATE (MASS UPDATE KETERANGAN MATERIAL)
      * approval-material.update
      * ======================================================
      */
@@ -105,11 +119,13 @@ class ApprovalRabController extends Controller
         $validated = $request->validate([
             'items' => 'required|array',
             'items.*.id' => 'required|exists:item_pekerjaan_items,id',
+            'items.*.item_id' => 'required|exists:items,id',
             'items.*.keterangan_material' => 'nullable|string|max:1000',
         ]);
 
         foreach ($validated['items'] as $row) {
             ItemPekerjaanItem::where('id', $row['id'])->update([
+                'item_id' => $row['item_id'],
                 'keterangan_material' => $row['keterangan_material'],
             ]);
         }
@@ -118,4 +134,5 @@ class ApprovalRabController extends Controller
             ->route('approval-material.index')
             ->with('success', 'Keterangan material berhasil disimpan.');
     }
+
 }
