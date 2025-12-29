@@ -23,7 +23,8 @@ class GambarKerjaController extends Controller
 
                 $item->has_response = !empty($item->response_time);
                 return $item;
-            });
+            })
+            ->where('order.surveyUlang');
 
         return Inertia::render('GambarKerja/Index', [
             'items' => $items,

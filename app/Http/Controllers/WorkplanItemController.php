@@ -42,6 +42,10 @@ class WorkplanItemController extends Controller
                 // Sudah ada pembayaran termin (bukan commitment fee, tahap >= 1)
                 $q->whereNotNull('paid_at')->where('termin_step', '>=', 1);
             })
+            //menampilkan yang sudah isi itempekerjaan kolom keterangan material
+            ->whereHas('moodboard.itemPekerjaans', function ($q) {
+                $q->whereNotNull('keterangan_material');
+            })
             ->get()
             ->map(function ($order) {
                 $itemPekerjaans = $order->moodboard->itemPekerjaans->map(function ($ip) {

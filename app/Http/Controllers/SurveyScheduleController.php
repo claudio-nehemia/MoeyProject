@@ -59,7 +59,7 @@ class SurveyScheduleController extends Controller
 
         $order->update([
             'tanggal_survey' => $validated['tanggal_survey'],
-            'tahapan_proyek' => 'survey',
+            'tahapan_proyek' => 'survey_ulang',
             'project_status' => 'in_progress',
         ]);
 

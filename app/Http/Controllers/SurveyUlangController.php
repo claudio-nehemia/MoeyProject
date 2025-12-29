@@ -15,10 +15,6 @@ class SurveyUlangController extends Controller
     {
         $surveys = Order::with(['surveyUlang', 'jenisInterior'])
             ->where(function ($q) {
-                $q->whereRaw("LOWER(payment_status) LIKE '%commitment%'");
-            })
-            ->orWhereRaw("LOWER(payment_status) LIKE '%dp%'")
-            ->orWhere(function ($q) {
                 $q->whereRaw("LOWER(tahapan_proyek) = 'survey_ulang'");
             })
             ->orderBy('id', 'desc')
