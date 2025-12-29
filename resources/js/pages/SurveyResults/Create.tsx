@@ -1,5 +1,6 @@
 import { useState, FormEventHandler } from 'react';
 import { Head, useForm, router, Link } from '@inertiajs/react';
+import JenisPengukuranModal from '@/components/JenisPengukuranModal';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 
@@ -33,13 +34,18 @@ interface Survey {
     response_by: string;
 }
 
+interface Pengukuran {
+    id: number;
+    nama_pengukuran: string;
+}
+
 interface Props {
     order: Order;
     survey: Survey;
     jenisPengukuran: { id: number; nama_pengukuran: string }[];
 }
 
-export default function Create({ order, survey }: Props) {
+export default function Create({ order, survey, jenisPengukuran }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 1024;
@@ -55,6 +61,45 @@ export default function Create({ order, survey }: Props) {
         mom_file: null as File | null,
         jenis_pengukuran_ids: [] as number[],
     });
+
+    const [showJenisModal, setShowJenisModal] = useState(false);
+
+    // list & selection
+    const [jenisList, setJenisList] = useState<Pengukuran[]>(jenisPengukuran);
+    const [selectedPengukuran, setSelectedPengukuran] = useState<number[]>([]); 
+
+    // form untuk create jenis
+    const {
+        data: jenisData,
+        setData: setJenisData,
+        post: postJenis,
+        processing: jenisProcessing,
+        errors: jenisErrors,
+        reset: resetJenis,
+    } = useForm({
+        nama_pengukuran: '',
+    });
+
+    const handleCreateJenisPengukuran = () => {
+        postJenis('/jenis-pengukuran', {
+            preserveScroll: true,
+            onSuccess: (page: any) => {
+                const newJenis = page.props.flash?.newJenisPengukuran;
+                if (!newJenis) return;
+
+                // tambah ke list
+                setJenisList(prev => [...prev, newJenis]);
+
+                // auto check (opsional, sama seperti Edit)
+                const updated = [...selectedPengukuran, newJenis.id];
+                setSelectedPengukuran(updated);
+                setData('jenis_pengukuran_ids', updated);
+
+                resetJenis();
+                setShowJenisModal(false);
+            },
+        });
+    };
 
     const handleSubmit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -314,30 +359,36 @@ export default function Create({ order, survey }: Props) {
 
                                 {/* Jenis Pengukuran */}
                                 <div>
-                                    <label className="block text-sm font-semibold text-stone-700 mb-2">
+                                    <label className="block text-sm font-semibold text-stone-700">
                                         Jenis Pengukuran
                                     </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowJenisModal(true)}
+                                        className="text-sm text-cyan-600 hover:underline"
+                                    >
+                                        + Tambah
+                                    </button>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                        {typeof window !== 'undefined' && (window as any).jenisPengukuran?.map((jp: { id: number; nama_pengukuran: string }) => (
+                                        {jenisList.map((jp) => (
                                             <label
                                                 key={jp.id}
-                                                className="flex items-center gap-2 p-3 border-2 border-stone-200 rounded-xl cursor-pointer hover:border-cyan-500 transition-colors"
+                                                className="flex items-center gap-2 p-3 border-2 border-stone-200 rounded-xl"
                                             >
                                                 <input
                                                     type="checkbox"
-                                                    value={jp.id}
-                                                    checked={data.jenis_pengukuran_ids?.includes(jp.id) || false}
-                                                    onChange={(e) => {
-                                                        const current = data.jenis_pengukuran_ids || [];
-                                                        if (e.target.checked) {
-                                                            setData('jenis_pengukuran_ids', [...current, jp.id]);
-                                                        } else {
-                                                            setData('jenis_pengukuran_ids', current.filter((id) => id !== jp.id));
-                                                        }
+                                                    checked={selectedPengukuran.includes(jp.id)}
+                                                    onChange={() => {
+                                                        const updated = selectedPengukuran.includes(jp.id)
+                                                            ? selectedPengukuran.filter(id => id !== jp.id)
+                                                            : [...selectedPengukuran, jp.id];
+
+                                                        setSelectedPengukuran(updated);
+                                                        setData('jenis_pengukuran_ids', updated);
                                                     }}
-                                                    className="h-4 w-4 text-cyan-600 border-stone-300 rounded focus:ring-cyan-500"
+                                                    className="h-4 w-4 text-cyan-600"
                                                 />
-                                                <span className="text-stone-700 text-sm">{jp.nama_pengukuran}</span>
+                                                <span className="text-sm">{jp.nama_pengukuran}</span>
                                             </label>
                                         ))}
                                     </div>
@@ -423,6 +474,20 @@ export default function Create({ order, survey }: Props) {
                             </div>
                         </div>
                     </form>
+                    <JenisPengukuranModal
+                        show={showJenisModal}
+                        editMode={false}
+                        deleteMode={false}
+                        processing={jenisProcessing}
+                        data={jenisData}
+                        errors={jenisErrors}
+                        onClose={() => {
+                            setShowJenisModal(false);
+                            resetJenis();
+                        }}
+                        onSubmit={handleCreateJenisPengukuran}
+                        onDataChange={(field, value) => setJenisData(field as any, value)}
+                    />
                 </div>
             </div>
         </>

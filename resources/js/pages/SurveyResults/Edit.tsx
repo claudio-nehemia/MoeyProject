@@ -1,4 +1,4 @@
-import { useState, FormEventHandler } from 'react';
+import { useState, FormEventHandler, useEffect } from 'react';
 import { Head, useForm, router, Link } from '@inertiajs/react';
 import JenisPengukuranModal from '@/components/JenisPengukuranModal';
 import Navbar from '@/components/Navbar';
@@ -109,14 +109,17 @@ export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }:
                 const newJenis = page.props.flash?.newJenisPengukuran;
                 if (!newJenis) return;
 
+                // 1. Tambah ke list
                 setJenisList(prev => [...prev, newJenis]);
 
-                const updated = [...selectedPengukuran, newJenis.id];
-                setSelectedPengukuran(updated);
-                setData('jenis_pengukuran_ids', updated);
+                // 2. Auto centang
+                // const updated = [...selectedPengukuran, newJenis.id];
+                // setSelectedPengukuran(updated);
+                // setData('jenis_pengukuran_ids', updated);
 
+                // 3. Reset & tutup modal
                 resetJenis();
-                setShowJenisModal(false); // 🔥 PASTI NUTUP
+                setShowJenisModal(false);
             },
         });
     };
