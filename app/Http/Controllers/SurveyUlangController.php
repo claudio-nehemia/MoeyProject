@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\GambarKerja;
 use Inertia\Inertia;
 use App\Models\Order;
 use App\Models\SurveyUlang;
@@ -90,6 +91,12 @@ class SurveyUlangController extends Controller
             'foto' => $fotoPaths,
             'survey_time' => now(),
             'survey_by' => auth()->user()->name ?? 'System',
+        ]);
+
+
+        GambarKerja::create([
+            'order_id' => $order->id,
+            'status' => 'pending',
         ]);
 
         // update tahapan utama

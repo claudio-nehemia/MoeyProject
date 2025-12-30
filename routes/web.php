@@ -41,7 +41,9 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // DASHBOARD = all role
-    Route::get('dashboard',  [DashboardController::class, 'index']
+    Route::get(
+        'dashboard',
+        [DashboardController::class, 'index']
     )->name('dashboard');
 
     Route::middleware(['auth'])->group(function () {
@@ -395,7 +397,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('permission:kontrak.delete')->delete('kontrak/{kontrak}', [KontrakController::class, 'destroy'])->name('kontrak.destroy');
     Route::middleware('permission:kontrak.show')->get('kontrak/{kontrak}/print', [KontrakController::class, 'print'])->name('kontrak.print');
 
-// Signed Contract Routes
+    // Signed Contract Routes
     Route::middleware('permission:kontrak.edit')->post('kontrak/{kontrak}/upload-signed', [KontrakController::class, 'uploadSignedContract'])->name('kontrak.upload-signed');
     Route::middleware('permission:kontrak.show')->get('kontrak/{kontrak}/download-signed', [KontrakController::class, 'downloadSignedContract'])->name('kontrak.download-signed');
     Route::middleware('permission:kontrak.edit')->delete('kontrak/{kontrak}/delete-signed', [KontrakController::class, 'deleteSignedContract'])->name('kontrak.delete-signed');
@@ -505,53 +507,57 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('survey-schedule')->name('survey-schedule.')->group(function () {
 
-        Route::get('/',[SurveyScheduleController::class, 'index'])
+        Route::get('/', [SurveyScheduleController::class, 'index'])
             ->middleware('permission:survey-schedule.index')
             ->name('index');
 
-        Route::post('/{order}',[SurveyScheduleController::class, 'store'])
+        Route::post('/{order}', [SurveyScheduleController::class, 'store'])
             ->middleware('permission:survey-schedule.store')
             ->name('store');
 
     });
 
-    
+
 
     Route::prefix('gambar-kerja')->name('gambar-kerja.')->group(function () {
         Route::get('/', [GambarKerjaController::class, 'index'])
-        ->middleware('permission:gambar-kerja.index')
-        ->name('index');
+            ->middleware('permission:gambar-kerja.index')
+            ->name('index');
 
-        Route::post('/response/{id}', [GambarKerjaController::class, 'response'])
-        ->middleware('permission:gambar-kerja.response')
-        ->name('response');
+        // RESPONSE = CREATE PERTAMA KALI (tanpa ID)
+        Route::post('/response', [GambarKerjaController::class, 'response'])
+            ->middleware('permission:gambar-kerja.response')
+            ->name('response');
+
         Route::post('/upload', [GambarKerjaController::class, 'upload'])
-        ->middleware('permission:gambar-kerja.upload')
-        ->name('upload');
+            ->middleware('permission:gambar-kerja.upload')
+            ->name('upload');
+
         Route::post('/approve/{id}', [GambarKerjaController::class, 'approve'])
-        ->middleware('permission:gambar-kerja.approve')
-        ->name('approve');
+            ->middleware('permission:gambar-kerja.approve')
+            ->name('approve');
+
         Route::post('/revisi/{id}', [GambarKerjaController::class, 'revisi'])
-        ->middleware('permission:gambar-kerja.revisi')
-        ->name('revisi');
+            ->middleware('permission:gambar-kerja.revisi')
+            ->name('revisi');
 
         Route::delete('/file/{id}', [GambarKerjaController::class, 'deleteFile'])
-        ->middleware('permission:gambar-kerja.delete')
-        ->name('delete');
+            ->middleware('permission:gambar-kerja.delete')
+            ->name('delete');
     });
 
     Route::prefix('approval-material')->name('approval-material.')->group(function () {
         Route::get('/', [ApprovalRabController::class, 'index'])
-        ->middleware('permission:approval-material.index')
-        ->name('index');
+            ->middleware('permission:approval-material.index')
+            ->name('index');
         Route::get('/{itemPekerjaan}/edit', [ApprovalRabController::class, 'edit'])
-        ->middleware('permission:approval-material.edit')
-        ->name('edit');
+            ->middleware('permission:approval-material.edit')
+            ->name('edit');
         Route::put('/{itemPekerjaan}', [ApprovalRabController::class, 'update'])
-        ->middleware('permission:approval-material.update')
-        ->name('update');
+            ->middleware('permission:approval-material.update')
+            ->name('update');
         Route::put('/approval-material/bulk-update', [ApprovalRabController::class, 'bulkUpdate'])
-        ->middleware('permission:approval-material.update');
+            ->middleware('permission:approval-material.update');
     });
 
 

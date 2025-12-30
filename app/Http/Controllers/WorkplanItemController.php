@@ -43,9 +43,6 @@ class WorkplanItemController extends Controller
                 $q->whereNotNull('paid_at')->where('termin_step', '>=', 1);
             })
             //menampilkan yang sudah isi itempekerjaan kolom keterangan material
-            ->whereHas('moodboard.itemPekerjaans', function ($q) {
-                $q->whereNotNull('keterangan_material');
-            })
             ->get()
             ->map(function ($order) {
                 $itemPekerjaans = $order->moodboard->itemPekerjaans->map(function ($ip) {

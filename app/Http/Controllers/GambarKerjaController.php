@@ -12,7 +12,8 @@ class GambarKerjaController extends Controller
 {
     public function index()
     {
-        $items = GambarKerja::with(['order', 'files'])
+        $items = GambarKerja::with(['order.surveyUlang', 'files'])
+            ->whereHas('order.surveyUlang')
             ->orderByDesc('created_at')
             ->get()
             ->map(function ($item) {
@@ -23,8 +24,7 @@ class GambarKerjaController extends Controller
 
                 $item->has_response = !empty($item->response_time);
                 return $item;
-            })
-            ->where('order.surveyUlang');
+            });
 
         return Inertia::render('GambarKerja/Index', [
             'items' => $items,

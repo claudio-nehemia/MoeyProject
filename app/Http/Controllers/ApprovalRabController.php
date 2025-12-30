@@ -21,7 +21,7 @@ class ApprovalRabController extends Controller
             'moodboard.order',
             'produks.jenisItems.items.item',
         ])
-        ->whereHas('order.gambarKerja') // opsional, kalau mau hanya yg sudah ada RAB
+        ->whereHas('moodboard.order.gambarKerja') // opsional, kalau mau hanya yg sudah ada RAB
         ->orderByDesc('created_at')
         ->get()
         ->map(function ($ip) {
