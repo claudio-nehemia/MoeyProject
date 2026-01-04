@@ -25,6 +25,7 @@ interface BahanBakuRow {
     produk: string;
     harga_dasar: number;
     harga_jasa: number;
+    keterangan_bahan_baku: string | null;
 }
 
 interface Props {
@@ -42,6 +43,7 @@ export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [saving, setSaving] = useState(false);
     const [items, setItems] = useState<ItemRow[]>(itemPekerjaan.items);
+    const [bahanBakus, setBahanBakus] = useState<BahanBakuRow[]>(itemPekerjaan.bahan_bakus);
 
     const updateItem = (id: number, itemId: number) => {
         setItems((prev) =>
@@ -59,6 +61,14 @@ export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
         );
     };
 
+    const updateKeteranganBahanBaku = (id: number, value: string) => {
+        setBahanBakus((prev) =>
+            prev.map((b) =>
+                b.id === id ? { ...b, keterangan_bahan_baku: value } : b,
+            ),
+        );
+    };
+
     const handleSave = () => {
         setSaving(true);
         router.put(
@@ -68,6 +78,10 @@ export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
                     id: i.id,
                     item_id: i.item_id,
                     keterangan_material: i.keterangan_material,
+                })),
+                bahan_bakus: bahanBakus.map((b) => ({
+                    id: b.id,
+                    keterangan_bahan_baku: b.keterangan_bahan_baku,
                 })),
             },
             {
@@ -174,11 +188,11 @@ export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
                     </div>
 
                     {/* Bahan Baku Section */}
-                    {itemPekerjaan.bahan_bakus && itemPekerjaan.bahan_bakus.length > 0 && (
+                    {bahanBakus && bahanBakus.length > 0 && (
                         <div className="overflow-hidden rounded-lg border bg-white shadow-sm mb-6">
                             <div className="bg-green-50 border-b p-4">
                                 <h3 className="text-lg font-semibold text-stone-800">
-                                    Bahan Baku (Read-Only)
+                                    Bahan Baku
                                 </h3>
                                 <p className="text-sm text-stone-600 mt-1">
                                     Bahan baku yang dipilih saat pembuatan produk
@@ -189,12 +203,11 @@ export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
                                     <tr>
                                         <th className="p-3 text-left">Nama Bahan</th>
                                         <th className="p-3 text-left">Produk</th>
-                                        <th className="p-3 text-right">Harga Dasar</th>
-                                        <th className="p-3 text-right">Harga Jasa</th>
+                                        <th className="p-3 text-left">Keterangan</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {itemPekerjaan.bahan_bakus.map((bahan) => (
+                                    {bahanBakus.map((bahan) => (
                                         <tr key={bahan.id} className="border-t">
                                             <td className="p-3 text-stone-800">
                                                 {bahan.item_name}
@@ -202,11 +215,20 @@ export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
                                             <td className="p-3 text-stone-600">
                                                 {bahan.produk}
                                             </td>
-                                            <td className="p-3 text-right text-stone-700">
-                                                Rp {Number(bahan.harga_dasar).toLocaleString('id-ID')}
-                                            </td>
-                                            <td className="p-3 text-right text-stone-700">
-                                                Rp {Number(bahan.harga_jasa).toLocaleString('id-ID')}
+                                      
+                                            <td className="p-3">
+                                                <textarea
+                                                    value={bahan.keterangan_bahan_baku || ''}
+                                                    onChange={(e) =>
+                                                        updateKeteranganBahanBaku(
+                                                            bahan.id,
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    rows={2}
+                                                    className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm"
+                                                    placeholder="Contoh: type 1A, cap Kuda Terbang"
+                                                />
                                             </td>
                                         </tr>
                                     ))}

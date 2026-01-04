@@ -22,7 +22,10 @@ class ApprovalRabController extends Controller
             'produks.jenisItems.items.item',
             'produks.bahanBakus.item', // 🔥 eager load bahan baku
         ])
-        ->whereHas('moodboard.order.gambarKerja') // opsional, kalau mau hanya yg sudah ada RAB
+        ->whereHas('moodboard.order.gambarKerja', function($query) {
+            $query->whereNotNull('approved_time')
+                  ->whereNotNull('approved_by');
+        })
         ->orderByDesc('created_at')
         ->get()
         ->map(function ($ip) {
@@ -63,6 +66,7 @@ class ApprovalRabController extends Controller
                         'item_name' => $bahan->item->nama_item,
                         'harga_dasar' => $bahan->harga_dasar,
                         'harga_jasa' => $bahan->harga_jasa,
+                        'keterangan_bahan_baku' => $bahan->keterangan_bahan_baku,
                     ])
                     ->values(),
             ];
@@ -124,6 +128,7 @@ class ApprovalRabController extends Controller
                     'produk' => $produk->produk->nama_produk,
                     'harga_dasar' => $bahan->harga_dasar,
                     'harga_jasa' => $bahan->harga_jasa,
+                    'keterangan_bahan_baku' => $bahan->keterangan_bahan_baku,
                 ])
             )
             ->values();
@@ -153,6 +158,9 @@ class ApprovalRabController extends Controller
             'items.*.id' => 'required|exists:item_pekerjaan_items,id',
             'items.*.item_id' => 'required|exists:items,id',
             'items.*.keterangan_material' => 'nullable|string|max:1000',
+            'bahan_bakus' => 'nullable|array',
+            'bahan_bakus.*.id' => 'required|exists:item_pekerjaan_produk_bahan_bakus,id',
+            'bahan_bakus.*.keterangan_bahan_baku' => 'nullable|string|max:1000',
         ]);
 
         foreach ($validated['items'] as $row) {
@@ -162,9 +170,18 @@ class ApprovalRabController extends Controller
             ]);
         }
 
+        // Update bahan baku jika ada
+        if (isset($validated['bahan_bakus'])) {
+            foreach ($validated['bahan_bakus'] as $bahan) {
+                \App\Models\ItemPekerjaanProdukBahanBaku::where('id', $bahan['id'])->update([
+                    'keterangan_bahan_baku' => $bahan['keterangan_bahan_baku'],
+                ]);
+            }
+        }
+
         return redirect()
             ->route('approval-material.index')
-            ->with('success', 'Keterangan material berhasil disimpan.');
+            ->with('success', 'Keterangan material dan bahan baku berhasil disimpan.');
     }
 
 }

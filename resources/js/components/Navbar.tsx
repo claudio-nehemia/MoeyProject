@@ -15,7 +15,7 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
     };
 
     return (
-        <nav className="fixed top-0 z-50 w-full glass-effect border-b border-stone-200 shadow-sm">
+        <nav className="fixed top-0 z-50 w-full bg-white border-b border-stone-200 shadow-sm">
             <div className="px-3 py-2.5 lg:px-5 lg:pl-3">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center justify-start">

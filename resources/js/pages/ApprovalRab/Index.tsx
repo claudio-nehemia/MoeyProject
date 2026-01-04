@@ -13,6 +13,7 @@ interface BahanBakuPreview {
     item_name: string;
     harga_dasar: number;
     harga_jasa: number;
+    keterangan_bahan_baku: string | null;
 }
 
 interface Row {
@@ -176,6 +177,17 @@ export default function ApprovalRabIndex({ items }: Props) {
                                                             <span>
                                                                 Harga Jasa: Rp {Number(bahan.harga_jasa).toLocaleString('id-ID')}
                                                             </span>
+                                                        </div>
+                                                        <div className="mt-1 text-xs">
+                                                            {bahan.keterangan_bahan_baku ? (
+                                                                <span className="text-stone-600">
+                                                                    ↳ {bahan.keterangan_bahan_baku}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="italic text-amber-600">
+                                                                    ↳ belum ada keterangan
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 ))}
