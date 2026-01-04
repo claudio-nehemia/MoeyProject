@@ -20,6 +20,7 @@ class ApprovalRabController extends Controller
         $items = ItemPekerjaan::with([
             'moodboard.order',
             'produks.jenisItems.items.item',
+            'produks.bahanBakus.item', // 🔥 eager load bahan baku
         ])
         ->whereHas('moodboard.order.gambarKerja') // opsional, kalau mau hanya yg sudah ada RAB
         ->orderByDesc('created_at')
@@ -33,12 +34,17 @@ class ApprovalRabController extends Controller
                     )
                 );
 
+            // 🔥 Ambil semua bahan baku dari semua produk
+            $allBahanBaku = $ip->produks
+                ->flatMap(fn ($produk) => $produk->bahanBakus);
+
             return [
                 'id' => $ip->id,
                 'project_name' => $ip->moodboard->order->nama_project,
                 'company_name' => $ip->moodboard->order->company_name,
                 'customer_name' => $ip->moodboard->order->customer_name,
                 'total_items' => $allItems->count(),
+                'total_bahan_baku' => $allBahanBaku->count(), // 🔥 tambahan
 
                 // ⚠️ INI PENTING → supaya items_preview TIDAK undefined
                 'items_preview' => $allItems
@@ -47,6 +53,16 @@ class ApprovalRabController extends Controller
                         'item_name' => $item->item->nama_item,
                         'quantity' => $item->quantity,
                         'keterangan_material' => $item->keterangan_material,
+                    ])
+                    ->values(),
+
+                // 🔥 tambahan preview bahan baku
+                'bahan_baku_preview' => $allBahanBaku
+                    ->map(fn ($bahan) => [
+                        'id' => $bahan->id,
+                        'item_name' => $bahan->item->nama_item,
+                        'harga_dasar' => $bahan->harga_dasar,
+                        'harga_jasa' => $bahan->harga_jasa,
                     ])
                     ->values(),
             ];
@@ -68,8 +84,10 @@ class ApprovalRabController extends Controller
     {
         $itemPekerjaan = ItemPekerjaan::with([
             'moodboard.order',
+            'produks.produk',
             'produks.jenisItems.items.item',
             'produks.jenisItems.jenisItem.items', // 🔥 master items
+            'produks.bahanBakus.item', // 🔥 eager load bahan baku
         ])->findOrFail($itemPekerjaanId);
 
         $items = $itemPekerjaan->produks
@@ -97,6 +115,19 @@ class ApprovalRabController extends Controller
             )
             ->values();
 
+        // 🔥 Ambil bahan baku dari semua produk
+        $bahanBakus = $itemPekerjaan->produks
+            ->flatMap(fn ($produk) =>
+                $produk->bahanBakus->map(fn ($bahan) => [
+                    'id' => $bahan->id,
+                    'item_name' => $bahan->item->nama_item,
+                    'produk' => $produk->produk->nama_produk,
+                    'harga_dasar' => $bahan->harga_dasar,
+                    'harga_jasa' => $bahan->harga_jasa,
+                ])
+            )
+            ->values();
+
         return Inertia::render('ApprovalRab/Edit', [
             'itemPekerjaan' => [
                 'id' => $itemPekerjaan->id,
@@ -104,6 +135,7 @@ class ApprovalRabController extends Controller
                 'company_name' => $itemPekerjaan->moodboard->order->company_name,
                 'customer_name' => $itemPekerjaan->moodboard->order->customer_name,
                 'items' => $items,
+                'bahan_bakus' => $bahanBakus, // 🔥 tambahan
             ],
         ]);
     }

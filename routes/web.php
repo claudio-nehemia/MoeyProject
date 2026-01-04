@@ -524,8 +524,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:gambar-kerja.index')
             ->name('index');
 
-        // RESPONSE = CREATE PERTAMA KALI (tanpa ID)
-        Route::post('/response', [GambarKerjaController::class, 'response'])
+        // RESPONSE - perlu menerima ID parameter
+        Route::post('/response/{id}', [GambarKerjaController::class, 'response'])
             ->middleware('permission:gambar-kerja.response')
             ->name('response');
 

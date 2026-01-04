@@ -19,6 +19,14 @@ interface ItemRow {
     available_items: ItemOption[];
 }
 
+interface BahanBakuRow {
+    id: number;
+    item_name: string;
+    produk: string;
+    harga_dasar: number;
+    harga_jasa: number;
+}
+
 interface Props {
     itemPekerjaan: {
         id: number;
@@ -26,6 +34,7 @@ interface Props {
         company_name: string;
         customer_name: string;
         items: ItemRow[];
+        bahan_bakus: BahanBakuRow[];
     };
 }
 
@@ -93,7 +102,7 @@ export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
                     </div>
 
                     {/* Table */}
-                    <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+                    <div className="overflow-hidden rounded-lg border bg-white shadow-sm mb-6">
                         <table className="w-full text-sm">
                             <thead className="bg-stone-100 text-stone-700">
                                 <tr>
@@ -163,6 +172,48 @@ export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Bahan Baku Section */}
+                    {itemPekerjaan.bahan_bakus && itemPekerjaan.bahan_bakus.length > 0 && (
+                        <div className="overflow-hidden rounded-lg border bg-white shadow-sm mb-6">
+                            <div className="bg-green-50 border-b p-4">
+                                <h3 className="text-lg font-semibold text-stone-800">
+                                    Bahan Baku (Read-Only)
+                                </h3>
+                                <p className="text-sm text-stone-600 mt-1">
+                                    Bahan baku yang dipilih saat pembuatan produk
+                                </p>
+                            </div>
+                            <table className="w-full text-sm">
+                                <thead className="bg-stone-100 text-stone-700">
+                                    <tr>
+                                        <th className="p-3 text-left">Nama Bahan</th>
+                                        <th className="p-3 text-left">Produk</th>
+                                        <th className="p-3 text-right">Harga Dasar</th>
+                                        <th className="p-3 text-right">Harga Jasa</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {itemPekerjaan.bahan_bakus.map((bahan) => (
+                                        <tr key={bahan.id} className="border-t">
+                                            <td className="p-3 text-stone-800">
+                                                {bahan.item_name}
+                                            </td>
+                                            <td className="p-3 text-stone-600">
+                                                {bahan.produk}
+                                            </td>
+                                            <td className="p-3 text-right text-stone-700">
+                                                Rp {Number(bahan.harga_dasar).toLocaleString('id-ID')}
+                                            </td>
+                                            <td className="p-3 text-right text-stone-700">
+                                                Rp {Number(bahan.harga_jasa).toLocaleString('id-ID')}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
 
                     {/* Action */}
                     <div className="mt-6 flex justify-end gap-3">

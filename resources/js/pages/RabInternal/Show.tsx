@@ -301,7 +301,7 @@ export default function Show({ rabInternal }: Props) {
                                         return (
                                             <>
                                                 {Array.from({ length: maxRows }).map((_, rowIndex) => (
-                                                    <tr key={`${produk.id}-${rowIndex}`} className={rowIndex === 0 ? "bg-blue-50 dark:bg-blue-900/10" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}>
+                                                    <tr key={`produk-${produk.id}-row-${rowIndex}`} className={rowIndex === 0 ? "bg-blue-50 dark:bg-blue-900/10" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}>
                                                         {/* Produk Column */}
                                                         {rowIndex === 0 && (
                                                             <td rowSpan={maxRows} className="px-4 py-3 align-top border-r border-gray-200 dark:border-gray-700">
@@ -326,14 +326,14 @@ export default function Show({ rabInternal }: Props) {
                                                         {/* Bahan Baku Column - Names only (no price) */}
                                                         <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
                                                             {bahanBakuNames[rowIndex] && (
-                                                                <div>• {bahanBakuNames[rowIndex]}</div>
+                                                                <div key={`bahan-${produk.id}-${rowIndex}`}>• {bahanBakuNames[rowIndex]}</div>
                                                             )}
                                                         </td>
                                                         
                                                         {/* Finishing Dalam Column */}
                                                         <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
                                                             {finishingDalamItems[rowIndex] && (
-                                                                <div>• {finishingDalamItems[rowIndex].nama}</div>
+                                                                <div key={`fd-${produk.id}-${rowIndex}`}>• {finishingDalamItems[rowIndex].nama}</div>
                                                             )}
                                                         </td>
                                                         
@@ -347,7 +347,7 @@ export default function Show({ rabInternal }: Props) {
                                                         {/* Finishing Luar Column */}
                                                         <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
                                                             {finishingLuarItems[rowIndex] && (
-                                                                <div>• {finishingLuarItems[rowIndex].nama}</div>
+                                                                <div key={`fl-${produk.id}-${rowIndex}`}>• {finishingLuarItems[rowIndex].nama}</div>
                                                             )}
                                                         </td>
                                                         
@@ -382,7 +382,7 @@ export default function Show({ rabInternal }: Props) {
                                                         {/* Aksesoris Column */}
                                                         <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
                                                             {produk.aksesoris[rowIndex] && (
-                                                                <div>
+                                                                <div key={`aks-${produk.id}-${produk.aksesoris[rowIndex].id}-${rowIndex}`}>
                                                                     • {produk.aksesoris[rowIndex].nama_aksesoris} 
                                                                     <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
                                                                         (Qty: {produk.aksesoris[rowIndex].qty_aksesoris}, Markup: {produk.aksesoris[rowIndex].markup_aksesoris}%)
