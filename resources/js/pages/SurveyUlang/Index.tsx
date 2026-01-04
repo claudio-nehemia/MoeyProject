@@ -204,7 +204,7 @@ export default function Index({ surveys }: Props) {
                                                         View
                                                     </Link>
                                                     <Link
-                                                        href={`/survey-ulang/${s.survey_ulang_id}/edit`}
+                                                        href={`/survey-ulang/edit/${s.survey_ulang_id}`}
                                                         className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 shadow"
                                                     >
                                                         Edit
