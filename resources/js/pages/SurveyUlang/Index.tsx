@@ -12,8 +12,10 @@ interface SurveyUlang {
     tanggal_survey_ulang: string | null;
     payment_status: string;
     tahapan_proyek: string;
-    status_survey_ulang: "pending" | "in_progress" | "done";
+    status_survey_ulang: "pending" | "waiting_input" | "done";
     survey_ulang_id: number | null;
+    response_by: string | null;
+    response_time: string | null;
 }
 
 interface Props {
@@ -36,8 +38,8 @@ export default function Index({ surveys }: Props) {
         switch (status) {
             case "pending":
                 return "Pending";
-            case "in_progress":
-                return "On Progress";
+            case "waiting_input":
+                return "Awaiting Input";
             case "done":
                 return "Completed";
             default:
@@ -49,7 +51,7 @@ export default function Index({ surveys }: Props) {
         switch (status) {
             case "done":
                 return "bg-emerald-100 text-emerald-700 border-emerald-300";
-            case "in_progress":
+            case "waiting_input":
                 return "bg-blue-100 text-blue-700 border-blue-300";
             default:
                 return "bg-amber-100 text-amber-700 border-amber-300";
@@ -61,6 +63,16 @@ export default function Index({ surveys }: Props) {
             year: "numeric",
             month: "short",
             day: "numeric",
+        });
+    };
+
+    const formatDateTime = (date: string) => {
+        return new Date(date).toLocaleString("id-ID", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
         });
     };
 
@@ -145,7 +157,7 @@ export default function Index({ surveys }: Props) {
                                                 {s.company_name} • {s.customer_name}
                                             </p>
 
-                                            <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                                            <div className="mt-3 grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
                                                 <div>
                                                     <p className="text-xs text-stone-500">
                                                         Survey Ulang
@@ -169,6 +181,24 @@ export default function Index({ surveys }: Props) {
                                                         {formatStatus(s.status_survey_ulang)}
                                                     </span>
                                                 </div>
+
+                                                <div>
+                                                    <p className="text-xs text-stone-500">
+                                                        Response By
+                                                    </p>
+                                                    <p className="font-semibold text-stone-900">
+                                                        {s.response_by || "-"}
+                                                    </p>
+                                                </div>
+
+                                                <div>
+                                                    <p className="text-xs text-stone-500">
+                                                        Response Time
+                                                    </p>
+                                                    <p className="font-semibold text-stone-900">
+                                                        {s.response_time ? formatDateTime(s.response_time) : "-"}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -178,20 +208,20 @@ export default function Index({ surveys }: Props) {
                                             {s.status_survey_ulang === "pending" && (
                                                 <button
                                                     onClick={() =>
-                                                        router.post(`/survey-ulang/${s.id}/start`)
+                                                        router.post(`/survey-ulang/${s.id}/response`)
                                                     }
-                                                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 shadow"
+                                                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 shadow"
                                                 >
-                                                    Mulai Survey Ulang
+                                                    ✓ Response
                                                 </button>
                                             )}
 
-                                            {s.status_survey_ulang === "in_progress" && (
+                                            {s.status_survey_ulang === "waiting_input" && (
                                                 <Link
                                                     href={`/survey-ulang/create/${s.id}`}
                                                     className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-semibold hover:bg-amber-600 shadow"
                                                 >
-                                                    Input Hasil Survey
+                                                    📝 Input Hasil Survey
                                                 </Link>
                                             )}
 

@@ -179,9 +179,17 @@ class ApprovalRabController extends Controller
             }
         }
 
+        // Get Order from ItemPekerjaan to send notification
+        $itemPekerjaan = ItemPekerjaan::with('moodboard.order')->findOrFail($itemPekerjaanId);
+        $order = $itemPekerjaan->moodboard->order;
+
+        // Send notification to PM and Estimator
+        $notificationService = new \App\Services\NotificationService();
+        $notificationService->sendWorkplanRequestNotification($order);
+
         return redirect()
             ->route('approval-material.index')
-            ->with('success', 'Keterangan material dan bahan baku berhasil disimpan.');
+            ->with('success', 'Keterangan material dan bahan baku berhasil disimpan dan notifikasi telah dikirim.');
     }
 
 }

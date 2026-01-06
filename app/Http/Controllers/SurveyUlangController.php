@@ -22,12 +22,16 @@ class SurveyUlangController extends Controller
             ->get()
             ->map(function ($o) {
 
-                $status = 'pending';
+                // Determine status based on survey ulang progress
+                $status = 'pending'; // Belum response sama sekali
 
                 if ($o->surveyUlang) {
-                    $status = 'done';
-                } elseif (strtolower($o->tahapan_proyek) === 'survey_ulang') {
-                    $status = 'in_progress';
+                    // Check if survey details have been filled (survey_time exists)
+                    if ($o->surveyUlang->survey_time) {
+                        $status = 'done'; // Sudah lengkap input detail
+                    } else {
+                        $status = 'waiting_input'; // Sudah response, belum input detail
+                    }
                 }
 
                 return [
@@ -40,7 +44,9 @@ class SurveyUlangController extends Controller
                     'tahapan_proyek' => $o->tahapan_proyek,
                     'tanggal_survey_ulang' => $o->tanggal_survey,
                     'status_survey_ulang' => $status,
-                    'survey_ulang_id' => optional($o->surveyUlang)->id,
+                    'survey_ulang_id' => $o->surveyUlang?->id,
+                    'response_by' => $o->surveyUlang?->response_by,
+                    'response_time' => $o->surveyUlang?->response_time?->toIso8601String(),
                 ];
             });
 
@@ -57,6 +63,27 @@ class SurveyUlangController extends Controller
         ]);
 
         return back()->with('success', 'Survey ulang dimulai.');
+    }
+
+    // 📌 Response notification - Create empty record
+    public function response(Order $order)
+    {
+        // Check if survey ulang already exists
+        if ($order->surveyUlang) {
+            return back()->with('info', 'Survey ulang request sudah diterima sebelumnya.');
+        }
+
+        // Create empty survey ulang record with ONLY response info
+        // User will fill in details (catatan, foto, temuan, survey_time) later via store
+        SurveyUlang::create([
+            'order_id' => $order->id,
+            'response_time' => now(),
+            'response_by' => auth()->user()->name ?? 'System',
+        ]);
+
+        $order->update(['tahapan_proyek' => 'survey_ulang']);
+
+        return back()->with('success', 'Permintaan survey ulang berhasil diterima. Silakan input hasil survey.');
     }
 
 
@@ -84,8 +111,15 @@ class SurveyUlangController extends Controller
             }
         }
 
-        SurveyUlang::create([
-            'order_id' => $order->id,
+        // UPDATE existing survey ulang (yang sudah dibuat saat response)
+        // Bukan create baru!
+        $surveyUlang = $order->surveyUlang;
+        
+        if (!$surveyUlang) {
+            return back()->with('error', 'Survey ulang belum di-response. Silakan klik tombol Response terlebih dahulu.');
+        }
+
+        $surveyUlang->update([
             'catatan' => $validated['catatan'] ?? null,
             'temuan' => $validated['temuan'] ?? [],
             'foto' => $fotoPaths,
@@ -93,22 +127,24 @@ class SurveyUlangController extends Controller
             'survey_by' => auth()->user()->name ?? 'System',
         ]);
 
-
-        GambarKerja::create([
-            'order_id' => $order->id,
-            'status' => 'pending',
-        ]);
+        // Create gambar kerja if not exists
+        if (!$order->gambarKerja) {
+            GambarKerja::create([
+                'order_id' => $order->id,
+                'status' => 'pending',
+            ]);
+        }
 
         // update tahapan utama
         $order->update([
             'tahapan_proyek' => 'survey_ulang', // tetap di survey ulang sampai user lanjut
         ]);
 
-        // Kirim notifikasi workplan request ke Project Manager
+        // Kirim notifikasi gambar kerja request
         $notificationService = new NotificationService();
         $notificationService->sendGambarKerjaRequestNotification($order);
 
-        return redirect()->route('survey-ulang.index')->with('success', 'Survey ulang berhasil disimpan. Notifikasi workplan telah dikirim ke Project Manager.');
+        return redirect()->route('survey-ulang.index')->with('success', 'Survey ulang berhasil disimpan. Notifikasi gambar kerja telah dikirim.');
     }
 
     // 📌 Halaman Show

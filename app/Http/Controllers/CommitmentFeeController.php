@@ -260,7 +260,7 @@ class CommitmentFeeController extends Controller
         // Semua variabel untuk view
         $data = [
             'customerName' => $order->customer_name,
-            'alamat' => $order->customer_additional_info ?? '-',
+            'alamat' => $order->alamat ?? '-',
             'projectName' => $order->nama_project,
 
             'companyName' => "PT. Moey Jaya Abadi",

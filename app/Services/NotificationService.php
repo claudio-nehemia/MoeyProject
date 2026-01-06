@@ -307,13 +307,13 @@ class NotificationService
                 'user_id' => $team->id,
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_SURVEY_ULANG_REQUEST,
-                'title' => 'Survey Request - ' . $order->nama_project,
-                'message' => 'Anda ditugaskan untuk melakukan survey pada project "' . $order->nama_project . '". Silakan lengkapi data survey.',
+                'title' => 'Re-Survey Request - ' . $order->nama_project,
+                'message' => 'Anda ditugaskan untuk melakukan survey ulang setelah customer DP pada project "' . $order->nama_project . '". Silakan lengkapi hasil survey ulang.',
                 'data' => [
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
                     'tanggal_survey' => $order->tanggal_survey,
-                    'action_url' => '/survey-results',
+                    'action_url' => '/survey-ulang',
                 ],
             ]);
         }
@@ -394,6 +394,40 @@ class NotificationService
         }
         
         \Log::info('=== END SEND WORKPLAN NOTIFICATION ===');
+    }
+
+    public function sendApprovalRabUpdateNotification(Order $order)
+    {
+        // Get all Project Managers and Estimators
+        $users = User::whereHas('role', function ($query) {
+            $query->whereIn('nama_role', ['Project Manager', 'Estimator']);
+        })->get();
+
+        \Log::info('=== SEND APPROVAL RAB UPDATE NOTIFICATION ===');
+        \Log::info('Order ID: ' . $order->id);
+        \Log::info('Order Name: ' . $order->nama_project);
+        \Log::info('PMs & Estimators found: ' . $users->count());
+
+        foreach ($users as $user) {
+            \Log::info('Sending notification to: ' . $user->name . ' (ID: ' . $user->id . ')');
+            
+            Notification::create([
+                'user_id' => $user->id,
+                'order_id' => $order->id,
+                'type' => 'approval_rab_update',
+                'title' => 'Approval RAB Updated - ' . $order->nama_project,
+                'message' => 'Keterangan material dan bahan baku telah diupdate untuk project "' . $order->nama_project . '". Silakan review perubahan.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/approval-material',
+                ],
+            ]);
+            
+            \Log::info('Notification sent successfully to: ' . $user->name);
+        }
+        
+        \Log::info('=== END SEND APPROVAL RAB UPDATE NOTIFICATION ===');
     }
 
     public function sendProjectManagementRequestNotification(Order $order)

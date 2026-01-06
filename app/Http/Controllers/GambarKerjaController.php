@@ -96,6 +96,9 @@ class GambarKerjaController extends Controller
             'approved_by'   => auth()->user()->name,
         ]);
 
+        $notificationService = new \App\Services\NotificationService();
+        $notificationService->sendApprovalMaterialRequestNotification($gambarKerja->order);
+
         return back()->with('success', 'Gambar kerja disetujui.');
     }
 

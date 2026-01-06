@@ -442,7 +442,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // WORKPLAN ROUTES
     Route::middleware(['permission:workplan.index'])->group(function () {
-        Route::get('/workplan', [WorkplanItemController::class, 'index'])->name('workplan.index');
+        Route::get('/workplan', [WorkplanItemController::class, 'index'])->name('workplan.index');        Route::post('/workplan/{order}/response', [WorkplanItemController::class, 'response'])->name('workplan.response');        Route::post('/workplan/{order}/response', [WorkplanItemController::class, 'response'])->name('workplan.response');
         Route::get('/workplan/{order}/create', [WorkplanItemController::class, 'create'])->name('workplan.create');
         Route::post('/workplan/{order}', [WorkplanItemController::class, 'store'])->name('workplan.store');
         Route::get('/workplan/{order}/edit', [WorkplanItemController::class, 'edit'])->name('workplan.edit');
@@ -459,6 +459,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             // INDEX
             Route::get('/', [SurveyUlangController::class, 'index'])->name('index');
+
+            // RESPONSE (Accept notification)
+            Route::post('/{order}/response', [SurveyUlangController::class, 'response'])->name('response');
 
             // START
             Route::post('/{order}/start', [SurveyUlangController::class, 'start'])->name('start');
