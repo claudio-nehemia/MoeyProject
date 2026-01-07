@@ -11,310 +11,243 @@
             box-sizing: border-box;
         }
         body {
-            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
             font-size: 12px;
-            line-height: 1.5;
-            color: #333;
+            line-height: 1.6;
+            color: #000;
         }
         .container {
             padding: 20px 40px;
         }
-        .header {
+        
+        /* Header dengan Kop Surat */
+        .kop-surat {
+            width: 100%;
+            height: auto;
+            display: block;
+            margin-bottom: 20px;
+        }
+        
+        .header-title {
             text-align: center;
-            border-bottom: 3px double #333;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            margin: 30px 0 20px 0;
         }
-        .header h1 {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #1a365d;
-        }
-        .header h2 {
+        .header-title h1 {
             font-size: 16px;
-            font-weight: normal;
-            color: #4a5568;
-        }
-        .bast-number {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            display: inline-block;
-            margin: 15px 0;
-            font-size: 14px;
             font-weight: bold;
+            text-decoration: underline;
+            margin-bottom: 10px;
         }
+        
+        /* Section */
         .section {
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
-        .section-title {
-            font-size: 14px;
-            font-weight: bold;
-            color: #2d3748;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 8px;
-            margin-bottom: 15px;
+        
+        .opening-text {
+            text-align: justify;
+            margin-bottom: 20px;
+            line-height: 1.8;
         }
+        
+        /* Info Table */
         .info-table {
             width: 100%;
-            border-collapse: collapse;
+            margin: 20px 0;
         }
         .info-table td {
-            padding: 8px 0;
+            padding: 3px 0;
             vertical-align: top;
         }
         .info-table .label {
-            width: 180px;
-            font-weight: bold;
-            color: #4a5568;
+            width: 35%;
+            padding-left: 40px;
         }
         .info-table .separator {
-            width: 20px;
-            text-align: center;
+            width: 5%;
         }
-        .product-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
+        
+        /* Product List */
+        .product-section {
+            margin: 20px 0;
         }
-        .product-table th,
-        .product-table td {
-            border: 1px solid #cbd5e0;
-            padding: 10px;
-            text-align: left;
-        }
-        .product-table th {
-            background: #edf2f7;
+        .product-section-title {
             font-weight: bold;
-            color: #2d3748;
+            margin-bottom: 10px;
+            text-transform: uppercase;
         }
-        .product-table tr:nth-child(even) {
-            background: #f7fafc;
+        .product-list {
+            margin-left: 40px;
+            margin-bottom: 15px;
         }
-        .stages-section {
-            margin-top: 20px;
+        .product-list li {
+            margin-bottom: 5px;
+            line-height: 1.6;
         }
-        .stage-item {
-            display: inline-block;
-            background: #e2e8f0;
-            padding: 8px 15px;
-            margin: 5px;
-            border-radius: 20px;
-            font-size: 11px;
+        
+        /* Closing Statement */
+        .closing-statement {
+            text-align: justify;
+            margin: 25px 0;
+            line-height: 1.8;
         }
-        .stage-item.completed {
-            background: #c6f6d5;
-            color: #22543d;
-        }
+        
+        /* Signature Section */
         .signature-section {
             margin-top: 50px;
             page-break-inside: avoid;
         }
+        .signature-date {
+            text-align: right;
+            margin-bottom: 40px;
+        }
         .signature-table {
             width: 100%;
+            margin-top: 30px;
         }
-        .signature-box {
-            width: 45%;
+        .signature-table td {
+            width: 50%;
             text-align: center;
-            padding: 20px;
+            vertical-align: top;
+            padding: 0 20px;
         }
-        .signature-line {
-            border-top: 1px solid #333;
-            margin-top: 80px;
-            padding-top: 10px;
+        .signature-table .signature-space {
+            height: 80px;
         }
-        .footer {
-            position: fixed;
-            bottom: 20px;
-            left: 40px;
-            right: 40px;
-            text-align: center;
-            font-size: 10px;
-            color: #718096;
-            border-top: 1px solid #e2e8f0;
-            padding-top: 10px;
-        }
-        .stamp {
-            border: 3px solid #38a169;
-            border-radius: 10px;
-            padding: 15px 25px;
-            display: inline-block;
-            transform: rotate(-5deg);
-            color: #38a169;
-            font-weight: bold;
-            font-size: 18px;
-            margin-top: 20px;
-        }
-        .summary-box {
-            background: #f7fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 15px;
-        }
-        .summary-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-        }
-        .summary-label {
-            color: #4a5568;
-        }
-        .summary-value {
-            font-weight: bold;
-            color: #2d3748;
+        .signature-table .signature-space-short {
+            height: 40px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>BERITA ACARA SERAH TERIMA</h1>
-            <h2>PEKERJAAN INTERIOR</h2>
-            <div class="bast-number">{{ $bast_number }}</div>
-            <p style="margin-top: 10px; color: #718096;">Tanggal: {{ $bast_date }}</p>
+        <!-- Kop Surat -->
+        @if('kop-moey.png')
+            <img src="kop-moey.png" class="kop-surat" alt="Kop Surat PT. Moey Jaya Abadi">
+        @endif
+        
+        <!-- Header Title -->
+        <div class="header-title">
+            <h1>BERITA ACARA PEMERIKSAAN PEKERJAAN (BASTP)</h1>
         </div>
-
-        <div class="section">
-            <div class="section-title">📋 INFORMASI PROJECT</div>
+        
+        <!-- Opening Text -->
+        <div class="opening-text">
+            Pada hari ini <strong>{{ \Carbon\Carbon::parse($bast_date)->locale('id')->isoFormat('dddd, DD MMMM YYYY') }}</strong>, 
+            telah dilakukan serah terima pekerjaan antara:
+        </div>
+        
+        <!-- Pihak Pertama -->
+        <table class="info-table">
+            <tr>
+                <td class="label">1. Nama</td>
+                <td class="separator">:</td>
+                <td><strong>{{ $direkturName }}</strong></td>
+            </tr>
+            <tr>
+                <td class="label">Alamat</td>
+                <td class="separator">:</td>
+                <td>{{ $companyAddress }}</td>
+            </tr>
+            <tr>
+                <td colspan="3" style="padding-left: 40px; padding-top: 8px;">
+                    Dalam hal ini bertindak untuk /atas nama <strong>{{ $companyName }}</strong>.
+                </td>
+            </tr>
+        </table>
+        
+        <!-- Pihak Kedua -->
+        <table class="info-table">
+            <tr>
+                <td class="label">2. Nama</td>
+                <td class="separator">:</td>
+                <td><strong>{{ $order->customer_name }}</strong></td>
+            </tr>
+            <tr>
+                <td class="label">Alamat</td>
+                <td class="separator">:</td>
+                <td>{{ $order->alamat ?? '-' }}</td>
+            </tr>
+            <tr>
+                <td colspan="3" style="padding-left: 40px; padding-top: 8px;">
+                    Dalam hal ini bertindak untuk /atas nama <strong>{{ $order->company_name }}</strong>.
+                </td>
+            </tr>
+        </table>
+        
+        <!-- Rincian Pekerjaan -->
+        <div class="product-section">
+            <div class="product-section-title">Rincian Pekerjaan:</div>
             <table class="info-table">
                 <tr>
-                    <td class="label">Nama Project</td>
+                    <td class="label">1. Nama Pekerjaan</td>
                     <td class="separator">:</td>
-                    <td>{{ $order->nama_project }}</td>
+                    <td>"{{ $order->nama_project }}"</td>
                 </tr>
                 <tr>
-                    <td class="label">Nama Perusahaan</td>
+                    <td class="label">2. Lingkup Pekerjaan</td>
                     <td class="separator">:</td>
-                    <td>{{ $order->company_name }}</td>
+                    <td>Pembuatan interior {{ strtolower($order->nama_project) }}</td>
                 </tr>
                 <tr>
-                    <td class="label">Nama Customer</td>
-                    <td class="separator">:</td>
-                    <td>{{ $order->customer_name }}</td>
-                </tr>
-                <tr>
-                    <td class="label">Item Pekerjaan</td>
-                    <td class="separator">:</td>
-                    <td>Item Pekerjaan #{{ $item_pekerjaan->id }}</td>
+                    <td class="label" style="vertical-align: top;">3. Hasil Pekerjaan yang Diserahkan:</td>
+                    <td class="separator" style="vertical-align: top;"></td>
+                    <td style="vertical-align: top;">
+                        <ul style="margin: 0; padding-left: 20px;">
+                            @foreach($produks as $index => $produk)
+                            <li style="margin-bottom: 5px;">
+                                Pembuatan {{ $produk->nama_ruangan ?? 'ruangan ' . ($index + 1) }}
+                            </li>
+                            @endforeach
+                        </ul>
+                    </td>
                 </tr>
             </table>
         </div>
-
-        <div class="section">
-            <div class="section-title">📦 DAFTAR PRODUK</div>
-            <table class="product-table">
-                <thead>
-                    <tr>
-                        <th style="width: 30px;">No</th>
-                        <th>Nama Produk</th>
-                        <th>Qty</th>
-                        <th>Dimensi (P×L×T)</th>
-                        <th>Progress</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($produks as $index => $produk)
-                    <tr>
-                        <td style="text-align: center;">{{ $index + 1 }}</td>
-                        <td>{{ $produk->produk->nama_produk }}</td>
-                        <td style="text-align: center;">{{ $produk->quantity }}</td>
-                        <td>{{ $produk->panjang }} × {{ $produk->lebar }} × {{ $produk->tinggi }} cm</td>
-                        <td style="text-align: center;">{{ $produk->progress }}%</td>
-                        <td>
-                            @if($produk->is_completed)
-                                <span style="color: #38a169; font-weight: bold;">✓ SELESAI</span>
-                            @else
-                                <span style="color: #e53e3e;">{{ $produk->current_stage ?? 'Belum Dimulai' }}</span>
-                            @endif
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-
-            <div class="summary-box">
-                <table style="width: 100%;">
-                    <tr>
-                        <td class="summary-label">Total Produk</td>
-                        <td class="summary-value" style="text-align: right;">{{ $produks->count() }} item</td>
-                    </tr>
-                    <tr>
-                        <td class="summary-label">Produk Selesai</td>
-                        <td class="summary-value" style="text-align: right;">{{ $produks->where('is_completed', true)->count() }} item</td>
-                    </tr>
-                    <tr>
-                        <td class="summary-label">Progress Item Pekerjaan</td>
-                        <td class="summary-value" style="text-align: right;">{{ $item_pekerjaan->progress }}%</td>
-                    </tr>
-                </table>
-            </div>
+        
+        <!-- Closing Statement -->
+        <div class="closing-statement">
+            Dengan ini, <strong>Pihak Kedua</strong> menyatakan telah menerima pekerjaan dari 
+            <strong>Pihak Pertama</strong> dalam kondisi baik dan sesuai dengan spesifikasi yang telah disepakati.
         </div>
-
-        <div class="section stages-section">
-            <div class="section-title">🔄 TAHAPAN YANG TELAH DILALUI</div>
-            <p style="margin-bottom: 10px; color: #718096;">Semua produk telah melalui tahapan berikut:</p>
-            @php
-                // Collect all unique stages from all products
-                $allStages = collect();
-                foreach($produks as $produk) {
-                    if($produk->stageEvidences) {
-                        foreach($produk->stageEvidences->groupBy('stage')->keys() as $stage) {
-                            $allStages->push($stage);
-                        }
-                    }
-                }
-                $uniqueStages = $allStages->unique();
-            @endphp
-            @forelse($uniqueStages as $stage)
-                <span class="stage-item completed">✓ {{ $stage }}</span>
-            @empty
-                <span class="stage-item">Install QC (Completed)</span>
-            @endforelse
+        
+        <div class="closing-statement">
+            Demikian berita acara serah terima pekerjaan ini dibuat dengan sebenar-benarnya untuk dapat digunakan 
+            sebagaimana mestinya.
         </div>
-
-        <div class="section">
-            <div class="section-title">📝 PERNYATAAN</div>
-            <p style="text-align: justify; line-height: 1.8;">
-                Dengan ini menyatakan bahwa seluruh pekerjaan pada <strong>Item Pekerjaan #{{ $item_pekerjaan->id }}</strong> 
-                yang terdiri dari <strong>{{ $produks->count() }} produk</strong>
-                telah selesai dikerjakan dan diserahterimakan dalam kondisi baik sesuai dengan spesifikasi yang telah disepakati.
-                Berita Acara Serah Terima ini dibuat sebagai bukti resmi bahwa pekerjaan telah selesai dan diterima dengan baik.
-            </p>
-        </div>
-
+        
+        <!-- Signature Section -->
         <div class="signature-section">
+            <div class="signature-date">
+                {{ $companyAddress }}, {{ \Carbon\Carbon::parse($bast_date)->locale('id')->isoFormat('DD MMMM YYYY') }}
+            </div>
+            
             <table class="signature-table">
                 <tr>
-                    <td class="signature-box">
-                        <p><strong>PIHAK PERTAMA</strong></p>
-                        <p style="color: #718096; font-size: 11px;">(Pelaksana)</p>
-                        <div class="signature-line">
-                            <p>(...............................)</p>
-                        </div>
+                    <td>
+                        <p><strong>Diserahkan Oleh :</strong></p>
                     </td>
-                    <td style="width: 10%;"></td>
-                    <td class="signature-box">
-                        <p><strong>PIHAK KEDUA</strong></p>
-                        <p style="color: #718096; font-size: 11px;">({{ $order->customer_name }})</p>
-                        <div class="signature-line">
-                            <p>(...............................)</p>
-                        </div>
+                    <td>
+                        <p><strong>Diterima Oleh :</strong></p>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="signature-space"></div>
+                    </td>
+                    <td>
+                        <div class="signature-space-short"></div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <p><strong>{{ $direkturName }}</strong></p>
+                    </td>
+                    <td>
+                        <p><strong>{{ $order->customer_name }}</strong></p>
                     </td>
                 </tr>
             </table>
-            
-            <div style="text-align: center; margin-top: 30px;">
-                <div class="stamp">SERAH TERIMA RESMI</div>
-            </div>
-        </div>
-
-        <div class="footer">
-            <p>Dokumen ini dicetak secara otomatis oleh sistem pada {{ now()->format('d F Y H:i:s') }}</p>
-            <p>{{ $bast_number }}</p>
         </div>
     </div>
 </body>

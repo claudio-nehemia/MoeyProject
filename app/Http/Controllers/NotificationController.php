@@ -30,8 +30,10 @@ class NotificationController extends Controller
         $notifications = Notification::where('user_id', auth()->id())
             ->with([
                 'order.surveyResults',
+                'order.surveyUlang',
                 'order.moodboard.commitmentFee',
                 'order.moodboard.estimasi',
+                'order.moodboard.itemPekerjaans.produks.workplanItems',
                 'order.itemPekerjaans.rabInternal',
                 'order.itemPekerjaans.kontrak',
                 'order.gambarKerja',
@@ -406,13 +408,29 @@ class NotificationController extends Controller
 
     /**
      * Handle survey ulang request notification
-     * DIRECT REDIRECT - No record creation
+     * CREATES RECORD with response info (like moodboard)
      */
     private function handleSurveyUlangRequest($order)
     {
-        // Redirect to Survey Schedule page
-        return redirect()->route('survey-ulang.index', ['order_id' => $order->id])
-            ->with('info', 'Please schedule a re-survey for this order.');
+        // Check if survey ulang already exists
+        if ($order->surveyUlang) {
+            return redirect()->route('survey-ulang.index', ['order_id' => $order->id])
+                ->with('info', 'Survey ulang sudah ada untuk project ini.');
+        }
+
+        // Create empty survey ulang record with response info
+        // User will fill in details (catatan, foto, temuan) later
+        \App\Models\SurveyUlang::create([
+            'order_id' => $order->id,
+            'response_time' => now(),
+            'response_by' => auth()->user()->name ?? 'Admin',
+        ]);
+
+        $order->update(['tahapan_proyek' => 'survey_ulang']);
+
+        // Redirect to create page to fill in details
+        return redirect()->route('survey-ulang.create', $order->id)
+            ->with('success', 'Response recorded. Silakan isi detail survey ulang.');
     }
 
     /**
@@ -422,16 +440,22 @@ class NotificationController extends Controller
     private function handleGambarKerjaRequest($order)
     {
         // Check if gambar kerja already exists
-        if ($order->gambarKerja) {
+        if (!$order->gambarKerja) {
             return redirect()->route('gambar-kerja.index')
-                ->with('info', 'Gambar Kerja sudah ada untuk project ini.');
+                ->with('error', 'Gambar Kerja belum dibuat. Silakan lengkapi survey ulang terlebih dahulu.');
         }
 
-        GambarKerja::create([
-            'order_id' => $order->id,
-            'status' => 'pending',
+        // Check if already responded
+        if ($order->gambarKerja->response_time) {
+            return redirect()->route('gambar-kerja.index')
+                ->with('info', 'Gambar Kerja sudah di-response sebelumnya.');
+        }
+
+        // Update existing gambar kerja with response info (tidak create baru)
+        $order->gambarKerja->update([
             'response_time' => now(),
             'response_by' => auth()->user()->name,
+            'status' => 'pending',
         ]);
 
         $order->update([
@@ -440,7 +464,7 @@ class NotificationController extends Controller
         
         // Redirect to Gambar Kerja page
         return redirect()->route('gambar-kerja.index', ['order_id' => $order->id])
-            ->with('success', 'Response recorded. Please manage the Gambar Kerja for this order.');
+            ->with('success', 'Response berhasil. Silakan upload gambar kerja.');
     }
 
     /**
@@ -456,13 +480,54 @@ class NotificationController extends Controller
 
     /**
      * Handle workplan request notification
-     * DIRECT REDIRECT - No record creation
+     * Workplan created during store, response acknowledges the request
      */
     private function handleWorkplanRequest($order)
     {
-        // Redirect to Workplan page
-        return redirect()->route('workplan.index', ['order_id' => $order->id])
-            ->with('info', 'Please manage the Workplan for this order.');
+        // Check if workplan exists and already responded
+        $workplanItems = $order->moodboard
+            ->itemPekerjaans
+            ->flatMap(fn($ip) => $ip->produks)
+            ->flatMap(fn($produk) => $produk->workplanItems);
+
+        // If workplan already exists and responded
+        if ($workplanItems->isNotEmpty() && \App\Models\WorkplanItem::hasAnyResponded($workplanItems)) {
+            return redirect()->route('workplan.index')
+                ->with('info', 'Permintaan workplan sudah diterima sebelumnya.');
+        }
+
+        // CREATE empty workplan items with response tracking
+        // This marks the response and prepares the structure for filling
+        \Illuminate\Support\Facades\DB::transaction(function () use ($order) {
+            foreach ($order->moodboard->itemPekerjaans as $itemPekerjaan) {
+                foreach ($itemPekerjaan->produks as $produk) {
+                    // Skip if already has workplan items
+                    if ($produk->workplanItems->count() > 0) {
+                        continue;
+                    }
+
+                    // Create empty workplan items based on default breakdown
+                    $defaultBreakdown = \App\Http\Controllers\WorkplanItemController::defaultBreakdown();
+                    foreach ($defaultBreakdown as $index => $stage) {
+                        \App\Models\WorkplanItem::create([
+                            'item_pekerjaan_produk_id' => $produk->id,
+                            'nama_tahapan' => $stage['nama_tahapan'],
+                            'start_date' => null,
+                            'end_date' => null,
+                            'duration_days' => null,
+                            'urutan' => $index + 1,
+                            'status' => 'planned',
+                            'catatan' => null,
+                            'response_time' => now(),
+                            'response_by' => auth()->user()->name ?? 'System',
+                        ]);
+                    }
+                }
+            }
+        });
+
+        return redirect()->route('workplan.index')
+            ->with('success', 'Permintaan workplan berhasil diterima. Silakan lengkapi detail workplan.');
     }
 
     /**

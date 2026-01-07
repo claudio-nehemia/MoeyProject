@@ -8,13 +8,23 @@ interface ItemPreview {
     keterangan_material: string | null;
 }
 
+interface BahanBakuPreview {
+    id: number;
+    item_name: string;
+    harga_dasar: number;
+    harga_jasa: number;
+    keterangan_bahan_baku: string | null;
+}
+
 interface Row {
     id: number;
     project_name: string;
     company_name: string;
     customer_name: string;
     total_items: number;
+    total_bahan_baku: number;
     items_preview: ItemPreview[];
+    bahan_baku_preview: BahanBakuPreview[];
 }
 
 interface Props {
@@ -120,6 +130,9 @@ export default function ApprovalRabIndex({ items }: Props) {
                                     <div className="p-6 space-y-4">
                                         {/* Preview Item */}
                                         <div className="space-y-2">
+                                            <h4 className="text-sm font-semibold text-stone-700 mb-2">
+                                                Items
+                                            </h4>
                                             {row.items_preview.map((item, idx) => (
                                                 <div
                                                     key={idx}
@@ -143,8 +156,51 @@ export default function ApprovalRabIndex({ items }: Props) {
                                             ))}
                                         </div>
 
-                                        <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
-                                            <strong>Total Item:</strong> {row.total_items}
+                                        {/* Preview Bahan Baku */}
+                                        {row.bahan_baku_preview && row.bahan_baku_preview.length > 0 && (
+                                            <div className="space-y-2">
+                                                <h4 className="text-sm font-semibold text-stone-700 mb-2">
+                                                    Bahan Baku
+                                                </h4>
+                                                {row.bahan_baku_preview.map((bahan, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        className="rounded-lg border border-green-200 bg-green-50 p-3"
+                                                    >
+                                                        <div className="text-sm font-medium text-stone-800">
+                                                            • {bahan.item_name}
+                                                        </div>
+                                                        <div className="mt-1 text-xs text-stone-600 space-x-3">
+                                                            <span>
+                                                                Harga Dasar: Rp {Number(bahan.harga_dasar).toLocaleString('id-ID')}
+                                                            </span>
+                                                            <span>
+                                                                Harga Jasa: Rp {Number(bahan.harga_jasa).toLocaleString('id-ID')}
+                                                            </span>
+                                                        </div>
+                                                        <div className="mt-1 text-xs">
+                                                            {bahan.keterangan_bahan_baku ? (
+                                                                <span className="text-stone-600">
+                                                                    ↳ {bahan.keterangan_bahan_baku}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="italic text-amber-600">
+                                                                    ↳ belum ada keterangan
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        <div className="flex gap-3">
+                                            <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-800 flex-1">
+                                                <strong>Total Item:</strong> {row.total_items}
+                                            </div>
+                                            <div className="rounded-lg bg-green-50 p-4 text-sm text-green-800 flex-1">
+                                                <strong>Total Bahan Baku:</strong> {row.total_bahan_baku}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

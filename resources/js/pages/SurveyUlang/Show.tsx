@@ -34,7 +34,7 @@ export default function Show({ survey }: any) {
                         </h1>
 
                         <Link
-                            href={route("survey-ulang.edit", survey.id)}
+                            href={`/survey-ulang/edit/${survey.id}`}
                             className="px-4 py-2 bg-amber-500 text-white rounded-lg shadow hover:bg-amber-600"
                         >
                             Edit

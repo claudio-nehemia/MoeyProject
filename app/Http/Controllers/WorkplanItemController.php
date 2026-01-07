@@ -42,14 +42,23 @@ class WorkplanItemController extends Controller
                 // Sudah ada pembayaran termin (bukan commitment fee, tahap >= 1)
                 $q->whereNotNull('paid_at')->where('termin_step', '>=', 1);
             })
+            //menampilkan yang sudah isi itempekerjaan kolom keterangan material
             ->get()
             ->map(function ($order) {
                 $itemPekerjaans = $order->moodboard->itemPekerjaans->map(function ($ip) {
                     $totalProduks = $ip->produks->count();
                     $hasTimeline = $ip->workplan_start_date && $ip->workplan_end_date;
-                    $produksWithWorkplan = $ip->produks->filter(fn($p) => 
-                        $p->workplanItems->count() > 0
-                    )->count();
+                    
+                    // Count produks yang workplan items-nya sudah LENGKAP (ada start_date & end_date)
+                    // Bukan hanya count yang punya workplan items kosong
+                    $produksWithWorkplan = $ip->produks->filter(function($p) {
+                        // Cek apakah ada minimal 1 workplan item yang sudah diisi timeline
+                        $hasFilledWorkplan = $p->workplanItems->filter(function($wi) {
+                            return $wi->start_date !== null && $wi->end_date !== null;
+                        })->count() > 0;
+                        
+                        return $hasFilledWorkplan;
+                    })->count();
                     
                     // Get latest pengajuan perpanjangan
                     $latestPengajuan = $ip->pengajuanPerpanjanganTimelines
@@ -78,6 +87,25 @@ class WorkplanItemController extends Controller
                 $produksWithWorkplan = $itemPekerjaans->sum('produks_with_workplan');
                 $hasAnyTimeline = $itemPekerjaans->contains('has_timeline', true);
 
+                // Check if any workplan item has been responded
+                $workplanItems = $order->moodboard->itemPekerjaans
+                    ->flatMap(fn($ip) => $ip->produks)
+                    ->flatMap(fn($produk) => $produk->workplanItems);
+                
+                // Use model method to check if any item has response_time
+                $hasResponded = WorkplanItem::hasAnyResponded($workplanItems);
+                $responseBy = null;
+                $responseTime = null;
+                
+                if ($hasResponded) {
+                    // Get first responded item's info
+                    $respondedItem = $workplanItems->first(fn($item) => $item->response_time !== null);
+                    if ($respondedItem) {
+                        $responseBy = $respondedItem->response_by;
+                        $responseTime = $respondedItem->response_time;
+                    }
+                }
+
                 return [
                     'id' => $order->id,
                     'nama_project' => $order->nama_project,
@@ -86,6 +114,9 @@ class WorkplanItemController extends Controller
                     'total_produks' => $totalProduks,
                     'produks_with_workplan' => $produksWithWorkplan,
                     'has_timeline' => $hasAnyTimeline,
+                    'has_responded' => $hasResponded,
+                    'response_by' => $responseBy,
+                    'response_time' => $responseTime?->toIso8601String(),
                     'workplan_progress' => $totalProduks > 0 
                         ? round(($produksWithWorkplan / $totalProduks) * 100) 
                         : 0,
@@ -99,7 +130,58 @@ class WorkplanItemController extends Controller
     }
 
     /**
+     * Response notification - CREATE empty workplan items with response tracking
+     * User must respond first before they can fill the workplan details
+     */
+    public function response(Order $order)
+    {
+        // Check if already has workplan items with response
+        $workplanItems = $order->moodboard
+            ->itemPekerjaans
+            ->flatMap(fn($ip) => $ip->produks)
+            ->flatMap(fn($produk) => $produk->workplanItems);
+
+        // If workplan already exists and responded
+        if ($workplanItems->isNotEmpty() && WorkplanItem::hasAnyResponded($workplanItems)) {
+            return back()->with('info', 'Permintaan workplan sudah diterima sebelumnya.');
+        }
+
+        // CREATE empty workplan items with response tracking
+        // This marks the response and prepares the structure for filling
+        DB::transaction(function () use ($order) {
+            foreach ($order->moodboard->itemPekerjaans as $itemPekerjaan) {
+                foreach ($itemPekerjaan->produks as $produk) {
+                    // Skip if already has workplan items
+                    if ($produk->workplanItems->count() > 0) {
+                        continue;
+                    }
+
+                    // Create empty workplan items based on default breakdown
+                    $defaultBreakdown = self::defaultBreakdown();
+                    foreach ($defaultBreakdown as $index => $stage) {
+                        WorkplanItem::create([
+                            'item_pekerjaan_produk_id' => $produk->id,
+                            'nama_tahapan' => $stage['nama_tahapan'],
+                            'start_date' => null,
+                            'end_date' => null,
+                            'duration_days' => null,
+                            'urutan' => $index + 1,
+                            'status' => 'planned',
+                            'catatan' => null,
+                            'response_time' => now(),
+                            'response_by' => auth()->user()->name ?? 'System',
+                        ]);
+                    }
+                }
+            }
+        });
+
+        return back()->with('success', 'Permintaan workplan berhasil diterima. Silakan lengkapi detail workplan.');
+    }
+
+    /**
      * Create: Form untuk membuat workplan per order
+     * GUARD: User must respond first before accessing this page
      */
     public function create($orderId)
     {
@@ -108,6 +190,17 @@ class WorkplanItemController extends Controller
             'moodboard.itemPekerjaans.produks.workplanItems',
             'moodboard.itemPekerjaans.kontrak',
         ])->findOrFail($orderId);
+
+        // GUARD: Check if user has responded
+        $workplanItems = $order->moodboard
+            ->itemPekerjaans
+            ->flatMap(fn($ip) => $ip->produks)
+            ->flatMap(fn($produk) => $produk->workplanItems);
+
+        if ($workplanItems->isEmpty() || !WorkplanItem::hasAnyResponded($workplanItems)) {
+            return redirect()->route('workplan.index')
+                ->with('error', 'Anda harus merespons permintaan workplan terlebih dahulu sebelum mengisi detail.');
+        }
 
         $itemPekerjaans = $order->moodboard->itemPekerjaans->map(function ($ip) {
             return [
@@ -169,7 +262,8 @@ class WorkplanItemController extends Controller
     }
 
     /**
-     * Store: Simpan workplan untuk semua produk dalam order
+     * Store: Update workplan details for all products in order
+     * This updates the empty workplan items created during response
      */
     public function store(Request $request, $orderId)
     {
@@ -188,7 +282,19 @@ class WorkplanItemController extends Controller
             'item_pekerjaans.*.produks.*.workplan_items.*.catatan' => 'nullable|string',
         ]);
 
-        DB::transaction(function () use ($validated) {
+        DB::transaction(function () use ($validated, $orderId) {
+            $order = Order::findOrFail($orderId);
+            
+            // GUARD: Ensure workplan items exist and have response_time
+            $workplanItems = $order->moodboard
+                ->itemPekerjaans
+                ->flatMap(fn($ip) => $ip->produks)
+                ->flatMap(fn($produk) => $produk->workplanItems);
+            
+            if ($workplanItems->isEmpty() || !WorkplanItem::hasAnyResponded($workplanItems)) {
+                throw new \Exception('Workplan belum direspons. Silakan respons terlebih dahulu.');
+            }
+            
             $lastItemPekerjaan = null;
             
             foreach ($validated['item_pekerjaans'] as $ipData) {
@@ -201,11 +307,15 @@ class WorkplanItemController extends Controller
                 
                 $lastItemPekerjaan = $itemPekerjaan;
 
-                // Update workplan items per produk
+                // UPDATE workplan items per produk (bukan create baru)
                 foreach ($ipData['produks'] as $produkData) {
                     $produk = ItemPekerjaanProduk::find($produkData['id']);
                     
-                    // Hapus workplan lama dan buat baru
+                    // Hapus workplan lama dan buat baru dengan preserve response info
+                    $existingWorkplans = $produk->workplanItems;
+                    $responseTime = $existingWorkplans->first()?->response_time;
+                    $responseBy = $existingWorkplans->first()?->response_by;
+                    
                     $produk->workplanItems()->delete();
 
                     foreach ($produkData['workplan_items'] as $index => $item) {
@@ -226,6 +336,8 @@ class WorkplanItemController extends Controller
                             'urutan' => $index + 1,
                             'status' => $item['status'],
                             'catatan' => $item['catatan'] ?? null,
+                            'response_time' => $responseTime, // Preserve response tracking
+                            'response_by' => $responseBy,
                         ]);
                     }
                 }
@@ -252,10 +364,11 @@ class WorkplanItemController extends Controller
 
     /**
      * Edit: Form untuk edit workplan
+     * GUARD: User must have responded first
      */
     public function edit($orderId)
     {
-        // Sama seperti create, tapi untuk edit
+        // Same as create, but for edit - includes same guard
         return $this->create($orderId);
     }
 

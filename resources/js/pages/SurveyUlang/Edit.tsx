@@ -60,7 +60,10 @@ export default function Edit({ survey }: { survey: Survey }) {
         const formData = new FormData();
 
         formData.append("catatan", catatan);
-        formData.append("temuan", JSON.stringify(temuan));
+        
+        // Send temuan as array items, not JSON string
+        temuan.forEach((t, i) => formData.append(`temuan[${i}]`, t));
+        
         formData.append("foto_lama", JSON.stringify(fotoLama)); // FOTO LAMA
 
         fotoBaru.forEach((file, index) => {
@@ -70,7 +73,7 @@ export default function Edit({ survey }: { survey: Survey }) {
         formData.append("_method", "PUT");
 
         router.post(
-            route("survey-ulang.update", survey.id),
+            `/survey-ulang/edit/${survey.id}`,
             formData,
             {
                 forceFormData: true,
@@ -212,7 +215,7 @@ export default function Edit({ survey }: { survey: Survey }) {
                         <div className="flex justify-end gap-3 pt-5">
                             <button
                                 type="button"
-                                onClick={() => router.get(route("survey-ulang.index"))}
+                                onClick={() => router.get("/survey-ulang")}
                                 className="px-4 py-2 border rounded"
                             >
                                 Batal

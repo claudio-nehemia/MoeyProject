@@ -12,7 +12,8 @@ class GambarKerjaController extends Controller
 {
     public function index()
     {
-        $items = GambarKerja::with(['order', 'files'])
+        $items = GambarKerja::with(['order.surveyUlang', 'files'])
+            ->whereHas('order.surveyUlang')
             ->orderByDesc('created_at')
             ->get()
             ->map(function ($item) {
@@ -94,6 +95,9 @@ class GambarKerjaController extends Controller
             'approved_time' => now(),
             'approved_by'   => auth()->user()->name,
         ]);
+
+        $notificationService = new \App\Services\NotificationService();
+        $notificationService->sendApprovalMaterialRequestNotification($gambarKerja->order);
 
         return back()->with('success', 'Gambar kerja disetujui.');
     }

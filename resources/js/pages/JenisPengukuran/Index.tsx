@@ -81,26 +81,44 @@ export default function Index({ jenisPengukuran }: Props) {
         reset();
     };
 
-    const handleSubmit: FormEventHandler = (e) => {
-        e.preventDefault();
+    // const handleSubmit: FormEventHandler = (e) => {
+    //     e.preventDefault();
 
-        if (deleteMode && selectedJenisPengukuran) {
-            router.delete(`/jenis-pengukuran/${selectedJenisPengukuran.id}`, {
-                onSuccess: closeModal,
-            });
-            return;
-        }
+    //     if (deleteMode && selectedJenisPengukuran) {
+    //         router.delete(`/jenis-pengukuran/${selectedJenisPengukuran.id}`, {
+    //             onSuccess: closeModal,
+    //         });
+    //         return;
+    //     }
 
-        if (editMode && selectedJenisPengukuran) {
-            put(`/jenis-pengukuran/${selectedJenisPengukuran.id}`, {
-                onSuccess: closeModal,
-            });
-        } else {
-            post("/jenis-pengukuran", {
-                onSuccess: closeModal,
-            });
-        }
-    };
+    //     if (editMode && selectedJenisPengukuran) {
+    //         put(`/jenis-pengukuran/${selectedJenisPengukuran.id}`, {
+    //             onSuccess: closeModal,
+    //         });
+    //     } else {
+    //         post("/jenis-pengukuran", {
+    //             onSuccess: closeModal,
+    //         });
+    //     }
+    // };
+    const handleSubmit = () => {
+    if (deleteMode && selectedJenisPengukuran) {
+        router.delete(`/jenis-pengukuran/${selectedJenisPengukuran.id}`, {
+            onSuccess: closeModal,
+        });
+        return;
+    }
+
+    if (editMode && selectedJenisPengukuran) {
+        put(`/jenis-pengukuran/${selectedJenisPengukuran.id}`, {
+            onSuccess: closeModal,
+        });
+    } else {
+        post("/jenis-pengukuran", {
+            onSuccess: closeModal,
+        });
+    }
+};
 
     const openDeleteModal = (item: JenisPengukuran) => {
         setSelectedJenisPengukuran(item);
@@ -263,12 +281,12 @@ export default function Index({ jenisPengukuran }: Props) {
 
                                         <td className="px-5 py-3 whitespace-nowrap">
                                             <div className="flex items-center gap-2">
-                                                <Link
+                                                {/* <Link
                                                     href={`/jenis-pengukuran/${item.id}`}
                                                     className="inline-flex items-center px-2.5 py-1.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-xs font-medium shadow-sm"
                                                 >
                                                     View
-                                                </Link>
+                                                </Link> */}
 
                                                 <button
                                                     onClick={() => openEditModal(item)}

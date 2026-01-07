@@ -444,6 +444,7 @@ class RabInternalController extends Controller
                             'id' => $rabProduk ? $rabProduk->id : null,
                             'item_pekerjaan_produk_id' => $produk->id,
                             'nama_produk' => $produk->produk->nama_produk,
+                            'nama_ruangan' => $produk->nama_ruangan, // 🔥 tambahkan nama_ruangan
                             'qty_produk' => $produk->quantity,
                             'panjang' => $produk->panjang,
                             'lebar' => $produk->lebar,
@@ -466,7 +467,7 @@ class RabInternalController extends Controller
         try {
             $validated = $request->validate([
                 'produks' => 'required|array|min:1',
-                'produks.*.id' => 'required|exists:rab_produks,id',
+                'produks.*.id' => 'nullable|exists:rab_produks,id', // 🔥 nullable untuk produk baru
                 'produks.*.item_pekerjaan_produk_id' => 'required|exists:item_pekerjaan_produks,id',
                 'produks.*.markup_satuan' => 'required|numeric|min:0|max:100',
                 'produks.*.aksesoris' => 'nullable|array',
@@ -478,8 +479,16 @@ class RabInternalController extends Controller
             DB::beginTransaction();
 
             foreach ($validated['produks'] as $produkData) {
-                // Get RAB Produk
-                $rabProduk = RabProduk::findOrFail($produkData['id']);
+                // 🔥 Check if produk baru (id = null) atau existing
+                if (empty($produkData['id'])) {
+                    // Create new RAB Produk untuk produk yang baru ditambahkan
+                    $rabProduk = new RabProduk();
+                    $rabProduk->rab_internal_id = $rabInternalId;
+                    $rabProduk->item_pekerjaan_produk_id = $produkData['item_pekerjaan_produk_id'];
+                } else {
+                    // Get existing RAB Produk
+                    $rabProduk = RabProduk::findOrFail($produkData['id']);
+                }
 
                 // Get item pekerjaan produk data with selected bahan bakus
                 $itemProduk = ItemPekerjaanProduk::with(['produk', 'bahanBakus', 'jenisItems.items.item'])->findOrFail($produkData['item_pekerjaan_produk_id']);
@@ -518,14 +527,13 @@ class RabInternalController extends Controller
                 $markupSatuan = $produkData['markup_satuan'];
                 $hargaSatuan = ($hargaDasarProduk + $hargaItemsNonAksesoris) * (1 + $markupSatuan / 100) * $hargaDimensi;
 
-                // Update RAB Produk
-                $rabProduk->update([
-                    'markup_satuan' => $markupSatuan,
-                    'harga_dasar' => $hargaDasarProduk, // Total harga_dasar dari selected bahan baku
-                    'harga_items_non_aksesoris' => $hargaItemsNonAksesoris,
-                    'harga_dimensi' => $hargaDimensi,
-                    'harga_satuan' => $hargaSatuan,
-                ]);
+                // Save RAB Produk (create atau update)
+                $rabProduk->markup_satuan = $markupSatuan;
+                $rabProduk->harga_dasar = $hargaDasarProduk; // Total harga_dasar dari selected bahan baku
+                $rabProduk->harga_items_non_aksesoris = $hargaItemsNonAksesoris;
+                $rabProduk->harga_dimensi = $hargaDimensi;
+                $rabProduk->harga_satuan = $hargaSatuan;
+                $rabProduk->save(); // 🔥 save() untuk handle create & update
 
                 // Delete existing aksesoris
                 $rabProduk->rabAksesoris()->delete();

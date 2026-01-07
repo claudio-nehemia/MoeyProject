@@ -13,12 +13,15 @@ class SurveyUlang extends Model
         'temuan',
         'survey_time',
         'survey_by',
+        'response_time',
+        'response_by',
     ];
 
     protected $casts = [
         'foto' => 'array',
         'temuan' => 'array',
         'survey_time' => 'datetime',
+        'response_time' => 'datetime',
     ];
 
     public function order()

@@ -350,6 +350,12 @@ class ProjectManagementController extends Controller
                 $allStageEvidences[$stage] = $allStageEvidences[$stage]->merge($evidences);
             }
         }
+        
+        $kopPath = public_path('kop-moey.png');
+
+        $companyName = "PT. Moey Jaya Abadi";
+        $companyAddress = "Tangerang";
+        $direkturName = "Aniq Infanuddin";
 
         // Generate PDF
         $data = [
@@ -359,6 +365,10 @@ class ProjectManagementController extends Controller
             'item_pekerjaan' => $itemPekerjaan,
             'produks' => $itemPekerjaan->produks,
             'stage_evidences' => $allStageEvidences,
+            'kop_path' => $kopPath,
+            'companyName' => $companyName,
+            'companyAddress' => $companyAddress,
+            'direkturName' => $direkturName,
         ];
 
         $pdf = PDF::loadView('pdf.bast', $data);

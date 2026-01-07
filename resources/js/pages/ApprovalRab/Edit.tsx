@@ -19,6 +19,15 @@ interface ItemRow {
     available_items: ItemOption[];
 }
 
+interface BahanBakuRow {
+    id: number;
+    item_name: string;
+    produk: string;
+    harga_dasar: number;
+    harga_jasa: number;
+    keterangan_bahan_baku: string | null;
+}
+
 interface Props {
     itemPekerjaan: {
         id: number;
@@ -26,6 +35,7 @@ interface Props {
         company_name: string;
         customer_name: string;
         items: ItemRow[];
+        bahan_bakus: BahanBakuRow[];
     };
 }
 
@@ -33,6 +43,7 @@ export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [saving, setSaving] = useState(false);
     const [items, setItems] = useState<ItemRow[]>(itemPekerjaan.items);
+    const [bahanBakus, setBahanBakus] = useState<BahanBakuRow[]>(itemPekerjaan.bahan_bakus);
 
     const updateItem = (id: number, itemId: number) => {
         setItems((prev) =>
@@ -50,6 +61,14 @@ export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
         );
     };
 
+    const updateKeteranganBahanBaku = (id: number, value: string) => {
+        setBahanBakus((prev) =>
+            prev.map((b) =>
+                b.id === id ? { ...b, keterangan_bahan_baku: value } : b,
+            ),
+        );
+    };
+
     const handleSave = () => {
         setSaving(true);
         router.put(
@@ -59,6 +78,10 @@ export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
                     id: i.id,
                     item_id: i.item_id,
                     keterangan_material: i.keterangan_material,
+                })),
+                bahan_bakus: bahanBakus.map((b) => ({
+                    id: b.id,
+                    keterangan_bahan_baku: b.keterangan_bahan_baku,
                 })),
             },
             {
@@ -93,7 +116,7 @@ export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
                     </div>
 
                     {/* Table */}
-                    <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+                    <div className="overflow-hidden rounded-lg border bg-white shadow-sm mb-6">
                         <table className="w-full text-sm">
                             <thead className="bg-stone-100 text-stone-700">
                                 <tr>
@@ -163,6 +186,56 @@ export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Bahan Baku Section */}
+                    {bahanBakus && bahanBakus.length > 0 && (
+                        <div className="overflow-hidden rounded-lg border bg-white shadow-sm mb-6">
+                            <div className="bg-green-50 border-b p-4">
+                                <h3 className="text-lg font-semibold text-stone-800">
+                                    Bahan Baku
+                                </h3>
+                                <p className="text-sm text-stone-600 mt-1">
+                                    Bahan baku yang dipilih saat pembuatan produk
+                                </p>
+                            </div>
+                            <table className="w-full text-sm">
+                                <thead className="bg-stone-100 text-stone-700">
+                                    <tr>
+                                        <th className="p-3 text-left">Nama Bahan</th>
+                                        <th className="p-3 text-left">Produk</th>
+                                        <th className="p-3 text-left">Keterangan</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {bahanBakus.map((bahan) => (
+                                        <tr key={bahan.id} className="border-t">
+                                            <td className="p-3 text-stone-800">
+                                                {bahan.item_name}
+                                            </td>
+                                            <td className="p-3 text-stone-600">
+                                                {bahan.produk}
+                                            </td>
+                                      
+                                            <td className="p-3">
+                                                <textarea
+                                                    value={bahan.keterangan_bahan_baku || ''}
+                                                    onChange={(e) =>
+                                                        updateKeteranganBahanBaku(
+                                                            bahan.id,
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    rows={2}
+                                                    className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm"
+                                                    placeholder="Contoh: type 1A, cap Kuda Terbang"
+                                                />
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
 
                     {/* Action */}
                     <div className="mt-6 flex justify-end gap-3">

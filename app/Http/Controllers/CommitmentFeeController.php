@@ -31,6 +31,7 @@ class CommitmentFeeController extends Controller
                         'nama_project' => $moodboard->order->nama_project,
                         'company_name' => $moodboard->order->company_name,
                         'customer_name' => $moodboard->order->customer_name,
+                        'alamat' => $moodboard->order->alamat,
                     ] : null,
                     'commitmentFee' => $moodboard->commitmentFee ? [
                         'id' => $moodboard->commitmentFee->id,
@@ -260,7 +261,7 @@ class CommitmentFeeController extends Controller
         // Semua variabel untuk view
         $data = [
             'customerName' => $order->customer_name,
-            'alamat' => $order->customer_additional_info ?? '-',
+            'alamat' => $order->alamat ?? '-',
             'projectName' => $order->nama_project,
 
             'companyName' => "PT. Moey Jaya Abadi",

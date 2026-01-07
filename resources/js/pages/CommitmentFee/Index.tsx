@@ -8,6 +8,7 @@ interface Order {
     nama_project: string;
     company_name: string | null;
     customer_name: string;
+    alamat: string;
 }
 
 interface CommitmentFee {
@@ -245,6 +246,7 @@ export default function Index({ moodboards }: Props) {
                                                                 }
                                                             </span>
                                                         </p>
+                                                        <p>
                                                         {moodboard.order
                                                             .company_name && (
                                                             <p>
@@ -254,6 +256,20 @@ export default function Index({ moodboards }: Props) {
                                                                         moodboard
                                                                             .order
                                                                             .company_name
+                                                                    }
+                                                                </span>
+                                                            </p>
+                                                        )}
+                                                        </p>
+                                                        {moodboard.order
+                                                            .alamat && (
+                                                            <p>
+                                                                Address:{' '}
+                                                                <span className="font-medium">
+                                                                    {
+                                                                        moodboard
+                                                                            .order
+                                                                            .alamat
                                                                     }
                                                                 </span>
                                                             </p>
@@ -491,6 +507,16 @@ export default function Index({ moodboards }: Props) {
                                                         >
                                                             Revisi Total Fee
                                                         </button>
+
+                                                        {/* Tombol cetak commitment fee */}
+                                                        <a
+                                                            href={`/commitment-fee/${moodboard.commitmentFee.id}/print`} target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-700"
+                                                        >
+                                                            Cetak Commitment Fee
+                                                        </a>
+
                                                         <button
                                                             onClick={() =>
                                                                 handleOpenPaymentModal(
@@ -504,6 +530,14 @@ export default function Index({ moodboards }: Props) {
                                                     </>
                                                 ) : (
                                                     <>
+                                                    {/* Tombol cetak commitment fee */}
+                                                        <a
+                                                            href={`/commitment-fee/${moodboard.commitmentFee.id}/print`} target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-700"
+                                                        >
+                                                            Cetak Commitment Fee
+                                                        </a>
                                                         <a
                                                             href={`/storage/${moodboard.commitmentFee.payment_proof!}`} 
                                                             target="_blank"

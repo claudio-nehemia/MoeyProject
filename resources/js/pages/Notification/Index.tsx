@@ -22,11 +22,23 @@ interface Notification {
             response_time: string | null;
             response_by: string | null;
         };
+        survey_ulang?: {
+            response_time: string | null;
+            response_by: string | null;
+        };
         moodboard?: {
             response_time: string | null;
             response_by: string | null;
             response_final_time: string | null;
             response_final_by: string | null;
+            item_pekerjaans?: Array<{
+                produks?: Array<{
+                    workplan_items?: Array<{
+                        response_time: string | null;
+                        response_by: string | null;
+                    }>;
+                }>;
+            }>;
         };
         estimasi?: {
             response_time: string | null;
@@ -152,6 +164,46 @@ export default function Index({ notifications, unreadCount }: Props) {
                     responseBy: order.gambar_kerja?.response_by || null
                 };
             
+            case 'survey_ulang_request':
+                return {
+                    responded: !!order.survey_ulang?.response_time,
+                    responseTime: order.survey_ulang?.response_time || null,
+                    responseBy: order.survey_ulang?.response_by || null
+                };
+            
+            case 'workplan_request':
+                // Check if any workplan item has response_time
+                const hasAnyWorkplanResponse = order.moodboard?.item_pekerjaans?.some(
+                    (ip) => ip.produks?.some(
+                        (produk) => produk.workplan_items?.some(
+                            (workplan) => workplan.response_time
+                        )
+                    )
+                ) || false;
+                
+                // Get first responded workplan item
+                let workplanResponseTime = null;
+                let workplanResponseBy = null;
+                if (hasAnyWorkplanResponse) {
+                    for (const ip of order.moodboard?.item_pekerjaans || []) {
+                        for (const produk of ip.produks || []) {
+                            const respondedWorkplan = produk.workplan_items?.find(w => w.response_time);
+                            if (respondedWorkplan) {
+                                workplanResponseTime = respondedWorkplan.response_time;
+                                workplanResponseBy = respondedWorkplan.response_by;
+                                break;
+                            }
+                        }
+                        if (workplanResponseTime) break;
+                    }
+                }
+                
+                return {
+                    responded: hasAnyWorkplanResponse,
+                    responseTime: workplanResponseTime,
+                    responseBy: workplanResponseBy
+                };
+            
             // For commitment_fee_request, check if moodboard.commitment_fee exists
             case 'commitment_fee_request':
                 return {
@@ -169,6 +221,7 @@ export default function Index({ notifications, unreadCount }: Props) {
     const requiresResponse = (type: string): boolean => {
         const typesWithResponse = [
             'survey_request',
+            'survey_ulang_request',
             'moodboard_request',
             'estimasi_request',
             'commitment_fee_request',
@@ -177,6 +230,7 @@ export default function Index({ notifications, unreadCount }: Props) {
             'rab_internal_request',
             'kontrak_request',
             'gambar_kerja_request',
+            'workplan_request',
         ];
         return typesWithResponse.includes(type);
     };
@@ -187,9 +241,7 @@ export default function Index({ notifications, unreadCount }: Props) {
             'design_approval',
             'invoice_request',
             'survey_schedule_request',
-            'survey_ulang_request',
             'approval_material_request',
-            'workplan_request',
             'project_management_request',
         ];
         return typesWithoutResponse.includes(type);

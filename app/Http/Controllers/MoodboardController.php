@@ -20,6 +20,7 @@ class MoodboardController extends Controller
     {
         $orders = Order::with(['moodboard.estimasi', 'moodboard.itemPekerjaan', 'moodboard.commitmentFee', 'moodboard.kasarFiles.estimasiFile', 'moodboard.finalFiles', 'jenisInterior', 'users.role'])
             ->orderBy('created_at', 'desc')
+            ->whereHas('surveyResults')
             ->get()
             ->map(function ($order) {
                 return [

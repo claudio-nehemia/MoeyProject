@@ -1,7 +1,7 @@
 import Navbar from '@/components/Navbar';
 import SearchFilter from '@/components/SearchFilter';
 import Sidebar from '@/components/Sidebar';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 
 interface PengajuanPerpanjanganTimeline {
@@ -28,6 +28,9 @@ interface Order {
     total_produks: number;
     produks_with_workplan: number;
     workplan_progress: number;
+    has_responded: boolean;
+    response_by: string | null;
+    response_time: string | null;
     item_pekerjaans: ItemPekerjaan[];
 }
 
@@ -69,17 +72,29 @@ export default function Index({ orders }: Props) {
 
     // Cek apakah bisa edit workplan berdasarkan status pengajuan perpanjangan
     const canEditWorkplan = (order: Order): boolean => {
+        // Jika tidak ada item_pekerjaans, tidak bisa edit
+        if (!order.item_pekerjaans || order.item_pekerjaans.length === 0) {
+            return false;
+        }
+        
         // Cek semua item_pekerjaans
         for (const item of order.item_pekerjaans) {
-            // Ambil pengajuan perpanjangan terbaru (jika ada)
             const latestPengajuan = item.pengajuan_perpanjangans?.[0];
-            if (latestPengajuan) {
-                // Hanya bisa edit jika status 'approved'
-                if (latestPengajuan.status === 'approved') {
-                    return true;
-                }
+            
+            // Jika tidak ada pengajuan perpanjangan (array kosong/undefined), boleh edit
+            if (!latestPengajuan) {
+                return true;
             }
+            
+            // Jika ada pengajuan dengan status 'approved', boleh edit
+            if (latestPengajuan.status === 'approved') {
+                return true;
+            }
+            
+            // Jika status pending/rejected/none, lanjut cek item berikutnya
         }
+        
+        // Jika semua item punya pengajuan dengan status bukan 'approved', tidak boleh edit
         return false;
     };
 
@@ -254,6 +269,24 @@ export default function Index({ orders }: Props) {
                                                 </p>
                                                 <p className="text-xs text-stone-500">dengan workplan</p>
                                             </div>
+
+                                            {order.response_by && (
+                                                <div className="text-right">
+                                                    <p className="text-xs text-stone-500">Response By</p>
+                                                    <p className="text-sm font-semibold text-stone-900">{order.response_by}</p>
+                                                    {order.response_time && (
+                                                        <p className="text-xs text-stone-400 mt-1">
+                                                            {new Date(order.response_time).toLocaleDateString('id-ID', {
+                                                                day: 'numeric',
+                                                                month: 'short',
+                                                                year: 'numeric',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit'
+                                                            })}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
@@ -273,7 +306,33 @@ export default function Index({ orders }: Props) {
 
                                     {/* Actions */}
                                     <div className="mt-4 flex items-center justify-end gap-2">
-                                        {order.workplan_progress > 0 ? (
+                                        {/* Show Response button only if NOT responded yet */}
+                                        {!order.has_responded && (
+                                            <button
+                                                onClick={() => router.post(`/workplan/${order.id}/response`)}
+                                                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-emerald-600 hover:to-green-700 hover:shadow-lg"
+                                            >
+                                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                ✓ Response
+                                            </button>
+                                        )}
+                                        
+                                        {/* Show Isi/Edit Workplan button only if already responded */}
+                                        {order.has_responded && order.workplan_progress === 0 && (
+                                            <Link
+                                                href={`/workplan/${order.id}/create`}
+                                                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-600 hover:to-indigo-700 hover:shadow-lg"
+                                            >
+                                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                                📝 Isi Detail Workplan
+                                            </Link>
+                                        )}
+                                        
+                                        {order.has_responded && order.workplan_progress > 0 && (
                                             canEditWorkplan(order) ? (
                                                 <Link
                                                     href={`/workplan/${order.id}/edit`}
@@ -292,16 +351,6 @@ export default function Index({ orders }: Props) {
                                                     Workplan Terkunci
                                                 </span>
                                             )
-                                        ) : (
-                                            <Link
-                                                href={`/workplan/${order.id}/create`}
-                                                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-emerald-600 hover:to-green-700 hover:shadow-lg"
-                                            >
-                                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                                </svg>
-                                                Buat Workplan
-                                            </Link>
                                         )}
                                     </div>
                                 </div>

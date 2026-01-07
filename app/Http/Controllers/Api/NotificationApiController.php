@@ -2,16 +2,22 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\Notification;
+use App\Models\Kontrak;
 use App\Models\Estimasi;
+use App\Models\Moodboard;
 use App\Models\GambarKerja;
 use App\Models\RabInternal;
+use App\Models\SurveyUlang;
+use App\Models\Notification;
+use App\Models\WorkplanItem;
+use Illuminate\Http\Request;
 use App\Models\CommitmentFee;
 use App\Models\ItemPekerjaan;
-use App\Models\Kontrak;
+use App\Models\SurveyResults;
+use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
 use App\Services\NotificationService;
-use Illuminate\Http\Request;
+use App\Http\Controllers\WorkplanItemController;
 
 class NotificationApiController extends Controller
 {
@@ -33,10 +39,13 @@ class NotificationApiController extends Controller
         $query = Notification::where('user_id', auth()->id())
             ->with([
                 'order.surveyResults',
+                'order.surveyUlang',
                 'order.moodboard.commitmentFee',
                 'order.moodboard.estimasi',
+                'order.moodboard.itemPekerjaans.produks.workplanItems',
                 'order.itemPekerjaans.rabInternal',
                 'order.itemPekerjaans.kontrak',
+                'order.itemPekerjaans.produks.workplanItems',
                 'order.gambarKerja',
             ])
             ->orderBy('created_at', 'desc');
@@ -49,6 +58,40 @@ class NotificationApiController extends Controller
         }
 
         $notifications = $query->paginate($perPage);
+
+        // 🔥 DEBUG: Log workplan data for workplan_request notifications
+        foreach ($notifications->items() as $notif) {
+            if ($notif->type === Notification::TYPE_WORKPLAN_REQUEST && $notif->order) {
+                \Log::info('=== WORKPLAN NOTIFICATION DEBUG ===');
+                \Log::info('Notification ID: ' . $notif->id);
+                \Log::info('Order ID: ' . $notif->order->id);
+                
+                if ($notif->order->moodboard) {
+                    \Log::info('Has Moodboard: YES');
+                    \Log::info('Moodboard ItemPekerjaans count: ' . $notif->order->moodboard->itemPekerjaans->count());
+                    
+                    foreach ($notif->order->moodboard->itemPekerjaans as $ip) {
+                        \Log::info('  ItemPekerjaan ID: ' . $ip->id);
+                        \Log::info('  Produks count: ' . $ip->produks->count());
+                        
+                        foreach ($ip->produks as $produk) {
+                            \Log::info('    Produk ID: ' . $produk->id);
+                            \Log::info('    Workplan Items count: ' . $produk->workplanItems->count());
+                            
+                            if ($produk->workplanItems->count() > 0) {
+                                $firstWorkplan = $produk->workplanItems->first();
+                                \Log::info('    First Workplan response_time: ' . $firstWorkplan->response_time);
+                                \Log::info('    First Workplan response_by: ' . $firstWorkplan->response_by);
+                            }
+                        }
+                    }
+                } else {
+                    \Log::info('Has Moodboard: NO');
+                }
+                
+                \Log::info('=== END DEBUG ===');
+            }
+        }
 
         return response()->json([
             'success' => true,
@@ -478,38 +521,67 @@ class NotificationApiController extends Controller
 
     private function handleSurveyUlangRequest($order)
     {
+        // Check if survey ulang already exists
+        if ($order->surveyUlang) {
+            return [
+                'success' => true,
+                'message' => 'Survey ulang already exists',
+                'action' => 'view',
+                'data' => ['order_id' => $order->id],
+            ];
+        }
+
+        // Create empty survey ulang record with response info
+        // User will fill in details (catatan, foto, temuan) later via store
+        \App\Models\SurveyUlang::create([
+            'order_id' => $order->id,
+            'response_time' => now(),
+            'response_by' => auth()->user()->name ?? 'Admin',
+        ]);
+
+        $order->update(['tahapan_proyek' => 'survey_ulang']);
+
         return [
             'success' => true,
-            'message' => 'Please schedule re-survey for this order',
-            'action' => 'view',
+            'message' => 'Response recorded. Survey ulang can now be created.',
+            'action' => 'create',
             'data' => ['order_id' => $order->id],
         ];
     }
 
     private function handleGambarKerjaRequest($order)
     {
-        if ($order->gambarKerja) {
+        // Check if gambar kerja exists
+        if (!$order->gambarKerja) {
+            return [
+                'success' => false,
+                'message' => 'Gambar Kerja belum dibuat. Silakan lengkapi survey ulang terlebih dahulu.',
+            ];
+        }
+
+        // Check if already responded
+        if ($order->gambarKerja->response_time) {
             return [
                 'success' => true,
-                'message' => 'Gambar Kerja already exists',
+                'message' => 'Gambar Kerja sudah di-response sebelumnya',
                 'action' => 'view',
                 'data' => ['order_id' => $order->id],
             ];
         }
 
-        GambarKerja::create([
-            'order_id' => $order->id,
-            'status' => 'pending',
+        // Update existing gambar kerja with response info (tidak create baru)
+        $order->gambarKerja->update([
             'response_time' => now(),
             'response_by' => auth()->user()->name,
+            'status' => 'pending',
         ]);
 
         $order->update(['tahapan_proyek' => 'gambar_kerja']);
 
         return [
             'success' => true,
-            'message' => 'Response recorded. Please manage Gambar Kerja.',
-            'action' => 'create',
+            'message' => 'Response berhasil. Silakan upload gambar kerja.',
+            'action' => 'view',
             'data' => ['order_id' => $order->id],
         ];
     }
@@ -526,12 +598,63 @@ class NotificationApiController extends Controller
 
     private function handleWorkplanRequest($order)
     {
-        return [
-            'success' => true,
-            'message' => 'Please manage Workplan for this order',
-            'action' => 'view',
-            'data' => ['order_id' => $order->id],
-        ];
+        // Check if workplan exists
+        $workplanItems = $order->moodboard
+            ->itemPekerjaans
+            ->flatMap(fn($ip) => $ip->produks)
+            ->flatMap(fn($produk) => $produk->workplanItems);
+
+        // If workplan exists and already responded
+        if ($workplanItems->isNotEmpty() && WorkplanItem::hasAnyResponded($workplanItems)) {
+            return [
+                'success' => true,
+                'message' => 'Workplan request already acknowledged',
+                'action' => 'view',
+                'data' => ['order_id' => $order->id],
+            ];
+        }
+
+        // CREATE empty workplan items with response tracking
+        DB::beginTransaction();
+        try {
+            foreach ($order->moodboard->itemPekerjaans as $itemPekerjaan) {
+                foreach ($itemPekerjaan->produks as $produk) {
+                    // Skip if already has workplan items
+                    if ($produk->workplanItems->count() > 0) {
+                        continue;
+                    }
+
+                    // Create empty workplan items based on default breakdown
+                    $defaultBreakdown = WorkplanItemController::defaultBreakdown();
+                    foreach ($defaultBreakdown as $index => $stage) {
+                        WorkplanItem::create([
+                            'item_pekerjaan_produk_id' => $produk->id,
+                            'nama_tahapan' => $stage['nama_tahapan'],
+                            'start_date' => null,
+                            'end_date' => null,
+                            'duration_days' => null,
+                            'urutan' => $index + 1,
+                            'status' => 'planned',
+                            'catatan' => null,
+                            'response_time' => now(),
+                            'response_by' => auth()->user()->name ?? 'Admin',
+                        ]);
+                    }
+                }
+            }
+            
+            DB::commit();
+
+            return [
+                'success' => true,
+                'message' => 'Workplan request acknowledged. Please fill in workplan details via web.',
+                'action' => 'create',
+                'data' => ['order_id' => $order->id],
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
     }
 
     private function handleProjectManagementRequest($order)

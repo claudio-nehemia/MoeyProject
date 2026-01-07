@@ -11,6 +11,7 @@ class ItemPekerjaanProdukBahanBaku extends Model
         'item_id',
         'harga_dasar',
         'harga_jasa',
+        'keterangan_bahan_baku',
     ];
 
     protected $casts = [
