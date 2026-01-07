@@ -31,6 +31,7 @@ class CommitmentFeeController extends Controller
                         'nama_project' => $moodboard->order->nama_project,
                         'company_name' => $moodboard->order->company_name,
                         'customer_name' => $moodboard->order->customer_name,
+                        'alamat' => $moodboard->order->alamat,
                     ] : null,
                     'commitmentFee' => $moodboard->commitmentFee ? [
                         'id' => $moodboard->commitmentFee->id,

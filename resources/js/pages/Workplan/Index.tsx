@@ -352,6 +352,16 @@ export default function Index({ orders }: Props) {
                                                 </span>
                                             )
                                         )}
+                                        <button
+                                            onClick={() => window.location.href = '/workplan/export/excel'}
+                                            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
+                                        >
+                                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                                    d="M4 4v16h16M4 12h16M12 4v16" />
+                                            </svg>
+                                            Export Excel
+                                        </button>
                                     </div>
                                 </div>
                             </div>

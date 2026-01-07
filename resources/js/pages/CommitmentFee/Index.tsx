@@ -8,6 +8,7 @@ interface Order {
     nama_project: string;
     company_name: string | null;
     customer_name: string;
+    alamat: string;
 }
 
 interface CommitmentFee {
@@ -245,6 +246,7 @@ export default function Index({ moodboards }: Props) {
                                                                 }
                                                             </span>
                                                         </p>
+                                                        <p>
                                                         {moodboard.order
                                                             .company_name && (
                                                             <p>
@@ -254,6 +256,20 @@ export default function Index({ moodboards }: Props) {
                                                                         moodboard
                                                                             .order
                                                                             .company_name
+                                                                    }
+                                                                </span>
+                                                            </p>
+                                                        )}
+                                                        </p>
+                                                        {moodboard.order
+                                                            .alamat && (
+                                                            <p>
+                                                                Address:{' '}
+                                                                <span className="font-medium">
+                                                                    {
+                                                                        moodboard
+                                                                            .order
+                                                                            .alamat
                                                                     }
                                                                 </span>
                                                             </p>
