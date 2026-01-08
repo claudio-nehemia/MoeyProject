@@ -12,7 +12,16 @@ class GambarKerjaController extends Controller
 {
     public function index()
     {
+        $user = auth()->user();
+        \Log::info('=== GAMBAR KERJA INDEX DEBUG ===');
+        \Log::info('User ID: ' . $user->id);
+        \Log::info('User Name: ' . $user->name);
+        \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
+        
         $items = GambarKerja::with(['order.surveyUlang', 'files'])
+            ->whereHas('order', function($query) use ($user) {
+                $query->visibleToSurveyUser($user);
+            })
             ->whereHas('order.surveyUlang')
             ->orderByDesc('created_at')
             ->get()

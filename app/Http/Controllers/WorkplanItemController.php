@@ -31,6 +31,12 @@ class WorkplanItemController extends Controller
      */
     public function index()
     {
+        $user = auth()->user();
+        \Log::info('=== WORKPLAN INDEX DEBUG ===');
+        \Log::info('User ID: ' . $user->id);
+        \Log::info('User Name: ' . $user->name);
+        \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
+        
         $orders = Order::with([
             'moodboard.itemPekerjaans.produks.produk',
             'moodboard.itemPekerjaans.produks.workplanItems',
@@ -38,6 +44,7 @@ class WorkplanItemController extends Controller
             'moodboard.itemPekerjaans.kontrak',
             'moodboard.itemPekerjaans.pengajuanPerpanjanganTimelines',
         ])
+            ->visibleToSurveyUser($user)
             ->whereHas('moodboard.itemPekerjaans.invoices', function ($q) {
                 // Sudah ada pembayaran termin (bukan commitment fee, tahap >= 1)
                 $q->whereNotNull('paid_at')->where('termin_step', '>=', 1);

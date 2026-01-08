@@ -18,7 +18,19 @@ class OrderController extends Controller
      */
     public function index()
     {
-        $orders = Order::with('users', 'jenisInterior')->get();
+        $user = auth()->user();
+        \Log::info('=== ORDER INDEX DEBUG ===');
+        \Log::info('User ID: ' . $user->id);
+        \Log::info('User Name: ' . $user->name);
+        \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
+        
+        $orders = Order::with('users', 'jenisInterior')
+            ->visibleToUser($user)
+            ->get();
+            
+        \Log::info('Orders count: ' . $orders->count());
+        \Log::info('Order IDs: ' . $orders->pluck('id')->implode(', '));
+        
         return Inertia::render('Order/Index', [
             'orders' => $orders,
         ]);

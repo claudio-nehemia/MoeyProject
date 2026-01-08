@@ -17,8 +17,15 @@ class SurveyResultsController extends Controller
      */
     public function index()
     {
+        $user = auth()->user();
+        \Log::info('=== SURVEY RESULTS INDEX DEBUG ===');
+        \Log::info('User ID: ' . $user->id);
+        \Log::info('User Name: ' . $user->name);
+        \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
+        
         // Get all orders with survey results relationship
         $surveys = Order::with(['surveyResults', 'jenisInterior', 'users.role'])
+            ->visibleToUser($user)
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($order) {

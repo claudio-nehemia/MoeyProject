@@ -16,7 +16,16 @@ class EstimasiController extends Controller
      */
     public function index()
     {
+        $user = auth()->user();
+        \Log::info('=== ESTIMASI INDEX DEBUG ===');
+        \Log::info('User ID: ' . $user->id);
+        \Log::info('User Name: ' . $user->name);
+        \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
+        
         $moodboards = Moodboard::with('estimasi.files.moodboardFile', 'order', 'kasarFiles')
+            ->whereHas('order', function($query) use ($user) {
+                $query->visibleToUser($user);
+            })
             ->whereHas('kasarFiles')
             ->get()
             ->map(function ($moodboard) {

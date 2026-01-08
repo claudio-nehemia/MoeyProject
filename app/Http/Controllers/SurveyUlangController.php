@@ -14,7 +14,14 @@ class SurveyUlangController extends Controller
     // 📌 Halaman Index
     public function index()
     {
+        $user = auth()->user();
+        \Log::info('=== SURVEY ULANG INDEX DEBUG ===');
+        \Log::info('User ID: ' . $user->id);
+        \Log::info('User Name: ' . $user->name);
+        \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
+        
         $surveys = Order::with(['surveyUlang', 'jenisInterior'])
+            ->visibleToSurveyUser($user)
             ->where(function ($q) {
                 $q->whereRaw("LOWER(tahapan_proyek) = 'survey_ulang'");
             })

@@ -17,11 +17,20 @@ class ApprovalRabController extends Controller
      */
     public function index()
     {
+        $user = auth()->user();
+        \Log::info('=== APPROVAL RAB INDEX DEBUG ===');
+        \Log::info('User ID: ' . $user->id);
+        \Log::info('User Name: ' . $user->name);
+        \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
+        
         $items = ItemPekerjaan::with([
             'moodboard.order',
             'produks.jenisItems.items.item',
             'produks.bahanBakus.item', // 🔥 eager load bahan baku
         ])
+        ->whereHas('moodboard.order', function($query) use ($user) {
+            $query->visibleToSurveyUser($user);
+        })
         ->whereHas('moodboard.order.gambarKerja', function($query) {
             $query->whereNotNull('approved_time')
                   ->whereNotNull('approved_by');

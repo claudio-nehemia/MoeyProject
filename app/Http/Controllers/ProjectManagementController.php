@@ -14,10 +14,17 @@ class ProjectManagementController extends Controller
 {
     public function index()
     {
+        $user = auth()->user();
+        \Log::info('=== PROJECT MANAGEMENT INDEX DEBUG ===');
+        \Log::info('User ID: ' . $user->id);
+        \Log::info('User Name: ' . $user->name);
+        \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
+        
         $orders = Order::with([
             'moodboard.itemPekerjaans.produks.itemPekerjaan.rabVendor.rabVendorProduks',
             'moodboard.itemPekerjaans.kontrak',
         ])
+            ->visibleToSurveyUser($user)
             ->whereHas('moodboard.itemPekerjaans.invoice', function ($q) {
                 $q->whereNotNull('bukti_bayar');
             })

@@ -89,4 +89,65 @@ class Order extends Model
     {
         return $this->hasOne(GambarKerja::class);
     }
+
+    /**
+     * Scope untuk filter order berdasarkan role dan team
+     */
+    public function scopeVisibleToUser($query, $user = null)
+    {
+        // Jika tidak ada user, return query kosong
+        if (!$user) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        // Roles yang hanya bisa melihat order dimana mereka adalah team member
+        $restrictedRoles = ['Surveyor', 'Drafter', 'Desainer'];
+        
+        // Load role jika belum di-load
+        if (!$user->relationLoaded('role')) {
+            $user->load('role');
+        }
+        
+        // Cek apakah user memiliki role yang dibatasi
+        if ($user->role && in_array($user->role->nama_role, $restrictedRoles)) {
+            // Filter hanya order dimana user adalah team member
+            return $query->whereHas('users', function($q) use ($user) {
+                $q->where('users.id', $user->id);
+            });
+        }
+        
+        // Role lain bisa melihat semua order
+        return $query;
+    }
+
+    /**
+     * Scope untuk filter order berdasarkan survey schedule users
+     * Untuk menu: Survey Ulang, Gambar Kerja, Approval Material, Workplan, Project Management, Defect Management
+     */
+    public function scopeVisibleToSurveyUser($query, $user = null)
+    {
+        // Jika tidak ada user, return query kosong
+        if (!$user) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        // Roles yang hanya bisa melihat order dimana mereka masuk survey schedule
+        $restrictedRoles = ['Surveyor', 'Drafter', 'Desainer', 'Project Manager', 'Supervisor'];
+        
+        // Load role jika belum di-load
+        if (!$user->relationLoaded('role')) {
+            $user->load('role');
+        }
+        
+        // Cek apakah user memiliki role yang dibatasi
+        if ($user->role && in_array($user->role->nama_role, $restrictedRoles)) {
+            // Filter hanya order dimana user masuk dalam survey schedule users
+            return $query->whereHas('surveyUsers', function($q) use ($user) {
+                $q->where('users.id', $user->id);
+            });
+        }
+        
+        // Role lain bisa melihat semua order
+        return $query;
+    }
 }

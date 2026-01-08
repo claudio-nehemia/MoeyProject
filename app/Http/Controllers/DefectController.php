@@ -14,11 +14,20 @@ class DefectController extends Controller
 {
     public function index()
     {
+        $user = auth()->user();
+        \Log::info('=== DEFECT MANAGEMENT INDEX DEBUG ===');
+        \Log::info('User ID: ' . $user->id);
+        \Log::info('User Name: ' . $user->name);
+        \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
+        
         $defects = Defect::with([
             'itemPekerjaanProduk.produk',
             'itemPekerjaanProduk.itemPekerjaan.moodboard.order',
             'defectItems.repairs'
         ])
+            ->whereHas('itemPekerjaanProduk.itemPekerjaan.moodboard.order', function($query) use ($user) {
+                $query->visibleToSurveyUser($user);
+            })
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($defect) {

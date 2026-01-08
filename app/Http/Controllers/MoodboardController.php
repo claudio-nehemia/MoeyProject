@@ -18,7 +18,14 @@ class MoodboardController extends Controller
      */
     public function index()
     {
+        $user = auth()->user();
+        \Log::info('=== MOODBOARD INDEX DEBUG ===');
+        \Log::info('User ID: ' . $user->id);
+        \Log::info('User Name: ' . $user->name);
+        \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
+        
         $orders = Order::with(['moodboard.estimasi', 'moodboard.itemPekerjaan', 'moodboard.commitmentFee', 'moodboard.kasarFiles.estimasiFile', 'moodboard.finalFiles', 'jenisInterior', 'users.role'])
+            ->visibleToUser($user)
             ->orderBy('created_at', 'desc')
             ->whereHas('surveyResults')
             ->get()
