@@ -11,6 +11,8 @@ class Estimasi extends Model
         'estimated_cost',
         'response_by',
         'response_time',
+        'pm_response_time',
+        'pm_response_by',
     ];
 
     public function moodboard()

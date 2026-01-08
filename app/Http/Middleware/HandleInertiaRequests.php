@@ -47,6 +47,8 @@ class HandleInertiaRequests extends Middleware
                     ] : null,
                     'permissions' => $request->user() ? 
                         $request->user()->getPermissions()->pluck('name')->toArray() : [],
+                    'isProjectManager' => $request->user()->role ? 
+                        $request->user()->role->nama_role === 'Project Manager' : false,
                 ] : null,
             ],
             'flash' => [

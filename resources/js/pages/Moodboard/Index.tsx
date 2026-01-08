@@ -1,7 +1,7 @@
 import MoodboardModal from '@/components/MoodboardModal';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import {Link} from '@inertiajs/react';
 
@@ -34,6 +34,8 @@ interface Moodboard {
     final_files: MoodboardFile[];
     response_time: string;
     response_by: string;
+    pm_response_time: string | null;
+    pm_response_by: string | null;
     status: 'pending' | 'approved' | 'revisi';
     notes: string | null;
     has_estimasi: boolean;
@@ -85,6 +87,9 @@ const statusLabels = {
 };
 
 export default function Index({ orders }: Props) {
+    const { auth } = usePage<{ auth: { user: { isProjectManager: boolean } } }>().props;
+    const isProjectManager = auth?.user?.isProjectManager || false;
+    
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 1024;
@@ -149,6 +154,14 @@ export default function Index({ orders }: Props) {
     const closeModal = () => {
         setShowModal(false);
         setSelectedOrder(null);
+    };
+
+    const handlePmResponse = (moodboardId: number) => {
+        if (confirm('Apakah Anda yakin ingin merespon sebagai Project Manager?')) {
+            router.post(`/pm-response/moodboard/${moodboardId}`, {}, {
+                preserveScroll: true,
+            });
+        }
     };
 
     const toggleExpand = (orderId: number) => {
@@ -611,6 +624,28 @@ export default function Index({ orders }: Props) {
                                         {/* Actions - Always Visible */}
                                         <div className="pt-2 border-t border-stone-200">
                                             {getActionButtons(order)}
+                                        </div>
+
+                                        {/* PM Response Section - Always Visible for PM */}
+                                        <div className="pt-2 flex flex-col gap-2 sm:flex-row">
+                                            {/* PM Response Button */}
+                                            {isProjectManager && (!order.moodboard?.pm_response_time) && (
+                                                <button
+                                                    onClick={() => handlePmResponse(order.moodboard?.id || order.id)}
+                                                    className="rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-3 py-1.5 text-xs font-medium text-white transition-all hover:from-purple-600 hover:to-purple-700 sm:px-3.5 sm:py-2"
+                                                >
+                                                    PM Response
+                                                </button>
+                                            )}
+                                            
+                                            {/* PM Response Badge */}
+                                            {order.moodboard?.pm_response_time && (
+                                                <div className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-2">
+                                                    <p className="text-xs font-medium text-purple-700">
+                                                        ✓ PM: {order.moodboard.pm_response_by}
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

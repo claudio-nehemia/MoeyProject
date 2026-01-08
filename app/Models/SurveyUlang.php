@@ -15,6 +15,8 @@ class SurveyUlang extends Model
         'survey_by',
         'response_time',
         'response_by',
+        'pm_response_time',
+        'pm_response_by',
     ];
 
     protected $casts = [

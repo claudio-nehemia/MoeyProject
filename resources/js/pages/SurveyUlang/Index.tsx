@@ -1,6 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
-import { Head, Link, router } from "@inertiajs/react";
+import { Head, Link, router, usePage } from "@inertiajs/react";
 import { useEffect, useState } from "react";
 
 interface SurveyUlang {
@@ -16,6 +16,8 @@ interface SurveyUlang {
     survey_ulang_id: number | null;
     response_by: string | null;
     response_time: string | null;
+    pm_response_by: string | null;
+    pm_response_time: string | null;
 }
 
 interface Props {
@@ -26,6 +28,9 @@ export default function Index({ surveys }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [mounted, setMounted] = useState(false);
     const [search, setSearch] = useState("");
+
+    const { auth } = usePage<{ auth: { user: { isProjectManager: boolean } } }>().props;
+    const isProjectManager = auth?.user?.isProjectManager || false;
 
     useEffect(() => {
         setMounted(true);
@@ -82,6 +87,14 @@ export default function Index({ surveys }: Props) {
             s.company_name.toLowerCase().includes(search.toLowerCase()) ||
             s.customer_name.toLowerCase().includes(search.toLowerCase())
     );
+
+    const handlePmResponse = (surveyUlangId: number) => {
+        if (confirm('Apakah Anda yakin ingin memberikan PM response untuk survey ulang ini?')) {
+            router.post(`/pm-response/survey-ulang/${surveyUlangId}`, {}, {
+                preserveScroll: true,
+            });
+        }
+    };
 
     return (
         <>
@@ -199,11 +212,30 @@ export default function Index({ surveys }: Props) {
                                                         {s.response_time ? formatDateTime(s.response_time) : "-"}
                                                     </p>
                                                 </div>
+
+                                                {/* PM Response Badge */}
+                                                {s.pm_response_time && (
+                                                    <div className="col-span-2 bg-purple-50 border border-purple-200 rounded-lg p-2">
+                                                        <p className="text-xs font-semibold text-purple-900">✓ PM Response</p>
+                                                        <p className="text-xs text-purple-700">By: {s.pm_response_by}</p>
+                                                        <p className="text-xs text-purple-700">{formatDateTime(s.pm_response_time)}</p>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
                                         {/* ACTIONS */}
                                         <div className="flex flex-col gap-2">
+
+                                            {/* PM Response Button */}
+                                            {isProjectManager && !s.pm_response_time && s.survey_ulang_id && (
+                                                <button
+                                                    onClick={() => handlePmResponse(s.survey_ulang_id!)}
+                                                    className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 shadow"
+                                                >
+                                                    PM Response
+                                                </button>
+                                            )}
 
                                             {s.status_survey_ulang === "pending" && (
                                                 <button

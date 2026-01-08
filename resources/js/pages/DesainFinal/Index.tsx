@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { router, Head } from '@inertiajs/react';
+import { router, Head, usePage } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 
@@ -31,6 +31,8 @@ interface Moodboard {
     response_final_time: string | null;
     response_final_by: string | null;
     has_response_final: boolean;
+    pm_response_time: string | null;
+    pm_response_by: string | null;
     order: Order;
     commitmentFee: CommitmentFee;
 }
@@ -53,6 +55,9 @@ export default function DesainFinalIndex({ moodboards }: Props) {
     const [replaceFile, setReplaceFile] = useState<File | null>(null);
     const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
 
+    const { auth } = usePage<{ auth: { user: { isProjectManager: boolean } } }>().props;
+    const isProjectManager = auth?.user?.isProjectManager || false;
+
     const filteredMoodboards = moodboards.filter((moodboard) => {
         const search = searchQuery.toLowerCase();
         return (
@@ -74,6 +79,14 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                     alert('Gagal response desain final');
                     setLoading(false);
                 },
+            });
+        }
+    };
+
+    const handlePmResponse = (moodboardId: number) => {
+        if (confirm('Apakah Anda yakin ingin memberikan PM response untuk desain final ini?')) {
+            router.post(`/pm-response/moodboard/${moodboardId}`, {}, {
+                preserveScroll: true,
             });
         }
     };
@@ -304,6 +317,35 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                                                             })})
                                                         </span>
                                                     )}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* PM Response Button */}
+                                        {isProjectManager && !moodboard.pm_response_time && (
+                                            <div className="mt-3">
+                                                <button
+                                                    onClick={() => handlePmResponse(moodboard.id)}
+                                                    className="w-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg transition-all"
+                                                >
+                                                    PM Response
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* PM Response Badge */}
+                                        {moodboard.pm_response_time && (
+                                            <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-2">
+                                                <p className="text-xs font-semibold text-purple-900">✓ PM Response</p>
+                                                <p className="text-xs text-purple-700">By: {moodboard.pm_response_by}</p>
+                                                <p className="text-xs text-purple-700">
+                                                    {new Date(moodboard.pm_response_time).toLocaleDateString('id-ID', {
+                                                        day: 'numeric',
+                                                        month: 'short',
+                                                        year: 'numeric',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}
                                                 </p>
                                             </div>
                                         )}

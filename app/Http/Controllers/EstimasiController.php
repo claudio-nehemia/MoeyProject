@@ -38,6 +38,8 @@ class EstimasiController extends Controller
                     'notes' => $moodboard->notes,
                     'response_by' => $moodboard->response_by,
                     'response_time' => $moodboard->response_time,
+                    'pm_response_by' => $moodboard->pm_response_by,
+                    'pm_response_time' => $moodboard->pm_response_time,
                     'kasar_files' => $moodboard->kasarFiles->map(function ($file) use ($moodboard) {
                         $estimasiFile = null;
                         if ($moodboard->estimasi) {
@@ -70,6 +72,8 @@ class EstimasiController extends Controller
                         'estimated_cost' => $moodboard->estimasi->estimated_cost,
                         'response_by' => $moodboard->estimasi->response_by,
                         'response_time' => $moodboard->estimasi->response_time,
+                        'pm_response_by' => $moodboard->estimasi->pm_response_by,
+                        'pm_response_time' => $moodboard->estimasi->pm_response_time,
                     ] : null,
                 ];
             });

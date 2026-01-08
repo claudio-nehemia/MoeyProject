@@ -13,6 +13,8 @@ class SurveyResults extends Model
         'foto_lokasi_files',
         'response_time',
         'response_by',
+        'pm_response_time',
+        'pm_response_by',
     ];
 
     protected $casts = [

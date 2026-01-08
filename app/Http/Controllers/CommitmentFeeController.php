@@ -26,6 +26,8 @@ class CommitmentFeeController extends Controller
                     'id' => $moodboard->id,
                     'order_id' => $moodboard->order_id,
                     'status' => $moodboard->status,
+                    'pm_response_by' => $moodboard->pm_response_by,
+                    'pm_response_time' => $moodboard->pm_response_time,
                     'order' => $moodboard->order ? [
                         'id' => $moodboard->order->id,
                         'nama_project' => $moodboard->order->nama_project,
@@ -40,6 +42,8 @@ class CommitmentFeeController extends Controller
                         'payment_status' => $moodboard->commitmentFee->payment_status,
                         'response_by' => $moodboard->commitmentFee->response_by,
                         'response_time' => $moodboard->commitmentFee->response_time,
+                        'pm_response_by' => $moodboard->commitmentFee->pm_response_by,
+                        'pm_response_time' => $moodboard->commitmentFee->pm_response_time,
                     ] : null,
                     'moodboard_kasar' => $moodboard->moodboard_kasar,
                     'estimasi' => $moodboard->estimasi ? [

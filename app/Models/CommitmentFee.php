@@ -13,6 +13,8 @@ class CommitmentFee extends Model
         'moodboard_id',
         'response_by',
         'response_time',
+        'pm_response_time',
+        'pm_response_by',
     ];
 
     public function moodboard()

@@ -42,6 +42,8 @@ class SurveyResultsController extends Controller
                     'survey_id' => $order->surveyResults->id ?? null,
                     'response_time' => $order->surveyResults->response_time ?? null,
                     'response_by' => $order->surveyResults->response_by ?? null,
+                    'pm_response_time' => $order->surveyResults->pm_response_time ?? null,
+                    'pm_response_by' => $order->surveyResults->pm_response_by ?? null,
                     'feedback' => $order->surveyResults->feedback ?? null,
                     'tanggal_survey' => $order->tanggal_survey,
                     'tahapan_proyek' => $order->tahapan_proyek,

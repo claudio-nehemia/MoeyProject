@@ -34,6 +34,7 @@ use App\Http\Controllers\SurveyResultsController;
 use App\Http\Controllers\SurveyScheduleController;
 use App\Http\Controllers\JenisPengukuranController;
 use App\Http\Controllers\ProjectManagementController;
+use App\Http\Controllers\PmResponseController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -564,6 +565,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:approval-material.update');
     });
 
+    // PM Response Routes
+    Route::prefix('pm-response')->name('pm.response.')->middleware('auth')->group(function () {
+        Route::post('/moodboard/{id}', [PmResponseController::class, 'moodboard'])->name('moodboard');
+        Route::post('/estimasi/{id}', [PmResponseController::class, 'estimasi'])->name('estimasi');
+        Route::post('/commitment-fee/{id}', [PmResponseController::class, 'commitmentFee'])->name('commitment-fee');
+        Route::post('/item-pekerjaan/{id}', [PmResponseController::class, 'itemPekerjaan'])->name('item-pekerjaan');
+        Route::post('/survey-ulang/{id}', [PmResponseController::class, 'surveyUlang'])->name('survey-ulang');
+        Route::post('/gambar-kerja/{id}', [PmResponseController::class, 'gambarKerja'])->name('gambar-kerja');
+        Route::post('/kontrak/{id}', [PmResponseController::class, 'kontrak'])->name('kontrak');
+        Route::post('/survey-result/{id}', [PmResponseController::class, 'surveyResult'])->name('survey-result');
+    });
 
 });
 

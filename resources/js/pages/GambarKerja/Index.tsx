@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { router, Head } from '@inertiajs/react';
+import { router, Head, usePage } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 
@@ -23,6 +23,8 @@ interface GambarKerja {
     status: 'pending' | 'uploaded' | 'approved';
     response_time: string | null;
     response_by: string | null;
+    pm_response_time: string | null;
+    pm_response_by: string | null;
     revisi_notes: string | null;
     approved_time: string | null;
     approved_by: string | null;
@@ -46,6 +48,9 @@ export default function GambarKerjaIndex({ items }: Props) {
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
+    const { auth } = usePage<{ auth: { user: { isProjectManager: boolean } } }>().props;
+    const isProjectManager = auth?.user?.isProjectManager || false;
+
     /* ================= FILTER ================= */
 
     const filteredItems = items.filter((item) => {
@@ -64,6 +69,14 @@ export default function GambarKerjaIndex({ items }: Props) {
             setLoading(true);
             router.post(`/gambar-kerja/response/${item.id}`, {}, {
                 onFinish: () => setLoading(false),
+            });
+        }
+    };
+
+    const handlePmResponse = (gambarKerjaId: number) => {
+        if (confirm('Apakah Anda yakin ingin memberikan PM response untuk gambar kerja ini?')) {
+            router.post(`/pm-response/gambar-kerja/${gambarKerjaId}`, {}, {
+                preserveScroll: true,
             });
         }
     };
@@ -215,6 +228,35 @@ export default function GambarKerjaIndex({ items }: Props) {
                                         >
                                             Response
                                         </button>
+                                    </div>
+                                )}
+
+                                {/* PM Response Button */}
+                                {isProjectManager && !item.pm_response_time && (
+                                    <div className="mb-4 text-center">
+                                        <button
+                                            onClick={() => handlePmResponse(item.id)}
+                                            className="px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg transition-all"
+                                        >
+                                            PM Response
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* PM Response Badge */}
+                                {item.pm_response_time && (
+                                    <div className="mb-4 bg-purple-50 border border-purple-200 rounded-lg p-3">
+                                        <p className="text-sm font-semibold text-purple-900">✓ PM Response</p>
+                                        <p className="text-xs text-purple-700">By: {item.pm_response_by}</p>
+                                        <p className="text-xs text-purple-700">
+                                            {new Date(item.pm_response_time).toLocaleDateString('id-ID', {
+                                                day: 'numeric',
+                                                month: 'short',
+                                                year: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                        </p>
                                     </div>
                                 )}
 

@@ -17,6 +17,8 @@ class Kontrak extends Model
         'signed_at',
         'response_time',
         'response_by',
+        'pm_response_time',
+        'pm_response_by',
     ];
 
     protected $casts = [

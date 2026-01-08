@@ -33,6 +33,8 @@ class ItemPekerjaanController extends Controller
         ->map(function ($moodboard) {
             return [
                 'id' => $moodboard->id,
+                'pm_response_by' => $moodboard->pm_response_by,
+                'pm_response_time' => $moodboard->pm_response_time,
                 'order' => [
                     'id' => $moodboard->order->id,
                     'nama_project' => $moodboard->order->nama_project,
@@ -43,6 +45,8 @@ class ItemPekerjaanController extends Controller
                     'id' => $moodboard->itemPekerjaan->id,
                     'response_by' => $moodboard->itemPekerjaan->response_by,
                     'response_time' => $moodboard->itemPekerjaan->response_time,
+                    'pm_response_by' => $moodboard->itemPekerjaan->pm_response_by,
+                    'pm_response_time' => $moodboard->itemPekerjaan->pm_response_time,
                     'status' => $moodboard->itemPekerjaan->status,
                     'produks' => $moodboard->itemPekerjaan->produks->map(function ($produk) {
                         return [

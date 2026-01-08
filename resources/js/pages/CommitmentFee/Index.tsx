@@ -1,6 +1,6 @@
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import React, { useState } from 'react';
 
 interface Order {
@@ -18,6 +18,8 @@ interface CommitmentFee {
     payment_status: string;
     response_by: string;
     response_time: string;
+    pm_response_by: string | null;
+    pm_response_time: string | null;
 }
 
 interface Estimasi {
@@ -33,6 +35,8 @@ interface Moodboard {
     commitmentFee: CommitmentFee | null;
     moodboard_kasar: string | null;
     estimasi: Estimasi | null;
+    pm_response_by: string | null;
+    pm_response_time: string | null;
 }
 
 interface Props {
@@ -50,6 +54,9 @@ export default function Index({ moodboards }: Props) {
     const [paymentFile, setPaymentFile] = useState<File | null>(null);
     const [showImagePreview, setShowImagePreview] = useState(false);
     const [previewImage, setPreviewImage] = useState('');
+
+    const { auth } = usePage<{ auth: { user: { isProjectManager: boolean } } }>().props;
+    const isProjectManager = auth?.user?.isProjectManager || false;
 
     // Format number with thousand separators
     const formatNumber = (value: string): string => {
@@ -71,6 +78,14 @@ export default function Index({ moodboards }: Props) {
                     preserveScroll: true,
                 },
             );
+        }
+    };
+
+    const handlePmResponse = (moodboardId: number) => {
+        if (confirm('Apakah Anda yakin ingin memberikan PM response untuk moodboard ini?')) {
+            router.post(`/pm-response/moodboard/${moodboardId}`, {}, {
+                preserveScroll: true,
+            });
         }
     };
 
@@ -463,6 +478,29 @@ export default function Index({ moodboards }: Props) {
                                                             </div>
                                                         )}
                                                     </div>
+
+                                                    {/* PM Response Button */}
+                                                    {isProjectManager && !moodboard.pm_response_time && (
+                                                        <div className="mt-3">
+                                                            <button
+                                                                onClick={() => handlePmResponse(moodboard.id)}
+                                                                className="w-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg transition-all"
+                                                            >
+                                                                PM Response
+                                                            </button>
+                                                        </div>
+                                                    )}
+
+                                                    {/* PM Response Badge */}
+                                                    {moodboard.pm_response_time && (
+                                                        <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-3">
+                                                            <p className="text-sm font-semibold text-purple-900">✓ PM Response</p>
+                                                            <p className="text-xs text-purple-700">By: {moodboard.pm_response_by}</p>
+                                                            <p className="text-xs text-purple-700">
+                                                                {formatDate(moodboard.pm_response_time)}
+                                                            </p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
 

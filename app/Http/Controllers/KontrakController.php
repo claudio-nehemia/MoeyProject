@@ -65,6 +65,8 @@ class KontrakController extends Controller
                     'signed_at' => $itemPekerjaan->kontrak->signed_at?->format('d M Y H:i'),
                     'response_time' => $itemPekerjaan->kontrak->response_time?->format('d M Y H:i'),
                     'response_by' => $itemPekerjaan->kontrak->response_by,
+                    'pm_response_time' => $itemPekerjaan->kontrak->pm_response_time?->format('d M Y H:i'),
+                    'pm_response_by' => $itemPekerjaan->kontrak->pm_response_by,
                     'termin' => $itemPekerjaan->kontrak->termin ? [
                         'id' => $itemPekerjaan->kontrak->termin->id,
                         'nama' => $itemPekerjaan->kontrak->termin->nama_tipe,

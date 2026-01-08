@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 
@@ -30,6 +30,8 @@ interface Estimasi {
     estimated_cost: string | null;
     response_by: string | null;
     response_time: string | null;
+    pm_response_by: string | null;
+    pm_response_time: string | null;
 }
 
 interface Moodboard {
@@ -42,6 +44,8 @@ interface Moodboard {
     notes: string | null;
     response_by: string;
     response_time: string;
+    pm_response_by: string | null;
+    pm_response_time: string | null;
     order: Order | null;
     estimasi: Estimasi | null;
 }
@@ -87,6 +91,9 @@ export default function EstimasiIndex({ moodboards }: Props) {
     const [searchQuery, setSearchQuery] = useState('');
     const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
 
+    const { auth } = usePage<{ auth: { user: { isProjectManager: boolean } } }>().props;
+    const isProjectManager = auth?.user?.isProjectManager || false;
+
     const filteredMoodboards = moodboards.filter((moodboard) => {
         const search = searchQuery.toLowerCase();
         return (
@@ -111,6 +118,25 @@ export default function EstimasiIndex({ moodboards }: Props) {
                     setLoading(false);
                 },
             });
+        }
+    };
+
+    const handlePmResponse = (moodboardId: number) => {
+        console.log('handlePmResponse called with moodboardId:', moodboardId);
+        if (window.confirm('Apakah Anda yakin ingin memberikan PM response untuk moodboard ini?')) {
+            console.log('Sending PM response request to:', `/pm-response/moodboard/${moodboardId}`);
+            router.post(`/pm-response/moodboard/${moodboardId}`, {}, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    console.log('PM Response success');
+                },
+                onError: (errors) => {
+                    console.error('PM Response error:', errors);
+                    alert('Gagal memberikan PM response');
+                }
+            });
+        } else {
+            console.log('User cancelled PM response');
         }
     };
 
@@ -251,6 +277,40 @@ export default function EstimasiIndex({ moodboards }: Props) {
                                                     Waktu: {moodboard.estimasi.response_time ? new Date(moodboard.estimasi.response_time).toLocaleString('id-ID') : '-'}
                                                 </p>
                                             </div>
+
+                                            {/* PM Response Badge */}
+                                            {moodboard.estimasi.pm_response_time && (
+                                                <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-2">
+                                                    <p className="text-xs font-semibold text-purple-900">✓ PM Response:</p>
+                                                    <p className="text-xs text-purple-700">By: {moodboard.estimasi.pm_response_by}</p>
+                                                    <p className="text-xs text-purple-700">
+                                                        {moodboard.estimasi.pm_response_time ? new Date(moodboard.estimasi.pm_response_time).toLocaleString('id-ID') : '-'}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* PM Response Button - Always visible for PM */}
+                                    {isProjectManager && !moodboard.pm_response_time && (
+                                        <div className="mb-4">
+                                            <button
+                                                onClick={() => handlePmResponse(moodboard.id)}
+                                                className="w-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg transition-all"
+                                            >
+                                                PM Response
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* PM Response Badge */}
+                                    {moodboard.pm_response_time && (
+                                        <div className="mb-4 bg-purple-50 border border-purple-200 rounded-lg p-3">
+                                            <p className="text-xs font-semibold text-purple-900">✓ PM Response</p>
+                                            <p className="text-xs text-purple-700">By: {moodboard.pm_response_by}</p>
+                                            <p className="text-xs text-purple-700">
+                                                {new Date(moodboard.pm_response_time).toLocaleString('id-ID')}
+                                            </p>
                                         </div>
                                     )}
 

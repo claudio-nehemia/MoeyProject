@@ -19,6 +19,8 @@ class ItemPekerjaan extends Model
         'bast_pdf_path',
         'bast_foto_klien',
         'bast_foto_klien_uploaded_at',
+        'pm_response_time',
+        'pm_response_by',
     ];
 
     protected $casts = [

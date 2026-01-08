@@ -67,6 +67,8 @@ class MoodboardController extends Controller
                         'has_item_pekerjaan' => $order->moodboard->itemPekerjaan ? true : false,
                         'response_time' => $order->moodboard->response_time,
                         'response_by' => $order->moodboard->response_by,
+                        'pm_response_time' => $order->moodboard->pm_response_time,
+                        'pm_response_by' => $order->moodboard->pm_response_by,
                         'status' => $order->moodboard->status,
                         'notes' => $order->moodboard->notes,
                         'has_estimasi' => $order->moodboard->estimasi ? true : false,
@@ -100,29 +102,37 @@ class MoodboardController extends Controller
 
             // Check if moodboard already exists
             if ($order->moodboard) {
-                Log::warning('Moodboard already exists for order: ' . $orderId);
-                return back()->with('error', 'Moodboard sudah dibuat untuk order ini.');
+                Log::info('Moodboard already exists, updating response data');
+                
+                // Update existing moodboard with response data
+                $order->moodboard->update([
+                    'response_time' => now(),
+                    'response_by' => auth()->user()->name,
+                ]);
+                
+                $moodboard = $order->moodboard;
+            } else {
+                // Create new moodboard
+                $moodboard = Moodboard::create([
+                    'order_id' => $order->id,
+                    'response_time' => now(),
+                    'response_by' => auth()->user()->name,
+                    'status' => 'pending',
+                ]);
             }
-
-            $moodboard = Moodboard::create([
-                'order_id' => $order->id,
-                'response_time' => now(),
-                'response_by' => auth()->user()->name,
-                'status' => 'pending',
-            ]);
 
             $order->update([
                 'tahapan_proyek' => 'moodboard',
             ]);
 
-            Log::info('Moodboard created with ID: ' . $moodboard->id);
+            Log::info('Moodboard processed with ID: ' . $moodboard->id);
             Log::info('=== RESPONSE MOODBOARD END ===');
 
-            return back()->with('success', 'Moodboard berhasil dibuat.');
+            return back()->with('success', 'Response moodboard berhasil dicatat.');
         } catch (\Exception $e) {
             Log::error('Response moodboard error: ' . $e->getMessage());
             Log::error('Stack trace: ' . $e->getTraceAsString());
-            return back()->with('error', 'Gagal membuat moodboard: ' . $e->getMessage());
+            return back()->with('error', 'Gagal response moodboard: ' . $e->getMessage());
         }
     }
 

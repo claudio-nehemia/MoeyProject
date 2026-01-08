@@ -1,6 +1,6 @@
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 interface Survey {
@@ -18,6 +18,8 @@ interface Survey {
     survey_id: number | null;
     response_time: string | null;
     response_by: string | null;
+    pm_response_time: string | null;
+    pm_response_by: string | null;
     feedback: string | null;
     is_responded: boolean;
     team: {
@@ -40,6 +42,9 @@ export default function Index({ surveys }: Props) {
     });
     const [mounted, setMounted] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+
+    const { auth } = usePage<{ auth: { user: { isProjectManager: boolean } } }>().props;
+    const isProjectManager = auth?.user?.isProjectManager || false;
 
     useEffect(() => {
         setMounted(true);
@@ -68,6 +73,14 @@ export default function Index({ surveys }: Props) {
                     },
                 },
             );
+        }
+    };
+
+    const handlePmResponse = (surveyId: number) => {
+        if (confirm('Apakah Anda yakin ingin memberikan PM response untuk survey result ini?')) {
+            router.post(`/pm-response/survey-result/${surveyId}`, {}, {
+                preserveScroll: true,
+            });
         }
     };
 
@@ -587,12 +600,31 @@ export default function Index({ surveys }: Props) {
                                                                 </p>
                                                             </div>
                                                         </div>
+
+                                                        {/* PM Response Badge */}
+                                                        {survey.pm_response_time && (
+                                                            <div className="mt-2 bg-purple-50 border border-purple-200 rounded-lg p-2">
+                                                                <p className="text-xs font-semibold text-purple-900">✓ PM Response</p>
+                                                                <p className="text-xs text-purple-700">By: {survey.pm_response_by}</p>
+                                                                <p className="text-xs text-purple-700">{formatDate(survey.pm_response_time)}</p>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>
 
                                             {/* Right Section - Actions */}
                                             <div className="flex flex-row justify-end gap-2 lg:flex-col lg:justify-start">
+                                                {/* PM Response Button */}
+                                                {isProjectManager && survey.survey_id && !survey.pm_response_time && (
+                                                    <button
+                                                        onClick={() => handlePmResponse(survey.survey_id!)}
+                                                        className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-purple-600 hover:to-purple-700 sm:px-4 sm:text-sm"
+                                                    >
+                                                        PM Response
+                                                    </button>
+                                                )}
+
                                                 {!survey.has_survey ? (
                                                     // Belum ada survey & belum klik response - Tampilkan tombol Response
                                                     <button

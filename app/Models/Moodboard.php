@@ -17,6 +17,8 @@ class Moodboard extends Model
         'status',
         'notes',
         'revisi_final',
+        'pm_response_time',
+        'pm_response_by',
     ];
 
     public function order()

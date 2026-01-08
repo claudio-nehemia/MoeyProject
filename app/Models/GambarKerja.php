@@ -15,6 +15,8 @@ class GambarKerja extends Model
         'revisi_notes',
         'approved_time',
         'approved_by',
+        'pm_response_time',
+        'pm_response_by',
     ];
 
     protected $casts = [

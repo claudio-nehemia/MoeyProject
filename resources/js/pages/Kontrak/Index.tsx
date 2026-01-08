@@ -1,6 +1,6 @@
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 import KontrakModal from './KontrakModal';
 
@@ -24,6 +24,8 @@ interface Kontrak {
     signed_at: string | null;
     response_time: string | null;
     response_by: string | null;
+    pm_response_time: string | null;
+    pm_response_by: string | null;
     termin: {
         id: number;
         nama: string;
@@ -76,6 +78,9 @@ export default function Index({ itemPekerjaans, termins }: Props) {
         {},
     );
 
+    const { auth } = usePage<{ auth: { user: { isProjectManager: boolean } } }>().props;
+    const isProjectManager = auth?.user?.isProjectManager || false;
+
     const handleOpenModal = (itemPekerjaan: ItemPekerjaan) => {
         setSelectedItemPekerjaan(itemPekerjaan);
         setIsModalOpen(true);
@@ -94,6 +99,14 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                     },
                 },
             );
+        }
+    };
+
+    const handlePmResponse = (kontrakId: number) => {
+        if (confirm('Apakah Anda yakin ingin memberikan PM response untuk kontrak ini?')) {
+            router.post(`/pm-response/kontrak/${kontrakId}`, {}, {
+                preserveScroll: true,
+            });
         }
     };
 
@@ -410,6 +423,15 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                                 }
                                                                             </div>
                                                                         </div>
+
+                                                                        {/* PM Response Badge */}
+                                                                        {item.kontrak.pm_response_time && (
+                                                                            <div className="mt-2 bg-purple-50 border border-purple-200 rounded-lg p-2">
+                                                                                <p className="text-xs font-semibold text-purple-900">✓ PM Response</p>
+                                                                                <p className="text-xs text-purple-700">By: {item.kontrak.pm_response_by}</p>
+                                                                                <p className="text-xs text-purple-700">{item.kontrak.pm_response_time}</p>
+                                                                            </div>
+                                                                        )}
                                                                     </div>
                                                                 ) : (
                                                                     <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-800">
@@ -460,6 +482,16 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                     </button>
                                                                 ) : (
                                                                     <div className="space-y-2">
+                                                                        {/* PM Response Button */}
+                                                                        {isProjectManager && !item.kontrak.pm_response_time && (
+                                                                            <button
+                                                                                onClick={() => handlePmResponse(item.kontrak!.id)}
+                                                                                className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:bg-purple-700 hover:shadow-lg"
+                                                                            >
+                                                                                PM Response
+                                                                            </button>
+                                                                        )}
+
                                                                         {/* Status Badge */}
                                                                         <div className="flex flex-wrap items-center gap-2">
                                                                             {item

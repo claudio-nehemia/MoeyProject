@@ -54,6 +54,8 @@ class SurveyUlangController extends Controller
                     'survey_ulang_id' => $o->surveyUlang?->id,
                     'response_by' => $o->surveyUlang?->response_by,
                     'response_time' => $o->surveyUlang?->response_time?->toIso8601String(),
+                    'pm_response_by' => $o->surveyUlang?->pm_response_by,
+                    'pm_response_time' => $o->surveyUlang?->pm_response_time?->toIso8601String(),
                 ];
             });
 

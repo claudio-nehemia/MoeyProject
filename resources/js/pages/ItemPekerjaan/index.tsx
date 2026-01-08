@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { router, Link, Head } from '@inertiajs/react';
+import { router, Link, Head, usePage } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 
@@ -49,6 +49,8 @@ interface ItemPekerjaan {
     id: number;
     response_by: string;
     response_time: string;
+    pm_response_by: string | null;
+    pm_response_time: string | null;
     status: 'draft' | 'published';
     produks: ItemPekerjaanProduk[];
 }
@@ -57,6 +59,8 @@ interface Moodboard {
     id: number;
     order: Order;
     itemPekerjaan: ItemPekerjaan | null;
+    pm_response_by: string | null;
+    pm_response_time: string | null;
 }
 
 interface Props {
@@ -70,6 +74,9 @@ export default function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: 
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(false);
     const [expandedProduk, setExpandedProduk] = useState<number[]>([]);
+
+    const { auth } = usePage<{ auth: { user: { isProjectManager: boolean } } }>().props;
+    const isProjectManager = auth?.user?.isProjectManager || false;
 
     useEffect(() => {
         const handleResize = () => {
@@ -97,6 +104,14 @@ export default function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: 
                     alert('Gagal membuat response');
                     setLoading(false);
                 },
+            });
+        }
+    };
+
+    const handlePmResponse = (moodboardId: number) => {
+        if (confirm('Apakah Anda yakin ingin memberikan PM response untuk moodboard ini?')) {
+            router.post(`/pm-response/moodboard/${moodboardId}`, {}, {
+                preserveScroll: true,
             });
         }
     };
@@ -285,6 +300,28 @@ export default function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: 
                                                         <strong>Response by:</strong> {moodboard.itemPekerjaan.response_by} • {formatDateTime(moodboard.itemPekerjaan.response_time)}
                                                     </span>
                                                 </div>
+
+                                                {/* PM Response Button */}
+                                                {isProjectManager && !moodboard.pm_response_time && (
+                                                    <div className="mt-3">
+                                                        <button
+                                                            onClick={() => handlePmResponse(moodboard.id)}
+                                                            className="w-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg transition-all"
+                                                        >
+                                                            PM Response
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {/* PM Response Badge */}
+                                                {moodboard.pm_response_time && (
+                                                    <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-2">
+                                                        <p className="text-xs font-semibold text-purple-900">✓ PM Response</p>
+                                                        <p className="text-xs text-purple-700">By: {moodboard.pm_response_by}</p>
+                                                        <p className="text-xs text-purple-700">{formatDateTime(moodboard.pm_response_time!)}</p>
+                                                    </div>
+                                                )}
+
                                                 <div className={`mt-3 text-sm ${
                                                     moodboard.itemPekerjaan.status === 'published' 
                                                         ? 'text-blue-700' 
