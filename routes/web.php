@@ -442,13 +442,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // WORKPLAN ROUTES
     Route::middleware(['permission:workplan.index'])->group(function () {
-        Route::get('/workplan', [WorkplanItemController::class, 'index'])->name('workplan.index');        Route::post('/workplan/{order}/response', [WorkplanItemController::class, 'response'])->name('workplan.response');        Route::post('/workplan/{order}/response', [WorkplanItemController::class, 'response'])->name('workplan.response');
+        Route::get('/workplan', [WorkplanItemController::class, 'index'])->name('workplan.index');
+        Route::post('/workplan/{order}/response', [WorkplanItemController::class, 'response'])->name('workplan.response');        Route::post('/workplan/{order}/response', [WorkplanItemController::class, 'response'])->name('workplan.response');
         Route::get('/workplan/{order}/create', [WorkplanItemController::class, 'create'])->name('workplan.create');
         Route::post('/workplan/{order}', [WorkplanItemController::class, 'store'])->name('workplan.store');
         Route::get('/workplan/{order}/edit', [WorkplanItemController::class, 'edit'])->name('workplan.edit');
         Route::put('/workplan/{order}', [WorkplanItemController::class, 'update'])->name('workplan.update');
-        Route::post('/workplan/{workplan}/update-status', [WorkplanItemController::class, 'updateStatus'])
-            ->name('workplan.update.status');
+        Route::post('/workplan/{workplan}/update-status', [WorkplanItemController::class, 'updateStatus'])->name('workplan.update.status');
+        Route::get('/workplan/export/excel', [WorkplanItemController::class, 'export'])->name('workplan.export');
     });
 
     // SUERVEY ULANG

@@ -183,6 +183,7 @@
 
     <p>
         Kepada : <strong>{{ $customerName }}</strong><br>
+        Di : <strong>{{ $alamat }}</strong><br>
         Hal : Pembayaran Commitment Fee Interior
     </p>
 

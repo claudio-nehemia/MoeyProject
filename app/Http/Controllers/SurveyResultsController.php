@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Models\SurveyResults;
 use App\Models\JenisPengukuran;
 use App\Services\NotificationService;
+use Intervention\Image\Facades\Image;
 use Illuminate\Support\Facades\Storage;
 
 class SurveyResultsController extends Controller
@@ -128,65 +129,117 @@ class SurveyResultsController extends Controller
         $validated = $request->validate([
             'survey_id' => 'required|exists:survey_results,id',
             'feedback' => 'nullable|string',
+
             'layout_files' => 'nullable|array',
             'layout_files.*' => 'file|mimes:pdf,jpg,jpeg,png,dwg,dxf|max:10240',
+
             'foto_lokasi_files' => 'nullable|array',
             'foto_lokasi_files.*' => 'file|mimes:jpg,jpeg,png|max:5120',
+
             'mom_file' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
 
-            // many-to-many
             'jenis_pengukuran_ids' => 'nullable|array',
             'jenis_pengukuran_ids.*' => 'exists:jenis_pengukuran,id',
         ]);
 
         $survey = SurveyResults::findOrFail($validated['survey_id']);
 
-        // Simpan pivot IDs, sebelum dihapus
+        /* ===============================
+        * PIVOT IDS
+        * =============================== */
         $jenisPengukuranIds = $validated['jenis_pengukuran_ids'] ?? [];
 
-        // Hapus dari validated agar tidak masuk ke update()
-        unset($validated['jenis_pengukuran_ids']);
-        unset($validated['survey_id']);
-        unset($validated['layout_files']);
-        unset($validated['foto_lokasi_files']);
+        unset(
+            $validated['survey_id'],
+            $validated['jenis_pengukuran_ids'],
+            $validated['layout_files'],
+            $validated['foto_lokasi_files']
+        );
 
-        // Upload layout files (multiple)
+        /* ===============================
+        * UPLOAD LAYOUT FILES
+        * =============================== */
         $layoutFilesPaths = [];
+
         if ($request->hasFile('layout_files')) {
             foreach ($request->file('layout_files') as $file) {
-                $path = $file->store('survey_layouts', 'public');
-                $layoutFilesPaths[] = [
-                    'path' => $path,
-                    'original_name' => $file->getClientOriginalName(),
-                    'mime_type' => $file->getMimeType(),
-                    'size' => $file->getSize(),
-                ];
+
+                // IMAGE → resize + thumbnail
+                if (in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png'])) {
+
+                    $imageData = image_service()->saveImage(
+                        $file,
+                        'survey_layouts',
+                        2000, // max width
+                        85    // quality
+                    );
+
+                    $thumbnail = image_service()->saveThumbnail(
+                        $file,
+                        'survey_layouts',
+                        500,
+                        70
+                    );
+
+                    $layoutFilesPaths[] = array_merge($imageData, [
+                        'thumbnail' => $thumbnail,
+                    ]);
+
+                } else {
+                    // PDF / DWG / DXF → raw
+                    $layoutFilesPaths[] = image_service()->saveRawFile(
+                        $file,
+                        'survey_layouts'
+                    );
+                }
             }
         }
-        $validated['layout_files'] = !empty($layoutFilesPaths) ? $layoutFilesPaths : null;
 
-        // Upload foto lokasi files (multiple)
+        $validated['layout_files'] = $layoutFilesPaths ?: null;
+
+        /* ===============================
+        * UPLOAD FOTO LOKASI
+        * =============================== */
         $fotoLokasiFilesPaths = [];
+
         if ($request->hasFile('foto_lokasi_files')) {
             foreach ($request->file('foto_lokasi_files') as $file) {
-                $path = $file->store('survey_photos', 'public');
-                $fotoLokasiFilesPaths[] = [
-                    'path' => $path,
-                    'original_name' => $file->getClientOriginalName(),
-                    'mime_type' => $file->getMimeType(),
-                    'size' => $file->getSize(),
-                ];
+
+                $imageData = image_service()->saveImage(
+                    $file,
+                    'survey_photos',
+                    1600,
+                    80
+                );
+
+                $thumbnail = image_service()->saveThumbnail(
+                    $file,
+                    'survey_photos',
+                    400,
+                    70
+                );
+
+                $fotoLokasiFilesPaths[] = array_merge($imageData, [
+                    'thumbnail' => $thumbnail,
+                ]);
             }
         }
-        $validated['foto_lokasi_files'] = !empty($fotoLokasiFilesPaths) ? $fotoLokasiFilesPaths : null;
 
-        // Update survey result
+        $validated['foto_lokasi_files'] = $fotoLokasiFilesPaths ?: null;
+
+        /* ===============================
+        * UPDATE SURVEY
+        * =============================== */
         $survey->update($validated);
 
-        // Pengukuran relasi many-to-many
+        /* ===============================
+        * SYNC JENIS PENGUKURAN
+        * =============================== */
         $survey->jenisPengukuran()->sync($jenisPengukuranIds);
 
-        // Handle MOM file upload (ke order)
+        /* ===============================
+        * UPLOAD MOM FILE (ORDER)
+        * =============================== */
         if ($request->hasFile('mom_file')) {
             $order = $survey->order;
 
@@ -197,11 +250,16 @@ class SurveyResultsController extends Controller
             $momFilePath = $request->file('mom_file')->store('mom_files', 'public');
             $order->update(['mom_file' => $momFilePath]);
         }
-    
+
+        /* ===============================
+        * NOTIFICATION
+        * =============================== */
         $notificationService = new NotificationService();
         $notificationService->sendMoodboardRequestNotification($survey->order);
 
-        return redirect()->route('survey-results.index')->with('success', 'Survey Results created successfully.');
+        return redirect()
+            ->route('survey-results.index')
+            ->with('success', 'Survey Results created successfully.');
     }
 
     /**
@@ -245,58 +303,112 @@ class SurveyResultsController extends Controller
 
         $validated = $request->validate([
             'feedback' => 'nullable|string',
+
             'layout_files' => 'nullable|array',
             'layout_files.*' => 'file|mimes:pdf,jpg,jpeg,png,dwg,dxf|max:10240',
+
             'foto_lokasi_files' => 'nullable|array',
             'foto_lokasi_files.*' => 'file|mimes:jpg,jpeg,png|max:5120',
+
             'mom_file' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
 
-            // ⬅️ validasi jenis pengukuran
             'jenis_pengukuran_ids' => 'nullable|array',
             'jenis_pengukuran_ids.*' => 'exists:jenis_pengukuran,id',
         ]);
 
-        // Remove file arrays from validated before update
-        unset($validated['layout_files']);
-        unset($validated['foto_lokasi_files']);
+        /* ===============================
+        * PREPARE
+        * =============================== */
+        $jenisPengukuranIds = $validated['jenis_pengukuran_ids'] ?? [];
 
-        // Handle layout files (append to existing)
+        unset(
+            $validated['layout_files'],
+            $validated['foto_lokasi_files'],
+            $validated['jenis_pengukuran_ids']
+        );
+
+        /* ===============================
+        * HANDLE LAYOUT FILES (APPEND)
+        * =============================== */
         $existingLayoutFiles = $survey->layout_files ?? [];
+
         if ($request->hasFile('layout_files')) {
             foreach ($request->file('layout_files') as $file) {
-                $path = $file->store('survey_layouts', 'public');
-                $existingLayoutFiles[] = [
-                    'path' => $path,
-                    'original_name' => $file->getClientOriginalName(),
-                    'mime_type' => $file->getMimeType(),
-                    'size' => $file->getSize(),
-                ];
+
+                if (in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png'])) {
+
+                    $imageData = image_service()->saveImage(
+                        $file,
+                        'survey_layouts',
+                        2000,
+                        85
+                    );
+
+                    $thumbnail = image_service()->saveThumbnail(
+                        $file,
+                        'survey_layouts',
+                        500,
+                        70
+                    );
+
+                    $existingLayoutFiles[] = array_merge($imageData, [
+                        'thumbnail' => $thumbnail,
+                    ]);
+
+                } else {
+                    $existingLayoutFiles[] = image_service()->saveRawFile(
+                        $file,
+                        'survey_layouts'
+                    );
+                }
             }
         }
-        $validated['layout_files'] = !empty($existingLayoutFiles) ? $existingLayoutFiles : null;
 
-        // Handle foto lokasi files (append to existing)
+        $validated['layout_files'] = $existingLayoutFiles ?: null;
+
+        /* ===============================
+        * HANDLE FOTO LOKASI (APPEND)
+        * =============================== */
         $existingFotoFiles = $survey->foto_lokasi_files ?? [];
+
         if ($request->hasFile('foto_lokasi_files')) {
             foreach ($request->file('foto_lokasi_files') as $file) {
-                $path = $file->store('survey_photos', 'public');
-                $existingFotoFiles[] = [
-                    'path' => $path,
-                    'original_name' => $file->getClientOriginalName(),
-                    'mime_type' => $file->getMimeType(),
-                    'size' => $file->getSize(),
-                ];
+
+                $imageData = image_service()->saveImage(
+                    $file,
+                    'survey_photos',
+                    1600,
+                    80
+                );
+
+                $thumbnail = image_service()->saveThumbnail(
+                    $file,
+                    'survey_photos',
+                    400,
+                    70
+                );
+
+                $existingFotoFiles[] = array_merge($imageData, [
+                    'thumbnail' => $thumbnail,
+                ]);
             }
         }
-        $validated['foto_lokasi_files'] = !empty($existingFotoFiles) ? $existingFotoFiles : null;
 
-        // Update survey main data
+        $validated['foto_lokasi_files'] = $existingFotoFiles ?: null;
+
+        /* ===============================
+        * UPDATE SURVEY
+        * =============================== */
         $survey->update($validated);
 
-        // ⬅️ jenis pengukuran
-        $survey->jenisPengukuran()->sync($request->jenis_pengukuran_ids);
+        /* ===============================
+        * SYNC JENIS PENGUKURAN
+        * =============================== */
+        $survey->jenisPengukuran()->sync($jenisPengukuranIds);
 
-        // Upload MOM file
+        /* ===============================
+        * UPLOAD MOM FILE (ORDER)
+        * =============================== */
         if ($request->hasFile('mom_file')) {
             $order = $survey->order;
 
@@ -308,10 +420,15 @@ class SurveyResultsController extends Controller
             $order->update(['mom_file' => $momFilePath]);
         }
 
+        /* ===============================
+        * NOTIFICATION
+        * =============================== */
         $notificationService = new NotificationService();
         $notificationService->sendMoodboardRequestNotification($survey->order);
 
-        return redirect()->route('survey-results.index')->with('success', 'Survey Results updated successfully.');
+        return redirect()
+            ->route('survey-results.index')
+            ->with('success', 'Survey Results updated successfully.');
     }
 
     /**

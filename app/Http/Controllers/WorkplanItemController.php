@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 use App\Models\ItemPekerjaanProduk;
 use App\Models\PengajuanPerpanjanganTimeline;
 use App\Services\NotificationService;
+use App\Exports\WorkplanExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class WorkplanItemController extends Controller
 {
@@ -488,5 +490,13 @@ class WorkplanItemController extends Controller
         ]);
 
         return back()->with('success', 'Status workplan diperbarui.');
+    }
+
+    public function export()
+    {
+        return Excel::download(
+            new WorkplanExport(),
+            'workplan_' . now()->format('Ymd_His') . '.xlsx'
+        );
     }
 }
