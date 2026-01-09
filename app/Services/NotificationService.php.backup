@@ -27,7 +27,7 @@ class NotificationService
         })->get();
 
         foreach ($surveyors as $surveyor) {
-            $notification = Notification::create([
+            Notification::create([
                 'user_id' => $surveyor->id,
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_SURVEY_REQUEST,
@@ -38,17 +38,6 @@ class NotificationService
                     'customer_name' => $order->customer_name,
                     'tanggal_survey' => $order->tanggal_survey,
                     'action_url' => '/survey-results',
-                ],
-            ]);
-
-            // 🔥 Send FCM push notification
-            $this->fcmService->sendToUser($surveyor->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
                 ],
             ]);
         }
@@ -77,7 +66,7 @@ class NotificationService
         foreach ($designers as $designer) {
             \Log::info('Sending notification to designer: ' . $designer->name . ' (ID: ' . $designer->id . ')');
             
-            $notification = Notification::create([
+            Notification::create([
                 'user_id' => $designer->id,
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_MOODBOARD_REQUEST,
@@ -87,17 +76,6 @@ class NotificationService
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
                     'action_url' => '/moodboard',
-                ],
-            ]);
-
-            // 🔥 Send FCM push notification
-            $this->fcmService->sendToUser($designer->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
                 ],
             ]);
             
@@ -118,7 +96,7 @@ class NotificationService
         })->get();
 
         foreach ($estimators as $estimator) {
-            $notification = Notification::create([
+            Notification::create([
                 'user_id' => $estimator->id,
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_ESTIMASI_REQUEST,
@@ -128,17 +106,6 @@ class NotificationService
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
                     'action_url' => '/estimasi',
-                ],
-            ]);
-
-            // 🔥 Send FCM push notification
-            $this->fcmService->sendToUser($estimator->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
                 ],
             ]);
         }
@@ -155,7 +122,7 @@ class NotificationService
         })->get();
 
         foreach ($legalAdmins as $legalAdmin) {
-            $notification = Notification::create([
+            Notification::create([
                 'user_id' => $legalAdmin->id,
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_COMMITMENT_FEE_REQUEST,
@@ -165,17 +132,6 @@ class NotificationService
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
                     'action_url' => '/commitment-fee',
-                ],
-            ]);
-
-            // 🔥 Send FCM push notification
-            $this->fcmService->sendToUser($legalAdmin->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
                 ],
             ]);
         }
@@ -192,7 +148,7 @@ class NotificationService
         })->get();
 
         foreach ($designers as $designer) {
-            $notification = Notification::create([
+            Notification::create([
                 'user_id' => $designer->id,
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_DESIGN_APPROVAL,
@@ -202,17 +158,6 @@ class NotificationService
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
                     'action_url' => '/moodboard',
-                ],
-            ]);
-
-            // 🔥 Send FCM push notification
-            $this->fcmService->sendToUser($designer->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
                 ],
             ]);
         }
@@ -229,7 +174,7 @@ class NotificationService
         })->get();
 
         foreach ($designers as $designer) {
-            $notification = Notification::create([
+            Notification::create([
                 'user_id' => $designer->id,
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_FINAL_DESIGN_REQUEST,
@@ -239,17 +184,6 @@ class NotificationService
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
                     'action_url' => '/moodboard',
-                ],
-            ]);
-
-            // 🔥 Send FCM push notification
-            $this->fcmService->sendToUser($designer->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
                 ],
             ]);
         }
@@ -263,7 +197,7 @@ class NotificationService
         })->get();
 
         foreach ($designers as $designer) {
-            $notification = Notification::create([
+            Notification::create([
                 'user_id' => $designer->id,
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_ITEM_PEKERJAAN_REQUEST,
@@ -273,17 +207,6 @@ class NotificationService
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
                     'action_url' => '/item-pekerjaan',
-                ],
-            ]);
-
-            // 🔥 Send FCM push notification
-            $this->fcmService->sendToUser($designer->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
                 ],
             ]);
         }
@@ -297,7 +220,7 @@ class NotificationService
         })->get();
 
         foreach ($estimators as $estimator) {
-            $notification = Notification::create([
+            Notification::create([
                 'user_id' => $estimator->id,
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_RAB_INTERNAL_REQUEST,
@@ -307,17 +230,6 @@ class NotificationService
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
                     'action_url' => '/rab-internal',
-                ],
-            ]);
-
-            // 🔥 Send FCM push notification
-            $this->fcmService->sendToUser($estimator->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
                 ],
             ]);
         }
@@ -331,7 +243,7 @@ class NotificationService
         })->get();
 
         foreach ($legalAdmins as $legalAdmin) {
-            $notification = Notification::create([
+            Notification::create([
                 'user_id' => $legalAdmin->id,
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_KONTRAK_REQUEST,
@@ -341,17 +253,6 @@ class NotificationService
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
                     'action_url' => '/kontrak',
-                ],
-            ]);
-
-            // 🔥 Send FCM push notification
-            $this->fcmService->sendToUser($legalAdmin->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
                 ],
             ]);
         }
@@ -365,7 +266,7 @@ class NotificationService
         })->get();
 
         foreach ($legalAdmins as $financeUser) {
-            $notification = Notification::create([
+            Notification::create([
                 'user_id' => $financeUser->id,
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_INVOICE_REQUEST,
@@ -375,17 +276,6 @@ class NotificationService
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
                     'action_url' => '/invoice',
-                ],
-            ]);
-
-            // 🔥 Send FCM push notification
-            $this->fcmService->sendToUser($financeUser->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
                 ],
             ]);
         }
@@ -398,7 +288,7 @@ class NotificationService
         })->get();
 
         foreach ($pms as $pm) {
-            $notification = Notification::create([
+            Notification::create([
                 'user_id' => $pm->id,
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_SURVEY_SCHEDULE_REQUEST,
@@ -408,17 +298,6 @@ class NotificationService
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
                     'action_url' => '/survey-schedule',
-                ],
-            ]);
-
-            // 🔥 Send FCM push notification
-            $this->fcmService->sendToUser($pm->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
                 ],
             ]);
         }
@@ -432,7 +311,7 @@ class NotificationService
         })->get();
 
         foreach ($teams as $team) {
-            $notification = Notification::create([
+            Notification::create([
                 'user_id' => $team->id,
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_SURVEY_ULANG_REQUEST,
@@ -445,17 +324,6 @@ class NotificationService
                     'action_url' => '/survey-ulang',
                 ],
             ]);
-
-            // 🔥 Send FCM push notification
-            $this->fcmService->sendToUser($team->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
-                ],
-            ]);
         }
     }
 
@@ -465,7 +333,7 @@ class NotificationService
             $query->whereIn('nama_role', ['Surveyor', 'Drafter', 'Desainer']);
         })->get();
         foreach ($teams as $team) {
-            $notification = Notification::create([
+            Notification::create([
                 'user_id' => $team->id,
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_GAMBAR_KERJA_REQUEST,
@@ -475,17 +343,6 @@ class NotificationService
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
                     'action_url' => '/gambar-kerja',
-                ],
-            ]);
-
-            // 🔥 Send FCM push notification
-            $this->fcmService->sendToUser($team->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
                 ],
             ]);
         }
@@ -498,7 +355,7 @@ class NotificationService
         })->get();
 
         foreach ($drafters as $drafter) {
-            $notification = Notification::create([
+            Notification::create([
                 'user_id' => $drafter->id,
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_APPROVAL_MATERIAL_REQUEST,
@@ -508,17 +365,6 @@ class NotificationService
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
                     'action_url' => '/approval-material',
-                ],
-            ]);
-
-            // 🔥 Send FCM push notification
-            $this->fcmService->sendToUser($drafter->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
                 ],
             ]);
         }
@@ -539,7 +385,7 @@ class NotificationService
         foreach ($pms as $pm) {
             \Log::info('Sending notification to PM: ' . $pm->name . ' (ID: ' . $pm->id . ')');
             
-            $notification = Notification::create([
+            Notification::create([
                 'user_id' => $pm->id,
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_WORKPLAN_REQUEST,
@@ -549,17 +395,6 @@ class NotificationService
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
                     'action_url' => '/workplan',
-                ],
-            ]);
-
-            // 🔥 Send FCM push notification
-            $this->fcmService->sendToUser($pm->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
                 ],
             ]);
             
@@ -584,7 +419,7 @@ class NotificationService
         foreach ($users as $user) {
             \Log::info('Sending notification to: ' . $user->name . ' (ID: ' . $user->id . ')');
             
-            $notification = Notification::create([
+            Notification::create([
                 'user_id' => $user->id,
                 'order_id' => $order->id,
                 'type' => 'approval_rab_update',
@@ -594,17 +429,6 @@ class NotificationService
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
                     'action_url' => '/approval-material',
-                ],
-            ]);
-
-            // 🔥 Send FCM push notification
-            $this->fcmService->sendToUser($user->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
                 ],
             ]);
             
@@ -629,7 +453,7 @@ class NotificationService
         foreach ($users as $user) {
             \Log::info('Sending notification to: ' . $user->name . ' (ID: ' . $user->id . ') - Role: ' . $user->role->nama_role);
             
-            $notification = Notification::create([
+            Notification::create([
                 'user_id' => $user->id,
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_PROJECT_MANAGEMENT_REQUEST,
@@ -639,17 +463,6 @@ class NotificationService
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
                     'action_url' => '/project-management',
-                ],
-            ]);
-
-            // 🔥 Send FCM push notification
-            $this->fcmService->sendToUser($user->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
                 ],
             ]);
             

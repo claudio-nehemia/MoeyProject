@@ -24,6 +24,9 @@ class User extends Authenticatable
         'email',
         'password',
         'role_id',
+        'fcm_token',
+        'device_platform',
+        'fcm_token_updated_at',
     ];
 
     /**
@@ -49,6 +52,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'fcm_token_updated_at' => 'datetime',
         ];
     }
 

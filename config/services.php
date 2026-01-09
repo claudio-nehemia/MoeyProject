@@ -35,4 +35,29 @@ return [
         ],
     ],
 
+    'stripe' => [
+        'model' => App\Models\User::class,
+        'key' => env('STRIPE_KEY'),
+        'secret' => env('STRIPE_SECRET'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Firebase Cloud Messaging (FCM) Settings - V1 API
+    |--------------------------------------------------------------------------
+    |
+    | Using Firebase Admin SDK with Service Account JSON.
+    | This is the MODERN and RECOMMENDED method (not Legacy Server Key).
+    | 
+    | How to get Service Account JSON:
+    | 1. Firebase Console > Project Settings > Service Accounts tab
+    | 2. Click "Generate new private key"
+    | 3. Save to: storage/firebase/service-account.json
+    |
+    */
+    'fcm' => [
+        'service_account' => storage_path('firebase/service-account.json'),
+        'project_id' => env('FCM_PROJECT_ID', ''),
+    ],
+
 ];
