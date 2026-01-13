@@ -2453,176 +2453,6 @@ export default function Detail({
                                                                                                     )}
                                                                                                 </div>
                                                                                             )}
-                                                                                            {showDefectModal ===
-                                                                                                produk.id && (
-                                                                                                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                                                                                                    <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white">
-                                                                                                        <div className="p-6">
-                                                                                                            <h2 className="mb-4 text-2xl font-bold">
-                                                                                                                Report
-                                                                                                                Defect
-                                                                                                                -{' '}
-                                                                                                                {
-                                                                                                                    selectedProduk?.nama_produk
-                                                                                                                }
-                                                                                                            </h2>
-
-                                                                                                            <form
-                                                                                                                onSubmit={
-                                                                                                                    handleSubmitDefect
-                                                                                                                }
-                                                                                                            >
-                                                                                                                <input
-                                                                                                                    type="hidden"
-                                                                                                                    name="item_pekerjaan_produk_id"
-                                                                                                                    value={
-                                                                                                                        selectedProduk?.id ||
-                                                                                                                        ''
-                                                                                                                    }
-                                                                                                                />
-                                                                                                                <input
-                                                                                                                    type="hidden"
-                                                                                                                    name="qc_stage"
-                                                                                                                    value={
-                                                                                                                        selectedProduk?.current_stage ||
-                                                                                                                        ''
-                                                                                                                    }
-                                                                                                                />
-
-                                                                                                                {/* Dynamic Defect Items */}
-                                                                                                                {defectItems.map(
-                                                                                                                    (
-                                                                                                                        item,
-                                                                                                                        index,
-                                                                                                                    ) => (
-                                                                                                                        <div
-                                                                                                                            key={
-                                                                                                                                index
-                                                                                                                            }
-                                                                                                                            className="mb-4 rounded-lg border-2 border-gray-200 p-4"
-                                                                                                                        >
-                                                                                                                            <div className="mb-2 flex items-center justify-between">
-                                                                                                                                <h3 className="font-semibold">
-                                                                                                                                    Cacat
-                                                                                                                                    #
-                                                                                                                                    {index +
-                                                                                                                                        1}
-                                                                                                                                </h3>
-                                                                                                                                {defectItems.length >
-                                                                                                                                    1 && (
-                                                                                                                                    <button
-                                                                                                                                        type="button"
-                                                                                                                                        onClick={() =>
-                                                                                                                                            removeDefectItem(
-                                                                                                                                                index,
-                                                                                                                                            )
-                                                                                                                                        }
-                                                                                                                                        className="text-red-600 hover:text-red-800"
-                                                                                                                                    >
-                                                                                                                                        🗑️
-                                                                                                                                        Hapus
-                                                                                                                                    </button>
-                                                                                                                                )}
-                                                                                                                            </div>
-
-                                                                                                                            <div className="mb-2">
-                                                                                                                                <label className="mb-1 block text-sm font-medium">
-                                                                                                                                    Foto
-                                                                                                                                    Cacat
-                                                                                                                                </label>
-                                                                                                                                <input
-                                                                                                                                    type="file"
-                                                                                                                                    accept="image/*"
-                                                                                                                                    required
-                                                                                                                                    onChange={(
-                                                                                                                                        e,
-                                                                                                                                    ) =>
-                                                                                                                                        updateDefectItem(
-                                                                                                                                            index,
-                                                                                                                                            'photo',
-                                                                                                                                            e
-                                                                                                                                                .target
-                                                                                                                                                .files?.[0] ||
-                                                                                                                                                null,
-                                                                                                                                        )
-                                                                                                                                    }
-                                                                                                                                    className="w-full rounded-lg border border-gray-300 p-2"
-                                                                                                                                />
-                                                                                                                            </div>
-
-                                                                                                                            <div>
-                                                                                                                                <label className="mb-1 block text-sm font-medium">
-                                                                                                                                    Catatan
-                                                                                                                                    Cacat
-                                                                                                                                </label>
-                                                                                                                                <textarea
-                                                                                                                                    required
-                                                                                                                                    value={
-                                                                                                                                        item.notes
-                                                                                                                                    }
-                                                                                                                                    onChange={(
-                                                                                                                                        e,
-                                                                                                                                    ) =>
-                                                                                                                                        updateDefectItem(
-                                                                                                                                            index,
-                                                                                                                                            'notes',
-                                                                                                                                            e
-                                                                                                                                                .target
-                                                                                                                                                .value,
-                                                                                                                                        )
-                                                                                                                                    }
-                                                                                                                                    className="w-full rounded-lg border border-gray-300 p-2"
-                                                                                                                                    rows={
-                                                                                                                                        3
-                                                                                                                                    }
-                                                                                                                                    placeholder="Jelaskan cacat yang ditemukan..."
-                                                                                                                                />
-                                                                                                                            </div>
-                                                                                                                        </div>
-                                                                                                                    ),
-                                                                                                                )}
-
-                                                                                                                <button
-                                                                                                                    type="button"
-                                                                                                                    onClick={
-                                                                                                                        addDefectItem
-                                                                                                                    }
-                                                                                                                    className="mb-4 w-full rounded-lg border-2 border-dashed border-gray-300 px-4 py-2 font-medium text-gray-600 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600"
-                                                                                                                >
-                                                                                                                    +
-                                                                                                                    Tambah
-                                                                                                                    Cacat
-                                                                                                                    Lain
-                                                                                                                </button>
-
-                                                                                                                <div className="flex gap-3">
-                                                                                                                    <button
-                                                                                                                        type="button"
-                                                                                                                        onClick={() => {
-                                                                                                                            setShowDefectModal(
-                                                                                                                                null,
-                                                                                                                            );
-                                                                                                                            setSelectedProduk(
-                                                                                                                                null,
-                                                                                                                            );
-                                                                                                                        }}
-                                                                                                                        className="flex-1 rounded-lg border border-gray-300 px-4 py-2 hover:bg-gray-50"
-                                                                                                                    >
-                                                                                                                        Batal
-                                                                                                                    </button>
-                                                                                                                    <button
-                                                                                                                        type="submit"
-                                                                                                                        className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-                                                                                                                    >
-                                                                                                                        Submit
-                                                                                                                        Defect
-                                                                                                                    </button>
-                                                                                                                </div>
-                                                                                                            </form>
-                                                                                                        </div>
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                            )}
                                                                                         </div>
                                                                                     </div>
                                                                                 </div>
@@ -2919,6 +2749,147 @@ export default function Detail({
                             <p className="text-sm font-medium text-white">
                                 📷 Foto BAST dengan Klien
                             </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Defect Modal - Moved to root level to prevent glitches */}
+            {showDefectModal && selectedProduk && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+                        <div className="p-6">
+                            <div className="mb-4 flex items-center justify-between">
+                                <h2 className="text-2xl font-bold text-gray-900">
+                                    🔍 Report Defect - {selectedProduk.nama_produk}
+                                </h2>
+                                <button
+                                    onClick={() => {
+                                        setShowDefectModal(null);
+                                        setSelectedProduk(null);
+                                    }}
+                                    className="text-gray-400 transition-colors hover:text-gray-600"
+                                >
+                                    <svg
+                                        className="h-6 w-6"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M6 18L18 6M6 6l12 12"
+                                        />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <div className="mb-4 rounded-lg bg-red-50 p-3">
+                                <p className="text-sm text-red-700">
+                                    <strong>QC Stage:</strong> {selectedProduk.current_stage || 'Belum Dimulai'}
+                                </p>
+                            </div>
+
+                            <form onSubmit={handleSubmitDefect}>
+                                <input
+                                    type="hidden"
+                                    name="item_pekerjaan_produk_id"
+                                    value={selectedProduk.id}
+                                />
+                                <input
+                                    type="hidden"
+                                    name="qc_stage"
+                                    value={selectedProduk.current_stage || ''}
+                                />
+
+                                {/* Dynamic Defect Items */}
+                                {defectItems.map((item, index) => (
+                                    <div
+                                        key={index}
+                                        className="mb-4 rounded-lg border-2 border-gray-200 bg-gray-50 p-4"
+                                    >
+                                        <div className="mb-3 flex items-center justify-between">
+                                            <h3 className="text-lg font-semibold text-gray-800">
+                                                Cacat #{index + 1}
+                                            </h3>
+                                            {defectItems.length > 1 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeDefectItem(index)}
+                                                    className="text-red-600 transition-colors hover:text-red-800"
+                                                >
+                                                    🗑️ Hapus
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div className="mb-3">
+                                            <label className="mb-1 block text-sm font-medium text-gray-700">
+                                                📷 Foto Cacat *
+                                            </label>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                required
+                                                onChange={(e) =>
+                                                    updateDefectItem(
+                                                        index,
+                                                        'photo',
+                                                        e.target.files?.[0] || null,
+                                                    )
+                                                }
+                                                className="w-full rounded-lg border border-gray-300 bg-white p-2 transition-colors focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="mb-1 block text-sm font-medium text-gray-700">
+                                                📝 Catatan Cacat *
+                                            </label>
+                                            <textarea
+                                                required
+                                                value={item.notes}
+                                                onChange={(e) =>
+                                                    updateDefectItem(index, 'notes', e.target.value)
+                                                }
+                                                className="w-full rounded-lg border border-gray-300 bg-white p-2 transition-colors focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200"
+                                                rows={3}
+                                                placeholder="Jelaskan cacat yang ditemukan..."
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+
+                                <button
+                                    type="button"
+                                    onClick={addDefectItem}
+                                    className="mb-6 w-full rounded-lg border-2 border-dashed border-gray-300 bg-white px-4 py-3 font-medium text-gray-600 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600"
+                                >
+                                    ➕ Tambah Cacat Lain
+                                </button>
+
+                                <div className="flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowDefectModal(null);
+                                            setSelectedProduk(null);
+                                            setDefectItems([{ photo: null, notes: '' }]);
+                                        }}
+                                        className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 rounded-lg bg-gradient-to-r from-red-600 to-orange-600 px-4 py-2 font-medium text-white shadow-lg transition-all hover:from-red-700 hover:to-orange-700"
+                                    >
+                                        Submit Defect
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
