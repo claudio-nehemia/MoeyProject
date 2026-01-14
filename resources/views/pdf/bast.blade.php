@@ -196,7 +196,7 @@
                         <ul style="margin: 0; padding-left: 20px;">
                             @foreach($produks as $index => $produk)
                             <li style="margin-bottom: 5px;">
-                                Pembuatan {{ $produk->nama_ruangan ?? 'ruangan ' . ($index + 1) }}
+                                Pembuatan {{ $produk->nama_produk ?? 'produk ' . ($index + 1) }}
                             </li>
                             @endforeach
                         </ul>
