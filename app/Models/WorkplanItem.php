@@ -18,12 +18,15 @@ class WorkplanItem extends Model
         'catatan',
         'response_time',
         'response_by',
+        'pm_response_time',
+        'pm_response_by',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date'   => 'date',
         'response_time' => 'datetime',
+        'pm_response_time' => 'datetime',
     ];
 
     public function itemPekerjaanProduk(): BelongsTo

@@ -57,14 +57,20 @@ class AuthController extends Controller
             ]);
         }
 
-        $user = User::where('email', $request->email)->firstOrFail();
+        $user = User::where('email', $request->email)->with('role')->firstOrFail();
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'success' => true,
             'message' => 'Login successful',
             'data' => [
-                'user' => $user,
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role_id' => $user->role_id,
+                    'is_project_manager' => $user->role && $user->role->nama_role === 'Project Manager',
+                ],
                 'access_token' => $token,
                 'token_type' => 'Bearer',
             ]
@@ -76,9 +82,17 @@ class AuthController extends Controller
      */
     public function me(Request $request)
     {
+        $user = $request->user()->load('role');
+        
         return response()->json([
             'success' => true,
-            'data' => $request->user()
+            'data' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role_id' => $user->role_id,
+                'is_project_manager' => $user->role && $user->role->nama_role === 'Project Manager',
+            ]
         ]);
     }
 

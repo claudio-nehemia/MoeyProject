@@ -17,7 +17,7 @@ class NotificationService
     }
 
     /**
-     * Send survey request notification to drafter/surveyor
+     * Send survey request notification to drafter/surveyor AND project managers
      */
     public function sendSurveyRequestNotification(Order $order)
     {
@@ -43,6 +43,37 @@ class NotificationService
 
             // 🔥 Send FCM push notification
             $this->fcmService->sendToUser($surveyor->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
+
+        // Also send to ALL Project Managers
+        $pms = User::whereHas('role', function ($query) {
+            $query->where('nama_role', 'Project Manager');
+        })->get();
+
+        foreach ($pms as $pm) {
+            $notification = Notification::create([
+                'user_id' => $pm->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_SURVEY_REQUEST,
+                'title' => 'Survey Request - ' . $order->nama_project,
+                'message' => 'Survey dimulai untuk project "' . $order->nama_project . '". Team survey telah ditugaskan.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'tanggal_survey' => $order->tanggal_survey,
+                    'action_url' => '/survey-results',
+                ],
+            ]);
+
+            $this->fcmService->sendToUser($pm->id, [
                 'title' => $notification->title,
                 'body' => $notification->message,
                 'data' => [
@@ -105,10 +136,40 @@ class NotificationService
         }
         
         \Log::info('=== END SEND MOODBOARD NOTIFICATION ===');
+
+        // Also send to ALL Project Managers
+        $pms = User::whereHas('role', function ($query) {
+            $query->where('nama_role', 'Project Manager');
+        })->get();
+
+        foreach ($pms as $pm) {
+            $notification = Notification::create([
+                'user_id' => $pm->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_MOODBOARD_REQUEST,
+                'title' => 'Moodboard Request - ' . $order->nama_project,
+                'message' => 'Survey telah selesai untuk project "' . $order->nama_project . '". Designer sedang membuat moodboard.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/moodboard',
+                ],
+            ]);
+
+            $this->fcmService->sendToUser($pm->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
     }
 
     /**
-     * Send estimasi request notification to ALL estimators
+     * Send estimasi request notification to ALL estimators AND project managers
      */
     public function sendEstimasiRequestNotification(Order $order)
     {
@@ -142,10 +203,40 @@ class NotificationService
                 ],
             ]);
         }
+
+        // Also send to ALL Project Managers
+        $pms = User::whereHas('role', function ($query) {
+            $query->where('nama_role', 'Project Manager');
+        })->get();
+
+        foreach ($pms as $pm) {
+            $notification = Notification::create([
+                'user_id' => $pm->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_ESTIMASI_REQUEST,
+                'title' => 'Estimasi Request - ' . $order->nama_project,
+                'message' => 'Moodboard telah selesai untuk project "' . $order->nama_project . '". Team estimator sedang membuat estimasi.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/estimasi',
+                ],
+            ]);
+
+            $this->fcmService->sendToUser($pm->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
     }
 
     /**
-     * Send commitment fee request notification to ALL legal admin
+     * Send commitment fee request notification to ALL legal admin AND project managers
      */
     public function sendCommitmentFeeRequestNotification(Order $order)
     {
@@ -179,10 +270,40 @@ class NotificationService
                 ],
             ]);
         }
+
+        // Also send to ALL Project Managers
+        $pms = User::whereHas('role', function ($query) {
+            $query->where('nama_role', 'Project Manager');
+        })->get();
+
+        foreach ($pms as $pm) {
+            $notification = Notification::create([
+                'user_id' => $pm->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_COMMITMENT_FEE_REQUEST,
+                'title' => 'Commitment Fee Request - ' . $order->nama_project,
+                'message' => 'Moodboard kasar telah di-approve untuk project "' . $order->nama_project . '". Legal admin sedang mengisi commitment fee.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/commitment-fee',
+                ],
+            ]);
+
+            $this->fcmService->sendToUser($pm->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
     }
 
     /**
-     * Send design approval notification to designer
+     * Send design approval notification to designer AND project managers
      */
     public function sendDesignApprovalNotification(Order $order)
     {
@@ -216,10 +337,40 @@ class NotificationService
                 ],
             ]);
         }
+
+        // Also send to ALL Project Managers
+        $pms = User::whereHas('role', function ($query) {
+            $query->where('nama_role', 'Project Manager');
+        })->get();
+
+        foreach ($pms as $pm) {
+            $notification = Notification::create([
+                'user_id' => $pm->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_DESIGN_APPROVAL,
+                'title' => 'Design Approval - ' . $order->nama_project,
+                'message' => 'Estimasi telah selesai untuk project "' . $order->nama_project . '". Designer sedang review dan approve design.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/moodboard',
+                ],
+            ]);
+
+            $this->fcmService->sendToUser($pm->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
     }
 
     /**
-     * Send final design request notification to designer
+     * Send final design request notification to designer AND project managers
      */
     public function sendFinalDesignRequestNotification(Order $order)
     {
@@ -244,6 +395,36 @@ class NotificationService
 
             // 🔥 Send FCM push notification
             $this->fcmService->sendToUser($designer->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
+
+        // Also send to ALL Project Managers
+        $pms = User::whereHas('role', function ($query) {
+            $query->where('nama_role', 'Project Manager');
+        })->get();
+
+        foreach ($pms as $pm) {
+            $notification = Notification::create([
+                'user_id' => $pm->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_FINAL_DESIGN_REQUEST,
+                'title' => 'Final Design Request - ' . $order->nama_project,
+                'message' => 'Commitment fee telah selesai untuk project "' . $order->nama_project . '". Designer sedang membuat final design.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/moodboard',
+                ],
+            ]);
+
+            $this->fcmService->sendToUser($pm->id, [
                 'title' => $notification->title,
                 'body' => $notification->message,
                 'data' => [
@@ -287,6 +468,36 @@ class NotificationService
                 ],
             ]);
         }
+
+        // Also send to ALL Project Managers
+        $pms = User::whereHas('role', function ($query) {
+            $query->where('nama_role', 'Project Manager');
+        })->get();
+
+        foreach ($pms as $pm) {
+            $notification = Notification::create([
+                'user_id' => $pm->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_ITEM_PEKERJAAN_REQUEST,
+                'title' => 'Item Pekerjaan Request - ' . $order->nama_project,
+                'message' => 'Desain Final telah selesai untuk project "' . $order->nama_project . '". Designer sedang membuat Item Pekerjaan.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/item-pekerjaan',
+                ],
+            ]);
+
+            $this->fcmService->sendToUser($pm->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
     }
 
     public function sendRabInternalRequestNotification(Order $order)
@@ -312,6 +523,36 @@ class NotificationService
 
             // 🔥 Send FCM push notification
             $this->fcmService->sendToUser($estimator->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
+
+        // Also send to ALL Project Managers
+        $pms = User::whereHas('role', function ($query) {
+            $query->where('nama_role', 'Project Manager');
+        })->get();
+
+        foreach ($pms as $pm) {
+            $notification = Notification::create([
+                'user_id' => $pm->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_RAB_INTERNAL_REQUEST,
+                'title' => 'RAB Internal Request - ' . $order->nama_project,
+                'message' => 'Item Pekerjaan telah selesai untuk project "' . $order->nama_project . '". Estimator sedang membuat RAB Internal.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/rab-internal',
+                ],
+            ]);
+
+            $this->fcmService->sendToUser($pm->id, [
                 'title' => $notification->title,
                 'body' => $notification->message,
                 'data' => [
@@ -355,6 +596,36 @@ class NotificationService
                 ],
             ]);
         }
+
+        // Also send to ALL Project Managers
+        $pms = User::whereHas('role', function ($query) {
+            $query->where('nama_role', 'Project Manager');
+        })->get();
+
+        foreach ($pms as $pm) {
+            $notification = Notification::create([
+                'user_id' => $pm->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_KONTRAK_REQUEST,
+                'title' => 'Kontrak Request - ' . $order->nama_project,
+                'message' => 'RAB Internal telah submit untuk project "' . $order->nama_project . '". Legal admin sedang membuat Kontrak.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/kontrak',
+                ],
+            ]);
+
+            $this->fcmService->sendToUser($pm->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
     }
 
     public function sendInvoiceRequestNotification(Order $order)
@@ -380,6 +651,36 @@ class NotificationService
 
             // 🔥 Send FCM push notification
             $this->fcmService->sendToUser($financeUser->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
+
+        // Also send to ALL Project Managers
+        $pms = User::whereHas('role', function ($query) {
+            $query->where('nama_role', 'Project Manager');
+        })->get();
+
+        foreach ($pms as $pm) {
+            $notification = Notification::create([
+                'user_id' => $pm->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_INVOICE_REQUEST,
+                'title' => 'Invoice Request - ' . $order->nama_project,
+                'message' => 'Kontrak telah submit untuk project "' . $order->nama_project . '". Finance sedang membuat Invoice.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/invoice',
+                ],
+            ]);
+
+            $this->fcmService->sendToUser($pm->id, [
                 'title' => $notification->title,
                 'body' => $notification->message,
                 'data' => [
@@ -457,6 +758,37 @@ class NotificationService
                 ],
             ]);
         }
+
+        // Also send to ALL Project Managers
+        $pms = User::whereHas('role', function ($query) {
+            $query->where('nama_role', 'Project Manager');
+        })->get();
+
+        foreach ($pms as $pm) {
+            $notification = Notification::create([
+                'user_id' => $pm->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_SURVEY_ULANG_REQUEST,
+                'title' => 'Re-Survey Request - ' . $order->nama_project,
+                'message' => 'Customer telah DP untuk project "' . $order->nama_project . '". Team survey sedang melakukan survey ulang.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'tanggal_survey' => $order->tanggal_survey,
+                    'action_url' => '/survey-ulang',
+                ],
+            ]);
+
+            $this->fcmService->sendToUser($pm->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
     }
 
     public function sendGambarKerjaRequestNotification(Order $order)
@@ -464,6 +796,7 @@ class NotificationService
         $teams = $order->surveyUsers()->whereHas('role', function ($query) {
             $query->whereIn('nama_role', ['Surveyor', 'Drafter', 'Desainer']);
         })->get();
+        
         foreach ($teams as $team) {
             $notification = Notification::create([
                 'user_id' => $team->id,
@@ -480,6 +813,36 @@ class NotificationService
 
             // 🔥 Send FCM push notification
             $this->fcmService->sendToUser($team->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
+
+        // Also send to ALL Project Managers
+        $pms = User::whereHas('role', function ($query) {
+            $query->where('nama_role', 'Project Manager');
+        })->get();
+
+        foreach ($pms as $pm) {
+            $notification = Notification::create([
+                'user_id' => $pm->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_GAMBAR_KERJA_REQUEST,
+                'title' => 'Gambar Kerja Request - ' . $order->nama_project,
+                'message' => 'Survey ulang telah selesai untuk project "' . $order->nama_project . '". Team drafter sedang membuat gambar kerja.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/gambar-kerja',
+                ],
+            ]);
+
+            $this->fcmService->sendToUser($pm->id, [
                 'title' => $notification->title,
                 'body' => $notification->message,
                 'data' => [
@@ -513,6 +876,36 @@ class NotificationService
 
             // 🔥 Send FCM push notification
             $this->fcmService->sendToUser($drafter->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
+
+        // Also send to ALL Project Managers
+        $pms = User::whereHas('role', function ($query) {
+            $query->where('nama_role', 'Project Manager');
+        })->get();
+
+        foreach ($pms as $pm) {
+            $notification = Notification::create([
+                'user_id' => $pm->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_APPROVAL_MATERIAL_REQUEST,
+                'title' => 'Approval Material Request - ' . $order->nama_project,
+                'message' => 'Gambar kerja telah selesai untuk project "' . $order->nama_project . '". Drafter sedang melakukan approval material.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/approval-material',
+                ],
+            ]);
+
+            $this->fcmService->sendToUser($pm->id, [
                 'title' => $notification->title,
                 'body' => $notification->message,
                 'data' => [

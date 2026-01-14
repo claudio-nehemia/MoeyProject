@@ -67,9 +67,10 @@ export default function Index({ surveys }: Props) {
                 `/survey-results/${orderId}/mark-response`,
                 {},
                 {
-                    preserveScroll: true,
                     onSuccess: () => {
                         console.log('Survey marked as responded');
+                        // Force reload to get fresh data
+                        router.reload({ only: ['surveys'] });
                     },
                 },
             );
@@ -79,7 +80,11 @@ export default function Index({ surveys }: Props) {
     const handlePmResponse = (surveyId: number) => {
         if (confirm('Apakah Anda yakin ingin memberikan PM response untuk survey result ini?')) {
             router.post(`/pm-response/survey-result/${surveyId}`, {}, {
-                preserveScroll: true,
+                onSuccess: () => {
+                    console.log('PM response recorded');
+                    // Force reload to get fresh data
+                    router.reload({ only: ['surveys'] });
+                },
             });
         }
     };

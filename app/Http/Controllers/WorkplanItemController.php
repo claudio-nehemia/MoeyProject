@@ -105,6 +105,8 @@ class WorkplanItemController extends Controller
                 $hasResponded = WorkplanItem::hasAnyResponded($workplanItems);
                 $responseBy = null;
                 $responseTime = null;
+                $pmResponseBy = null;
+                $pmResponseTime = null;
                 
                 if ($hasResponded) {
                     // Get first responded item's info
@@ -113,6 +115,13 @@ class WorkplanItemController extends Controller
                         $responseBy = $respondedItem->response_by;
                         $responseTime = $respondedItem->response_time;
                     }
+                }
+                
+                // Get PM response info from first PM responded item
+                $pmRespondedItem = $workplanItems->first(fn($item) => $item->pm_response_time !== null);
+                if ($pmRespondedItem) {
+                    $pmResponseBy = $pmRespondedItem->pm_response_by;
+                    $pmResponseTime = $pmRespondedItem->pm_response_time;
                 }
 
                 return [
@@ -126,6 +135,8 @@ class WorkplanItemController extends Controller
                     'has_responded' => $hasResponded,
                     'response_by' => $responseBy,
                     'response_time' => $responseTime?->toIso8601String(),
+                    'pm_response_by' => $pmResponseBy,
+                    'pm_response_time' => $pmResponseTime?->toIso8601String(),
                     'workplan_progress' => $totalProduks > 0 
                         ? round(($produksWithWorkplan / $totalProduks) * 100) 
                         : 0,

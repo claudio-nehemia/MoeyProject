@@ -24,6 +24,7 @@ class SurveyUlang extends Model
         'temuan' => 'array',
         'survey_time' => 'datetime',
         'response_time' => 'datetime',
+        'pm_response_time' => 'datetime',
     ];
 
     public function order()

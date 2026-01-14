@@ -22,6 +22,7 @@ class GambarKerja extends Model
     protected $casts = [
         'response_time' => 'datetime',
         'approved_time' => 'datetime',
+        'pm_response_time' => 'datetime',
     ];
 
     /* ================= RELATIONS ================= */

@@ -31,10 +31,20 @@ class PmResponseController extends Controller
      */
     private function recordResponse($model)
     {
+        \Log::info('=== RECORD PM RESPONSE ===');
+        \Log::info('Model: ' . get_class($model));
+        \Log::info('Before update - response_time: ' . ($model->response_time ?? 'null'));
+        \Log::info('Before update - pm_response_time: ' . ($model->pm_response_time ?? 'null'));
+        
         $model->update([
             'pm_response_time' => now(),
             'pm_response_by' => auth()->user()->name,
         ]);
+        
+        $model->refresh();
+        \Log::info('After update - response_time: ' . ($model->response_time ?? 'null'));
+        \Log::info('After update - pm_response_time: ' . $model->pm_response_time);
+        \Log::info('=== END RECORD PM RESPONSE ===');
     }
 
     // Moodboard
@@ -127,5 +137,29 @@ class PmResponseController extends Controller
         if ($check = $this->checkPm()) return $check;
         $this->recordResponse(SurveyResults::findOrFail($id));
         return back()->with('success', 'PM Response berhasil dicatat untuk Survey Result.');
+    }
+
+    // Workplan
+    public function workplan($orderId)
+    {
+        if ($check = $this->checkPm()) return $check;
+        
+        // Get all workplan items for this order
+        $order = \App\Models\Order::with('moodboard.itemPekerjaans.produks.workplanItems')->findOrFail($orderId);
+        
+        $workplanItems = $order->moodboard
+            ->itemPekerjaans
+            ->flatMap(fn($ip) => $ip->produks)
+            ->flatMap(fn($produk) => $produk->workplanItems);
+        
+        // Record PM response for all workplan items
+        foreach ($workplanItems as $item) {
+            $item->update([
+                'pm_response_time' => now(),
+                'pm_response_by' => auth()->user()->name,
+            ]);
+        }
+        
+        return back()->with('success', 'PM Response berhasil dicatat untuk Workplan.');
     }
 }

@@ -575,6 +575,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/gambar-kerja/{id}', [PmResponseController::class, 'gambarKerja'])->name('gambar-kerja');
         Route::post('/kontrak/{id}', [PmResponseController::class, 'kontrak'])->name('kontrak');
         Route::post('/survey-result/{id}', [PmResponseController::class, 'surveyResult'])->name('survey-result');
+        Route::post('/workplan/{id}', [PmResponseController::class, 'workplan'])->name('workplan');
     });
 
 });

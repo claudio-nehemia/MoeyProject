@@ -38,7 +38,8 @@ class SurveyResultsController extends Controller
                     'jenis_interior' => $order->jenisInterior->nama_interior ?? '-',
                     'tanggal_masuk_customer' => $order->tanggal_masuk_customer,
                     'project_status' => $order->project_status,
-                    'has_survey' => $order->surveyResults !== null,
+                    // has_survey harus cek response_time (staff response), bukan cuma exists
+                    'has_survey' => $order->surveyResults !== null && $order->surveyResults->response_time !== null,
                     'survey_id' => $order->surveyResults->id ?? null,
                     'response_time' => $order->surveyResults->response_time ?? null,
                     'response_by' => $order->surveyResults->response_by ?? null,
@@ -73,17 +74,26 @@ class SurveyResultsController extends Controller
     {
         $order = Order::findOrFail($orderId);
         
-        // Check if survey already exists
-        if ($order->surveyResults) {
-            return back()->with('error', 'Survey already exists for this order.');
+        // Check if STAFF already responded (cek response_time, bukan cuma exists)
+        if ($order->surveyResults && $order->surveyResults->response_time) {
+            return back()->with('error', 'Staff response already recorded for this order.');
         }
 
-        // Create empty survey with response info
-        SurveyResults::create([
-            'order_id' => $order->id,
-            'response_time' => now(),
-            'response_by' => auth()->user()->name ?? 'Admin',
-        ]);
+        // If surveyResults exists (PM mungkin sudah response) tapi response_time NULL
+        // Update response_time (staff response)
+        if ($order->surveyResults) {
+            $order->surveyResults->update([
+                'response_time' => now(),
+                'response_by' => auth()->user()->name ?? 'Admin',
+            ]);
+        } else {
+            // Create new survey with response info
+            SurveyResults::create([
+                'order_id' => $order->id,
+                'response_time' => now(),
+                'response_by' => auth()->user()->name ?? 'Admin',
+            ]);
+        }
 
         $order->update([
             'tahapan_proyek' => 'survey',

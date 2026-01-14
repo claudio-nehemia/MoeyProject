@@ -21,6 +21,12 @@ class Moodboard extends Model
         'pm_response_by',
     ];
 
+    protected $casts = [
+        'response_time' => 'datetime',
+        'response_final_time' => 'datetime',
+        'pm_response_time' => 'datetime',
+    ];
+
     public function order()
     {
         return $this->belongsTo(Order::class);

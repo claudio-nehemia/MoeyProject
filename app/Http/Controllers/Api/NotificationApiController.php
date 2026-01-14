@@ -666,4 +666,224 @@ class NotificationApiController extends Controller
             'data' => ['order_id' => $order->id],
         ];
     }
+
+    /**
+     * Handle PM Response for notification
+     */
+    public function handlePmResponse($notificationId)
+    {
+        try {
+            $notification = Notification::where('id', $notificationId)
+                ->where('user_id', auth()->id())
+                ->with([
+                    'order.moodboard',
+                    'order.surveyUlang',
+                    'order.gambarKerja',
+                    'order.surveyResults',
+                    'order.moodboard.itemPekerjaans.produks.workplanItems',
+                    'order.itemPekerjaans.kontrak'
+                ])
+                ->firstOrFail();
+
+            // Check if user is Project Manager
+            $user = auth()->user()->load('role');
+            if (!$user->role || $user->role->nama_role !== 'Project Manager') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Only Project Manager can perform PM response.',
+                ], 403);
+            }
+
+            $order = $notification->order;
+            if (!$order) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Order not found for this notification.',
+                ], 404);
+            }
+
+            // Mark notification as read
+            $this->notificationService->markAsRead($notificationId, auth()->id());
+
+            // Handle PM response based on notification type
+            $result = $this->processPmResponse($notification->type, $order);
+
+            return response()->json($result);
+
+        } catch (\Exception $e) {
+            \Log::error('PM Response error: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to process PM response: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    private function processPmResponse($type, $order)
+    {
+        $pmName = auth()->user()->name;
+        $pmTime = now();
+
+        \Log::info("Processing PM Response - Type: {$type}, Order ID: {$order->id}");
+
+        switch ($type) {
+            case Notification::TYPE_MOODBOARD_REQUEST:
+            case Notification::TYPE_ESTIMASI_REQUEST:
+            case Notification::TYPE_COMMITMENT_FEE_REQUEST:
+            case Notification::TYPE_FINAL_DESIGN_REQUEST:
+            case Notification::TYPE_ITEM_PEKERJAAN_REQUEST:
+                \Log::info("Checking moodboard: " . ($order->moodboard ? 'exists' : 'not found'));
+                
+                // Create or update moodboard (PM response only)
+                if (!$order->moodboard) {
+                    \Log::info("Creating new moodboard with PM response ONLY");
+                    \App\Models\Moodboard::create([
+                        'order_id' => $order->id,
+                        'pm_response_time' => $pmTime,
+                        'pm_response_by' => $pmName,
+                        // DON'T set response_time or response_by - that's for staff!
+                    ]);
+                } else {
+                    \Log::info("Updating existing moodboard with PM response");
+                    $order->moodboard->update([
+                        'pm_response_time' => $pmTime,
+                        'pm_response_by' => $pmName,
+                    ]);
+                }
+                
+                return [
+                    'success' => true,
+                    'message' => 'PM Response recorded successfully. Staff can now work on moodboard.',
+                ];
+                break;
+
+            case Notification::TYPE_SURVEY_ULANG_REQUEST:
+                \Log::info("Checking surveyUlang: " . ($order->surveyUlang ? 'exists' : 'not found'));
+                
+                // Create or update surveyUlang (PM response only)
+                if (!$order->surveyUlang) {
+                    \Log::info("Creating new surveyUlang with PM response ONLY");
+                    \App\Models\SurveyUlang::create([
+                        'order_id' => $order->id,
+                        'pm_response_time' => $pmTime,
+                        'pm_response_by' => $pmName,
+                        // DON'T set response_time or response_by - that's for staff!
+                    ]);
+                } else {
+                    \Log::info("Updating existing surveyUlang with PM response");
+                    $order->surveyUlang->update([
+                        'pm_response_time' => $pmTime,
+                        'pm_response_by' => $pmName,
+                    ]);
+                }
+                
+                return [
+                    'success' => true,
+                    'message' => 'PM Response recorded successfully. Staff can now complete survey ulang.',
+                ];
+                break;
+
+            case Notification::TYPE_GAMBAR_KERJA_REQUEST:
+                \Log::info("Checking gambarKerja: " . ($order->gambarKerja ? 'exists' : 'not found'));
+                
+                // Create or update gambarKerja (PM response only)
+                if (!$order->gambarKerja) {
+                    \Log::info("Creating new gambarKerja with PM response ONLY");
+                    \App\Models\GambarKerja::create([
+                        'order_id' => $order->id,
+                        'pm_response_time' => $pmTime,
+                        'pm_response_by' => $pmName,
+                        'status' => 'pending',
+                        // DON'T set response_time or response_by - that's for staff!
+                    ]);
+                } else {
+                    \Log::info("Updating existing gambarKerja with PM response");
+                    $order->gambarKerja->update([
+                        'pm_response_time' => $pmTime,
+                        'pm_response_by' => $pmName,
+                    ]);
+                }
+                
+                return [
+                    'success' => true,
+                    'message' => 'PM Response recorded successfully. Staff can now upload gambar kerja.',
+                ];
+                break;
+
+            case Notification::TYPE_WORKPLAN_REQUEST:
+                \Log::info("Checking workplan - has moodboard: " . ($order->moodboard ? 'yes' : 'no'));
+                if ($order->moodboard && $order->moodboard->itemPekerjaans) {
+                    $workplanItems = $order->moodboard->itemPekerjaans
+                        ->flatMap(fn($ip) => $ip->produks ?? collect())
+                        ->flatMap(fn($produk) => $produk->workplanItems ?? collect());
+
+                    \Log::info("Workplan items count: " . $workplanItems->count());
+                    
+                    if ($workplanItems->count() > 0) {
+                        foreach ($workplanItems as $item) {
+                            $item->update([
+                                'pm_response_time' => $pmTime,
+                                'pm_response_by' => $pmName,
+                            ]);
+                        }
+                        return [
+                            'success' => true,
+                            'message' => 'PM Response recorded successfully for Workplan.',
+                        ];
+                    }
+                }
+                break;
+
+            case Notification::TYPE_KONTRAK_REQUEST:
+                \Log::info("Checking kontrak");
+                if ($order->itemPekerjaans && $order->itemPekerjaans->isNotEmpty()) {
+                    $kontrak = $order->itemPekerjaans->first()?->kontrak;
+                    \Log::info("Kontrak: " . ($kontrak ? 'exists' : 'not found'));
+                    if ($kontrak) {
+                        $kontrak->update([
+                            'pm_response_time' => $pmTime,
+                            'pm_response_by' => $pmName,
+                        ]);
+                        return [
+                            'success' => true,
+                            'message' => 'PM Response recorded successfully for Kontrak.',
+                        ];
+                    }
+                }
+                break;
+
+            case Notification::TYPE_SURVEY_REQUEST:
+                \Log::info("Checking surveyResults: " . ($order->surveyResults ? 'exists' : 'not found'));
+                
+                // Create or update surveyResults (PM response only, don't touch staff response)
+                if (!$order->surveyResults) {
+                    \Log::info("Creating new surveyResults with PM response ONLY");
+                    \App\Models\SurveyResults::create([
+                        'order_id' => $order->id,
+                        'pm_response_time' => $pmTime,
+                        'pm_response_by' => $pmName,
+                        // DON'T set response_time or response_by - that's for staff!
+                    ]);
+                } else {
+                    \Log::info("Updating existing surveyResults with PM response");
+                    $order->surveyResults->update([
+                        'pm_response_time' => $pmTime,
+                        'pm_response_by' => $pmName,
+                    ]);
+                }
+                
+                return [
+                    'success' => true,
+                    'message' => 'PM Response recorded successfully. Staff can now complete the survey.',
+                ];
+                break;
+        }
+
+        \Log::warning("PM Response failed - No related record found for type: {$type}");
+        return [
+            'success' => false,
+            'message' => 'Unable to record PM response. Related record not found.',
+        ];
+    }
 }

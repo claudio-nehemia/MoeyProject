@@ -1,7 +1,7 @@
 import Navbar from '@/components/Navbar';
 import SearchFilter from '@/components/SearchFilter';
 import Sidebar from '@/components/Sidebar';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 
 interface PengajuanPerpanjanganTimeline {
@@ -31,6 +31,8 @@ interface Order {
     has_responded: boolean;
     response_by: string | null;
     response_time: string | null;
+    pm_response_by: string | null;
+    pm_response_time: string | null;
     item_pekerjaans: ItemPekerjaan[];
 }
 
@@ -39,6 +41,9 @@ interface Props {
 }
 
 export default function Index({ orders }: Props) {
+    const { auth } = usePage<{ auth: { user: { isProjectManager: boolean } } }>().props;
+    const isProjectManager = auth?.user?.isProjectManager || false;
+    
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [searchQuery, setSearchQuery] = useState('');
     const [filteredOrders, setFilteredOrders] = useState(orders);
@@ -68,6 +73,14 @@ export default function Index({ orders }: Props) {
         if (progress >= 25) return 'bg-gradient-to-r from-orange-500 to-red-500';
         if (progress > 0) return 'bg-gradient-to-r from-pink-500 to-rose-600';
         return 'bg-gray-300';
+    };
+
+    const handlePmResponse = (orderId: number) => {
+        if (confirm('Apakah Anda yakin ingin memberikan PM response untuk workplan ini?')) {
+            router.post(`/pm-response/workplan/${orderId}`, {}, {
+                preserveScroll: true,
+            });
+        }
     };
 
     // Cek apakah bisa edit workplan berdasarkan status pengajuan perpanjangan
@@ -287,6 +300,24 @@ export default function Index({ orders }: Props) {
                                                     )}
                                                 </div>
                                             )}
+                                            
+                                            {order.pm_response_by && (
+                                                <div className="text-right">
+                                                    <p className="text-xs text-purple-500">PM Response By</p>
+                                                    <p className="text-sm font-semibold text-purple-900">{order.pm_response_by}</p>
+                                                    {order.pm_response_time && (
+                                                        <p className="text-xs text-purple-400 mt-1">
+                                                            {new Date(order.pm_response_time).toLocaleDateString('id-ID', {
+                                                                day: 'numeric',
+                                                                month: 'short',
+                                                                year: 'numeric',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit'
+                                                            })}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
@@ -306,6 +337,19 @@ export default function Index({ orders }: Props) {
 
                                     {/* Actions */}
                                     <div className="mt-4 flex items-center justify-end gap-2">
+                                        {/* PM Response Button */}
+                                        {isProjectManager && order.has_responded && !order.pm_response_time && (
+                                            <button
+                                                onClick={() => handlePmResponse(order.id)}
+                                                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-purple-600 hover:to-purple-700 hover:shadow-lg"
+                                            >
+                                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                PM Response
+                                            </button>
+                                        )}
+                                        
                                         {/* Show Response button only if NOT responded yet */}
                                         {!order.has_responded && (
                                             <button

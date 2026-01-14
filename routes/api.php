@@ -28,6 +28,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{id}/mark-as-read', [NotificationApiController::class, 'markAsRead'])->name('mark-as-read');
         Route::post('/mark-all-as-read', [NotificationApiController::class, 'markAllAsRead'])->name('mark-all-as-read');
         Route::post('/{id}/handle-response', [NotificationApiController::class, 'handleResponse']);
+        Route::post('/{id}/pm-response', [NotificationApiController::class, 'handlePmResponse'])->name('pm-response');
     });
 
     // Mobile FCM Token Management
