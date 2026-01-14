@@ -28,6 +28,26 @@ class ProdukController extends Controller
 
     public function store(Request $request)
     {
+        // Log request untuk debugging
+        \Log::info('Produk Store Request', [
+            'nama_produk' => $request->nama_produk,
+            'bahan_baku' => $request->bahan_baku,
+            'has_images' => $request->hasFile('produk_images'),
+        ]);
+
+        // Sanitize bahan baku values - hapus karakter non-digit
+        if ($request->has('bahan_baku') && is_array($request->bahan_baku)) {
+            $sanitizedBahanBaku = [];
+            foreach ($request->bahan_baku as $bahan) {
+                $sanitizedBahanBaku[] = [
+                    'item_id' => $bahan['item_id'] ?? null,
+                    'harga_dasar' => preg_replace('/[^0-9.]/', '', $bahan['harga_dasar'] ?? '0'),
+                    'harga_jasa' => preg_replace('/[^0-9.]/', '', $bahan['harga_jasa'] ?? '0'),
+                ];
+            }
+            $request->merge(['bahan_baku' => $sanitizedBahanBaku]);
+        }
+
         $validated = $request->validate([
             'nama_produk' => 'required|string|max:255',
             'produk_images' => 'nullable|array',
@@ -91,6 +111,27 @@ class ProdukController extends Controller
 
     public function update(Request $request, Produk $produk)
     {
+        // Log request untuk debugging
+        \Log::info('Produk Update Request', [
+            'produk_id' => $produk->id,
+            'nama_produk' => $request->nama_produk,
+            'bahan_baku' => $request->bahan_baku,
+            'has_images' => $request->hasFile('produk_images'),
+        ]);
+
+        // Sanitize bahan baku values - hapus karakter non-digit
+        if ($request->has('bahan_baku') && is_array($request->bahan_baku)) {
+            $sanitizedBahanBaku = [];
+            foreach ($request->bahan_baku as $bahan) {
+                $sanitizedBahanBaku[] = [
+                    'item_id' => $bahan['item_id'] ?? null,
+                    'harga_dasar' => preg_replace('/[^0-9.]/', '', $bahan['harga_dasar'] ?? '0'),
+                    'harga_jasa' => preg_replace('/[^0-9.]/', '', $bahan['harga_jasa'] ?? '0'),
+                ];
+            }
+            $request->merge(['bahan_baku' => $sanitizedBahanBaku]);
+        }
+
         $validated = $request->validate([
             'nama_produk' => 'required|string|max:255',
             'produk_images' => 'nullable|array',

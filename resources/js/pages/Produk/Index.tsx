@@ -95,8 +95,9 @@ export default function Index({ produks, bahanBakuItems = [] }: Props) {
         // Convert existing bahan bakus ke format BahanBakuData
         const bahanBakuData: BahanBakuData[] = (produk.bahan_bakus || []).map(item => ({
             item_id: item.id,
-            harga_dasar: (item.pivot?.harga_dasar || 0).toString(),
-            harga_jasa: (item.pivot?.harga_jasa || 0).toString(),
+            // Convert to integer to remove decimal points from database
+            harga_dasar: Math.floor(item.pivot?.harga_dasar || 0).toString(),
+            harga_jasa: Math.floor(item.pivot?.harga_jasa || 0).toString(),
         }));
         
         setData({
@@ -120,34 +121,68 @@ export default function Index({ produks, bahanBakuItems = [] }: Props) {
     const handleSubmit: FormEventHandler = (e) => {
         e.preventDefault();
         
+        // Validasi basic
+        if (!data.nama_produk || data.nama_produk.trim() === '') {
+            alert('Nama produk harus diisi');
+            return;
+        }
+
+        // Validasi bahan baku jika ada
+        if (data.bahan_baku && data.bahan_baku.length > 0) {
+            for (const bahan of data.bahan_baku) {
+                if (!bahan.harga_dasar || !bahan.harga_jasa) {
+                    alert('Semua bahan baku harus memiliki harga dasar dan harga jasa');
+                    return;
+                }
+            }
+        }
+
+        console.log('=== Produk Submit Debug ===');
+        console.log('Nama Produk:', data.nama_produk);
+        console.log('Bahan Baku:', data.bahan_baku);
+        console.log('Selected Images:', selectedImages.length);
+        
         const formData = new FormData();
-        formData.append('nama_produk', data.nama_produk);
+        formData.append('nama_produk', data.nama_produk.trim());
         
         // Append all selected images
         selectedImages.forEach((file, index) => {
             formData.append(`produk_images[${index}]`, file);
         });
 
-        // Append bahan baku dengan pivot data
+        // Append bahan baku dengan pivot data - pastikan nilai valid
         data.bahan_baku.forEach((bahan, index) => {
             formData.append(`bahan_baku[${index}][item_id]`, bahan.item_id.toString());
-            formData.append(`bahan_baku[${index}][harga_dasar]`, bahan.harga_dasar || '0');
-            formData.append(`bahan_baku[${index}][harga_jasa]`, bahan.harga_jasa || '0');
+            // Pastikan nilai hanya angka, hapus semua karakter non-digit
+            const cleanHargaDasar = (bahan.harga_dasar || '0').replace(/\D/g, '');
+            const cleanHargaJasa = (bahan.harga_jasa || '0').replace(/\D/g, '');
+            formData.append(`bahan_baku[${index}][harga_dasar]`, cleanHargaDasar || '0');
+            formData.append(`bahan_baku[${index}][harga_jasa]`, cleanHargaJasa || '0');
         });
 
         if (editMode && selectedProduk) {
             formData.append('_method', 'PUT');
             router.post(`/produk/${selectedProduk.id}`, formData, {
                 forceFormData: true,
+                preserveScroll: true,
                 onSuccess: () => {
                     closeModal();
+                },
+                onError: (errors) => {
+                    console.error('Submit error:', errors);
+                    alert('Terjadi kesalahan saat menyimpan. Silakan cek console untuk detail.');
                 },
             });
         } else {
             router.post("/produk", formData, {
                 forceFormData: true,
+                preserveScroll: true,
                 onSuccess: () => {
                     closeModal();
+                },
+                onError: (errors) => {
+                    console.error('Submit error:', errors);
+                    alert('Terjadi kesalahan saat menyimpan. Silakan cek console untuk detail.');
                 },
             });
         }

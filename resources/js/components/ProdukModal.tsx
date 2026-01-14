@@ -76,16 +76,20 @@ export default function ProdukModal({
     };
 
     // Format number with thousand separators
-    const formatNumber = (value: string): string => {
+    const formatNumber = (value: string | number): string => {
+        // Convert to string and remove all non-digit characters (including decimal points)
+        const stringValue = typeof value === 'number' ? value.toString() : value;
+        // Extract only the integer part (before decimal point if any)
+        const integerPart = stringValue.split('.')[0];
         // Remove all non-digit characters
-        const numbers = value.replace(/\D/g, '');
+        const numbers = integerPart.replace(/\D/g, '');
         // Format with thousand separators
         return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     };
 
     // Parse formatted number back to plain string
     const parseFormattedNumber = (value: string): string => {
-        // Remove dots and return plain number string
+        // Remove dots (thousand separators) and return plain number string
         return value.replace(/\./g, '');
     };
 
@@ -169,10 +173,12 @@ export default function ProdukModal({
 
     const updateBahanBakuHarga = (itemId: number, field: 'harga_dasar' | 'harga_jasa', value: string) => {
         const currentBahan = data.bahan_baku || [];
-        // Store the unformatted value
+        // Store the unformatted value - hapus semua karakter non-digit
         const plainValue = parseFormattedNumber(value);
+        // Validasi bahwa plainValue adalah angka valid
+        const numericValue = plainValue.replace(/[^0-9]/g, '');
         const newBahan = currentBahan.map(b => 
-            b.item_id === itemId ? { ...b, [field]: plainValue } : b
+            b.item_id === itemId ? { ...b, [field]: numericValue } : b
         );
         onDataChange('bahan_baku', newBahan);
     };
