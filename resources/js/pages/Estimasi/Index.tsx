@@ -91,8 +91,8 @@ export default function EstimasiIndex({ moodboards }: Props) {
     const [searchQuery, setSearchQuery] = useState('');
     const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
 
-    const { auth } = usePage<{ auth: { user: { isProjectManager: boolean } } }>().props;
-    const isProjectManager = auth?.user?.isProjectManager || false;
+    const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
+    const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
 
     const filteredMoodboards = moodboards.filter((moodboard) => {
         const search = searchQuery.toLowerCase();
@@ -291,14 +291,14 @@ export default function EstimasiIndex({ moodboards }: Props) {
                                         </div>
                                     )}
 
-                                    {/* PM Response Button - Always visible for PM */}
-                                    {isProjectManager && !moodboard.pm_response_time && (
+                                    {/* Marketing Response Button - INDEPENDENT */}
+                                    {isKepalaMarketing && !moodboard.pm_response_time && (
                                         <div className="mb-4">
                                             <button
                                                 onClick={() => handlePmResponse(moodboard.id)}
                                                 className="w-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg transition-all"
                                             >
-                                                PM Response
+                                                Marketing Response
                                             </button>
                                         </div>
                                     )}

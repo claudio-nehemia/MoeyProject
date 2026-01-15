@@ -41,8 +41,8 @@ interface Props {
 }
 
 export default function Index({ orders }: Props) {
-    const { auth } = usePage<{ auth: { user: { isProjectManager: boolean } } }>().props;
-    const isProjectManager = auth?.user?.isProjectManager || false;
+    const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
+    const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
     
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [searchQuery, setSearchQuery] = useState('');
@@ -337,8 +337,8 @@ export default function Index({ orders }: Props) {
 
                                     {/* Actions */}
                                     <div className="mt-4 flex items-center justify-end gap-2">
-                                        {/* PM Response Button */}
-                                        {isProjectManager && order.has_responded && !order.pm_response_time && (
+                                        {/* PM Response Button - INDEPENDENT dari general response */}
+                                        {isKepalaMarketing && !order.pm_response_time && (
                                             <button
                                                 onClick={() => handlePmResponse(order.id)}
                                                 className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-purple-600 hover:to-purple-700 hover:shadow-lg"
@@ -346,7 +346,7 @@ export default function Index({ orders }: Props) {
                                                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                 </svg>
-                                                PM Response
+                                                Marketing Response
                                             </button>
                                         )}
                                         

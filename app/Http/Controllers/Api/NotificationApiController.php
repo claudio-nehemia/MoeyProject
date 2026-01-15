@@ -685,12 +685,12 @@ class NotificationApiController extends Controller
                 ])
                 ->firstOrFail();
 
-            // Check if user is Project Manager
+            // Check if user is Kepala Marketing
             $user = auth()->user()->load('role');
-            if (!$user->role || $user->role->nama_role !== 'Project Manager') {
+            if (!$user->role || $user->role->nama_role !== 'Kepala Marketing') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Unauthorized. Only Project Manager can perform PM response.',
+                    'message' => 'Unauthorized. Only Kepala Marketing can perform PM response.',
                 ], 403);
             }
 

@@ -53,9 +53,9 @@ class NotificationService
             ]);
         }
 
-        // Also send to ALL Project Managers
-        $pms = User::whereHas('role', function ($query) {
-            $query->where('nama_role', 'Project Manager');
+        // Also send to Kepala Marketing in order teams
+        $pms = $order->users()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Kepala Marketing');
         })->get();
 
         foreach ($pms as $pm) {
@@ -137,9 +137,9 @@ class NotificationService
         
         \Log::info('=== END SEND MOODBOARD NOTIFICATION ===');
 
-        // Also send to ALL Project Managers
-        $pms = User::whereHas('role', function ($query) {
-            $query->where('nama_role', 'Project Manager');
+        // Also send to Kepala Marketing in order teams
+        $pms = $order->users()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Kepala Marketing');
         })->get();
 
         foreach ($pms as $pm) {
@@ -204,9 +204,9 @@ class NotificationService
             ]);
         }
 
-        // Also send to ALL Project Managers
-        $pms = User::whereHas('role', function ($query) {
-            $query->where('nama_role', 'Project Manager');
+        // Also send to Kepala Marketing in order teams
+        $pms = $order->users()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Kepala Marketing');
         })->get();
 
         foreach ($pms as $pm) {
@@ -271,9 +271,9 @@ class NotificationService
             ]);
         }
 
-        // Also send to ALL Project Managers
-        $pms = User::whereHas('role', function ($query) {
-            $query->where('nama_role', 'Project Manager');
+        // Also send to Kepala Marketing in order teams
+        $pms = $order->users()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Kepala Marketing');
         })->get();
 
         foreach ($pms as $pm) {
@@ -338,9 +338,9 @@ class NotificationService
             ]);
         }
 
-        // Also send to ALL Project Managers
-        $pms = User::whereHas('role', function ($query) {
-            $query->where('nama_role', 'Project Manager');
+        // Also send to Kepala Marketing in order teams
+        $pms = $order->users()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Kepala Marketing');
         })->get();
 
         foreach ($pms as $pm) {
@@ -405,9 +405,9 @@ class NotificationService
             ]);
         }
 
-        // Also send to ALL Project Managers
-        $pms = User::whereHas('role', function ($query) {
-            $query->where('nama_role', 'Project Manager');
+        // Also send to Kepala Marketing in order teams
+        $pms = $order->users()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Kepala Marketing');
         })->get();
 
         foreach ($pms as $pm) {
@@ -469,9 +469,9 @@ class NotificationService
             ]);
         }
 
-        // Also send to ALL Project Managers
-        $pms = User::whereHas('role', function ($query) {
-            $query->where('nama_role', 'Project Manager');
+        // Also send to Kepala Marketing in order teams
+        $pms = $order->users()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Kepala Marketing');
         })->get();
 
         foreach ($pms as $pm) {
@@ -533,9 +533,9 @@ class NotificationService
             ]);
         }
 
-        // Also send to ALL Project Managers
-        $pms = User::whereHas('role', function ($query) {
-            $query->where('nama_role', 'Project Manager');
+        // Also send to Kepala Marketing in order teams
+        $pms = $order->users()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Kepala Marketing');
         })->get();
 
         foreach ($pms as $pm) {
@@ -597,9 +597,9 @@ class NotificationService
             ]);
         }
 
-        // Also send to ALL Project Managers
-        $pms = User::whereHas('role', function ($query) {
-            $query->where('nama_role', 'Project Manager');
+        // Also send to Kepala Marketing in order teams
+        $pms = $order->users()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Kepala Marketing');
         })->get();
 
         foreach ($pms as $pm) {
@@ -661,9 +661,9 @@ class NotificationService
             ]);
         }
 
-        // Also send to ALL Project Managers
-        $pms = User::whereHas('role', function ($query) {
-            $query->where('nama_role', 'Project Manager');
+        // Also send to Kepala Marketing in order teams
+        $pms = $order->users()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Kepala Marketing');
         })->get();
 
         foreach ($pms as $pm) {
@@ -694,8 +694,8 @@ class NotificationService
 
     public function sendSurveyScheduleRequestNotification(Order $order)
     {
-        $pms = User::whereHas('role', function ($query) {
-            $query->where('nama_role', 'Project Manager');
+        $pms = $order->users()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Kepala Marketing');
         })->get();
 
         foreach ($pms as $pm) {
@@ -759,9 +759,9 @@ class NotificationService
             ]);
         }
 
-        // Also send to ALL Project Managers
-        $pms = User::whereHas('role', function ($query) {
-            $query->where('nama_role', 'Project Manager');
+        // Also send to Kepala Marketing in order teams
+        $pms = $order->users()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Kepala Marketing');
         })->get();
 
         foreach ($pms as $pm) {
@@ -823,9 +823,9 @@ class NotificationService
             ]);
         }
 
-        // Also send to ALL Project Managers
-        $pms = User::whereHas('role', function ($query) {
-            $query->where('nama_role', 'Project Manager');
+        // Also send to Kepala Marketing in order teams
+        $pms = $order->users()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Kepala Marketing');
         })->get();
 
         foreach ($pms as $pm) {
@@ -886,9 +886,9 @@ class NotificationService
             ]);
         }
 
-        // Also send to ALL Project Managers
-        $pms = User::whereHas('role', function ($query) {
-            $query->where('nama_role', 'Project Manager');
+        // Also send to Kepala Marketing in order teams
+        $pms = $order->users()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Kepala Marketing');
         })->get();
 
         foreach ($pms as $pm) {
@@ -919,15 +919,15 @@ class NotificationService
 
     public function sendWorkplanRequestNotification(Order $order)
     {
-        // Get all Project Managers
-        $pms = User::whereHas('role', function ($query) {
-            $query->where('nama_role', 'Project Manager');
+        // Get Kepala Marketing in order teams
+        $pms = $order->users()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Kepala Marketing');
         })->get();
 
         \Log::info('=== SEND WORKPLAN NOTIFICATION ===');
         \Log::info('Order ID: ' . $order->id);
         \Log::info('Order Name: ' . $order->nama_project);
-        \Log::info('Project Managers found: ' . $pms->count());
+        \Log::info('Kepala Marketing in team found: ' . $pms->count());
 
         foreach ($pms as $pm) {
             \Log::info('Sending notification to PM: ' . $pm->name . ' (ID: ' . $pm->id . ')');
@@ -964,15 +964,22 @@ class NotificationService
 
     public function sendApprovalRabUpdateNotification(Order $order)
     {
-        // Get all Project Managers and Estimators
-        $users = User::whereHas('role', function ($query) {
-            $query->whereIn('nama_role', ['Project Manager', 'Estimator']);
+        // Get Kepala Marketing from order teams and all Estimators
+        $kepalaMarketingInTeam = $order->users()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Kepala Marketing');
         })->get();
+        
+        $estimators = User::whereHas('role', function ($query) {
+            $query->where('nama_role', 'Estimator');
+        })->get();
+        
+        // Merge both collections
+        $users = $kepalaMarketingInTeam->merge($estimators);
 
         \Log::info('=== SEND APPROVAL RAB UPDATE NOTIFICATION ===');
         \Log::info('Order ID: ' . $order->id);
         \Log::info('Order Name: ' . $order->nama_project);
-        \Log::info('PMs & Estimators found: ' . $users->count());
+        \Log::info('Kepala Marketing in team & Estimators found: ' . $users->count());
 
         foreach ($users as $user) {
             \Log::info('Sending notification to: ' . $user->name . ' (ID: ' . $user->id . ')');
@@ -1009,15 +1016,22 @@ class NotificationService
 
     public function sendProjectManagementRequestNotification(Order $order)
     {
-        // Get all Supervisors and Project Managers
-        $users = User::whereHas('role', function ($query) {
-            $query->whereIn('nama_role', ['Supervisor', 'Project Manager']);
+        // Get Kepala Marketing from order teams and all Supervisors
+        $kepalaMarketingInTeam = $order->users()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Kepala Marketing');
         })->get();
+        
+        $supervisors = User::whereHas('role', function ($query) {
+            $query->where('nama_role', 'Supervisor');
+        })->get();
+        
+        // Merge both collections
+        $users = $kepalaMarketingInTeam->merge($supervisors);
 
         \Log::info('=== SEND PROJECT MANAGEMENT NOTIFICATION ===');
         \Log::info('Order ID: ' . $order->id);
         \Log::info('Order Name: ' . $order->nama_project);
-        \Log::info('Supervisors & PMs found: ' . $users->count());
+        \Log::info('Kepala Marketing in team & Supervisors found: ' . $users->count());
 
         foreach ($users as $user) {
             \Log::info('Sending notification to: ' . $user->name . ' (ID: ' . $user->id . ') - Role: ' . $user->role->nama_role);

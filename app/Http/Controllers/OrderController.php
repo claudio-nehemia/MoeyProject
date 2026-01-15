@@ -120,6 +120,19 @@ class OrderController extends Controller
         $order = Order::create($validated);
         \Log::info('Order created with ID:', ['order_id' => $order->id]);
 
+        // Tambahkan Kepala Marketing pertama (yang ID terkecil) ke team
+        $firstKepalaMarketing = User::whereHas('role', function ($query) {
+            $query->where('nama_role', 'Kepala Marketing');
+        })->orderBy('id', 'asc')->first();
+
+        if ($firstKepalaMarketing) {
+            // Add Kepala Marketing to userIds if not already there
+            if (!in_array($firstKepalaMarketing->id, $userIds)) {
+                $userIds[] = $firstKepalaMarketing->id;
+                \Log::info('Added first Kepala Marketing to team:', ['user_id' => $firstKepalaMarketing->id, 'name' => $firstKepalaMarketing->name]);
+            }
+        }
+
         if (!empty($userIds)) {
             \Log::info('Attaching users to order:', ['user_ids' => $userIds]);
             $order->users()->attach($userIds);
@@ -229,8 +242,20 @@ class OrderController extends Controller
         $order->update($validated);
         \Log::info('Order updated successfully');
 
-        // Sync team members (will detach all if empty array)
+        // Tambahkan Kepala Marketing pertama (yang ID terkecil) ke team jika user_ids disediakan
         if ($request->has('user_ids')) {
+            $firstKepalaMarketing = User::whereHas('role', function ($query) {
+                $query->where('nama_role', 'Kepala Marketing');
+            })->orderBy('id', 'asc')->first();
+
+            if ($firstKepalaMarketing) {
+                // Add Kepala Marketing to userIds if not already there
+                if (!in_array($firstKepalaMarketing->id, $userIds)) {
+                    $userIds[] = $firstKepalaMarketing->id;
+                    \Log::info('Added first Kepala Marketing to team during update:', ['user_id' => $firstKepalaMarketing->id, 'name' => $firstKepalaMarketing->name]);
+                }
+            }
+
             \Log::info('Syncing users to order:', ['user_ids' => $userIds]);
             $order->users()->sync($userIds);
             \Log::info('Users synced successfully');

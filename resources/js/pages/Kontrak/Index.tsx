@@ -78,8 +78,8 @@ export default function Index({ itemPekerjaans, termins }: Props) {
         {},
     );
 
-    const { auth } = usePage<{ auth: { user: { isProjectManager: boolean } } }>().props;
-    const isProjectManager = auth?.user?.isProjectManager || false;
+    const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
+    const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
 
     const handleOpenModal = (itemPekerjaan: ItemPekerjaan) => {
         setSelectedItemPekerjaan(itemPekerjaan);
@@ -483,7 +483,7 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                 ) : (
                                                                     <div className="space-y-2">
                                                                         {/* PM Response Button */}
-                                                                        {isProjectManager && !item.kontrak.pm_response_time && (
+                                                                        {isKepalaMarketing && !item.kontrak.pm_response_time && (
                                                                             <button
                                                                                 onClick={() => handlePmResponse(item.kontrak!.id)}
                                                                                 className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:bg-purple-700 hover:shadow-lg"

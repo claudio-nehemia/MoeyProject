@@ -29,8 +29,8 @@ export default function Index({ surveys }: Props) {
     const [mounted, setMounted] = useState(false);
     const [search, setSearch] = useState("");
 
-    const { auth } = usePage<{ auth: { user: { isProjectManager: boolean } } }>().props;
-    const isProjectManager = auth?.user?.isProjectManager || false;
+    const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
+    const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
 
     useEffect(() => {
         setMounted(true);
@@ -227,13 +227,13 @@ export default function Index({ surveys }: Props) {
                                         {/* ACTIONS */}
                                         <div className="flex flex-col gap-2">
 
-                                            {/* PM Response Button */}
-                                            {isProjectManager && !s.pm_response_time && s.survey_ulang_id && (
+                                            {/* Marketing Response Button - INDEPENDENT */}
+                                            {isKepalaMarketing && !s.pm_response_time && s.survey_ulang_id && (
                                                 <button
                                                     onClick={() => handlePmResponse(s.survey_ulang_id!)}
                                                     className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 shadow"
                                                 >
-                                                    PM Response
+                                                    Marketing Response
                                                 </button>
                                             )}
 

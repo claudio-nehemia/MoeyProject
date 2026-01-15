@@ -132,7 +132,8 @@ class Order extends Model
         }
 
         // Roles yang hanya bisa melihat order dimana mereka masuk survey schedule
-        $restrictedRoles = ['Surveyor', 'Drafter', 'Desainer', 'Project Manager', 'Supervisor'];
+        // Kepala Marketing tidak termasuk karena mereka harus bisa melihat semua
+        $restrictedRoles = ['Surveyor', 'Drafter', 'Desainer', 'Supervisor'];
         
         // Load role jika belum di-load
         if (!$user->relationLoaded('role')) {

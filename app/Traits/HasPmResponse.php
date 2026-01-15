@@ -5,11 +5,11 @@ namespace App\Traits;
 trait HasPmResponse
 {
     /**
-     * Check if user is Project Manager
+     * Check if user is Kepala Marketing
      */
     protected function isProjectManager($user): bool
     {
-        return $user && $user->role && $user->role->nama_role === 'Project Manager';
+        return $user && $user->role && $user->role->nama_role === 'Kepala Marketing';
     }
 
     /**

@@ -20,8 +20,8 @@ class PmResponseController extends Controller
     private function checkPm()
     {
         $user = auth()->user();
-        if (!$user->role || $user->role->nama_role !== 'Project Manager') {
-            return redirect()->back()->with('error', 'Unauthorized. Only Project Manager can perform this action.');
+        if (!$user->role || $user->role->nama_role !== 'Kepala Marketing') {
+            return redirect()->back()->with('error', 'Unauthorized. Only Kepala Marketing can perform this action.');
         }
         return null;
     }
@@ -135,8 +135,35 @@ class PmResponseController extends Controller
     public function surveyResult($id)
     {
         if ($check = $this->checkPm()) return $check;
-        $this->recordResponse(SurveyResults::findOrFail($id));
-        return back()->with('success', 'PM Response berhasil dicatat untuk Survey Result.');
+        
+        \Log::info('=== PM RESPONSE SURVEY RESULT START ===');
+        \Log::info('ID received: ' . $id);
+        
+        // Try to find survey result by ID first
+        $surveyResult = SurveyResults::find($id);
+        
+        if (!$surveyResult) {
+            \Log::info('Survey Result not found by ID, trying order_id');
+            // If not found, assume $id is order_id and try to find by order_id
+            $surveyResult = SurveyResults::where('order_id', $id)->first();
+        }
+        
+        if (!$surveyResult) {
+            \Log::info('Survey Result not found, creating new with order_id: ' . $id);
+            // Buat survey result baru untuk Marketing response (assume $id is order_id)
+            $surveyResult = SurveyResults::create([
+                'order_id' => $id,
+                'pm_response_time' => now(),
+                'pm_response_by' => auth()->user()->name,
+            ]);
+            \Log::info('Survey Result created with ID: ' . $surveyResult->id);
+            return back()->with('success', 'Survey Result dibuat dan Marketing Response berhasil dicatat.');
+        }
+        
+        \Log::info('Survey Result found, ID: ' . $surveyResult->id . ', updating Marketing response');
+        $this->recordResponse($surveyResult);
+        \Log::info('=== PM RESPONSE SURVEY RESULT END ===');
+        return back()->with('success', 'Marketing Response berhasil dicatat untuk Survey Result.');
     }
 
     // Workplan

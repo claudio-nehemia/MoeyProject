@@ -75,8 +75,8 @@ export default function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: 
     const [loading, setLoading] = useState(false);
     const [expandedProduk, setExpandedProduk] = useState<number[]>([]);
 
-    const { auth } = usePage<{ auth: { user: { isProjectManager: boolean } } }>().props;
-    const isProjectManager = auth?.user?.isProjectManager || false;
+    const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
+    const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
 
     useEffect(() => {
         const handleResize = () => {
@@ -301,14 +301,14 @@ export default function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: 
                                                     </span>
                                                 </div>
 
-                                                {/* PM Response Button */}
-                                                {isProjectManager && !moodboard.pm_response_time && (
+                                                {/* Marketing Response Button - INDEPENDENT */}
+                                                {isKepalaMarketing && !moodboard.pm_response_time && (
                                                     <div className="mt-3">
                                                         <button
                                                             onClick={() => handlePmResponse(moodboard.id)}
                                                             className="w-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg transition-all"
                                                         >
-                                                            PM Response
+                                                            Marketing Response
                                                         </button>
                                                     </div>
                                                 )}

@@ -18,7 +18,7 @@ class SurveyScheduleController extends Controller
                 'Surveyor',
                 'Drafter',
                 'Desainer',
-                'Project Manager',
+                'Kepala Marketing',
                 'Supervisi',
             ]);
         })->select('id', 'name', 'email')->get();

@@ -69,7 +69,7 @@ class AuthController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'role_id' => $user->role_id,
-                    'is_project_manager' => $user->role && $user->role->nama_role === 'Project Manager',
+                    'is_kepala_marketing' => $user->role && $user->role->nama_role === 'Kepala Marketing',
                 ],
                 'access_token' => $token,
                 'token_type' => 'Bearer',
@@ -91,7 +91,7 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'role_id' => $user->role_id,
-                'is_project_manager' => $user->role && $user->role->nama_role === 'Project Manager',
+                'is_kepala_marketing' => $user->role && $user->role->nama_role === 'Kepala Marketing',
             ]
         ]);
     }

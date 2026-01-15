@@ -87,8 +87,8 @@ const statusLabels = {
 };
 
 export default function Index({ orders }: Props) {
-    const { auth } = usePage<{ auth: { user: { isProjectManager: boolean } } }>().props;
-    const isProjectManager = auth?.user?.isProjectManager || false;
+    const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
+    const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
     
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
@@ -157,7 +157,7 @@ export default function Index({ orders }: Props) {
     };
 
     const handlePmResponse = (moodboardId: number) => {
-        if (confirm('Apakah Anda yakin ingin merespon sebagai Project Manager?')) {
+        if (confirm('Apakah Anda yakin ingin merespon sebagai Kepala Marketing?')) {
             router.post(`/pm-response/moodboard/${moodboardId}`, {}, {
                 preserveScroll: true,
             });
@@ -626,15 +626,15 @@ export default function Index({ orders }: Props) {
                                             {getActionButtons(order)}
                                         </div>
 
-                                        {/* PM Response Section - Always Visible for PM */}
+                                        {/* Marketing Response Section - INDEPENDENT */}
                                         <div className="pt-2 flex flex-col gap-2 sm:flex-row">
-                                            {/* PM Response Button */}
-                                            {isProjectManager && (!order.moodboard?.pm_response_time) && (
+                                            {/* Marketing Response Button */}
+                                            {isKepalaMarketing && (!order.moodboard?.pm_response_time) && (
                                                 <button
                                                     onClick={() => handlePmResponse(order.moodboard?.id || order.id)}
                                                     className="rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-3 py-1.5 text-xs font-medium text-white transition-all hover:from-purple-600 hover:to-purple-700 sm:px-3.5 sm:py-2"
                                                 >
-                                                    PM Response
+                                                    Marketing Response
                                                 </button>
                                             )}
                                             

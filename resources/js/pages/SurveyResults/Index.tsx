@@ -43,8 +43,8 @@ export default function Index({ surveys }: Props) {
     const [mounted, setMounted] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
-    const { auth } = usePage<{ auth: { user: { isProjectManager: boolean } } }>().props;
-    const isProjectManager = auth?.user?.isProjectManager || false;
+    const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
+    const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
 
     useEffect(() => {
         setMounted(true);
@@ -78,12 +78,19 @@ export default function Index({ surveys }: Props) {
     };
 
     const handlePmResponse = (surveyId: number) => {
-        if (confirm('Apakah Anda yakin ingin memberikan PM response untuk survey result ini?')) {
+        if (confirm('Apakah Anda yakin ingin memberikan Marketing response untuk survey result ini?')) {
+            console.log('Marketing Response surveyId:', surveyId);
             router.post(`/pm-response/survey-result/${surveyId}`, {}, {
                 onSuccess: () => {
-                    console.log('PM response recorded');
-                    // Force reload to get fresh data
-                    router.reload({ only: ['surveys'] });
+                    console.log('Marketing response recorded successfully');
+                    // Force full page reload untuk update tampilan
+                    router.visit(window.location.pathname, {
+                        preserveScroll: true,
+                        preserveState: false,
+                    });
+                },
+                onError: (errors) => {
+                    console.error('Marketing response error:', errors);
                 },
             });
         }
@@ -606,10 +613,10 @@ export default function Index({ surveys }: Props) {
                                                             </div>
                                                         </div>
 
-                                                        {/* PM Response Badge */}
+                                                        {/* Marketing Response Badge */}
                                                         {survey.pm_response_time && (
                                                             <div className="mt-2 bg-purple-50 border border-purple-200 rounded-lg p-2">
-                                                                <p className="text-xs font-semibold text-purple-900">✓ PM Response</p>
+                                                                <p className="text-xs font-semibold text-purple-900">✓ Marketing Response</p>
                                                                 <p className="text-xs text-purple-700">By: {survey.pm_response_by}</p>
                                                                 <p className="text-xs text-purple-700">{formatDate(survey.pm_response_time)}</p>
                                                             </div>
@@ -620,18 +627,19 @@ export default function Index({ surveys }: Props) {
 
                                             {/* Right Section - Actions */}
                                             <div className="flex flex-row justify-end gap-2 lg:flex-col lg:justify-start">
-                                                {/* PM Response Button */}
-                                                {isProjectManager && survey.survey_id && !survey.pm_response_time && (
+                                                {/* Marketing Response Button - INDEPENDENT dari general response */}
+                                                {isKepalaMarketing && !survey.pm_response_time && (
                                                     <button
-                                                        onClick={() => handlePmResponse(survey.survey_id!)}
+                                                        onClick={() => handlePmResponse(survey.survey_id || survey.id)}
                                                         className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-purple-600 hover:to-purple-700 sm:px-4 sm:text-sm"
                                                     >
-                                                        PM Response
+                                                        Marketing Response
                                                     </button>
                                                 )}
 
-                                                {!survey.has_survey ? (
-                                                    // Belum ada survey & belum klik response - Tampilkan tombol Response
+                                                {/* General Response - Trigger dari response_time NULL */}
+                                                {!survey.response_time ? (
+                                                    // Belum response - Tampilkan tombol Response
                                                     <button
                                                         onClick={() =>
                                                             handleMarkResponse(
@@ -661,93 +669,54 @@ export default function Index({ surveys }: Props) {
                                                         </span>
                                                     </button>
                                                 ) : (
-                                                    // Sudah klik response - Tampilkan tombol Create/View/Edit
+                                                    // Sudah response - Tampilkan tombol View & Edit
                                                     <>
-                                                        {!survey.feedback &&
-                                                        !survey.response_time ? (
-                                                            // Sudah klik response tapi belum isi survey
-                                                            <Link
-                                                                href={`/survey-results/create/${survey.id}`}
-                                                                className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-cyan-600 hover:to-cyan-700 sm:px-4 sm:text-sm"
+                                                        <Link
+                                                            href={`/survey-results/${survey.survey_id || survey.id}`}
+                                                            className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-blue-600 hover:to-blue-700 sm:px-4 sm:text-sm"
+                                                        >
+                                                            <svg
+                                                                className="mr-1 h-4 w-4 sm:mr-2"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
                                                             >
-                                                                <svg
-                                                                    className="mr-1 h-4 w-4 sm:mr-2"
-                                                                    fill="none"
-                                                                    stroke="currentColor"
-                                                                    viewBox="0 0 24 24"
-                                                                >
-                                                                    <path
-                                                                        strokeLinecap="round"
-                                                                        strokeLinejoin="round"
-                                                                        strokeWidth={
-                                                                            2
-                                                                        }
-                                                                        d="M12 4v16m8-8H4"
-                                                                    />
-                                                                </svg>
-                                                                <span className="hidden sm:inline">
-                                                                    Create
-                                                                    Survey
-                                                                </span>
-                                                                <span className="sm:hidden">
-                                                                    Create
-                                                                </span>
-                                                            </Link>
-                                                        ) : (
-                                                            // Sudah isi survey
-                                                            <>
-                                                                <Link
-                                                                    href={`/survey-results/${survey.survey_id}`}
-                                                                    className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-blue-600 hover:to-blue-700 sm:px-4 sm:text-sm"
-                                                                >
-                                                                    <svg
-                                                                        className="mr-1 h-4 w-4 sm:mr-2"
-                                                                        fill="none"
-                                                                        stroke="currentColor"
-                                                                        viewBox="0 0 24 24"
-                                                                    >
-                                                                        <path
-                                                                            strokeLinecap="round"
-                                                                            strokeLinejoin="round"
-                                                                            strokeWidth={
-                                                                                2
-                                                                            }
-                                                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                                                        />
-                                                                        <path
-                                                                            strokeLinecap="round"
-                                                                            strokeLinejoin="round"
-                                                                            strokeWidth={
-                                                                                2
-                                                                            }
-                                                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                                                        />
-                                                                    </svg>
-                                                                    View
-                                                                </Link>
-                                                                <Link
-                                                                    href={`/survey-results/${survey.survey_id}/edit`}
-                                                                    className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-amber-600 hover:to-amber-700 sm:px-4 sm:text-sm"
-                                                                >
-                                                                    <svg
-                                                                        className="mr-1 h-4 w-4 sm:mr-2"
-                                                                        fill="none"
-                                                                        stroke="currentColor"
-                                                                        viewBox="0 0 24 24"
-                                                                    >
-                                                                        <path
-                                                                            strokeLinecap="round"
-                                                                            strokeLinejoin="round"
-                                                                            strokeWidth={
-                                                                                2
-                                                                            }
-                                                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                                                        />
-                                                                    </svg>
-                                                                    Edit
-                                                                </Link>
-                                                            </>
-                                                        )}
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                                />
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                                />
+                                                            </svg>
+                                                            <span className="hidden sm:inline">View</span>
+                                                            <span className="sm:hidden">View</span>
+                                                        </Link>
+                                                        <Link
+                                                            href={`/survey-results/${survey.survey_id || survey.id}/edit`}
+                                                            className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-amber-600 hover:to-amber-700 sm:px-4 sm:text-sm"
+                                                        >
+                                                            <svg
+                                                                className="mr-1 h-4 w-4 sm:mr-2"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                                                />
+                                                            </svg>
+                                                            <span className="hidden sm:inline">Edit</span>
+                                                            <span className="sm:hidden">Edit</span>
+                                                        </Link>
                                                     </>
                                                 )}
                                             </div>

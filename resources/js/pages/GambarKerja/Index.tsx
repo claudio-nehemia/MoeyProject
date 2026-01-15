@@ -48,8 +48,8 @@ export default function GambarKerjaIndex({ items }: Props) {
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
-    const { auth } = usePage<{ auth: { user: { isProjectManager: boolean } } }>().props;
-    const isProjectManager = auth?.user?.isProjectManager || false;
+    const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
+    const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
 
     /* ================= FILTER ================= */
 
@@ -231,14 +231,14 @@ export default function GambarKerjaIndex({ items }: Props) {
                                     </div>
                                 )}
 
-                                {/* PM Response Button */}
-                                {isProjectManager && !item.pm_response_time && (
+                                {/* Marketing Response Button - INDEPENDENT */}
+                                {isKepalaMarketing && !item.pm_response_time && (
                                     <div className="mb-4 text-center">
                                         <button
                                             onClick={() => handlePmResponse(item.id)}
                                             className="px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg transition-all"
                                         >
-                                            PM Response
+                                            Marketing Response
                                         </button>
                                     </div>
                                 )}
