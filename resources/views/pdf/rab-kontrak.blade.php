@@ -315,10 +315,11 @@
                 <th style="width: 12%;">Bahan Baku</th>
                 <th style="width: 12%;">Finishing Dalam</th>
                 <th style="width: 12%;">Finishing Luar</th>
-                <th class="text-center" style="width: 5%;">Qty</th>
+                <th class="text-center" style="width: 6%;">Qty</th>
                 <th class="total-item text-right" style="width: 10%;">Total Item</th>
                 <th style="width: 14%;">Aksesoris</th>
                 <th class="total-aks text-right" style="width: 10%;">Total Aksesoris</th>
+                <th class="text-center" style="width: 6%;">Diskon</th>
                 <th class="grand-total-header text-right" style="width: 10%;">Grand Total</th>
             </tr>
         </thead>
@@ -349,8 +350,12 @@
                         $totalAksesoris += $aks['harga_total'] ?? 0;
                     }
 
-                    // Calculate total item = harga_akhir - total aksesoris
-                    $totalItem = ($produk['harga_akhir'] ?? 0) - $totalAksesoris;
+                    $diskon = $produk['diskon_per_produk'] ?? 0;
+                    $hargaSebelumDiskon = ($produk['harga_satuan'] ?? 0) + ($produk['harga_total_aksesoris'] ?? 0);
+                    $hargaSetelahDiskon = $produk['harga_akhir'] ?? ($hargaSebelumDiskon * (1 - $diskon / 100));
+
+                    // Calculate total item = harga setelah diskon - total aksesoris (diskon sudah applied ke harga akhir)
+                    $totalItem = $hargaSetelahDiskon - $totalAksesoris;
 
                     // Aksesoris with details
                     $aksesorisData = $produk['aksesoris'] ?? [];
@@ -422,8 +427,11 @@
                             <td rowspan="{{ $maxRows }}" class="total-aks-cell">
                                 Rp {{ number_format($totalAksesoris, 0, ',', '.') }}
                             </td>
+                            <td rowspan="{{ $maxRows }}" class="text-center">
+                                {{ $diskon }}%
+                            </td>
                             <td rowspan="{{ $maxRows }}" class="grand-total-cell">
-                                Rp {{ number_format($produk['harga_akhir'] ?? 0, 0, ',', '.') }}
+                                Rp {{ number_format($hargaSetelahDiskon, 0, ',', '.') }}
                             </td>
                         @endif
                     </tr>

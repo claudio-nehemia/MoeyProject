@@ -32,20 +32,16 @@ interface Produk {
     lebar: number | null;
     tinggi: number | null;
     harga_dasar: number;
-    harga_items_non_aksesoris: number;
-    harga_dimensi: number;
-    harga_satuan: number;
-    harga_total_aksesoris: number;
+    harga_items_non_aksesoris?: number;
+    harga_dimensi?: number;
+    harga_satuan?: number;
+    harga_total_aksesoris?: number;
     harga_akhir: number;
-    bahan_baku_names: string[];
+    diskon_per_produk?: number;
     jenis_items: JenisItem[];
     aksesoris: Aksesoris[];
+    bahan_baku_names: string[];
 }
-
-// Helper function to calculate total harga for a jenis item
-const calculateJenisTotal = (items: Item[]): number => {
-    return items.reduce((sum, item) => sum + item.harga_total, 0);
-};
 
 interface RabKontrak {
     id: number;
@@ -67,34 +63,32 @@ export default function Show({ rabKontrak }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
 
     useEffect(() => {
-        const handleResize = () => {
-            setSidebarOpen(window.innerWidth >= 1024);
-        };
+        const handleResize = () => setSidebarOpen(window.innerWidth >= 1024);
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('id-ID', {
+    const formatCurrency = (value: number) =>
+        new Intl.NumberFormat('id-ID', {
             style: 'currency',
             currency: 'IDR',
             minimumFractionDigits: 0,
         }).format(value);
-    };
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleString('id-ID', {
+    const formatDate = (dateString: string) =>
+        new Date(dateString).toLocaleString('id-ID', {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit',
         });
-    };
 
-    const totalSemuaProduk = rabKontrak.produks.reduce((sum, produk) => sum + Number(produk.harga_akhir), 0);
+    const totalSemuaProduk = rabKontrak.produks.reduce(
+        (sum, produk) => sum + Number(produk.harga_akhir),
+        0,
+    );
 
-    // Group products by ruangan
     const groupedByRuangan = useMemo(() => {
         const groups: { [key: string]: typeof rabKontrak.produks } = {};
         rabKontrak.produks.forEach((produk) => {
@@ -166,6 +160,114 @@ export default function Show({ rabKontrak }: Props) {
                         </div>
                     </div>
 
+                    {/* Formula Breakdown Card - RAB Kontrak */}
+                    <div className="mb-6 overflow-hidden bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 shadow-lg sm:rounded-lg border-2 border-purple-200 dark:border-purple-700">
+                        <div className="p-6">
+                            <div className="flex items-start gap-3 mb-4">
+                                <div className="rounded-full bg-purple-600 p-2">
+                                    <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="text-xl font-bold text-purple-900 dark:text-purple-100">📋 Formula RAB Kontrak</h3>
+                                    <p className="text-sm text-purple-700 dark:text-purple-300 mt-1">Harga untuk kontrak customer (diambil dari RAB Internal)</p>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-white dark:bg-gray-800 rounded-lg p-5 shadow-inner border border-purple-100 dark:border-purple-800">
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    {/* Formula Section */}
+                                    <div>
+                                        <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                                            <span className="bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 px-2 py-1 rounded text-xs">INFO</span>
+                                            Sumber Data
+                                        </div>
+                                        <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 p-4 rounded-lg border-l-4 border-purple-500">
+                                            <div className="font-mono text-sm text-gray-800 dark:text-gray-200">
+                                                <span className="font-bold text-purple-600 dark:text-purple-400">Harga Satuan</span>
+                                                <span className="mx-2">=</span>
+                                                <span className="font-bold text-indigo-600 dark:text-indigo-400">Harga Satuan Internal</span>
+                                            </div>
+                                            <div className="font-mono text-sm text-gray-800 dark:text-gray-200 mt-2">
+                                                <span className="font-bold text-green-600 dark:text-green-400">Harga Akhir</span>
+                                                <span className="mx-2">=</span>
+                                                <span className="font-bold text-indigo-600 dark:text-indigo-400">Harga Akhir Internal</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-4 mb-3 flex items-center gap-2">
+                                            <span className="bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 px-2 py-1 rounded text-xs">MARKUP</span>
+                                            Breakdown Harga
+                                        </div>
+                                        <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 p-4 rounded-lg border-l-4 border-amber-500">
+                                            <div className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
+                                                <div>
+                                                    <span className="font-bold text-emerald-600 dark:text-emerald-400">Harga BB (Kontrak)</span>
+                                                    <span className="mx-2">=</span>
+                                                    <span className="text-gray-600 dark:text-gray-400">Harga BB ÷ (Markup / 100)</span>
+                                                </div>
+                                                <div>
+                                                    <span className="font-bold text-blue-600 dark:text-blue-400">Finishing (Kontrak)</span>
+                                                    <span className="mx-2">=</span>
+                                                    <span className="text-gray-600 dark:text-gray-400">Finishing ÷ (Markup / 100)</span>
+                                                </div>
+                                                <div className="mt-2 text-xs text-amber-600 dark:text-amber-400 font-semibold">
+                                                    💡 Markup 150% → 150/100 = 1.5, lalu harga dibagi 1.5
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Legend Section */}
+                                    <div>
+                                        <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">📌 Keterangan:</div>
+                                        <div className="space-y-2 text-sm">
+                                            <div className="flex items-start gap-2">
+                                                <div className="w-4 h-4 rounded bg-purple-500 mt-0.5 flex-shrink-0"></div>
+                                                <div>
+                                                    <span className="font-semibold text-purple-700 dark:text-purple-400">Data Source:</span>
+                                                    <span className="text-gray-600 dark:text-gray-400"> Diambil dari RAB Internal</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-start gap-2">
+                                                <div className="w-4 h-4 rounded bg-amber-500 mt-0.5 flex-shrink-0"></div>
+                                                <div>
+                                                    <span className="font-semibold text-amber-700 dark:text-amber-400">Markup:</span>
+                                                    <span className="text-gray-600 dark:text-gray-400"> Diterapkan ke Harga BB & Finishing</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-start gap-2">
+                                                <div className="w-4 h-4 rounded bg-indigo-500 mt-0.5 flex-shrink-0"></div>
+                                                <div>
+                                                    <span className="font-semibold text-indigo-700 dark:text-indigo-400">Harga Satuan:</span>
+                                                    <span className="text-gray-600 dark:text-gray-400"> Sudah include markup dari Internal</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-start gap-2">
+                                                <div className="w-4 h-4 rounded bg-orange-500 mt-0.5 flex-shrink-0"></div>
+                                                <div>
+                                                    <span className="font-semibold text-orange-700 dark:text-orange-400">Aksesoris:</span>
+                                                    <span className="text-gray-600 dark:text-gray-400"> Include dalam harga akhir</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="mt-4 p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg border border-purple-200 dark:border-purple-700">
+                                            <div className="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-1">✅ Karakteristik RAB Kontrak:</div>
+                                            <ul className="text-xs text-purple-600 dark:text-purple-400 space-y-1">
+                                                <li>• Markup sebagai PEMBAGI (150% = 1.5, harga ÷ 1.5)</li>
+                                                <li>• Breakdown harga BB & finishing dengan pembagian markup</li>
+                                                <li>• Harga akhir = dari RAB Internal</li>
+                                                <li>• Include aksesoris dengan markup</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Full Table - All Products */}
                     <div className="mb-8 overflow-hidden bg-white shadow-lg sm:rounded-lg dark:bg-gray-800">
                         <div className="overflow-x-auto">
@@ -199,6 +301,9 @@ export default function Show({ rabKontrak }: Props) {
                                         <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20">
                                             Total Aksesoris
                                         </th>
+                                        <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/20">
+                                            Diskon
+                                        </th>
                                         <th className="bg-green-100 px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-green-800 dark:bg-green-900/30 dark:text-green-400">
                                             Grand Total
                                         </th>
@@ -209,7 +314,7 @@ export default function Show({ rabKontrak }: Props) {
                                         <>
                                             {/* Ruangan Header Row */}
                                             <tr key={`ruangan-header-${ruanganIndex}`} className="bg-gradient-to-r from-cyan-500 to-cyan-600">
-                                                <td colSpan={10} className="px-4 py-3">
+                                                <td colSpan={11} className="px-4 py-3">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-2">
                                                             <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -338,6 +443,13 @@ export default function Show({ rabKontrak }: Props) {
                                                         {rowIndex === 0 && (
                                                             <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-orange-700 dark:text-orange-400 bg-orange-50/50 dark:bg-orange-900/10 border-r border-gray-200 dark:border-gray-700">
                                                                 {formatCurrency(totalAksesoris)}
+                                                            </td>
+                                                        )}
+
+                                                        {/* Diskon Column */}
+                                                        {rowIndex === 0 && (
+                                                            <td rowSpan={maxRows} className="px-4 py-3 text-center align-top text-sm font-medium text-rose-700 dark:text-rose-300 border-r border-gray-200 dark:border-gray-700">
+                                                                {produk.diskon_per_produk ?? 0}%
                                                             </td>
                                                         )}
                                                         

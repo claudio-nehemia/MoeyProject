@@ -25,10 +25,14 @@ class FCMService
     {
         try {
             $serviceAccountPath = config('services.fcm.service_account');
-            
+            $projectId = config('services.fcm.project_id');
+
             if (!file_exists($serviceAccountPath)) {
                 Log::error('⚠️  [FCM] Service Account JSON not found', [
-                    'path' => $serviceAccountPath
+                    'path' => $serviceAccountPath,
+                    'pwd' => getcwd(),
+                    'project_id' => $projectId,
+                    'env' => app()->environment(),
                 ]);
                 return;
             }
@@ -37,13 +41,19 @@ class FCMService
             $factory = (new Factory)->withServiceAccount($serviceAccountPath);
             $this->messaging = $factory->createMessaging();
             
-            Log::info('✅ [FCM] Firebase Messaging initialized successfully');
+            Log::info('✅ [FCM] Firebase Messaging initialized successfully', [
+                'project_id' => $projectId,
+                'service_account_exists' => true,
+            ]);
             
         } catch (\Exception $e) {
             Log::error('❌ [FCM] Failed to initialize Firebase', [
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
+                'project_id' => config('services.fcm.project_id'),
+                'service_account' => config('services.fcm.service_account'),
+                'env' => app()->environment(),
             ]);
         }
     }
@@ -73,9 +83,19 @@ class FCMService
 
         // Validate user has FCM token
         if (!$user || !$user->fcm_token) {
-            Log::info("❌ [FCM] User {$user?->id} has no FCM token");
+            Log::info('❌ [FCM] Missing FCM token for user', [
+                'user_id' => $user?->id,
+                'env' => app()->environment(),
+            ]);
             return false;
         }
+
+        Log::info('➡️ [FCM] Sending push to user', [
+            'user_id' => $user->id,
+            'platform' => $user->device_platform,
+            'token_prefix' => substr($user->fcm_token, 0, 10) . '...',
+            'env' => app()->environment(),
+        ]);
 
         return $this->sendToToken($user->fcm_token, $data);
     }
@@ -122,7 +142,10 @@ class FCMService
         try {
             // Validate Firebase Messaging is initialized
             if (!$this->messaging) {
-                Log::error('❌ [FCM] Firebase Messaging not initialized');
+                Log::error('❌ [FCM] Firebase Messaging not initialized', [
+                    'env' => app()->environment(),
+                    'service_account' => config('services.fcm.service_account'),
+                ]);
                 return false;
             }
 
@@ -148,6 +171,7 @@ class FCMService
             Log::info('✅ [FCM] Push notification sent', [
                 'token' => substr($fcmToken, 0, 20) . '...',
                 'title' => $data['title'] ?? 'No title',
+                'env' => app()->environment(),
             ]);
 
             return true;
@@ -177,6 +201,7 @@ class FCMService
             Log::error('❌ [FCM] Firebase messaging error', [
                 'error' => $e->getMessage(),
                 'code' => $e->getCode(),
+                'env' => app()->environment(),
             ]);
             
             return false;
@@ -187,6 +212,7 @@ class FCMService
                 'message' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
+                'env' => app()->environment(),
             ]);
             
             return false;

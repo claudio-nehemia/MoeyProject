@@ -8,7 +8,6 @@ use Illuminate\Http\Request;
 use App\Models\SurveyResults;
 use App\Models\JenisPengukuran;
 use App\Services\NotificationService;
-use Intervention\Image\Facades\Image;
 use Illuminate\Support\Facades\Storage;
 
 class SurveyResultsController extends Controller

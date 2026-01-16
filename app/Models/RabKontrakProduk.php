@@ -14,6 +14,7 @@ class RabKontrakProduk extends Model
         'harga_dimensi',
         'harga_satuan',
         'harga_total_aksesoris',
+        'diskon_per_produk',
         'harga_akhir',
     ];
 

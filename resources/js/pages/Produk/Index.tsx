@@ -285,8 +285,6 @@ export default function Index({ produks, bahanBakuItems = [] }: Props) {
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">No</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Image</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Product Name</th>
-                                        <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Price</th>
-                                        <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Harga Jasa</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Bahan Baku</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-center font-semibold text-stone-700">Actions</th>
                                     </tr>
@@ -325,23 +323,6 @@ export default function Index({ produks, bahanBakuItems = [] }: Props) {
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-medium text-stone-900 truncate">{produk.nama_produk}</span>
                                                 </div>
-                                            </td>
-                                            <td className="px-3 sm:px-4 py-2.5">
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="inline-flex items-center px-2 py-1 rounded-full bg-gradient-to-r from-rose-100 to-rose-200 text-rose-700 font-semibold text-xs whitespace-nowrap">
-                                                        {formatPrice(produk.harga)}
-                                                    </span>
-                                                    {produk.bahan_bakus && produk.bahan_bakus.length > 0 && (
-                                                        <span className="text-xs text-stone-500">
-                                                            dari {produk.bahan_bakus.length} bahan baku
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-3 sm:px-4 py-2.5">
-                                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-gradient-to-r from-green-100 to-green-200 text-green-700 font-semibold text-xs whitespace-nowrap">
-                                                    {formatPrice(produk.harga_jasa || 0)}
-                                                </span>
                                             </td>
                                             <td className="px-3 sm:px-4 py-2.5">
                                                 <div className="flex flex-wrap gap-1">

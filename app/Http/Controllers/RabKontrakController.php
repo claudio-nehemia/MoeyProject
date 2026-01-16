@@ -74,18 +74,20 @@ class RabKontrakController extends Controller
             ]);
 
             foreach ($rabInternal->rabProduks as $rabProduk) {
-                // Apply markup to ALL prices (harga_dasar + items)
-                $markupMultiplier = 1 + ($rabProduk->markup_satuan / 100);
+                // ✅ RAB KONTRAK: Apply PEMBAGIAN (markup/100) pada harga_dasar & harga_items
+                // Contoh: Markup 150% → 150/100 = 1.5, harga dibagi 1.5
+                $markupDivider = $rabProduk->markup_satuan / 100; // 150 → 1.5
 
                 $rabKontrakProduk = RabKontrakProduk::create([
                     'rab_kontrak_id' => $rabKontrak->id,
                     'item_pekerjaan_produk_id' => $rabProduk->item_pekerjaan_produk_id,
-                    'harga_dasar' => $rabProduk->harga_dasar * $markupMultiplier,
-                    'harga_items_non_aksesoris' => $rabProduk->harga_items_non_aksesoris * $markupMultiplier,
+                    'harga_dasar' => $rabProduk->harga_dasar / $markupDivider,
+                    'harga_items_non_aksesoris' => $rabProduk->harga_items_non_aksesoris / $markupDivider,
                     'harga_dimensi' => $rabProduk->harga_dimensi,
-                    'harga_satuan' => $rabProduk->harga_satuan,
+                    'harga_satuan' => $rabProduk->harga_satuan, // Sudah include markup dari Internal
                     'harga_total_aksesoris' => $rabProduk->harga_total_aksesoris,
-                    'harga_akhir' => $rabProduk->harga_akhir,
+                    'diskon_per_produk' => $rabProduk->diskon_per_produk, // Copy diskon dari Internal
+                    'harga_akhir' => $rabProduk->harga_akhir, // Sudah include markup + diskon dari Internal
                 ]);
 
                 // Aksesoris already have markup included (no additional markup)
@@ -267,6 +269,7 @@ class RabKontrakController extends Controller
                 'harga_satuan' => $rabProduk->harga_satuan,
                 'harga_total_aksesoris' => $rabProduk->harga_total_aksesoris,
                 'harga_akhir' => $rabProduk->harga_akhir,
+                'diskon_per_produk' => $rabProduk->diskon_per_produk,
                 'jenis_items' => $jenisItemsList,
                 'bahan_baku_names' => $bahanBakuNames,
                 'aksesoris' => $rabProduk->rabKontrakAksesoris->map(function ($aksesoris) {
@@ -334,17 +337,20 @@ class RabKontrakController extends Controller
 
                 // Regenerate from RAB Internal (same logic as generate())
                 foreach ($rabInternal->rabProduks as $rabProduk) {
-                    $markupMultiplier = 1 + ($rabProduk->markup_satuan / 100);
+                    // ✅ RAB KONTRAK: Apply PEMBAGIAN (markup/100) pada harga_dasar & harga_items
+                    // Contoh: Markup 150% → 150/100 = 1.5, harga dibagi 1.5
+                    $markupDivider = $rabProduk->markup_satuan / 100; // 150 → 1.5
 
                     $rabKontrakProduk = RabKontrakProduk::create([
                         'rab_kontrak_id' => $rabKontrak->id,
                         'item_pekerjaan_produk_id' => $rabProduk->item_pekerjaan_produk_id,
-                        'harga_dasar' => $rabProduk->harga_dasar * $markupMultiplier,
-                        'harga_items_non_aksesoris' => $rabProduk->harga_items_non_aksesoris * $markupMultiplier,
+                        'harga_dasar' => $rabProduk->harga_dasar / $markupDivider,
+                        'harga_items_non_aksesoris' => $rabProduk->harga_items_non_aksesoris / $markupDivider,
                         'harga_dimensi' => $rabProduk->harga_dimensi,
-                        'harga_satuan' => $rabProduk->harga_satuan,
+                        'harga_satuan' => $rabProduk->harga_satuan, // Sudah include markup dari Internal
                         'harga_total_aksesoris' => $rabProduk->harga_total_aksesoris,
-                        'harga_akhir' => $rabProduk->harga_akhir,
+                        'diskon_per_produk' => $rabProduk->diskon_per_produk, // Copy diskon dari Internal
+                        'harga_akhir' => $rabProduk->harga_akhir, // Sudah include markup + diskon dari Internal
                     ]);
 
                     foreach ($rabProduk->rabAksesoris as $rabAksesoris) {

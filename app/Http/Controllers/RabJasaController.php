@@ -83,6 +83,8 @@ class RabJasaController extends Controller
                 Log::info('RAB Jasa Generate - BahanBakus count: ' . $itemPekerjaanProduk->bahanBakus->count());
                 Log::info('RAB Jasa Generate - BahanBakus data: ' . json_encode($itemPekerjaanProduk->bahanBakus->toArray()));
                 
+                // ✅ RAB JASA: Pakai HARGA_JASA bukan harga, TANPA aksesoris
+                // Karakteristik: Khusus untuk biaya jasa/labour, tanpa markup & aksesoris
                 // Get harga_jasa from selected bahan baku (sum of all selected bahan baku harga_jasa)
                 $hargaJasa = $itemPekerjaanProduk->bahanBakus->sum('harga_jasa') ?: 0;
                 
@@ -92,7 +94,7 @@ class RabJasaController extends Controller
                 $hargaItemsOriginal = $rabProduk->harga_items_non_aksesoris;
 
                 // Calculate harga_satuan using harga_jasa instead of harga
-                // Formula: (harga_jasa + harga_items_non_aksesoris) * harga_dimensi
+                // Formula RAB JASA: (Harga Jasa Bahan Baku + Harga Finishing) × Dimensi × Qty (no markup, no aksesoris)
                 $hargaSatuanJasa = ($hargaJasa + $hargaItemsOriginal) * $rabProduk->harga_dimensi;
 
                 // NO AKSESORIS - harga_akhir = harga_satuan only
@@ -290,6 +292,7 @@ class RabJasaController extends Controller
                     $itemPekerjaanProduk = ItemPekerjaanProduk::with('bahanBakus')
                         ->find($rabProduk->item_pekerjaan_produk_id);
                     
+                    // ✅ RAB JASA: Pakai HARGA_JASA bukan harga, TANPA aksesoris
                     // Get harga_jasa from selected bahan baku (sum of all selected bahan baku harga_jasa)
                     $hargaJasa = $itemPekerjaanProduk->bahanBakus->sum('harga_jasa') ?: 0;
                     
@@ -297,7 +300,7 @@ class RabJasaController extends Controller
                     $hargaItemsOriginal = $rabProduk->harga_items_non_aksesoris;
                     
                     // Calculate harga_satuan using harga_jasa instead of harga
-                    // Formula: (harga_jasa + harga_items_non_aksesoris) * harga_dimensi
+                    // Formula RAB JASA: (Harga Jasa Bahan Baku + Harga Finishing) × Dimensi × Qty (no markup, no aksesoris)
                     $hargaSatuanJasa = ($hargaJasa + $hargaItemsOriginal) * $rabProduk->harga_dimensi;
 
                     RabJasaProduk::create([

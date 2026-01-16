@@ -216,9 +216,13 @@ class RabInternalController extends Controller
                     $hargaDimensi = $itemProduk->quantity;
                 }
 
-                // Calculate harga satuan = (harga_dasar + harga_items_non_aksesoris) * (1 + markup/100) * harga_dimensi
+                // ✅ RUMUS RAB INTERNAL (Sesuai Permintaan Klien):
+                // Harga Satuan = (Harga Bahan Baku + Harga Finishing) / (Markup / 100) × Dimensi × Qty
+                // Contoh: Markup 150% → 150/100 = 1.5, terus harga dibagi 1.5
+                // Note: hargaDimensi sudah include qty
                 $markupSatuan = $produkData['markup_satuan'];
-                $hargaSatuan = ($hargaDasarProduk + $hargaItemsNonAksesoris) * (1 + $markupSatuan / 100) * $hargaDimensi;
+                $markupDivider = $markupSatuan / 100; // 150 → 1.5
+                $hargaSatuan = ($hargaDasarProduk + $hargaItemsNonAksesoris) / $markupDivider * $hargaDimensi;
 
                 // Create RAB Produk
                 $rabProduk = RabProduk::create([
@@ -239,11 +243,13 @@ class RabInternalController extends Controller
                     foreach ($produkData['aksesoris'] as $aksesorisData) {
                         $itemPekerjaanItem = ItemPekerjaanItem::with('item')->findOrFail($aksesorisData['item_pekerjaan_item_id']);
 
-                        // Calculate: harga_total = harga_satuan × qty × (1 + markup/100)
+                        // ✅ RUMUS AKSESORIS (Sesuai Permintaan Klien):
+                        // Harga Total = (Harga Satuan Aks / (Markup / 100)) × Qty
                         $hargaSatuanAksesoris = $itemPekerjaanItem->item->harga;
                         $qtyAksesoris = $aksesorisData['qty_aksesoris'];
                         $markupAksesoris = $aksesorisData['markup_aksesoris'];
-                        $hargaTotalAksesoris = $hargaSatuanAksesoris * $qtyAksesoris * (1 + $markupAksesoris / 100);
+                        $markupDivider = $markupAksesoris / 100; // 150 → 1.5
+                        $hargaTotalAksesoris = ($hargaSatuanAksesoris / $markupDivider) * $qtyAksesoris;
 
                         RabAksesoris::create([
                             'rab_produk_id' => $rabProduk->id,
@@ -260,9 +266,15 @@ class RabInternalController extends Controller
                 }
 
                 // Update RAB Produk with total aksesoris
+                // ✅ APPLY DISKON: Harga Jual (Diskon) = Harga Jual (Sebelum Diskon) × (1 - Diskon/100)
+                $diskonPerProduk = $produkData['diskon_per_produk'] ?? 0;
+                $hargaSebelumDiskon = $hargaSatuan + $totalHargaAksesoris;
+                $hargaAkhir = $hargaSebelumDiskon * (1 - $diskonPerProduk / 100);
+
                 $rabProduk->update([
                     'harga_total_aksesoris' => $totalHargaAksesoris,
-                    'harga_akhir' => $hargaSatuan + $totalHargaAksesoris,
+                    'diskon_per_produk' => $diskonPerProduk,
+                    'harga_akhir' => $hargaAkhir,
                 ]);
             }
 
@@ -454,6 +466,7 @@ class RabInternalController extends Controller
                             'non_aksesoris_items' => $nonAksesorisList ?? [],
                             'bahan_baku_names' => $bahanBakuNames,
                             'markup_satuan' => $rabProduk ? $rabProduk->markup_satuan : 0,
+                            'diskon_per_produk' => $rabProduk ? $rabProduk->diskon_per_produk : 0,
                             'aksesoris' => $aksesorisList,
                         ];
                     }),
@@ -470,6 +483,7 @@ class RabInternalController extends Controller
                 'produks.*.id' => 'nullable|exists:rab_produks,id', // 🔥 nullable untuk produk baru
                 'produks.*.item_pekerjaan_produk_id' => 'required|exists:item_pekerjaan_produks,id',
                 'produks.*.markup_satuan' => 'required|numeric|min:0|max:100',
+                'produks.*.diskon_per_produk' => 'nullable|numeric|min:0|max:100',
                 'produks.*.aksesoris' => 'nullable|array',
                 'produks.*.aksesoris.*.item_pekerjaan_item_id' => 'required|exists:item_pekerjaan_items,id',
                 'produks.*.aksesoris.*.qty_aksesoris' => 'required|integer|min:1',
@@ -523,9 +537,13 @@ class RabInternalController extends Controller
                     $hargaDimensi = $itemProduk->quantity;
                 }
 
-                // Calculate harga satuan = (harga_dasar + harga_items_non_aksesoris) * (1 + markup/100) * harga_dimensi
+                // ✅ RUMUS RAB INTERNAL (Sesuai Permintaan Klien):
+                // Harga Satuan = (Harga Bahan Baku + Harga Finishing) / (Markup / 100) × Dimensi × Qty
+                // Contoh: Markup 150% → 150/100 = 1.5, terus harga dibagi 1.5
+                // Note: hargaDimensi sudah include qty
                 $markupSatuan = $produkData['markup_satuan'];
-                $hargaSatuan = ($hargaDasarProduk + $hargaItemsNonAksesoris) * (1 + $markupSatuan / 100) * $hargaDimensi;
+                $markupDivider = $markupSatuan / 100; // 150 → 1.5
+                $hargaSatuan = ($hargaDasarProduk + $hargaItemsNonAksesoris) / $markupDivider * $hargaDimensi;
 
                 // Save RAB Produk (create atau update)
                 $rabProduk->markup_satuan = $markupSatuan;
@@ -544,11 +562,13 @@ class RabInternalController extends Controller
                     foreach ($produkData['aksesoris'] as $aksesorisData) {
                         $itemPekerjaanItem = ItemPekerjaanItem::with('item')->findOrFail($aksesorisData['item_pekerjaan_item_id']);
 
-                        // Calculate: harga_total = harga_satuan × qty × (1 + markup/100)
+                        // ✅ RUMUS AKSESORIS (Sesuai Permintaan Klien):
+                        // Harga Total = (Harga Satuan Aks / (Markup / 100)) × Qty
                         $hargaSatuanAksesoris = $itemPekerjaanItem->item->harga;
                         $qtyAksesoris = $aksesorisData['qty_aksesoris'];
                         $markupAksesoris = $aksesorisData['markup_aksesoris'];
-                        $hargaTotalAksesoris = $hargaSatuanAksesoris * $qtyAksesoris * (1 + $markupAksesoris / 100);
+                        $markupDivider = $markupAksesoris / 100; // 150 → 1.5
+                        $hargaTotalAksesoris = ($hargaSatuanAksesoris / $markupDivider) * $qtyAksesoris;
 
                         RabAksesoris::create([
                             'rab_produk_id' => $rabProduk->id,
@@ -565,9 +585,15 @@ class RabInternalController extends Controller
                 }
 
                 // Update RAB Produk with total aksesoris
+                // ✅ APPLY DISKON: Harga Jual (Diskon) = Harga Jual (Sebelum Diskon) × (1 - Diskon/100)
+                $diskonPerProduk = $produkData['diskon_per_produk'] ?? 0;
+                $hargaSebelumDiskon = $hargaSatuan + $totalHargaAksesoris;
+                $hargaAkhir = $hargaSebelumDiskon * (1 - $diskonPerProduk / 100);
+
                 $rabProduk->update([
                     'harga_total_aksesoris' => $totalHargaAksesoris,
-                    'harga_akhir' => $hargaSatuan + $totalHargaAksesoris,
+                    'diskon_per_produk' => $diskonPerProduk,
+                    'harga_akhir' => $hargaAkhir,
                 ]);
             }
 

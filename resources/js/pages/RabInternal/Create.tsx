@@ -68,6 +68,7 @@ interface FormAksesoris {
 interface FormProduk {
     item_pekerjaan_produk_id: number;
     markup_satuan: string | number;
+    diskon_per_produk: string | number;
     non_aksesoris_items: FormNonAksesorisItem[];
     aksesoris: FormAksesoris[];
 }
@@ -82,6 +83,7 @@ export default function Create({ rabInternal }: Props) {
         const initialData = rabInternal.itemPekerjaan.produks.map(produk => ({
             item_pekerjaan_produk_id: produk.item_pekerjaan_produk_id,
             markup_satuan: 5,
+            diskon_per_produk: 0,
             non_aksesoris_items: produk.non_aksesoris_items?.map(item => ({
                 id: item.id,
                 nama: item.nama,
@@ -208,18 +210,26 @@ export default function Create({ rabInternal }: Props) {
 
         const hargaDasar = Number(produk.harga_dasar) || 0;
 
-        return (hargaDasar + totalHargaItemsNonAksesoris) * (1 + markup / 100) * hargaDimensi;
+        // ✅ RUMUS RAB INTERNAL: (Harga BB + Finishing) ÷ (Markup/100) × Dimensi
+        const markupDivider = markup / 100; // 150 → 1.5
+        return (hargaDasar + totalHargaItemsNonAksesoris) / markupDivider * hargaDimensi;
     };
 
     const calculateHargaAksesoris = (aksesoris: FormAksesoris) => {
         const markup = typeof aksesoris.markup_aksesoris === 'string' ? parseFloat(aksesoris.markup_aksesoris) || 0 : aksesoris.markup_aksesoris;
-        return aksesoris.harga_satuan * aksesoris.qty_aksesoris * (1 + markup / 100);
+        // ✅ RUMUS AKSESORIS: Harga Aks ÷ (Markup/100) × Qty
+        const markupDivider = markup / 100; // 150 → 1.5
+        return (aksesoris.harga_satuan / markupDivider) * aksesoris.qty_aksesoris;
     };
 
     const calculateHargaAkhir = (produk: Produk, formProduk: FormProduk) => {
         const hargaSatuan = calculateHargaSatuan(produk, formProduk, formProduk.markup_satuan);
         const totalAksesoris = formProduk.aksesoris.reduce((sum, aks) => sum + calculateHargaAksesoris(aks), 0);
-        return hargaSatuan + totalAksesoris;
+        const hargaSebelumDiskon = hargaSatuan + totalAksesoris;
+        
+        // ✅ APPLY DISKON: Harga Jual (Diskon) = Harga Jual (Sebelum Diskon) × (1 - Diskon/100)
+        const diskon = typeof formProduk.diskon_per_produk === 'string' ? parseFloat(formProduk.diskon_per_produk) || 0 : formProduk.diskon_per_produk;
+        return hargaSebelumDiskon * (1 - diskon / 100);
     };
 
     const formatCurrency = (value: number) => {
@@ -274,6 +284,63 @@ export default function Create({ rabInternal }: Props) {
 
             <div className="p-3 lg:ml-60">
                 <div className="mt-12 p-3">
+
+                    {/* 🔹 Formula RAB Internal */}
+                    <div className="mb-6 overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 shadow-sm sm:rounded-lg dark:from-indigo-950 dark:via-purple-950 dark:to-pink-950">
+                        <div className="p-6">
+                            <div className="flex items-center gap-2 mb-3">
+                                <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                                    Formula Perhitungan RAB Internal
+                                </h3>
+                            </div>
+                            
+                            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border-l-4 border-indigo-500">
+                                <div className="space-y-3">
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">📦 Harga Satuan Produk:</p>
+                                        <code className="text-sm bg-gray-100 dark:bg-gray-900 px-3 py-2 rounded block">
+                                            (Harga BB + Finishing) ÷ (Markup / 100) × Dimensi × Qty
+                                        </code>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            💡 Contoh: Markup <strong>150%</strong> → 150/100 = 1.5, lalu harga <strong>dibagi</strong> 1.5
+                                        </p>
+                                    </div>
+                                    
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">🎨 Harga Aksesoris:</p>
+                                        <code className="text-sm bg-gray-100 dark:bg-gray-900 px-3 py-2 rounded block">
+                                            (Harga Satuan Aks ÷ (Markup / 100)) × Qty
+                                        </code>
+                                    </div>
+                                    
+                                    <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">🏷️ Komponen:</p>
+                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
+                                                <span className="text-gray-600 dark:text-gray-400">Harga BB (Bahan Baku)</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                                                <span className="text-gray-600 dark:text-gray-400">Finishing (Dalam + Luar)</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-3 h-3 rounded-full bg-amber-500"></span>
+                                                <span className="text-gray-600 dark:text-gray-400">Markup (dibagi)</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-3 h-3 rounded-full bg-purple-500"></span>
+                                                <span className="text-gray-600 dark:text-gray-400">Dimensi (P × L × T)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     {/* ==== MARKUP GENERAL HERE ==== */}
                     <div className="mb-6 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
@@ -516,12 +583,33 @@ export default function Create({ rabInternal }: Props) {
                                                 required
                                             />
 
-                                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                                Harga Satuan = (Harga Dasar + Non-Aksesoris) × (1 + Markup%) × Dimensi
-                                            </p>
-
                                             <p className="mt-1 text-sm font-semibold text-amber-600 dark:text-amber-400">
                                                 Harga Satuan: {formatCurrency(hargaSatuan)}
+                                            </p>
+                                        </div>
+
+                                        {/* DISKON PER PRODUK */}
+                                        <div className="mb-6">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Diskon Per Produk (%)
+                                            </label>
+
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                value={formProduk.diskon_per_produk}
+                                                onChange={(e) => {
+                                                    const updated = [...formData];
+                                                    updated[produkIndex].diskon_per_produk = e.target.value;
+                                                    setFormData(updated);
+                                                }}
+                                                placeholder="0"
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                            />
+
+                                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                                Diskon diterapkan setelah harga satuan + aksesoris
                                             </p>
                                         </div>
 

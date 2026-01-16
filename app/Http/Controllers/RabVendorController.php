@@ -73,12 +73,14 @@ class RabVendorController extends Controller
             ]);
 
             foreach ($rabInternal->rabProduks as $rabProduk) {
-                // RAB Internal already stores ORIGINAL prices (before markup)
-                // So we just copy them directly - NO need to divide by markup
+                // ✅ RAB VENDOR: TANPA markup - harga original untuk vendor
+                // Karakteristik: Harga asli bahan & finishing tanpa markup
+                // RAB Internal stores original prices (before markup), so we copy directly
                 $hargaDasarOriginal = $rabProduk->harga_dasar;
                 $hargaItemsOriginal = $rabProduk->harga_items_non_aksesoris;
 
                 // Calculate harga_satuan WITHOUT markup
+                // Formula: (Harga Bahan Baku + Harga Finishing) × Dimensi × Qty (no markup)
                 $hargaSatuanVendor = ($hargaDasarOriginal + $hargaItemsOriginal) * $rabProduk->harga_dimensi;
 
                 $rabVendorProduk = RabVendorProduk::create([
@@ -344,6 +346,8 @@ class RabVendorController extends Controller
 
                 // Regenerate from RAB Internal
                 foreach ($rabInternal->rabProduks as $rabProduk) {
+                    // ✅ RAB VENDOR: TANPA markup - harga original untuk vendor
+                    // Formula: (Harga Bahan Baku + Harga Finishing) × Dimensi × Qty (no markup)
                     $hargaDasarOriginal = $rabProduk->harga_dasar;
                     $hargaItemsOriginal = $rabProduk->harga_items_non_aksesoris;
                     $hargaSatuanVendor = ($hargaDasarOriginal + $hargaItemsOriginal) * $rabProduk->harga_dimensi;
