@@ -294,7 +294,7 @@ interface Produk {
                                             Produk
                                         </th>
                                         <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20">
-                                            Harga Dasar
+                                            Harga Satuan
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Bahan Baku
@@ -318,7 +318,7 @@ interface Produk {
                                             Markup
                                         </th>
                                         <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20">
-                                            Total Non-Aks
+                                            Total BB + Finishing
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Aksesoris
