@@ -4,10 +4,18 @@ namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Facades\Image;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class ImageService
 {
+    protected $manager;
+
+    public function __construct()
+    {
+        $this->manager = new ImageManager(new Driver());
+    }
+
     /**
      * Resize & save image (main image)
      */
@@ -17,17 +25,19 @@ class ImageService
         int $maxWidth = 1600,
         int $quality = 80
     ): array {
-        $image = Image::make($file)
-            ->resize($maxWidth, null, function ($constraint) {
-                $constraint->aspectRatio();
-                $constraint->upsize();
-            })
-            ->encode('jpg', $quality);
+        $image = $this->manager->read($file);
+        
+        // Scale down if wider than maxWidth
+        if ($image->width() > $maxWidth) {
+            $image->scale(width: $maxWidth);
+        }
+        
+        $encoded = $image->toJpeg(quality: $quality);
 
         $filename = uniqid() . '.jpg';
         $path = "{$directory}/{$filename}";
 
-        Storage::disk('public')->put($path, (string) $image);
+        Storage::disk('public')->put($path, (string) $encoded);
 
         return [
             'path' => $path,
@@ -46,17 +56,19 @@ class ImageService
         int $width = 400,
         int $quality = 70
     ): string {
-        $thumb = Image::make($file)
-            ->resize($width, null, function ($constraint) {
-                $constraint->aspectRatio();
-                $constraint->upsize();
-            })
-            ->encode('jpg', $quality);
+        $thumb = $this->manager->read($file);
+        
+        // Scale down to thumbnail width
+        if ($thumb->width() > $width) {
+            $thumb->scale(width: $width);
+        }
+        
+        $encoded = $thumb->toJpeg(quality: $quality);
 
         $filename = uniqid('thumb_') . '.jpg';
         $path = "{$directory}/thumbnails/{$filename}";
 
-        Storage::disk('public')->put($path, (string) $thumb);
+        Storage::disk('public')->put($path, (string) $encoded);
 
         return $path;
     }

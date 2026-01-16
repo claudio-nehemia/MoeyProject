@@ -15,6 +15,7 @@ class SurveyResults extends Model
         'response_by',
         'pm_response_time',
         'pm_response_by',
+        'is_draft',
     ];
 
     protected $casts = [

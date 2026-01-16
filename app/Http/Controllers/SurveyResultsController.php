@@ -9,6 +9,7 @@ use App\Models\SurveyResults;
 use App\Models\JenisPengukuran;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class SurveyResultsController extends Controller
 {
@@ -29,6 +30,8 @@ class SurveyResultsController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($order) {
+                $surveyResult = $order->surveyResults;
+                
                 return [
                     'id' => $order->id,
                     'nama_project' => $order->nama_project,
@@ -37,19 +40,32 @@ class SurveyResultsController extends Controller
                     'jenis_interior' => $order->jenisInterior->nama_interior ?? '-',
                     'tanggal_masuk_customer' => $order->tanggal_masuk_customer,
                     'project_status' => $order->project_status,
-                    // has_survey harus cek response_time (staff response), bukan cuma exists
-                    'has_survey' => $order->surveyResults !== null && $order->surveyResults->response_time !== null,
-                    'survey_id' => $order->surveyResults->id ?? null,
-                    'response_time' => $order->surveyResults->response_time ?? null,
-                    'response_by' => $order->surveyResults->response_by ?? null,
-                    'pm_response_time' => $order->surveyResults->pm_response_time ?? null,
-                    'pm_response_by' => $order->surveyResults->pm_response_by ?? null,
-                    'feedback' => $order->surveyResults->feedback ?? null,
+                    
+                    // Survey status checks
+                    'has_survey' => $surveyResult !== null 
+                        && $surveyResult->response_time !== null 
+                        && $surveyResult->is_draft == false
+                        && ($surveyResult->feedback || $surveyResult->layout_files || $surveyResult->foto_lokasi_files),
+                    
+                    'is_draft' => $surveyResult ? $surveyResult->is_draft : false,
+                    'has_draft' => $surveyResult !== null 
+                        && $surveyResult->is_draft == true
+                        && ($surveyResult->feedback || $surveyResult->layout_files || $surveyResult->foto_lokasi_files),
+                    
+                    // Survey data
+                    'survey_id' => $surveyResult->id ?? null,
+                    'response_time' => $surveyResult->response_time ?? null,
+                    'response_by' => $surveyResult->response_by ?? null,
+                    'pm_response_time' => $surveyResult->pm_response_time ?? null,
+                    'pm_response_by' => $surveyResult->pm_response_by ?? null,
+                    'feedback' => $surveyResult->feedback ?? null,
+                    
+                    // Order data
                     'tanggal_survey' => $order->tanggal_survey,
                     'tahapan_proyek' => $order->tahapan_proyek,
                     'payment_status' => $order->payment_status,
-                    // New field: is_responded (menandakan sudah klik response)
-                    'is_responded' => $order->surveyResults && $order->surveyResults->response_time !== null,
+                    'is_responded' => $surveyResult && $surveyResult->response_time !== null,
+                    
                     // Team members
                     'team' => $order->users->map(function ($user) {
                         return [
@@ -71,35 +87,44 @@ class SurveyResultsController extends Controller
      */
     public function markResponse(Request $request, $orderId)
     {
-        $order = Order::findOrFail($orderId);
-        
-        // Check if STAFF already responded (cek response_time, bukan cuma exists)
-        if ($order->surveyResults && $order->surveyResults->response_time) {
-            return back()->with('error', 'Staff response already recorded for this order.');
-        }
+        try {
+            DB::beginTransaction();
+            
+            $order = Order::findOrFail($orderId);
+            
+            // Check if STAFF already responded
+            if ($order->surveyResults && $order->surveyResults->response_time) {
+                return back()->with('error', 'Staff response already recorded for this order.');
+            }
 
-        // If surveyResults exists (PM mungkin sudah response) tapi response_time NULL
-        // Update response_time (staff response)
-        if ($order->surveyResults) {
-            $order->surveyResults->update([
-                'response_time' => now(),
-                'response_by' => auth()->user()->name ?? 'Admin',
+            // Update or create survey result
+            if ($order->surveyResults) {
+                $order->surveyResults->update([
+                    'response_time' => now(),
+                    'response_by' => auth()->user()->name ?? 'Admin',
+                ]);
+            } else {
+                SurveyResults::create([
+                    'order_id' => $order->id,
+                    'response_time' => now(),
+                    'response_by' => auth()->user()->name ?? 'Admin',
+                    'is_draft' => true,
+                ]);
+            }
+
+            $order->update([
+                'tahapan_proyek' => 'survey',
+                'project_status' => 'in_progress',
             ]);
-        } else {
-            // Create new survey with response info
-            SurveyResults::create([
-                'order_id' => $order->id,
-                'response_time' => now(),
-                'response_by' => auth()->user()->name ?? 'Admin',
-            ]);
+            
+            DB::commit();
+            return back()->with('success', 'Response recorded. You can now create the survey.');
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error marking response: ' . $e->getMessage());
+            return back()->with('error', 'Failed to record response. Please try again.');
         }
-
-        $order->update([
-            'tahapan_proyek' => 'survey',
-            'project_status' => 'in_progress',
-        ]);
-
-        return back()->with('success', 'Response recorded. You can now create the survey.');
     }
 
     /**
@@ -116,19 +141,18 @@ class SurveyResultsController extends Controller
                 ->with('error', 'Please click "Response" button first before creating survey.');
         }
 
-        // Check if survey data already filled
-        if ($order->surveyResults->feedback || $order->surveyResults->layout || $order->surveyResults->foto_lokasi) {
+        // Check if published survey already exists
+        if (!$order->surveyResults->is_draft && 
+            ($order->surveyResults->feedback || $order->surveyResults->layout_files || $order->surveyResults->foto_lokasi_files)) {
             return redirect()->route('survey-results.edit', $order->surveyResults->id)
                 ->with('info', 'Survey data already exists. You can edit it.');
         }
-
-        $jenisPengukuran = JenisPengukuran::all();
 
         return Inertia::render('SurveyResults/Create', [
             'order' => $order,
             'survey' => $order->surveyResults,
             'jenisPengukuran' => $jenisPengukuran, 
-            'selectedPengukuranIds' => [],
+            'selectedPengukuranIds' => $order->surveyResults->jenisPengukuran->pluck('id')->toArray() ?? [],
         ]);
     }
 
@@ -140,137 +164,116 @@ class SurveyResultsController extends Controller
         $validated = $request->validate([
             'survey_id' => 'required|exists:survey_results,id',
             'feedback' => 'nullable|string',
-
             'layout_files' => 'nullable|array',
             'layout_files.*' => 'file|mimes:pdf,jpg,jpeg,png,dwg,dxf|max:10240',
-
             'foto_lokasi_files' => 'nullable|array',
             'foto_lokasi_files.*' => 'file|mimes:jpg,jpeg,png|max:5120',
-
             'mom_file' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
-
             'jenis_pengukuran_ids' => 'nullable|array',
             'jenis_pengukuran_ids.*' => 'exists:jenis_pengukuran,id',
+            'action' => 'required|in:save_draft,publish',
         ]);
 
-        $survey = SurveyResults::findOrFail($validated['survey_id']);
+        try {
+            DB::beginTransaction();
 
-        /* ===============================
-        * PIVOT IDS
-        * =============================== */
-        $jenisPengukuranIds = $validated['jenis_pengukuran_ids'] ?? [];
+            $survey = SurveyResults::findOrFail($validated['survey_id']);
+            $isDraft = $validated['action'] === 'save_draft';
+            $jenisPengukuranIds = $validated['jenis_pengukuran_ids'] ?? [];
 
-        unset(
-            $validated['survey_id'],
-            $validated['jenis_pengukuran_ids'],
-            $validated['layout_files'],
-            $validated['foto_lokasi_files']
-        );
+            // Remove non-database fields
+            unset(
+                $validated['survey_id'],
+                $validated['jenis_pengukuran_ids'],
+                $validated['layout_files'],
+                $validated['foto_lokasi_files'],
+                $validated['action']
+            );
 
-        /* ===============================
-        * UPLOAD LAYOUT FILES
-        * =============================== */
-        $layoutFilesPaths = [];
+            /* ===============================
+            * UPLOAD LAYOUT FILES
+            * =============================== */
+            $layoutFilesPaths = [];
 
-        if ($request->hasFile('layout_files')) {
-            foreach ($request->file('layout_files') as $file) {
-
-                // IMAGE → resize + thumbnail
-                if (in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png'])) {
-
-                    $imageData = image_service()->saveImage(
-                        $file,
-                        'survey_layouts',
-                        2000, // max width
-                        85    // quality
-                    );
-
-                    $thumbnail = image_service()->saveThumbnail(
-                        $file,
-                        'survey_layouts',
-                        500,
-                        70
-                    );
-
-                    $layoutFilesPaths[] = array_merge($imageData, [
-                        'thumbnail' => $thumbnail,
-                    ]);
-
-                } else {
-                    // PDF / DWG / DXF → raw
-                    $layoutFilesPaths[] = image_service()->saveRawFile(
-                        $file,
-                        'survey_layouts'
-                    );
+            if ($request->hasFile('layout_files')) {
+                foreach ($request->file('layout_files') as $file) {
+                    if (in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png'])) {
+                        $imageData = image_service()->saveImage($file, 'survey_layouts', 2000, 85);
+                        $thumbnail = image_service()->saveThumbnail($file, 'survey_layouts', 500, 70);
+                        $layoutFilesPaths[] = array_merge($imageData, ['thumbnail' => $thumbnail]);
+                    } else {
+                        $layoutFilesPaths[] = image_service()->saveRawFile($file, 'survey_layouts');
+                    }
                 }
             }
-        }
 
-        $validated['layout_files'] = $layoutFilesPaths ?: null;
+            $validated['layout_files'] = $layoutFilesPaths ?: null;
 
-        /* ===============================
-        * UPLOAD FOTO LOKASI
-        * =============================== */
-        $fotoLokasiFilesPaths = [];
+            /* ===============================
+            * UPLOAD FOTO LOKASI
+            * =============================== */
+            $fotoLokasiFilesPaths = [];
 
-        if ($request->hasFile('foto_lokasi_files')) {
-            foreach ($request->file('foto_lokasi_files') as $file) {
-
-                $imageData = image_service()->saveImage(
-                    $file,
-                    'survey_photos',
-                    1600,
-                    80
-                );
-
-                $thumbnail = image_service()->saveThumbnail(
-                    $file,
-                    'survey_photos',
-                    400,
-                    70
-                );
-
-                $fotoLokasiFilesPaths[] = array_merge($imageData, [
-                    'thumbnail' => $thumbnail,
-                ]);
-            }
-        }
-
-        $validated['foto_lokasi_files'] = $fotoLokasiFilesPaths ?: null;
-
-        /* ===============================
-        * UPDATE SURVEY
-        * =============================== */
-        $survey->update($validated);
-
-        /* ===============================
-        * SYNC JENIS PENGUKURAN
-        * =============================== */
-        $survey->jenisPengukuran()->sync($jenisPengukuranIds);
-
-        /* ===============================
-        * UPLOAD MOM FILE (ORDER)
-        * =============================== */
-        if ($request->hasFile('mom_file')) {
-            $order = $survey->order;
-
-            if ($order->mom_file && Storage::disk('public')->exists($order->mom_file)) {
-                Storage::disk('public')->delete($order->mom_file);
+            if ($request->hasFile('foto_lokasi_files')) {
+                foreach ($request->file('foto_lokasi_files') as $file) {
+                    $imageData = image_service()->saveImage($file, 'survey_photos', 1600, 80);
+                    $thumbnail = image_service()->saveThumbnail($file, 'survey_photos', 400, 70);
+                    $fotoLokasiFilesPaths[] = array_merge($imageData, ['thumbnail' => $thumbnail]);
+                }
             }
 
-            $momFilePath = $request->file('mom_file')->store('mom_files', 'public');
-            $order->update(['mom_file' => $momFilePath]);
+            $validated['foto_lokasi_files'] = $fotoLokasiFilesPaths ?: null;
+
+            /* ===============================
+            * UPDATE SURVEY
+            * =============================== */
+            $validated['is_draft'] = $isDraft;
+            $survey->update($validated);
+
+            /* ===============================
+            * SYNC JENIS PENGUKURAN
+            * =============================== */
+            $survey->jenisPengukuran()->sync($jenisPengukuranIds);
+
+            /* ===============================
+            * UPLOAD MOM FILE (ORDER)
+            * =============================== */
+            if ($request->hasFile('mom_file')) {
+                $order = $survey->order;
+
+                if ($order->mom_file && Storage::disk('public')->exists($order->mom_file)) {
+                    Storage::disk('public')->delete($order->mom_file);
+                }
+
+                $momFilePath = $request->file('mom_file')->store('mom_files', 'public');
+                $order->update(['mom_file' => $momFilePath]);
+            }
+
+            /* ===============================
+            * NOTIFICATION (only if published)
+            * =============================== */
+            if (!$isDraft) {
+                $notificationService = new NotificationService();
+                $notificationService->sendMoodboardRequestNotification($survey->order);
+            }
+
+            DB::commit();
+
+            $message = $isDraft 
+                ? 'Survey Results saved as draft successfully.' 
+                : 'Survey Results published successfully.';
+
+            return redirect()
+                ->route('survey-results.index')
+                ->with('success', $message);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error storing survey: ' . $e->getMessage());
+            return back()
+                ->withInput()
+                ->with('error', 'Failed to save survey. Please try again.');
         }
-
-        /* ===============================
-        * NOTIFICATION
-        * =============================== */
-        $notificationService = new NotificationService();
-        $notificationService->sendMoodboardRequestNotification($survey->order);
-
-        return redirect()
-            ->route('survey-results.index')
-            ->with('success', 'Survey Results created successfully.');
     }
 
     /**
@@ -295,7 +298,6 @@ class SurveyResultsController extends Controller
         $survey = SurveyResults::with(['order.jenisInterior', 'order.users.role', 'jenisPengukuran'])->findOrFail($id);
         
         $jenisPengukuran = JenisPengukuran::all();
-
         $selectedPengukuranIds = $survey->jenisPengukuran->pluck('id')->toArray();
 
         return Inertia::render('SurveyResults/Edit', [
@@ -314,132 +316,115 @@ class SurveyResultsController extends Controller
 
         $validated = $request->validate([
             'feedback' => 'nullable|string',
-
             'layout_files' => 'nullable|array',
             'layout_files.*' => 'file|mimes:pdf,jpg,jpeg,png,dwg,dxf|max:10240',
-
             'foto_lokasi_files' => 'nullable|array',
             'foto_lokasi_files.*' => 'file|mimes:jpg,jpeg,png|max:5120',
-
             'mom_file' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
-
             'jenis_pengukuran_ids' => 'nullable|array',
             'jenis_pengukuran_ids.*' => 'exists:jenis_pengukuran,id',
+            'action' => 'required|in:save_draft,publish',
         ]);
 
-        /* ===============================
-        * PREPARE
-        * =============================== */
-        $jenisPengukuranIds = $validated['jenis_pengukuran_ids'] ?? [];
+        try {
+            DB::beginTransaction();
 
-        unset(
-            $validated['layout_files'],
-            $validated['foto_lokasi_files'],
-            $validated['jenis_pengukuran_ids']
-        );
+            $isDraft = $validated['action'] === 'save_draft';
+            $wasDraft = $survey->is_draft;
+            $jenisPengukuranIds = $validated['jenis_pengukuran_ids'] ?? [];
 
-        /* ===============================
-        * HANDLE LAYOUT FILES (APPEND)
-        * =============================== */
-        $existingLayoutFiles = $survey->layout_files ?? [];
+            // Remove non-database fields
+            unset(
+                $validated['layout_files'],
+                $validated['foto_lokasi_files'],
+                $validated['jenis_pengukuran_ids'],
+                $validated['action']
+            );
 
-        if ($request->hasFile('layout_files')) {
-            foreach ($request->file('layout_files') as $file) {
+            /* ===============================
+            * HANDLE LAYOUT FILES (APPEND)
+            * =============================== */
+            $existingLayoutFiles = $survey->layout_files ?? [];
 
-                if (in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png'])) {
-
-                    $imageData = image_service()->saveImage(
-                        $file,
-                        'survey_layouts',
-                        2000,
-                        85
-                    );
-
-                    $thumbnail = image_service()->saveThumbnail(
-                        $file,
-                        'survey_layouts',
-                        500,
-                        70
-                    );
-
-                    $existingLayoutFiles[] = array_merge($imageData, [
-                        'thumbnail' => $thumbnail,
-                    ]);
-
-                } else {
-                    $existingLayoutFiles[] = image_service()->saveRawFile(
-                        $file,
-                        'survey_layouts'
-                    );
+            if ($request->hasFile('layout_files')) {
+                foreach ($request->file('layout_files') as $file) {
+                    if (in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png'])) {
+                        $imageData = image_service()->saveImage($file, 'survey_layouts', 2000, 85);
+                        $thumbnail = image_service()->saveThumbnail($file, 'survey_layouts', 500, 70);
+                        $existingLayoutFiles[] = array_merge($imageData, ['thumbnail' => $thumbnail]);
+                    } else {
+                        $existingLayoutFiles[] = image_service()->saveRawFile($file, 'survey_layouts');
+                    }
                 }
             }
-        }
 
-        $validated['layout_files'] = $existingLayoutFiles ?: null;
+            $validated['layout_files'] = $existingLayoutFiles ?: null;
 
-        /* ===============================
-        * HANDLE FOTO LOKASI (APPEND)
-        * =============================== */
-        $existingFotoFiles = $survey->foto_lokasi_files ?? [];
+            /* ===============================
+            * HANDLE FOTO LOKASI (APPEND)
+            * =============================== */
+            $existingFotoFiles = $survey->foto_lokasi_files ?? [];
 
-        if ($request->hasFile('foto_lokasi_files')) {
-            foreach ($request->file('foto_lokasi_files') as $file) {
-
-                $imageData = image_service()->saveImage(
-                    $file,
-                    'survey_photos',
-                    1600,
-                    80
-                );
-
-                $thumbnail = image_service()->saveThumbnail(
-                    $file,
-                    'survey_photos',
-                    400,
-                    70
-                );
-
-                $existingFotoFiles[] = array_merge($imageData, [
-                    'thumbnail' => $thumbnail,
-                ]);
-            }
-        }
-
-        $validated['foto_lokasi_files'] = $existingFotoFiles ?: null;
-
-        /* ===============================
-        * UPDATE SURVEY
-        * =============================== */
-        $survey->update($validated);
-
-        /* ===============================
-        * SYNC JENIS PENGUKURAN
-        * =============================== */
-        $survey->jenisPengukuran()->sync($jenisPengukuranIds);
-
-        /* ===============================
-        * UPLOAD MOM FILE (ORDER)
-        * =============================== */
-        if ($request->hasFile('mom_file')) {
-            $order = $survey->order;
-
-            if ($order->mom_file && Storage::disk('public')->exists($order->mom_file)) {
-                Storage::disk('public')->delete($order->mom_file);
+            if ($request->hasFile('foto_lokasi_files')) {
+                foreach ($request->file('foto_lokasi_files') as $file) {
+                    $imageData = image_service()->saveImage($file, 'survey_photos', 1600, 80);
+                    $thumbnail = image_service()->saveThumbnail($file, 'survey_photos', 400, 70);
+                    $existingFotoFiles[] = array_merge($imageData, ['thumbnail' => $thumbnail]);
+                }
             }
 
-            $momFilePath = $request->file('mom_file')->store('mom_files', 'public');
-            $order->update(['mom_file' => $momFilePath]);
+            $validated['foto_lokasi_files'] = $existingFotoFiles ?: null;
+
+            /* ===============================
+            * UPDATE SURVEY
+            * =============================== */
+            $validated['is_draft'] = $isDraft;
+            $survey->update($validated);
+
+            /* ===============================
+            * SYNC JENIS PENGUKURAN
+            * =============================== */
+            $survey->jenisPengukuran()->sync($jenisPengukuranIds);
+
+            /* ===============================
+            * UPLOAD MOM FILE (ORDER)
+            * =============================== */
+            if ($request->hasFile('mom_file')) {
+                $order = $survey->order;
+
+                if ($order->mom_file && Storage::disk('public')->exists($order->mom_file)) {
+                    Storage::disk('public')->delete($order->mom_file);
+                }
+
+                $momFilePath = $request->file('mom_file')->store('mom_files', 'public');
+                $order->update(['mom_file' => $momFilePath]);
+            }
+
+            /* ===============================
+            * NOTIFICATION (only if published from draft)
+            * =============================== */
+            if (!$isDraft && $wasDraft) {
+                $notificationService = new NotificationService();
+                $notificationService->sendMoodboardRequestNotification($survey->order);
+            }
+
+            DB::commit();
+
+            $message = $isDraft 
+                ? 'Survey Results saved as draft successfully.' 
+                : 'Survey Results published successfully.';
+
+            return redirect()
+                ->route('survey-results.index')
+                ->with('success', $message);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error updating survey: ' . $e->getMessage());
+            return back()
+                ->withInput()
+                ->with('error', 'Failed to update survey. Please try again.');
         }
-
-        /* ===============================
-        * NOTIFICATION
-        * =============================== */
-        $notificationService = new NotificationService();
-        $notificationService->sendMoodboardRequestNotification($survey->order);
-
-        return redirect()
-            ->route('survey-results.index')
-            ->with('success', 'Survey Results updated successfully.');
     }
 
     /**
@@ -447,29 +432,45 @@ class SurveyResultsController extends Controller
      */
     public function destroy($id)
     {
-        $survey = SurveyResults::findOrFail($id);
+        try {
+            DB::beginTransaction();
+            
+            $survey = SurveyResults::findOrFail($id);
 
-        // Delete layout files
-        if ($survey->layout_files) {
-            foreach ($survey->layout_files as $file) {
-                if (isset($file['path']) && Storage::disk('public')->exists($file['path'])) {
-                    Storage::disk('public')->delete($file['path']);
+            // Delete layout files
+            if ($survey->layout_files) {
+                foreach ($survey->layout_files as $file) {
+                    if (isset($file['path']) && Storage::disk('public')->exists($file['path'])) {
+                        Storage::disk('public')->delete($file['path']);
+                    }
+                    if (isset($file['thumbnail']) && Storage::disk('public')->exists($file['thumbnail'])) {
+                        Storage::disk('public')->delete($file['thumbnail']);
+                    }
                 }
             }
-        }
 
-        // Delete foto lokasi files
-        if ($survey->foto_lokasi_files) {
-            foreach ($survey->foto_lokasi_files as $file) {
-                if (isset($file['path']) && Storage::disk('public')->exists($file['path'])) {
-                    Storage::disk('public')->delete($file['path']);
+            // Delete foto lokasi files
+            if ($survey->foto_lokasi_files) {
+                foreach ($survey->foto_lokasi_files as $file) {
+                    if (isset($file['path']) && Storage::disk('public')->exists($file['path'])) {
+                        Storage::disk('public')->delete($file['path']);
+                    }
+                    if (isset($file['thumbnail']) && Storage::disk('public')->exists($file['thumbnail'])) {
+                        Storage::disk('public')->delete($file['thumbnail']);
+                    }
                 }
             }
+
+            $survey->delete();
+            
+            DB::commit();
+            return redirect()->route('survey-results.index')->with('success', 'Survey Results deleted successfully.');
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error deleting survey: ' . $e->getMessage());
+            return back()->with('error', 'Failed to delete survey. Please try again.');
         }
-
-        $survey->delete();
-
-        return redirect()->route('survey-results.index')->with('success', 'Survey Results deleted successfully.');
     }
 
     /**
@@ -477,31 +478,87 @@ class SurveyResultsController extends Controller
      */
     public function deleteFile($id, $fileIndex)
     {
-        $survey = SurveyResults::findOrFail($id);
-        $fileType = request()->query('type'); // 'layout' or 'foto'
+        try {
+            DB::beginTransaction();
+            
+            $survey = SurveyResults::findOrFail($id);
+            $fileType = request()->query('type'); // 'layout' or 'foto'
 
-        if ($fileType === 'layout') {
-            $files = $survey->layout_files ?? [];
-            if (isset($files[$fileIndex])) {
-                if (isset($files[$fileIndex]['path']) && Storage::disk('public')->exists($files[$fileIndex]['path'])) {
-                    Storage::disk('public')->delete($files[$fileIndex]['path']);
+            if ($fileType === 'layout') {
+                $files = $survey->layout_files ?? [];
+                if (isset($files[$fileIndex])) {
+                    // Delete main file
+                    if (isset($files[$fileIndex]['path']) && Storage::disk('public')->exists($files[$fileIndex]['path'])) {
+                        Storage::disk('public')->delete($files[$fileIndex]['path']);
+                    }
+                    // Delete thumbnail
+                    if (isset($files[$fileIndex]['thumbnail']) && Storage::disk('public')->exists($files[$fileIndex]['thumbnail'])) {
+                        Storage::disk('public')->delete($files[$fileIndex]['thumbnail']);
+                    }
+                    
+                    array_splice($files, $fileIndex, 1);
+                    $survey->update(['layout_files' => !empty($files) ? array_values($files) : null]);
+                    
+                    DB::commit();
+                    return back()->with('success', 'Layout file deleted successfully.');
                 }
-                array_splice($files, $fileIndex, 1);
-                $survey->update(['layout_files' => !empty($files) ? array_values($files) : null]);
-                return back()->with('success', 'Layout file deleted successfully.');
-            }
-        } elseif ($fileType === 'foto') {
-            $files = $survey->foto_lokasi_files ?? [];
-            if (isset($files[$fileIndex])) {
-                if (isset($files[$fileIndex]['path']) && Storage::disk('public')->exists($files[$fileIndex]['path'])) {
-                    Storage::disk('public')->delete($files[$fileIndex]['path']);
+            } elseif ($fileType === 'foto') {
+                $files = $survey->foto_lokasi_files ?? [];
+                if (isset($files[$fileIndex])) {
+                    // Delete main file
+                    if (isset($files[$fileIndex]['path']) && Storage::disk('public')->exists($files[$fileIndex]['path'])) {
+                        Storage::disk('public')->delete($files[$fileIndex]['path']);
+                    }
+                    // Delete thumbnail
+                    if (isset($files[$fileIndex]['thumbnail']) && Storage::disk('public')->exists($files[$fileIndex]['thumbnail'])) {
+                        Storage::disk('public')->delete($files[$fileIndex]['thumbnail']);
+                    }
+                    
+                    array_splice($files, $fileIndex, 1);
+                    $survey->update(['foto_lokasi_files' => !empty($files) ? array_values($files) : null]);
+                    
+                    DB::commit();
+                    return back()->with('success', 'Photo file deleted successfully.');
                 }
-                array_splice($files, $fileIndex, 1);
-                $survey->update(['foto_lokasi_files' => !empty($files) ? array_values($files) : null]);
-                return back()->with('success', 'Photo file deleted successfully.');
             }
+
+            DB::rollBack();
+            return back()->with('error', 'File not found.');
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error deleting file: ' . $e->getMessage());
+            return back()->with('error', 'Failed to delete file. Please try again.');
         }
+    }
 
-        return back()->with('error', 'File not found.');
+    /**
+     * Publish a draft survey
+     */
+    public function publish($id)
+    {
+        try {
+            DB::beginTransaction();
+            
+            $survey = SurveyResults::findOrFail($id);
+
+            if (!$survey->is_draft) {
+                return back()->with('error', 'Survey is already published.');
+            }
+
+            $survey->update(['is_draft' => false]);
+
+            // Send notification
+            $notificationService = new NotificationService();
+            $notificationService->sendMoodboardRequestNotification($survey->order);
+            
+            DB::commit();
+            return back()->with('success', 'Survey Results published successfully.');
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error publishing survey: ' . $e->getMessage());
+            return back()->with('error', 'Failed to publish survey. Please try again.');
+        }
     }
 }

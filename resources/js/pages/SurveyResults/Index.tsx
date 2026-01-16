@@ -15,6 +15,8 @@ interface Survey {
     payment_status: string;
     project_status: string;
     has_survey: boolean;
+    is_draft: boolean;
+    has_draft: boolean;
     survey_id: number | null;
     response_time: string | null;
     response_by: string | null;
@@ -446,6 +448,14 @@ export default function Index({ surveys }: Props) {
                                                     >
                                                         {survey.project_status}
                                                     </span>
+                                                    {survey.is_draft && survey.response_time && (
+                                                        <span className="w-fit flex items-center gap-1.5 rounded-lg border-2 border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 px-3 py-1 text-xs font-bold text-amber-700 shadow-sm">
+                                                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                            </svg>
+                                                            DRAFT
+                                                        </span>
+                                                    )}
                                                 </div>
 
                                                 <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
@@ -668,8 +678,55 @@ export default function Index({ surveys }: Props) {
                                                             Respond
                                                         </span>
                                                     </button>
+                                                ) : survey.is_draft ? (
+                                                    // Draft - Tampilkan tombol Create atau Edit Draft
+                                                    <>
+                                                        {survey.has_draft ? (
+                                                            <Link
+                                                                href={`/survey-results/${survey.survey_id || survey.id}/edit`}
+                                                                className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-amber-600 hover:to-orange-600 sm:px-4 sm:text-sm"
+                                                            >
+                                                                <svg
+                                                                    className="mr-1 h-4 w-4 sm:mr-2"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    viewBox="0 0 24 24"
+                                                                >
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth={2}
+                                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                                                    />
+                                                                </svg>
+                                                                <span className="hidden sm:inline">Edit Draft</span>
+                                                                <span className="sm:hidden">Edit</span>
+                                                            </Link>
+                                                        ) : (
+                                                            <Link
+                                                                href={`/survey-results/order/${survey.id}/create`}
+                                                                className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-cyan-600 hover:to-blue-600 sm:px-4 sm:text-sm"
+                                                            >
+                                                                <svg
+                                                                    className="mr-1 h-4 w-4 sm:mr-2"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    viewBox="0 0 24 24"
+                                                                >
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth={2}
+                                                                        d="M12 4v16m8-8H4"
+                                                                    />
+                                                                </svg>
+                                                                <span className="hidden sm:inline">Create Survey</span>
+                                                                <span className="sm:hidden">Create</span>
+                                                            </Link>
+                                                        )}
+                                                    </>
                                                 ) : (
-                                                    // Sudah response - Tampilkan tombol View & Edit
+                                                    // Published - Tampilkan tombol View & Edit
                                                     <>
                                                         <Link
                                                             href={`/survey-results/${survey.survey_id || survey.id}`}

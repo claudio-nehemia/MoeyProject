@@ -1,5 +1,6 @@
 <?php
 
+use GuzzleHttp\Middleware;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Illuminate\Support\Facades\Route;
@@ -213,6 +214,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('permission:survey-results.edit')->name('survey-results.delete-file');
     Route::get('survey-results/{surveyResult}', [SurveyResultsController::class, 'show'])
         ->middleware('permission:survey-results.show')->name('survey-results.show');
+    Route::post('/survey-results/{id}/publish', [SurveyResultsController::class, 'publish'])
+        ->middleware('permission:survey-results.edit')->name('survey-results.publish');
 
     // MOODBOARD ROUTES
     Route::get('moodboard', [MoodboardController::class, 'index'])

@@ -60,6 +60,7 @@ export default function Create({ order, survey, jenisPengukuran }: Props) {
         foto_lokasi_files: [] as File[],
         mom_file: null as File | null,
         jenis_pengukuran_ids: [] as number[],
+        action: 'publish' as 'save_draft' | 'publish',
     });
 
     const [showJenisModal, setShowJenisModal] = useState(false);
@@ -101,17 +102,19 @@ export default function Create({ order, survey, jenisPengukuran }: Props) {
         });
     };
 
-    const handleSubmit: FormEventHandler = (e) => {
-        e.preventDefault();
-
+    const handleSubmit = (action: 'save_draft' | 'publish') => {
         console.log('=== DEBUG CREATE SURVEY ===');
         console.log('Survey ID:', data.survey_id);
         console.log('Feedback:', data.feedback);
         console.log('Layout files count:', data.layout_files.length);
         console.log('Foto lokasi files count:', data.foto_lokasi_files.length);
         console.log('Has mom_file:', data.mom_file ? 'Yes' : 'No');
+        console.log('Action:', action);
 
-        router.post('/survey-results', data, {
+        router.post('/survey-results', {
+            ...data,
+            action: action,
+        }, {
             preserveScroll: true,
             onError: (errors) => {
                 console.log('Validation errors:', errors);
@@ -253,7 +256,7 @@ export default function Create({ order, survey, jenisPengukuran }: Props) {
                     )}
 
                     {/* Form */}
-                    <form onSubmit={handleSubmit}>
+                    <div>
                         <div className="bg-white rounded-2xl shadow-xl border border-stone-200 overflow-hidden fadeInUp" style={{ animationDelay: '0.15s' }}>
                             {/* Form Header */}
                             <div className="bg-gradient-to-r from-cyan-600 to-blue-600 px-8 py-6">
@@ -442,38 +445,64 @@ export default function Create({ order, survey, jenisPengukuran }: Props) {
                             </div>
 
                             {/* Form Actions */}
-                            <div className="bg-stone-50 px-8 py-6 flex items-center justify-end gap-3 border-t border-stone-200">
+                            <div className="bg-stone-50 px-8 py-6 flex items-center justify-between border-t border-stone-200">
                                 <Link
                                     href="/survey-results"
-                                    className="px-6 py-2.5 bg-white border-2 border-stone-300 text-stone-700 font-semibold rounded-lg hover:bg-stone-50 transition-all"
+                                    className="px-6 py-3 bg-white text-stone-700 rounded-xl font-medium hover:bg-stone-100 transition-all border-2 border-stone-200"
                                 >
                                     Cancel
                                 </Link>
-                                <button
-                                    type="submit"
-                                    disabled={processing}
-                                    className="px-6 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-semibold rounded-lg shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                                >
-                                    {processing ? (
-                                        <span className="flex items-center gap-2">
-                                            <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            Creating...
-                                        </span>
-                                    ) : (
-                                        <span className="flex items-center gap-2">
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                            </svg>
-                                            Create Survey
-                                        </span>
-                                    )}
-                                </button>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSubmit('save_draft')}
+                                        disabled={processing}
+                                        className="px-6 py-3 bg-white text-amber-700 rounded-xl font-medium hover:bg-amber-50 transition-all border-2 border-amber-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                    >
+                                        {processing ? (
+                                            <>
+                                                <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                <span>Saving...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                                </svg>
+                                                <span>Save as Draft</span>
+                                            </>
+                                        )}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSubmit('publish')}
+                                        disabled={processing}
+                                        className="px-8 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-medium hover:from-cyan-700 hover:to-blue-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                    >
+                                        {processing ? (
+                                            <>
+                                                <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                <span>Publishing...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                <span>Publish Survey</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </form>
+                    </div>
                     <JenisPengukuranModal
                         show={showJenisModal}
                         editMode={false}
