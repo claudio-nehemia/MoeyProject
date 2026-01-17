@@ -210,15 +210,15 @@ export default function Create({ rabInternal }: Props) {
 
         const hargaDasar = Number(produk.harga_dasar) || 0;
 
-        // ✅ RUMUS RAB INTERNAL: (Harga BB + Finishing) ÷ (Markup/100) × Dimensi
-        const markupDivider = markup / 100; // 150 → 1.5
+        // ✅ RUMUS RAB INTERNAL: (Harga BB + Finishing) ÷ (1 - markup/100) × Dimensi
+        const markupDivider = 1 - (markup / 100); // 20% → 1-0.2 = 0.8
         return (hargaDasar + totalHargaItemsNonAksesoris) / markupDivider * hargaDimensi;
     };
 
     const calculateHargaAksesoris = (aksesoris: FormAksesoris) => {
         const markup = typeof aksesoris.markup_aksesoris === 'string' ? parseFloat(aksesoris.markup_aksesoris) || 0 : aksesoris.markup_aksesoris;
-        // ✅ RUMUS AKSESORIS: Harga Aks ÷ (Markup/100) × Qty
-        const markupDivider = markup / 100; // 150 → 1.5
+        // ✅ RUMUS AKSESORIS: Harga Aks ÷ (1 - markup/100) × Qty
+        const markupDivider = 1 - (markup / 100); // 20% → 1-0.2 = 0.8
         return (aksesoris.harga_satuan / markupDivider) * aksesoris.qty_aksesoris;
     };
 
@@ -227,9 +227,9 @@ export default function Create({ rabInternal }: Props) {
         const totalAksesoris = formProduk.aksesoris.reduce((sum, aks) => sum + calculateHargaAksesoris(aks), 0);
         const hargaSebelumDiskon = hargaSatuan + totalAksesoris;
         
-        // ✅ APPLY DISKON: Harga Jual (Diskon) = Harga Jual (Sebelum Diskon) × (1 - Diskon/100)
+        // ✅ APPLY DISKON: Harga Diskon = Harga Jual - (diskon/100 × Harga Jual)
         const diskon = typeof formProduk.diskon_per_produk === 'string' ? parseFloat(formProduk.diskon_per_produk) || 0 : formProduk.diskon_per_produk;
-        return hargaSebelumDiskon * (1 - diskon / 100);
+        return hargaSebelumDiskon - (hargaSebelumDiskon * diskon / 100);
     };
 
     const formatCurrency = (value: number) => {

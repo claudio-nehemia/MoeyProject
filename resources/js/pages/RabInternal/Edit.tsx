@@ -298,8 +298,8 @@ export default function Edit({ rabInternal }: Props) {
         // Ensure numbers are parsed correctly
         const hargaDasar = Number(produk.harga_dasar) || 0;
 
-        // ✅ RUMUS RAB INTERNAL: (Harga BB + Finishing) ÷ (Markup/100) × Dimensi
-        const markupDivider = markup / 100; // 150 → 1.5
+        // ✅ RUMUS RAB INTERNAL: (Harga BB + Finishing) ÷ (1 - markup/100) × Dimensi
+        const markupDivider = 1 - (markup / 100); // 20% → 1-0.2 = 0.8
         return (
             (hargaDasar + totalHargaItemsNonAksesoris) / markupDivider * hargaDimensi
         );
@@ -311,8 +311,8 @@ export default function Edit({ rabInternal }: Props) {
                 ? parseFloat(aksesoris.markup_aksesoris) || 0
                 : aksesoris.markup_aksesoris;
 
-        // ✅ RUMUS AKSESORIS: Harga Aks ÷ (Markup/100) × Qty
-        const markupDivider = markup / 100; // 150 → 1.5
+        // ✅ RUMUS AKSESORIS: Harga Aks ÷ (1 - markup/100) × Qty
+        const markupDivider = 1 - (markup / 100); // 20% → 1-0.2 = 0.8
         return (
             (aksesoris.harga_satuan_aksesoris / markupDivider) * aksesoris.qty_aksesoris
         );
@@ -587,9 +587,9 @@ export default function Edit({ rabInternal }: Props) {
                                                 : formProduk.diskon_per_produk;
                                         const hargaSebelumDiskon =
                                             hargaSatuan + totalAksesoris;
+                                        // ✅ APPLY DISKON: Harga Diskon = Harga Jual - (diskon/100 × Harga Jual)
                                         const hargaAkhir =
-                                            hargaSebelumDiskon *
-                                            (1 - diskon / 100);
+                                            hargaSebelumDiskon - (hargaSebelumDiskon * diskon / 100);
 
                                         return (
                                             <div

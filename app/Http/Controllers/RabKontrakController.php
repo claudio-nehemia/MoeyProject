@@ -74,15 +74,15 @@ class RabKontrakController extends Controller
             ]);
 
             foreach ($rabInternal->rabProduks as $rabProduk) {
-                // ✅ RAB KONTRAK: Apply PEMBAGIAN (markup/100) pada harga_dasar & harga_items
-                // Contoh: Markup 150% → 150/100 = 1.5, harga dibagi 1.5
-                $markupDivider = $rabProduk->markup_satuan / 100; // 150 → 1.5
+                // ✅ RAB KONTRAK: Apply PERKALIAN (1 - markup/100) pada harga_dasar & harga_items
+                // Contoh: Markup 20% → (1-0.2) = 0.8, harga dikali 0.8
+                $markupMultiplier = 1 - ($rabProduk->markup_satuan / 100); // 20% → 1-0.2 = 0.8
 
                 $rabKontrakProduk = RabKontrakProduk::create([
                     'rab_kontrak_id' => $rabKontrak->id,
                     'item_pekerjaan_produk_id' => $rabProduk->item_pekerjaan_produk_id,
-                    'harga_dasar' => $rabProduk->harga_dasar / $markupDivider,
-                    'harga_items_non_aksesoris' => $rabProduk->harga_items_non_aksesoris / $markupDivider,
+                    'harga_dasar' => $rabProduk->harga_dasar * $markupMultiplier,
+                    'harga_items_non_aksesoris' => $rabProduk->harga_items_non_aksesoris * $markupMultiplier,
                     'harga_dimensi' => $rabProduk->harga_dimensi,
                     'harga_satuan' => $rabProduk->harga_satuan, // Sudah include markup dari Internal
                     'harga_total_aksesoris' => $rabProduk->harga_total_aksesoris,
@@ -337,15 +337,15 @@ class RabKontrakController extends Controller
 
                 // Regenerate from RAB Internal (same logic as generate())
                 foreach ($rabInternal->rabProduks as $rabProduk) {
-                    // ✅ RAB KONTRAK: Apply PEMBAGIAN (markup/100) pada harga_dasar & harga_items
-                    // Contoh: Markup 150% → 150/100 = 1.5, harga dibagi 1.5
-                    $markupDivider = $rabProduk->markup_satuan / 100; // 150 → 1.5
+                    // ✅ RAB KONTRAK: Apply PERKALIAN (1 - markup/100) pada harga_dasar & harga_items
+                    // Contoh: Markup 20% → (1-0.2) = 0.8, harga dikali 0.8
+                    $markupMultiplier = 1 - ($rabProduk->markup_satuan / 100); // 20% → 1-0.2 = 0.8
 
                     $rabKontrakProduk = RabKontrakProduk::create([
                         'rab_kontrak_id' => $rabKontrak->id,
                         'item_pekerjaan_produk_id' => $rabProduk->item_pekerjaan_produk_id,
-                        'harga_dasar' => $rabProduk->harga_dasar / $markupDivider,
-                        'harga_items_non_aksesoris' => $rabProduk->harga_items_non_aksesoris / $markupDivider,
+                        'harga_dasar' => $rabProduk->harga_dasar * $markupMultiplier,
+                        'harga_items_non_aksesoris' => $rabProduk->harga_items_non_aksesoris * $markupMultiplier,
                         'harga_dimensi' => $rabProduk->harga_dimensi,
                         'harga_satuan' => $rabProduk->harga_satuan, // Sudah include markup dari Internal
                         'harga_total_aksesoris' => $rabProduk->harga_total_aksesoris,

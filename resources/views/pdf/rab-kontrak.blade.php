@@ -352,7 +352,8 @@
 
                     $diskon = $produk['diskon_per_produk'] ?? 0;
                     $hargaSebelumDiskon = ($produk['harga_satuan'] ?? 0) + ($produk['harga_total_aksesoris'] ?? 0);
-                    $hargaSetelahDiskon = $produk['harga_akhir'] ?? ($hargaSebelumDiskon * (1 - $diskon / 100));
+                    // ✅ APPLY DISKON: Harga Diskon = Harga Jual - (diskon/100 × Harga Jual)
+                    $hargaSetelahDiskon = $produk['harga_akhir'] ?? ($hargaSebelumDiskon - ($hargaSebelumDiskon * $diskon / 100));
 
                     // Calculate total item = harga setelah diskon - total aksesoris (diskon sudah applied ke harga akhir)
                     $totalItem = $hargaSetelahDiskon - $totalAksesoris;
