@@ -324,8 +324,16 @@ interface Produk {
                                             Aksesoris
                                         </th>
                                         <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20">
+                                            QTY
+                                        </th>
+
+                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20">
+                                            Markup
+                                        </th>
+                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20">
                                             Harga Aks
                                         </th>
+                                        
                                         <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/20">
                                             Diskon
                                         </th>
@@ -339,7 +347,7 @@ interface Produk {
                                         <>
                                             {/* Ruangan Header Row */}
                                             <tr key={`ruangan-header-${ruanganIndex}`} className="bg-gradient-to-r from-cyan-500 to-cyan-600">
-                                                <td colSpan={14} className="px-4 py-3">
+                                                <td colSpan={16} className="px-4 py-3">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-2">
                                                             <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -485,13 +493,31 @@ interface Produk {
                                                             {produk.aksesoris[rowIndex] && (
                                                                 <div key={`aks-${produk.id}-${produk.aksesoris[rowIndex].id}-${rowIndex}`}>
                                                                     • {produk.aksesoris[rowIndex].nama_aksesoris} 
-                                                                    <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                                                                        (Qty: {produk.aksesoris[rowIndex].qty_aksesoris}, Markup: {produk.aksesoris[rowIndex].markup_aksesoris}%)
+                                                                </div>
+                                                            )}
+                                                        </td>
+
+                                                        {/* QTY Aksesoris Column */}
+                                                        <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
+                                                            {produk.aksesoris[rowIndex] && (
+                                                                <div key={`aks-${produk.id}-${produk.aksesoris[rowIndex].id}-${rowIndex}`}>
+                                                                    <span className="ml-2 text-sm text-black dark:text-gray-400">
+                                                                        {produk.aksesoris[rowIndex].qty_aksesoris}
                                                                     </span>
                                                                 </div>
                                                             )}
                                                         </td>
-                                                        
+
+                                                        {/* Markup Aksesoris Column */}
+                                                        <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
+                                                            {produk.aksesoris[rowIndex] && (
+                                                                <div key={`aks-${produk.id}-${produk.aksesoris[rowIndex].id}-${rowIndex}`}>
+                                                                    <span className="ml-2 text-sm text-black dark:text-gray-400">
+                                                                        {produk.aksesoris[rowIndex].markup_aksesoris}%
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </td>
                                                         {/* Harga Aksesoris Column */}
                                                         {rowIndex === 0 && (
                                                             <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-orange-700 dark:text-orange-400 bg-orange-50/50 dark:bg-orange-900/10 border-r border-gray-200 dark:border-gray-700">

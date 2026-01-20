@@ -299,7 +299,13 @@ export default function Show({ rabKontrak }: Props) {
                                             Aksesoris
                                         </th>
                                         <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20">
-                                            Total Aksesoris
+                                            QTY
+                                        </th>
+                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20">
+                                            Harga Aksesoris
+                                        </th>
+                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20">
+                                            Total Harga Aksesoris
                                         </th>
                                         <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/20">
                                             Diskon
@@ -314,7 +320,7 @@ export default function Show({ rabKontrak }: Props) {
                                         <>
                                             {/* Ruangan Header Row */}
                                             <tr key={`ruangan-header-${ruanganIndex}`} className="bg-gradient-to-r from-cyan-500 to-cyan-600">
-                                                <td colSpan={11} className="px-4 py-3">
+                                                <td colSpan={13} className="px-4 py-3">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-2">
                                                             <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -432,9 +438,25 @@ export default function Show({ rabKontrak }: Props) {
                                                             {produk.aksesoris[rowIndex] && (
                                                                 <div>
                                                                     <div className="font-medium">• {produk.aksesoris[rowIndex].nama_aksesoris}</div>
-                                                                    <div className="text-xs text-gray-500 dark:text-gray-400 ml-3">
-                                                                        Qty: {produk.aksesoris[rowIndex].qty_aksesoris} × {formatCurrency(produk.aksesoris[rowIndex].harga_satuan_aksesoris)} = {formatCurrency(produk.aksesoris[rowIndex].harga_total)}
-                                                                    </div>
+                                                                    
+                                                                </div>
+                                                            )}
+                                                        </td>
+
+                                                        {/* Aksesoris Qty Column */}
+                                                        <td className="px-4 py-2 text-right text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
+                                                            {produk.aksesoris[rowIndex] && (
+                                                                <div>
+                                                                    {produk.aksesoris[rowIndex].qty_aksesoris}
+                                                                </div>
+                                                            )}
+                                                        </td>
+
+                                                        {/* Aksesoris Harga Satuan Column */}
+                                                        <td className="px-4 py-2 text-right text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
+                                                            {produk.aksesoris[rowIndex] && (
+                                                                <div>
+                                                                    {formatCurrency(produk.aksesoris[rowIndex].harga_satuan_aksesoris)}
                                                                 </div>
                                                             )}
                                                         </td>

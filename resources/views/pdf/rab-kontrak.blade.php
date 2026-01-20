@@ -318,6 +318,8 @@
                 <th class="text-center" style="width: 6%;">Qty</th>
                 <th class="total-item text-right" style="width: 10%;">Total Item</th>
                 <th style="width: 14%;">Aksesoris</th>
+                <th class="total-aks text-right" style="width: 10%;">Qty</th>
+                <th class="total-aks text-right" style="width: 10%;">Harga Aksesoris</th>
                 <th class="total-aks text-right" style="width: 10%;">Total Aksesoris</th>
                 <th class="text-center" style="width: 6%;">Diskon</th>
                 <th class="grand-total-header text-right" style="width: 10%;">Grand Total</th>
@@ -415,11 +417,19 @@
                         <td>
                             @if (isset($aksesorisData[$rowIndex]))
                                 <div>• {{ $aksesorisData[$rowIndex]['nama_aksesoris'] }}</div>
+                            @endif
+                        </td>
+                        <td>
+                            @if (isset($aksesorisData[$rowIndex]))
                                 <div class="aksesoris-detail">
-                                    Qty: {{ $aksesorisData[$rowIndex]['qty_aksesoris'] }} × Rp
-                                    {{ number_format($aksesorisData[$rowIndex]['harga_satuan_aksesoris'] ?? 0, 0, ',', '.') }}
-                                    = Rp
-                                    {{ number_format($aksesorisData[$rowIndex]['harga_total'] ?? 0, 0, ',', '.') }}
+                                    {{ $aksesorisData[$rowIndex]['qty_aksesoris'] }}
+                                </div>
+                            @endif
+                        </td>
+                        <td>
+                            @if (isset($aksesorisData[$rowIndex]))
+                                <div class="aksesoris-detail">
+                                    Rp {{ number_format($aksesorisData[$rowIndex]['harga_satuan_aksesoris'] ?? 0, 0, ',', '.') }}
                                 </div>
                             @endif
                         </td>
