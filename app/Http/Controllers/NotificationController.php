@@ -31,6 +31,7 @@ class NotificationController extends Controller
             ->with([
                 'order.surveyResults',
                 'order.surveyUlang',
+                'order.surveyUsers', // TAMBAH INI untuk Survey Schedule
                 'order.moodboard.commitmentFee',
                 'order.moodboard.estimasi',
                 'order.moodboard.itemPekerjaans.produks.workplanItems',
@@ -105,19 +106,19 @@ class NotificationController extends Controller
         switch ($notification->type) {
             case Notification::TYPE_SURVEY_REQUEST:
                 return $this->handleSurveyRequest($order);
-            
+
             case Notification::TYPE_MOODBOARD_REQUEST:
                 return $this->handleMoodboardRequest($order);
-            
+
             case Notification::TYPE_ESTIMASI_REQUEST:
                 return $this->handleEstimasiRequest($order);
-            
+
             case Notification::TYPE_DESIGN_APPROVAL:
                 return $this->handleDesignApproval($order);
-            
+
             case Notification::TYPE_COMMITMENT_FEE_REQUEST:
                 return $this->handleCommitmentFeeRequest($order);
-            
+
             case Notification::TYPE_FINAL_DESIGN_REQUEST:
                 return $this->handleFinalDesignRequest($order);
 
@@ -134,7 +135,7 @@ class NotificationController extends Controller
                 return $this->handleInvoiceRequest($order);
 
             case Notification::TYPE_SURVEY_SCHEDULE_REQUEST:
-                return $this->handleSurveyScheduleRequest($order);  
+                return $this->handleSurveyScheduleRequest($order);
 
             case Notification::TYPE_SURVEY_ULANG_REQUEST:
                 return $this->handleSurveyUlangRequest($order);
@@ -144,7 +145,7 @@ class NotificationController extends Controller
 
             case Notification::TYPE_APPROVAL_MATERIAL_REQUEST:
                 return $this->handleApprovalMaterialRequest($order);
-            
+
             case Notification::TYPE_WORKPLAN_REQUEST:
                 return $this->handleWorkplanRequest($order);
 
@@ -329,7 +330,7 @@ class NotificationController extends Controller
             'response_by' => auth()->user()->name,
             'response_time' => now(),
         ]);
-            
+
         // Redirect to item pekerjaan page
         return redirect()->route('item-pekerjaan.index', ['order_id' => $order->id])
             ->with('success', 'Response recorded. Please manage the item pekerjaan for this order.');
@@ -350,7 +351,7 @@ class NotificationController extends Controller
         $order->update([
             'tahapan_proyek' => 'rab',
         ]);
-        
+
         // Redirect to RAB Internal page
         return redirect()->route('rab-internal.index', ['order_id' => $order->id])
             ->with('success', 'Response recorded. Please manage the RAB Internal for this order.');
@@ -378,7 +379,7 @@ class NotificationController extends Controller
         $order->update([
             'tahapan_proyek' => 'kontrak',
         ]);
-        
+
         // Redirect to Kontrak page
         return redirect()->route('kontrak.index', ['order_id' => $order->id])
             ->with('success', 'Response recorded. Please manage the Kontrak for this order.');
@@ -401,10 +402,23 @@ class NotificationController extends Controller
      */
     private function handleSurveyScheduleRequest($order)
     {
-        // Redirect to Survey Schedule page
-        return redirect()->route('survey-schedule.index', ['order_id' => $order->id])
-            ->with('info', 'Please schedule a survey for this order.');
+        // Check if already responded
+        if ($order->survey_response_time) {
+            return redirect()->route('survey-schedule.index')
+                ->with('info', 'Survey schedule sudah di-response sebelumnya.');
+        }
+
+        // Update order with response info
+        $order->update([
+            'survey_response_time' => now(),
+            'survey_response_by' => auth()->user()->name,
+        ]);
+
+        // Redirect to Survey Schedule page to fill details
+        return redirect()->route('survey-schedule.index')
+            ->with('success', 'Response recorded. Silakan jadwalkan survey untuk project ini.');
     }
+
 
     /**
      * Handle survey ulang request notification
@@ -461,7 +475,7 @@ class NotificationController extends Controller
         $order->update([
             'tahapan_proyek' => 'gambar_kerja',
         ]);
-        
+
         // Redirect to Gambar Kerja page
         return redirect()->route('gambar-kerja.index', ['order_id' => $order->id])
             ->with('success', 'Response berhasil. Silakan upload gambar kerja.');

@@ -16,16 +16,21 @@ interface Order {
   company_name: string;
   customer_name: string;
   tanggal_survey: string | null;
+  survey_response_time: string | null;
+  survey_response_by: string | null;
+  pm_survey_response_time: string | null;
+  pm_survey_response_by: string | null;
   survey_users: SurveyUser[];
 }
 
 interface Props {
   orders: Order[];
   surveyUsers: SurveyUser[];
+  isKepalaMarketing: boolean;
 }
 
 /* ================= COMPONENT ================= */
-export default function Index({ orders, surveyUsers }: Props) {
+export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -45,7 +50,6 @@ export default function Index({ orders, surveyUsers }: Props) {
 
   const openModal = (order: Order) => {
     setSelectedOrder(order);
-    // Pre-fill data jika sudah ada jadwal
     if (order.tanggal_survey) {
       setTanggalSurvey(order.tanggal_survey);
       setSelectedUsers(order.survey_users.map(u => u.id));
@@ -80,6 +84,29 @@ export default function Index({ orders, surveyUsers }: Props) {
     );
   };
 
+  const handleResponse = (orderId: number) => {
+    router.post(`/survey-schedule/${orderId}/response`, {}, {
+      preserveScroll: true,
+    });
+  };
+
+  const handlePmResponse = (orderId: number) => {
+    router.post(`/pm-response/survey-schedule/${orderId}`, {}, {
+      preserveScroll: true,
+    });
+  };
+
+  const formatDateTime = (dateTime: string | null) => {
+    if (!dateTime) return '';
+    return new Date(dateTime).toLocaleString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   if (!mounted) return null;
 
   return (
@@ -106,46 +133,105 @@ export default function Index({ orders, surveyUsers }: Props) {
             </div>
           ) : (
             <div className="space-y-4">
-              {orders.map(order => (
-                <div
-                  key={order.id}
-                  className="bg-white rounded-lg border p-4 flex items-center justify-between"
-                >
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg">
-                      {order.nama_project}
-                    </h3>
-                    <p className="text-sm text-stone-600">
-                      {order.company_name} •{' '}
-                      {order.customer_name}
-                    </p>
+              {orders.map(order => {
+                const hasResponse = !!order.survey_response_time;
+                const hasPmResponse = !!order.pm_survey_response_time;
+                const showScheduleButton = hasResponse;
 
-                    {/* STATUS */}
-                    {order.tanggal_survey && (
-                      <div className="mt-2">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium">
-                          ✔ Survey dijadwalkan (
-                          {new Date(
-                            order.tanggal_survey,
-                          ).toLocaleDateString('id-ID')}
-                          )
-                        </div>
-                        <p className="text-xs text-stone-500 mt-1">
-                          Tim: {order.survey_users.map(u => u.name).join(', ')}
+                return (
+                  <div
+                    key={order.id}
+                    className="bg-white rounded-lg border p-4"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg">
+                          {order.nama_project}
+                        </h3>
+                        <p className="text-sm text-stone-600">
+                          {order.company_name} • {order.customer_name}
                         </p>
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  {/* ACTION - SELALU MUNCUL */}
-                  <button
-                    onClick={() => openModal(order)}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
-                  >
-                    {order.tanggal_survey ? 'Edit Schedule' : 'Response Survey'}
-                  </button>
-                </div>
-              ))}
+                    {/* RESPONSE STATUS */}
+                    <div className="space-y-2 mb-3">
+                      {/* Regular Response */}
+                      {hasResponse && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-green-100 text-green-800 font-medium">
+                            ✓ Response
+                          </span>
+                          <span className="text-stone-600">
+                            oleh <strong>{order.survey_response_by}</strong> pada{' '}
+                            {formatDateTime(order.survey_response_time)}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* PM Response */}
+                      {hasPmResponse && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-medium">
+                            ✓ PM Response
+                          </span>
+                          <span className="text-stone-600">
+                            oleh <strong>{order.pm_survey_response_by}</strong> pada{' '}
+                            {formatDateTime(order.pm_survey_response_time)}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Survey Schedule Status */}
+                      {order.tanggal_survey && (
+                        <div className="pt-2 border-t">
+                          <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-sm font-medium">
+                            📅 Survey dijadwalkan (
+                            {new Date(order.tanggal_survey).toLocaleDateString('id-ID')}
+                            )
+                          </div>
+                          <p className="text-xs text-stone-500 mt-1">
+                            Tim: {order.survey_users.map(u => u.name).join(', ')}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ACTION BUTTONS */}
+                    <div className="flex gap-2 flex-wrap">
+                      {/* Response Button - Always show if not yet responded */}
+                      {!hasResponse && (
+                        <button
+                          onClick={() => handleResponse(order.id)}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700"
+                        >
+                          Response
+                        </button>
+                      )}
+
+                      {/* PM Response Button - Only for Kepala Marketing, show if not yet PM responded */}
+                      {isKepalaMarketing && !hasPmResponse && (
+                        <button
+                          onClick={() => handlePmResponse(order.id)}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700"
+                        >
+                          Marketing Response
+                        </button>
+                      )}
+
+                      {/* Schedule Button - Only show after response */}
+                      {showScheduleButton && (
+                        <button
+                          onClick={() => openModal(order)}
+                          className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
+                        >
+                          {order.tanggal_survey ? 'Edit Schedule' : 'Isi Tanggal Survey'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -157,7 +243,7 @@ export default function Index({ orders, surveyUsers }: Props) {
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <h2 className="text-xl font-bold mb-2">
-                {selectedOrder.tanggal_survey ? 'Edit' : 'Response'} Survey
+                {selectedOrder.tanggal_survey ? 'Edit' : 'Isi'} Tanggal Survey
               </h2>
               <p className="text-stone-600 mb-6">
                 {selectedOrder.nama_project}
@@ -176,7 +262,7 @@ export default function Index({ orders, surveyUsers }: Props) {
 
               {/* USER PICKER */}
               <label className="block mb-2 font-semibold">Tim Survey</label>
-              <div className="space-y-2 mb-6">
+              <div className="space-y-2 mb-6 max-h-60 overflow-y-auto">
                 {surveyUsers.map(user => (
                   <div
                     key={user.id}

@@ -523,6 +523,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:survey-schedule.store')
             ->name('store');
 
+        Route::post('/{order}/response', [SurveyScheduleController::class, 'response'])
+            ->middleware('permission:survey-schedule.store')
+            ->name('survey-schedule.response');
+
     });
 
 
@@ -575,6 +579,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/commitment-fee/{id}', [PmResponseController::class, 'commitmentFee'])->name('commitment-fee');
         Route::post('/item-pekerjaan/{id}', [PmResponseController::class, 'itemPekerjaan'])->name('item-pekerjaan');
         Route::post('/survey-ulang/{id}', [PmResponseController::class, 'surveyUlang'])->name('survey-ulang');
+        Route::post('/survey-schedule/{id}', [PmResponseController::class, 'surveySchedule'])->name('pm-response.survey-schedule');
         Route::post('/gambar-kerja/{id}', [PmResponseController::class, 'gambarKerja'])->name('gambar-kerja');
         Route::post('/kontrak/{id}', [PmResponseController::class, 'kontrak'])->name('kontrak');
         Route::post('/survey-result/{id}', [PmResponseController::class, 'surveyResult'])->name('survey-result');

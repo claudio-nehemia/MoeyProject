@@ -305,13 +305,13 @@
         <thead>
             <tr>
                 <th style="width: 10%;">Produk</th>
-                <th class="harga-col text-right" style="width: 7%;">Harga Dasar</th>
                 <th style="width: 9%;">Bahan Baku</th>
                 <th style="width: 9%;">Finishing Dalam</th>
                 <th class="harga-col text-right" style="width: 6%;">Harga FD</th>
                 <th style="width: 9%;">Finishing Luar</th>
                 <th class="harga-col text-right" style="width: 6%;">Harga FL</th>
                 <th class="text-center" style="width: 4%;">Qty</th>
+                <th class="harga-col text-right" style="width: 7%;">Harga Satuan</th>
                 <th class="total-non-aks text-right" style="width: 7%;">Total Non-Aks</th>
                 <th style="width: 10%;">Aksesoris</th>
                 <th class="harga-aks text-right" style="width: 4%;">QTY</th>
@@ -374,9 +374,7 @@
                                         {{ $produk['tinggi'] }} cm</div>
                                 @endif
                             </td>
-                            <td rowspan="{{ $maxRows }}" class="harga-col-cell">
-                                Rp {{ number_format($produk['harga_dasar'] ?? 0, 0, ',', '.') }}
-                            </td>
+                            
                         @endif
 
                         <td>
@@ -409,6 +407,9 @@
                             </td>
                             <td rowspan="{{ $maxRows }}" class="text-center">
                                 {{ $produk['qty_produk'] }}
+                            </td>
+                            <td rowspan="{{ $maxRows }}" class="harga-col-cell">
+                                Rp {{ number_format($produk['harga_dasar'] ?? 0, 0, ',', '.') }}
                             </td>
                             <td rowspan="{{ $maxRows }}" class="total-non-aks-cell">
                                 Rp {{ number_format($totalNonAksesoris, 0, ',', '.') }}

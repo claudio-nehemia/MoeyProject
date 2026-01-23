@@ -311,11 +311,11 @@
         <thead>
             <tr>
                 <th style="width: 12%;">Produk</th>
-                <th class="harga-col text-right" style="width: 10%;">Harga Dasar</th>
                 <th style="width: 12%;">Bahan Baku</th>
                 <th style="width: 12%;">Finishing Dalam</th>
                 <th style="width: 12%;">Finishing Luar</th>
                 <th class="text-center" style="width: 6%;">Qty</th>
+                <th class="harga-col text-right" style="width: 10%;">Harga Satuan</th>
                 <th class="total-item text-right" style="width: 10%;">Total Item</th>
                 <th style="width: 14%;">Aksesoris</th>
                 <th class="total-aks text-right" style="width: 10%;">Qty</th>
@@ -382,9 +382,7 @@
                                         {{ $produk['tinggi'] }} cm</div>
                                 @endif
                             </td>
-                            <td rowspan="{{ $maxRows }}" class="harga-col-cell">
-                                Rp {{ number_format($produk['harga_dasar'] ?? 0, 0, ',', '.') }}
-                            </td>
+                            
                         @endif
 
                         <td>
@@ -408,6 +406,9 @@
                         @if ($rowIndex === 0)
                             <td rowspan="{{ $maxRows }}" class="text-center">
                                 {{ $produk['qty_produk'] }}
+                            </td>
+                            <td rowspan="{{ $maxRows }}" class="harga-col-cell">
+                                Rp {{ number_format($produk['harga_dasar'] ?? 0, 0, ',', '.') }}
                             </td>
                             <td rowspan="{{ $maxRows }}" class="total-item-cell">
                                 Rp {{ number_format($totalItem, 0, ',', '.') }}

@@ -293,9 +293,7 @@ interface Produk {
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Produk
                                         </th>
-                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20">
-                                            Harga Satuan
-                                        </th>
+                                        
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Bahan Baku
                                         </th>
@@ -313,6 +311,9 @@ interface Produk {
                                         </th>
                                         <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Qty
+                                        </th>
+                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20">
+                                            Harga Dasar
                                         </th>
                                         <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Markup
@@ -424,13 +425,7 @@ interface Produk {
                                                                 )}
                                                             </td>
                                                         )}
-                                                        
-                                                        {/* Harga Dasar Column (Total harga bahan baku yang dipilih) */}
-                                                        {rowIndex === 0 && (
-                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10 border-r border-gray-200 dark:border-gray-700">
-                                                                {formatCurrency(produk.harga_dasar || 0)}
-                                                            </td>
-                                                        )}
+                                                    
                                                         
                                                         {/* Bahan Baku Column - Names only (no price) */}
                                                         <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
@@ -471,6 +466,13 @@ interface Produk {
                                                         {rowIndex === 0 && (
                                                             <td rowSpan={maxRows} className="px-4 py-3 text-center align-top text-sm font-medium text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
                                                                 {produk.qty_produk}
+                                                            </td>
+                                                        )}
+
+                                                        {/* Harga Dasar Column (Total harga bahan baku yang dipilih) */}
+                                                        {rowIndex === 0 && (
+                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10 border-r border-gray-200 dark:border-gray-700">
+                                                                {formatCurrency(produk.harga_dasar || 0)}
                                                             </td>
                                                         )}
                                                         

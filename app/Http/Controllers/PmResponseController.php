@@ -11,6 +11,7 @@ use App\Models\SurveyUlang;
 use App\Models\GambarKerja;
 use App\Models\Kontrak;
 use App\Models\SurveyResults;
+use App\Models\Order;
 
 class PmResponseController extends Controller
 {
@@ -47,6 +48,27 @@ class PmResponseController extends Controller
         \Log::info('=== END RECORD PM RESPONSE ===');
     }
 
+    // Survey Schedule (Order)
+    public function surveySchedule($id)
+    {
+        if ($check = $this->checkPm()) return $check;
+        
+        \Log::info('=== PM RESPONSE SURVEY SCHEDULE START ===');
+        \Log::info('Order ID: ' . $id);
+        
+        $order = Order::findOrFail($id);
+        
+        $order->update([
+            'pm_survey_response_time' => now(),
+            'pm_survey_response_by' => auth()->user()->name,
+        ]);
+        
+        \Log::info('Survey Schedule PM Response recorded for Order ID: ' . $order->id);
+        \Log::info('=== PM RESPONSE SURVEY SCHEDULE END ===');
+        
+        return back()->with('success', 'PM Response berhasil dicatat untuk Survey Schedule.');
+    }
+
     // Moodboard
     public function moodboard($id)
     {
@@ -55,18 +77,15 @@ class PmResponseController extends Controller
         \Log::info('=== PM RESPONSE MOODBOARD START ===');
         \Log::info('ID received: ' . $id);
         
-        // Try to find moodboard by ID first
         $moodboard = Moodboard::find($id);
         
         if (!$moodboard) {
             \Log::info('Moodboard not found by ID, trying order_id');
-            // If not found, assume $id is order_id and try to find by order_id
             $moodboard = Moodboard::where('order_id', $id)->first();
         }
         
         if (!$moodboard) {
             \Log::info('Moodboard not found, creating new with order_id: ' . $id);
-            // Buat moodboard baru untuk PM response (assume $id is order_id)
             $moodboard = Moodboard::create([
                 'order_id' => $id,
                 'status' => 'pending',
@@ -139,18 +158,15 @@ class PmResponseController extends Controller
         \Log::info('=== PM RESPONSE SURVEY RESULT START ===');
         \Log::info('ID received: ' . $id);
         
-        // Try to find survey result by ID first
         $surveyResult = SurveyResults::find($id);
         
         if (!$surveyResult) {
             \Log::info('Survey Result not found by ID, trying order_id');
-            // If not found, assume $id is order_id and try to find by order_id
             $surveyResult = SurveyResults::where('order_id', $id)->first();
         }
         
         if (!$surveyResult) {
             \Log::info('Survey Result not found, creating new with order_id: ' . $id);
-            // Buat survey result baru untuk Marketing response (assume $id is order_id)
             $surveyResult = SurveyResults::create([
                 'order_id' => $id,
                 'pm_response_time' => now(),
@@ -171,7 +187,6 @@ class PmResponseController extends Controller
     {
         if ($check = $this->checkPm()) return $check;
         
-        // Get all workplan items for this order
         $order = \App\Models\Order::with('moodboard.itemPekerjaans.produks.workplanItems')->findOrFail($orderId);
         
         $workplanItems = $order->moodboard
@@ -179,7 +194,6 @@ class PmResponseController extends Controller
             ->flatMap(fn($ip) => $ip->produks)
             ->flatMap(fn($produk) => $produk->workplanItems);
         
-        // Record PM response for all workplan items
         foreach ($workplanItems as $item) {
             $item->update([
                 'pm_response_time' => now(),

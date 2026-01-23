@@ -40,6 +40,7 @@ class NotificationApiController extends Controller
             ->with([
                 'order.surveyResults',
                 'order.surveyUlang',
+                'order.surveyUsers', // TAMBAH INI untuk Survey Schedule
                 'order.moodboard.commitmentFee',
                 'order.moodboard.estimasi',
                 'order.moodboard.itemPekerjaans.produks.workplanItems',
@@ -65,19 +66,19 @@ class NotificationApiController extends Controller
                 \Log::info('=== WORKPLAN NOTIFICATION DEBUG ===');
                 \Log::info('Notification ID: ' . $notif->id);
                 \Log::info('Order ID: ' . $notif->order->id);
-                
+
                 if ($notif->order->moodboard) {
                     \Log::info('Has Moodboard: YES');
                     \Log::info('Moodboard ItemPekerjaans count: ' . $notif->order->moodboard->itemPekerjaans->count());
-                    
+
                     foreach ($notif->order->moodboard->itemPekerjaans as $ip) {
                         \Log::info('  ItemPekerjaan ID: ' . $ip->id);
                         \Log::info('  Produks count: ' . $ip->produks->count());
-                        
+
                         foreach ($ip->produks as $produk) {
                             \Log::info('    Produk ID: ' . $produk->id);
                             \Log::info('    Workplan Items count: ' . $produk->workplanItems->count());
-                            
+
                             if ($produk->workplanItems->count() > 0) {
                                 $firstWorkplan = $produk->workplanItems->first();
                                 \Log::info('    First Workplan response_time: ' . $firstWorkplan->response_time);
@@ -88,7 +89,7 @@ class NotificationApiController extends Controller
                 } else {
                     \Log::info('Has Moodboard: NO');
                 }
-                
+
                 \Log::info('=== END DEBUG ===');
             }
         }
@@ -173,23 +174,23 @@ class NotificationApiController extends Controller
                 case Notification::TYPE_SURVEY_REQUEST:
                     $result = $this->handleSurveyRequest($order);
                     break;
-                
+
                 case Notification::TYPE_MOODBOARD_REQUEST:
                     $result = $this->handleMoodboardRequest($order);
                     break;
-                
+
                 case Notification::TYPE_ESTIMASI_REQUEST:
                     $result = $this->handleEstimasiRequest($order);
                     break;
-                
+
                 case Notification::TYPE_DESIGN_APPROVAL:
                     $result = $this->handleDesignApproval($order);
                     break;
-                
+
                 case Notification::TYPE_COMMITMENT_FEE_REQUEST:
                     $result = $this->handleCommitmentFeeRequest($order);
                     break;
-                
+
                 case Notification::TYPE_FINAL_DESIGN_REQUEST:
                     $result = $this->handleFinalDesignRequest($order);
                     break;
@@ -225,7 +226,7 @@ class NotificationApiController extends Controller
                 case Notification::TYPE_APPROVAL_MATERIAL_REQUEST:
                     $result = $this->handleApprovalMaterialRequest($order);
                     break;
-                
+
                 case Notification::TYPE_WORKPLAN_REQUEST:
                     $result = $this->handleWorkplanRequest($order);
                     break;
@@ -439,7 +440,7 @@ class NotificationApiController extends Controller
     private function handleRabInternalRequest($order)
     {
         $itemPekerjaan = $order->itemPekerjaans->first();
-        
+
         if (!$itemPekerjaan) {
             return [
                 'success' => false,
@@ -466,7 +467,7 @@ class NotificationApiController extends Controller
     private function handleKontrakRequest($order)
     {
         $itemPekerjaan = $order->itemPekerjaans->first();
-        
+
         if (!$itemPekerjaan) {
             return [
                 'success' => false,
@@ -511,14 +512,29 @@ class NotificationApiController extends Controller
 
     private function handleSurveyScheduleRequest($order)
     {
+        // Check if already responded
+        if ($order->survey_response_time) {
+            return [
+                'success' => true,
+                'message' => 'Survey schedule sudah di-response sebelumnya',
+                'action' => 'view',
+                'data' => ['order_id' => $order->id],
+            ];
+        }
+
+        // Update order with response info
+        $order->update([
+            'survey_response_time' => now(),
+            'survey_response_by' => auth()->user()->name,
+        ]);
+
         return [
             'success' => true,
-            'message' => 'Please schedule survey for this order',
-            'action' => 'view',
+            'message' => 'Response recorded. Please schedule survey via web.',
+            'action' => 'create',
             'data' => ['order_id' => $order->id],
         ];
     }
-
     private function handleSurveyUlangRequest($order)
     {
         // Check if survey ulang already exists
@@ -642,7 +658,7 @@ class NotificationApiController extends Controller
                     }
                 }
             }
-            
+
             DB::commit();
 
             return [
@@ -678,6 +694,7 @@ class NotificationApiController extends Controller
                 ->with([
                     'order.moodboard',
                     'order.surveyUlang',
+                    'order.surveyUsers',
                     'order.gambarKerja',
                     'order.surveyResults',
                     'order.moodboard.itemPekerjaans.produks.workplanItems',
@@ -734,7 +751,7 @@ class NotificationApiController extends Controller
             case Notification::TYPE_FINAL_DESIGN_REQUEST:
             case Notification::TYPE_ITEM_PEKERJAAN_REQUEST:
                 \Log::info("Checking moodboard: " . ($order->moodboard ? 'exists' : 'not found'));
-                
+
                 // Create or update moodboard (PM response only)
                 if (!$order->moodboard) {
                     \Log::info("Creating new moodboard with PM response ONLY");
@@ -751,7 +768,7 @@ class NotificationApiController extends Controller
                         'pm_response_by' => $pmName,
                     ]);
                 }
-                
+
                 return [
                     'success' => true,
                     'message' => 'PM Response recorded successfully. Staff can now work on moodboard.',
@@ -760,7 +777,7 @@ class NotificationApiController extends Controller
 
             case Notification::TYPE_SURVEY_ULANG_REQUEST:
                 \Log::info("Checking surveyUlang: " . ($order->surveyUlang ? 'exists' : 'not found'));
-                
+
                 // Create or update surveyUlang (PM response only)
                 if (!$order->surveyUlang) {
                     \Log::info("Creating new surveyUlang with PM response ONLY");
@@ -777,16 +794,32 @@ class NotificationApiController extends Controller
                         'pm_response_by' => $pmName,
                     ]);
                 }
-                
+
                 return [
                     'success' => true,
                     'message' => 'PM Response recorded successfully. Staff can now complete survey ulang.',
                 ];
                 break;
 
+            case Notification::TYPE_SURVEY_SCHEDULE_REQUEST:
+                \Log::info("Processing Survey Schedule PM Response");
+
+                // Update order with PM response (tidak mengganggu staff response)
+                $order->update([
+                    'pm_survey_response_time' => $pmTime,
+                    'pm_survey_response_by' => $pmName,
+                ]);
+
+                \Log::info("Survey Schedule PM Response recorded");
+                return [
+                    'success' => true,
+                    'message' => 'PM Response recorded successfully. Staff can now schedule the survey.',
+                ];
+                break;
+
             case Notification::TYPE_GAMBAR_KERJA_REQUEST:
                 \Log::info("Checking gambarKerja: " . ($order->gambarKerja ? 'exists' : 'not found'));
-                
+
                 // Create or update gambarKerja (PM response only)
                 if (!$order->gambarKerja) {
                     \Log::info("Creating new gambarKerja with PM response ONLY");
@@ -804,7 +837,7 @@ class NotificationApiController extends Controller
                         'pm_response_by' => $pmName,
                     ]);
                 }
-                
+
                 return [
                     'success' => true,
                     'message' => 'PM Response recorded successfully. Staff can now upload gambar kerja.',
@@ -819,7 +852,7 @@ class NotificationApiController extends Controller
                         ->flatMap(fn($produk) => $produk->workplanItems ?? collect());
 
                     \Log::info("Workplan items count: " . $workplanItems->count());
-                    
+
                     if ($workplanItems->count() > 0) {
                         foreach ($workplanItems as $item) {
                             $item->update([
@@ -855,7 +888,7 @@ class NotificationApiController extends Controller
 
             case Notification::TYPE_SURVEY_REQUEST:
                 \Log::info("Checking surveyResults: " . ($order->surveyResults ? 'exists' : 'not found'));
-                
+
                 // Create or update surveyResults (PM response only, don't touch staff response)
                 if (!$order->surveyResults) {
                     \Log::info("Creating new surveyResults with PM response ONLY");
@@ -872,7 +905,7 @@ class NotificationApiController extends Controller
                         'pm_response_by' => $pmName,
                     ]);
                 }
-                
+
                 return [
                     'success' => true,
                     'message' => 'PM Response recorded successfully. Staff can now complete the survey.',

@@ -12,6 +12,9 @@ class SurveyScheduleController extends Controller
 {
     public function index()
     {
+        $user = auth()->user();
+        $isKepalaMarketing = $user->role && $user->role->nama_role === 'Kepala Marketing';
+
         // USER YANG BOLEH IKUT SURVEY
         $surveyUsers = User::whereHas('role', function ($q) {
             $q->whereIn('nama_role', [
@@ -25,9 +28,7 @@ class SurveyScheduleController extends Controller
 
         $orders = Order::with(['surveyUsers:id,name'])
             ->whereNotNull('payment_status')
-            ->whereRaw("
-                LOWER(payment_status) LIKE '%dp%' 
-            ")
+            ->whereRaw("LOWER(payment_status) LIKE '%dp%'")
             ->orderBy('id', 'desc')
             ->get()
             ->map(fn($o) => [
@@ -36,6 +37,10 @@ class SurveyScheduleController extends Controller
                 'company_name' => $o->company_name,
                 'customer_name' => $o->customer_name,
                 'tanggal_survey' => $o->tanggal_survey,
+                'survey_response_time' => $o->survey_response_time,
+                'survey_response_by' => $o->survey_response_by,
+                'pm_survey_response_time' => $o->pm_survey_response_time,
+                'pm_survey_response_by' => $o->pm_survey_response_by,
                 'survey_users' => $o->surveyUsers->map(fn($u) => [
                     'id' => $u->id,
                     'name' => $u->name,
@@ -45,6 +50,7 @@ class SurveyScheduleController extends Controller
         return Inertia::render('SurveySchedule/Index', [
             'orders' => $orders,
             'surveyUsers' => $surveyUsers,
+            'isKepalaMarketing' => $isKepalaMarketing,
         ]);
     }
 
@@ -66,11 +72,22 @@ class SurveyScheduleController extends Controller
         $order->surveyUsers()->sync($validated['survey_schedule_users']);
 
         $notificationService = new NotificationService();
-
         $notificationService->sendSurveyUlangRequestNotification($order);
 
         return redirect()
             ->route('survey-schedule.index')
             ->with('success', 'Survey berhasil dijadwalkan.');
+    }
+
+    public function response(Order $order)
+    {
+        $order->update([
+            'survey_response_time' => now(),
+            'survey_response_by' => auth()->user()->name,
+        ]);
+
+        return redirect()
+            ->route('survey-schedule.index')
+            ->with('success', 'Response survey berhasil disimpan.');
     }
 }

@@ -22,6 +22,10 @@ class Order extends Model
         'payment_status',
         'tahapan_proyek',
         'alamat',
+        'survey_response_time',
+        'survey_response_by',
+        'pm_suruey_response_by',
+        'pm_survey_response_time',
     ];
 
     public function jenisInterior()

@@ -255,6 +255,11 @@ class SurveyResultsController extends Controller
             if (!$isDraft) {
                 $notificationService = new NotificationService();
                 $notificationService->sendMoodboardRequestNotification($survey->order);
+                $order = $survey->order;
+                $order->update([
+                    'tahapan_proyek' => 'moodboard',
+                    'project_status' => 'in_progress',
+                ]);
             }
 
             DB::commit();
@@ -406,6 +411,11 @@ class SurveyResultsController extends Controller
             if (!$isDraft && $wasDraft) {
                 $notificationService = new NotificationService();
                 $notificationService->sendMoodboardRequestNotification($survey->order);
+                $order = $survey->order;
+                $order->update([
+                    'tahapan_proyek' => 'moodboard',
+                    'project_status' => 'in_progress',
+                ]);
             }
 
             DB::commit();
