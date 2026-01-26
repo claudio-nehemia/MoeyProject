@@ -220,7 +220,7 @@ export default function MoodboardModal({ show, order, mode, onClose }: Props) {
                                     <p className="text-xs sm:text-sm font-medium text-stone-900">
                                         {mode === 'upload-kasar' ? 'Pilih file (bisa multiple)' : 'Pilih file'}
                                     </p>
-                                    <p className="text-xs text-stone-500 mt-1">JPG, PNG, PDF (Max 10MB per file)</p>
+                                    <p className="text-xs text-stone-500 mt-1">JPG, PNG, PDF</p>
                                 </label>
                             </div>
 
