@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use App\Models\User;
 use Inertia\Inertia;
 use App\Models\Order;
+use App\Models\TaskResponse;
 use Illuminate\Http\Request;
 use App\Models\JenisInterior;
 use App\Services\NotificationService;
@@ -23,14 +24,14 @@ class OrderController extends Controller
         \Log::info('User ID: ' . $user->id);
         \Log::info('User Name: ' . $user->name);
         \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
-        
+
         $orders = Order::with('users', 'jenisInterior')
             ->visibleToUser($user)
             ->get();
-            
+
         \Log::info('Orders count: ' . $orders->count());
         \Log::info('Order IDs: ' . $orders->pluck('id')->implode(', '));
-        
+
         return Inertia::render('Order/Index', [
             'orders' => $orders,
         ]);
@@ -142,6 +143,18 @@ class OrderController extends Controller
         } else {
             \Log::warning('No user_ids to attach - skipping team assignment');
         }
+
+        TaskResponse::create([
+            'order_id' => $order->id,
+            'user_id' => null, // Akan diisi saat user klik Response
+            'tahap' => 'survey',
+            'start_time' => now(),
+            'deadline' => now()->addDays(3), // Deadline 3 hari
+            'duration' => 3, // Durasi awal 3 hari
+            'duration_actual' => 3, // Durasi actual 3 hari
+            'extend_time' => 0,
+            'status' => 'menunggu_response',
+        ]);
 
         return redirect('/order')->with('success', 'Order created successfully.');
     }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Inertia\Inertia;
 use App\Models\Estimasi;
 use App\Models\Moodboard;
+use App\Models\TaskResponse;
 use Illuminate\Http\Request;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Storage;
@@ -21,9 +22,9 @@ class EstimasiController extends Controller
         \Log::info('User ID: ' . $user->id);
         \Log::info('User Name: ' . $user->name);
         \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
-        
+
         $moodboards = Moodboard::with('estimasi.files.moodboardFile', 'order', 'kasarFiles')
-            ->whereHas('order', function($query) use ($user) {
+            ->whereHas('order', function ($query) use ($user) {
                 $query->visibleToUser($user);
             })
             ->whereHas('kasarFiles')
@@ -148,6 +149,36 @@ class EstimasiController extends Controller
                 if (!$estimasi->estimated_cost) {
                     $estimasi->update(['estimated_cost' => $filePath]);
                 }
+
+                $taskResponse = TaskResponse::where('order_id', $estimasi->moodboard->order->id)
+                    ->where('tahap', 'estimasi')
+                    ->first();
+
+                if ($taskResponse) {
+                    $taskResponse->update([
+                        'update_data_time' => now(), // Kapan data diisi
+                        'status' => 'selesai',
+                    ]);
+
+                    // Create task response untuk tahap selanjutnya (cm_fee)
+                    $nextTaskExists = TaskResponse::where('order_id', $estimasi->moodboard->order->id)
+                        ->where('tahap', 'cm_fee')
+                        ->exists();
+
+                    if (!$nextTaskExists) {
+                        TaskResponse::create([
+                            'order_id' => $estimasi->moodboard->order->id,
+                            'user_id' => null,
+                            'tahap' => 'cm_fee',
+                            'start_time' => now(),
+                            'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                            'duration' => 3,
+                            'duration_actual' => 3,
+                            'extend_time' => 0,
+                            'status' => 'menunggu_response',
+                        ]);
+                    }
+                }
             }
 
             \Log::info('=== ESTIMASI STORE END ===');
@@ -205,6 +236,9 @@ class EstimasiController extends Controller
 
         $estimasi->update($validated);
 
+        $notificationService = new NotificationService();
+        $notificationService->sendDesignApprovalNotification($estimasi->moodboard->order);
+
         return redirect()->back()->with('success', 'Estimasi updated successfully.');
     }
 
@@ -215,6 +249,7 @@ class EstimasiController extends Controller
             \Log::info('Moodboard ID: ' . $moodboardId);
 
             $moodboard = Moodboard::findOrFail($moodboardId);
+            $order = $moodboard->order;
 
             if ($moodboard->estimasi) {
                 \Log::warning('Estimasi already exists for moodboard: ' . $moodboardId);
@@ -228,6 +263,21 @@ class EstimasiController extends Controller
                 'response_by' => auth()->user()->name,
                 'response_time' => now(),
             ]);
+
+            $taskResponse = TaskResponse::where('order_id', $order->id)
+                ->where('tahap', 'estimasi')
+                ->first();
+
+            if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+                $taskResponse->update([
+                    'user_id' => auth()->user()->id,
+                    'response_time' => now(),
+                    'deadline' => now()->addDays(6), // Tambah 3 hari (total 8 hari)
+                    'duration' => 6,
+                    'duration_actual' => $taskResponse->duration_actual,
+                    'status' => 'menunggu_input',
+                ]);
+            }
 
             \Log::info('Estimasi response created with ID: ' . $estimasi->id);
             \Log::info('=== ESTIMASI RESPONSE END ===');

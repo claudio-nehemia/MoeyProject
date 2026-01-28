@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use Inertia\Inertia;
-use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Moodboard;
+use App\Models\TaskResponse;
 use Illuminate\Http\Request;
 use App\Models\CommitmentFee;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use App\Services\NotificationService;
+use Illuminate\Support\Facades\Storage;
 
 class CommitmentFeeController extends Controller
 {
@@ -81,6 +82,21 @@ class CommitmentFeeController extends Controller
             $moodboard->order->update([
                 'tahapan_proyek' => 'cm_fee',
             ]);
+
+            $taskResponse = TaskResponse::where('order_id', $moodboard->order->id)
+                ->where('tahap', 'cm_fee')
+                ->first();
+
+            if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+                $taskResponse->update([
+                    'user_id' => auth()->user()->id,
+                    'response_time' => now(),
+                    'deadline' => now()->addDays(6), // Tambah 3 hari (total 8 hari)
+                    'duration' => 6,
+                    'duration_actual' => $taskResponse->duration_actual,
+                    'status' => 'menunggu_input',
+                ]);
+            }
 
             Log::info('Commitment Fee created with ID: ' . $commitmentFee->id);
             Log::info('=== COMMITMENT FEE RESPONSE END ===');
@@ -160,6 +176,36 @@ class CommitmentFeeController extends Controller
                 $notificationService->sendFinalDesignRequestNotification($commitmentFee->moodboard->order);
             }
 
+            $taskResponse = TaskResponse::where('order_id', $commitmentFee->moodboard->order->id)
+                ->where('tahap', 'cm_fee')
+                ->first();
+
+            if ($taskResponse) {
+                $taskResponse->update([
+                    'update_data_time' => now(), // Kapan data diisi
+                    'status' => 'selesai',
+                ]);
+
+                // Create task response untuk tahap selanjutnya (cm_fee)
+                $nextTaskExists = TaskResponse::where('order_id', $commitmentFee->moodboard->order->id)
+                    ->where('tahap', 'approval_design')
+                    ->exists();
+
+                if (!$nextTaskExists) {
+                    TaskResponse::create([
+                        'order_id' => $commitmentFee->moodboard->order->id,
+                        'user_id' => null,
+                        'tahap' => 'approval_design',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_input',
+                    ]);
+                }
+            }
+
             Log::info('Payment proof uploaded, status: completed');
             Log::info('=== UPLOAD PAYMENT PROOF END ===');
 
@@ -175,7 +221,7 @@ class CommitmentFeeController extends Controller
     {
         try {
             \Log::info('=== RESET FEE START (MAYOR REVISION) ===');
-            
+
             // 1. Hapus file payment_proof di storage jika ada
             if ($commitmentFee->payment_proof) {
                 if (Storage::disk('public')->exists($commitmentFee->payment_proof)) {
@@ -190,7 +236,7 @@ class CommitmentFeeController extends Controller
                 'payment_proof' => null,      // Direset ke null
                 'payment_status' => 'pending', // Kembalikan status ke pending
             ]);
-            
+
             // 3. Opsional: Update status pembayaran di tabel Order
             if ($commitmentFee->moodboard && $commitmentFee->moodboard->order) {
                 $commitmentFee->moodboard->order->update([
@@ -210,8 +256,8 @@ class CommitmentFeeController extends Controller
     }
 
     /**
-    * Revisi Total Fee untuk Commitment Fee yang belum dibayar.
-    */
+     * Revisi Total Fee untuk Commitment Fee yang belum dibayar.
+     */
     public function reviseFee(Request $request, $commitmentFeeId)
     {
         try {

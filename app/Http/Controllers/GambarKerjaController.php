@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use Inertia\Inertia;
 use App\Models\GambarKerja;
-use App\Models\GambarKerjaFile;
+use App\Models\TaskResponse;
 use Illuminate\Http\Request;
+use App\Models\GambarKerjaFile;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Storage;
 
 class GambarKerjaController extends Controller
@@ -17,9 +19,9 @@ class GambarKerjaController extends Controller
         \Log::info('User ID: ' . $user->id);
         \Log::info('User Name: ' . $user->name);
         \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
-        
+
         $items = GambarKerja::with(['order.surveyUlang', 'files'])
-            ->whereHas('order', function($query) use ($user) {
+            ->whereHas('order', function ($query) use ($user) {
                 $query->visibleToSurveyUser($user);
             })
             ->whereHas('order.surveyUlang')
@@ -52,9 +54,24 @@ class GambarKerjaController extends Controller
 
         $gambarKerja->update([
             'response_time' => now(),
-            'response_by'   => auth()->user()->name,
-            'status'        => 'pending',
+            'response_by' => auth()->user()->name,
+            'status' => 'pending',
         ]);
+
+        $taskResponse = TaskResponse::where('order_id', $gambarKerja->order->id)
+            ->where('tahap', 'gambar_kerja')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays(8), // Tambah 3 hari (total 8 hari)
+                'duration' => 8,
+                'duration_actual' => $taskResponse->duration_actual,
+                'status' => 'menunggu_input',
+            ]);
+        }
 
         return back()->with('success', 'Gambar kerja di-response.');
     }
@@ -65,8 +82,8 @@ class GambarKerjaController extends Controller
     {
         $validated = $request->validate([
             'gambar_kerja_id' => 'required|exists:gambar_kerjas,id',
-            'files'           => 'required|array',
-            'files.*'         => 'file|mimes:jpg,jpeg,png,pdf|max:10240',
+            'files' => 'required|array',
+            'files.*' => 'file|mimes:jpg,jpeg,png,pdf|max:10240',
         ]);
 
         $gambarKerja = GambarKerja::findOrFail($validated['gambar_kerja_id']);
@@ -76,9 +93,9 @@ class GambarKerjaController extends Controller
 
             GambarKerjaFile::create([
                 'gambar_kerja_id' => $gambarKerja->id,
-                'file_path'       => $path,
-                'original_name'   => $file->getClientOriginalName(),
-                'uploaded_by'     => auth()->user()->name,
+                'file_path' => $path,
+                'original_name' => $file->getClientOriginalName(),
+                'uploaded_by' => auth()->user()->name,
             ]);
         }
 
@@ -100,12 +117,42 @@ class GambarKerjaController extends Controller
         }
 
         $gambarKerja->update([
-            'status'        => 'approved',
+            'status' => 'approved',
             'approved_time' => now(),
-            'approved_by'   => auth()->user()->name,
+            'approved_by' => auth()->user()->name,
         ]);
 
-        $notificationService = new \App\Services\NotificationService();
+        $taskResponse = TaskResponse::where('order_id', $gambarKerja->order->id)
+                ->where('tahap', 'gambar_kerja')
+                ->first();
+
+            if ($taskResponse) {
+                $taskResponse->update([
+                    'update_data_time' => now(), // Kapan data diisi
+                    'status' => 'selesai',
+                ]);
+
+                // Create task response untuk tahap selanjutnya (cm_fee)
+                $nextTaskExists = TaskResponse::where('order_id', $gambarKerja->order->id)
+                    ->where('tahap', 'approval_material')
+                    ->exists();
+
+                if (!$nextTaskExists) {
+                    TaskResponse::create([
+                        'order_id' => $gambarKerja->order->id,
+                        'user_id' => null,
+                        'tahap' => 'approval_material',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(6), // Deadline untuk approval_material
+                        'duration' => 6,
+                        'duration_actual' => 6,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_input',
+                ]);
+            }
+        }
+
+        $notificationService = new NotificationService();
         $notificationService->sendApprovalMaterialRequestNotification($gambarKerja->order);
 
         return back()->with('success', 'Gambar kerja disetujui.');
@@ -123,7 +170,7 @@ class GambarKerjaController extends Controller
 
         $gambarKerja->update([
             'revisi_notes' => $validated['notes'],
-            'status'       => 'pending',
+            'status' => 'pending',
         ]);
 
         return back()->with('success', 'Catatan revisi disimpan.');

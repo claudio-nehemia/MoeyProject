@@ -4,14 +4,15 @@ namespace App\Http\Controllers;
 
 use Inertia\Inertia;
 use App\Models\Invoice;
-use App\Models\RabKontrak;
-use App\Models\ItemPekerjaan;
 use App\Models\JenisItem;
+use App\Models\RabKontrak;
+use App\Models\TaskResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use App\Models\ItemPekerjaan;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\DB;
 use App\Services\NotificationService;
+use Illuminate\Support\Facades\Storage;
 
 class InvoiceController extends Controller
 {
@@ -72,13 +73,13 @@ class InvoiceController extends Controller
                     $step = $index + 1;
                     $invoice = $allInvoices->firstWhere('termin_step', $step);
                     $persentase = (float) ($tahap['persentase'] ?? 0);
-                    
+
                     // Calculate nominal for this step based on sisa pembayaran
                     $nominal = $sisaPembayaran * ($persentase / 100);
-                    
+
                     // Check if this is the last step
                     $isLastStep = $step === $totalTahap;
-                    
+
                     // Determine status
                     $status = 'locked'; // default
                     $canPay = false;
@@ -136,8 +137,8 @@ class InvoiceController extends Controller
                 }
 
                 // Progress pembayaran calculation
-                $progressPembayaran = $sisaPembayaran > 0 
-                    ? round(($totalPaidFromInvoices / $sisaPembayaran) * 100, 2) 
+                $progressPembayaran = $sisaPembayaran > 0
+                    ? round(($totalPaidFromInvoices / $sisaPembayaran) * 100, 2)
                     : 0;
 
                 // Determine payment status text from last paid termin
@@ -254,7 +255,7 @@ class InvoiceController extends Controller
 
         // Calculate amounts using harga kontrak
         $hargaKontrak = (float) ($itemPekerjaan->kontrak->harga_kontrak ?? 0);
-        
+
         // Fallback to RAB if no harga kontrak
         if ($hargaKontrak <= 0) {
             $hargaKontrak = (float) $itemPekerjaan->rabKontrak->rabKontrakProduks->sum('harga_akhir');
@@ -284,6 +285,21 @@ class InvoiceController extends Controller
         $sequence = $lastInvoice ? (intval(substr($lastInvoice->invoice_number, -4)) + 1) : 1;
         $invoiceNumber = sprintf('INV/%s/%s/%04d', $year, $month, $sequence);
 
+        $order = $itemPekerjaan->moodboard->order;
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'invoice')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_input' && !$taskResponse->user_id) {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                // TIDAK ada response_time karena tidak ada response method
+                // Langsung update deadline jika perlu (optional)
+                'deadline' => now()->addDays(6), // Tetap atau tambah hari sesuai kebutuhan
+                'duration' => 6, // Tetap atau update sesuai kebutuhan
+            ]);
+        }
+
         $invoice = Invoice::create([
             'item_pekerjaan_id' => $itemPekerjaan->id,
             'rab_kontrak_id' => $itemPekerjaan->rabKontrak->id,
@@ -294,6 +310,8 @@ class InvoiceController extends Controller
             'total_amount' => $totalAmount,
             'status' => 'pending',
         ]);
+
+
 
         return redirect()->route('invoice.show', $invoice->id)
             ->with('success', "Invoice tahap $requestedStep berhasil di-generate!");
@@ -476,7 +494,7 @@ class InvoiceController extends Controller
             // Update payment_status di Order sesuai tahapan termin
             $order = $invoice->itemPekerjaan->moodboard->order;
             $terminText = $invoice->termin_text;
-            
+
             // Update payment status dengan nama tahapan termin
             $order->update([
                 'payment_status' => $terminText,
@@ -486,6 +504,36 @@ class InvoiceController extends Controller
             if ($invoice->termin_step === 1) {
                 $notificationService = new NotificationService();
                 $notificationService->sendSurveyScheduleRequestNotification($order);
+            }
+
+            $taskResponse = TaskResponse::where('order_id', $order->id)
+                ->where('tahap', 'invoice')
+                ->first();
+
+            if ($taskResponse) {
+                $taskResponse->update([
+                    'update_data_time' => now(), // Kapan data diisi
+                    'status' => 'selesai',
+                ]);
+
+                // Create task response untuk tahap selanjutnya (cm_fee)
+                $nextTaskExists = TaskResponse::where('order_id', $order->id)
+                    ->where('tahap', 'survey_schedule')
+                    ->exists();
+
+                if (!$nextTaskExists) {
+                    TaskResponse::create([
+                        'order_id' => $order->id,
+                        'user_id' => null,
+                        'tahap' => 'survey_schedule',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                    ]);
+                }
             }
         });
 
@@ -700,7 +748,7 @@ class InvoiceController extends Controller
 
             // Get fresh data from kontrak and RAB
             $hargaKontrak = (float) ($invoice->itemPekerjaan->kontrak?->harga_kontrak ?? 0);
-            
+
             // Fallback to RAB if no harga kontrak
             if ($hargaKontrak <= 0) {
                 $hargaKontrak = (float) $invoice->rabKontrak->rabKontrakProduks->sum('harga_akhir');

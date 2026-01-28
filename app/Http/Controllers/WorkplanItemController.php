@@ -5,15 +5,16 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use Inertia\Inertia;
 use App\Models\Order;
+use App\Models\TaskResponse;
 use App\Models\WorkplanItem;
 use Illuminate\Http\Request;
 use App\Models\ItemPekerjaan;
+use App\Exports\WorkplanExport;
 use Illuminate\Support\Facades\DB;
 use App\Models\ItemPekerjaanProduk;
-use App\Models\PengajuanPerpanjanganTimeline;
-use App\Services\NotificationService;
-use App\Exports\WorkplanExport;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Services\NotificationService;
+use App\Models\PengajuanPerpanjanganTimeline;
 
 class WorkplanItemController extends Controller
 {
@@ -38,7 +39,7 @@ class WorkplanItemController extends Controller
         \Log::info('User ID: ' . $user->id);
         \Log::info('User Name: ' . $user->name);
         \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
-        
+
         $orders = Order::with([
             'moodboard.itemPekerjaans.produks.produk',
             'moodboard.itemPekerjaans.produks.workplanItems',
@@ -57,18 +58,18 @@ class WorkplanItemController extends Controller
                 $itemPekerjaans = $order->moodboard->itemPekerjaans->map(function ($ip) {
                     $totalProduks = $ip->produks->count();
                     $hasTimeline = $ip->workplan_start_date && $ip->workplan_end_date;
-                    
+
                     // Count produks yang workplan items-nya sudah LENGKAP (ada start_date & end_date)
                     // Bukan hanya count yang punya workplan items kosong
-                    $produksWithWorkplan = $ip->produks->filter(function($p) {
+                    $produksWithWorkplan = $ip->produks->filter(function ($p) {
                         // Cek apakah ada minimal 1 workplan item yang sudah diisi timeline
-                        $hasFilledWorkplan = $p->workplanItems->filter(function($wi) {
+                        $hasFilledWorkplan = $p->workplanItems->filter(function ($wi) {
                             return $wi->start_date !== null && $wi->end_date !== null;
                         })->count() > 0;
-                        
+
                         return $hasFilledWorkplan;
                     })->count();
-                    
+
                     // Get latest pengajuan perpanjangan
                     $latestPengajuan = $ip->pengajuanPerpanjanganTimelines
                         ->sortByDesc('created_at')
@@ -83,12 +84,14 @@ class WorkplanItemController extends Controller
                         'workplan_end_date' => $ip->workplan_end_date?->format('Y-m-d'),
                         'has_kontrak' => $ip->kontrak !== null,
                         'kontrak_durasi' => $ip->kontrak?->durasi_kontrak,
-                        'pengajuan_perpanjangans' => $latestPengajuan ? [[
-                            'id' => $latestPengajuan->id,
-                            'item_pekerjaan_id' => $latestPengajuan->item_pekerjaan_id,
-                            'status' => $latestPengajuan->status,
-                            'reason' => $latestPengajuan->reason,
-                        ]] : [],
+                        'pengajuan_perpanjangans' => $latestPengajuan ? [
+                            [
+                                'id' => $latestPengajuan->id,
+                                'item_pekerjaan_id' => $latestPengajuan->item_pekerjaan_id,
+                                'status' => $latestPengajuan->status,
+                                'reason' => $latestPengajuan->reason,
+                            ]
+                        ] : [],
                     ];
                 });
 
@@ -100,14 +103,14 @@ class WorkplanItemController extends Controller
                 $workplanItems = $order->moodboard->itemPekerjaans
                     ->flatMap(fn($ip) => $ip->produks)
                     ->flatMap(fn($produk) => $produk->workplanItems);
-                
+
                 // Use model method to check if any item has response_time
                 $hasResponded = WorkplanItem::hasAnyResponded($workplanItems);
                 $responseBy = null;
                 $responseTime = null;
                 $pmResponseBy = null;
                 $pmResponseTime = null;
-                
+
                 if ($hasResponded) {
                     // Get first responded item's info
                     $respondedItem = $workplanItems->first(fn($item) => $item->response_time !== null);
@@ -116,7 +119,7 @@ class WorkplanItemController extends Controller
                         $responseTime = $respondedItem->response_time;
                     }
                 }
-                
+
                 // Get PM response info from first PM responded item
                 $pmRespondedItem = $workplanItems->first(fn($item) => $item->pm_response_time !== null);
                 if ($pmRespondedItem) {
@@ -137,8 +140,8 @@ class WorkplanItemController extends Controller
                     'response_time' => $responseTime?->toIso8601String(),
                     'pm_response_by' => $pmResponseBy,
                     'pm_response_time' => $pmResponseTime?->toIso8601String(),
-                    'workplan_progress' => $totalProduks > 0 
-                        ? round(($produksWithWorkplan / $totalProduks) * 100) 
+                    'workplan_progress' => $totalProduks > 0
+                        ? round(($produksWithWorkplan / $totalProduks) * 100)
                         : 0,
                     'item_pekerjaans' => $itemPekerjaans,
                 ];
@@ -194,6 +197,22 @@ class WorkplanItemController extends Controller
                     }
                 }
             }
+
+
+            $taskResponse = TaskResponse::where('order_id', $order->id)
+                ->where('tahap', 'workplan')
+                ->first();
+
+            if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+                $taskResponse->update([
+                    'user_id' => auth()->user()->id,
+                    'response_time' => now(),
+                    'deadline' => now()->addDays(6), // Tambah 3 hari (total 8 hari)
+                    'duration' => 6,
+                    'duration_actual' => $taskResponse->duration_actual,
+                    'status' => 'menunggu_input',
+                ]);
+            }
         });
 
         return back()->with('success', 'Permintaan workplan berhasil diterima. Silakan lengkapi detail workplan.');
@@ -237,7 +256,7 @@ class WorkplanItemController extends Controller
                     $workplanItems = $produk->workplanItems->count() > 0
                         ? $produk->workplanItems
                         : collect(self::defaultBreakdown())->map(function ($row, $i) {
-                            return (object)[
+                            return (object) [
                                 'id' => null,
                                 'nama_tahapan' => $row['nama_tahapan'],
                                 'start_date' => null,
@@ -304,19 +323,19 @@ class WorkplanItemController extends Controller
 
         DB::transaction(function () use ($validated, $orderId) {
             $order = Order::findOrFail($orderId);
-            
+
             // GUARD: Ensure workplan items exist and have response_time
             $workplanItems = $order->moodboard
                 ->itemPekerjaans
                 ->flatMap(fn($ip) => $ip->produks)
                 ->flatMap(fn($produk) => $produk->workplanItems);
-            
+
             if ($workplanItems->isEmpty() || !WorkplanItem::hasAnyResponded($workplanItems)) {
                 throw new \Exception('Workplan belum direspons. Silakan respons terlebih dahulu.');
             }
-            
+
             $lastItemPekerjaan = null;
-            
+
             foreach ($validated['item_pekerjaans'] as $ipData) {
                 // Update timeline di ItemPekerjaan
                 $itemPekerjaan = ItemPekerjaan::find($ipData['id']);
@@ -324,18 +343,18 @@ class WorkplanItemController extends Controller
                     'workplan_start_date' => $ipData['workplan_start_date'],
                     'workplan_end_date' => $ipData['workplan_end_date'],
                 ]);
-                
+
                 $lastItemPekerjaan = $itemPekerjaan;
 
                 // UPDATE workplan items per produk (bukan create baru)
                 foreach ($ipData['produks'] as $produkData) {
                     $produk = ItemPekerjaanProduk::find($produkData['id']);
-                    
+
                     // Hapus workplan lama dan buat baru dengan preserve response info
                     $existingWorkplans = $produk->workplanItems;
                     $responseTime = $existingWorkplans->first()?->response_time;
                     $responseBy = $existingWorkplans->first()?->response_by;
-                    
+
                     $produk->workplanItems()->delete();
 
                     foreach ($produkData['workplan_items'] as $index => $item) {
@@ -361,6 +380,17 @@ class WorkplanItemController extends Controller
                         ]);
                     }
                 }
+            }
+
+            $taskResponse = TaskResponse::where('order_id', $order->id)
+                ->where('tahap', 'workplan')
+                ->first();
+
+            if ($taskResponse) {
+                $taskResponse->update([
+                    'update_data_time' => now(), // Kapan data diisi
+                    'status' => 'selesai',
+                ]);            
             }
 
             // Create pengajuan perpanjangan timeline untuk store (create baru)
@@ -414,7 +444,7 @@ class WorkplanItemController extends Controller
 
         DB::transaction(function () use ($validated) {
             $lastItemPekerjaan = null;
-            
+
             foreach ($validated['item_pekerjaans'] as $ipData) {
                 // Update timeline di ItemPekerjaan
                 $itemPekerjaan = ItemPekerjaan::find($ipData['id']);
@@ -422,13 +452,13 @@ class WorkplanItemController extends Controller
                     'workplan_start_date' => $ipData['workplan_start_date'],
                     'workplan_end_date' => $ipData['workplan_end_date'],
                 ]);
-                
+
                 $lastItemPekerjaan = $itemPekerjaan;
 
                 // Update workplan items per produk
                 foreach ($ipData['produks'] as $produkData) {
                     $produk = ItemPekerjaanProduk::find($produkData['id']);
-                    
+
                     // Hapus workplan lama dan buat baru
                     $produk->workplanItems()->delete();
 
@@ -460,7 +490,7 @@ class WorkplanItemController extends Controller
                 $existingPengajuan = PengajuanPerpanjanganTimeline::where('item_pekerjaan_id', $lastItemPekerjaan->id)
                     ->latest()
                     ->first();
-                
+
                 if ($existingPengajuan) {
                     // Update pengajuan yang sudah ada
                     $existingPengajuan->update([

@@ -7,6 +7,7 @@ use App\Models\JenisItem;
 use App\Models\RabProduk;
 use App\Models\RabInternal;
 use App\Models\RabAksesoris;
+use App\Models\TaskResponse;
 use Illuminate\Http\Request;
 use App\Models\ItemPekerjaan;
 use App\Models\ItemPekerjaanItem;
@@ -74,6 +75,21 @@ class RabInternalController extends Controller
                 'tahapan_proyek' => 'rab',
             ]);
 
+            $taskResponse = TaskResponse::where('order_id', $itemPekerjaan->moodboard->order->id)
+                ->where('tahap', 'rab_internal')
+                ->first();
+
+            if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+                $taskResponse->update([
+                    'user_id' => auth()->user()->id,
+                    'response_time' => now(),
+                    'deadline' => now()->addDays(6), // Tambah 3 hari (total 8 hari)
+                    'duration' => 6,
+                    'duration_actual' => $taskResponse->duration_actual,
+                    'status' => 'menunggu_input',
+                ]);
+            }
+
             Log::info('RAB Internal created with ID: ' . $rabInternal->id);
 
             return redirect()->route('rab-internal.create', $rabInternal->id)
@@ -116,7 +132,7 @@ class RabInternalController extends Controller
                         // Get selected bahan baku from item_pekerjaan_produk_bahan_bakus
                         $selectedBahanBakus = $produk->bahanBakus;
                         $bahanBakuNames = $selectedBahanBakus->map(fn($bb) => $bb->item->nama_item)->toArray();
-                        
+
                         // Hitung harga dasar produk = total harga_dasar dari selected bahan baku
                         $hargaDasarProduk = $selectedBahanBakus->sum('harga_dasar');
 
@@ -208,9 +224,9 @@ class RabInternalController extends Controller
                 $hargaDimensi = 1;
                 if ($itemProduk->panjang !== null && $itemProduk->lebar !== null && $itemProduk->tinggi !== null) {
                     // Use max(1, value) to ensure minimum 1 for calculation
-                    $panjangCalc = max(1, (float)$itemProduk->panjang);
-                    $lebarCalc = max(1, (float)$itemProduk->lebar);
-                    $tinggiCalc = max(1, (float)$itemProduk->tinggi);
+                    $panjangCalc = max(1, (float) $itemProduk->panjang);
+                    $lebarCalc = max(1, (float) $itemProduk->lebar);
+                    $tinggiCalc = max(1, (float) $itemProduk->tinggi);
                     $hargaDimensi = $panjangCalc * $lebarCalc * $tinggiCalc * $itemProduk->quantity;
                 } else {
                     $hargaDimensi = $itemProduk->quantity;
@@ -276,6 +292,27 @@ class RabInternalController extends Controller
                     'diskon_per_produk' => $diskonPerProduk,
                     'harga_akhir' => $hargaAkhir,
                 ]);
+            }
+
+            $rabInternal = RabInternal::with('itemPekerjaan.moodboard.order')
+                ->findOrFail($validated['rab_internal_id']);
+
+            // Get Order dari relasi
+            $order = $rabInternal->itemPekerjaan->moodboard->order;
+
+            $taskResponse = TaskResponse::where('order_id', $order->id)
+                ->where('tahap', 'rab_internal')
+                ->first();
+
+            if ($taskResponse) {
+                $taskResponse->update([
+                    'update_data_time' => now(), // Kapan data diisi
+                    'status' => 'selesai',
+                ]);
+                
+                // Catatan: Task response untuk kontrak akan dibuat saat submit RAB
+                // (di method submit() setelah semua RAB type sudah ada)
+                // Jadi tidak perlu create di sini
             }
 
             DB::commit();
@@ -414,7 +451,7 @@ class RabInternalController extends Controller
                         // Get selected bahan baku
                         $selectedBahanBakus = $produk->bahanBakus;
                         $bahanBakuNames = $selectedBahanBakus->map(fn($bb) => $bb->item->nama_item)->toArray();
-                        
+
                         // Hitung harga dasar produk = total harga_dasar dari selected bahan baku
                         $hargaDasarProduk = $selectedBahanBakus->sum('harga_dasar');
 
@@ -529,9 +566,9 @@ class RabInternalController extends Controller
                 $hargaDimensi = 1;
                 if ($itemProduk->panjang !== null && $itemProduk->lebar !== null && $itemProduk->tinggi !== null) {
                     // Use max(1, value) to ensure minimum 1 for calculation
-                    $panjangCalc = max(1, (float)$itemProduk->panjang);
-                    $lebarCalc = max(1, (float)$itemProduk->lebar);
-                    $tinggiCalc = max(1, (float)$itemProduk->tinggi);
+                    $panjangCalc = max(1, (float) $itemProduk->panjang);
+                    $lebarCalc = max(1, (float) $itemProduk->lebar);
+                    $tinggiCalc = max(1, (float) $itemProduk->tinggi);
                     $hargaDimensi = $panjangCalc * $lebarCalc * $tinggiCalc * $itemProduk->quantity;
                 } else {
                     $hargaDimensi = $itemProduk->quantity;
@@ -597,6 +634,24 @@ class RabInternalController extends Controller
                 ]);
             }
 
+            // Update task response: data sudah diisi
+            $rabInternal = RabInternal::with('itemPekerjaan.moodboard.order')
+                ->findOrFail($rabInternalId);
+            $order = $rabInternal->itemPekerjaan->moodboard->order;
+
+            $taskResponse = TaskResponse::where('order_id', $order->id)
+                ->where('tahap', 'rab_internal')
+                ->first();
+
+            if ($taskResponse) {
+                $taskResponse->update([
+                    'update_data_time' => now(),
+                    'status' => 'selesai',
+                ]);
+
+                
+            }
+
             DB::commit();
 
             return redirect()->route('rab-internal.index')
@@ -645,6 +700,26 @@ class RabInternalController extends Controller
 
         $notificationService = new NotificationService();
         $notificationService->sendKontrakRequestNotification($itemPekerjaan->moodboard->order);
+
+        // Create task response untuk kontrak (setelah semua RAB submit)
+        $order = $itemPekerjaan->moodboard->order;
+        $nextTaskExists = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'kontrak')
+            ->exists();
+
+        if (!$nextTaskExists) {
+            TaskResponse::create([
+                'order_id' => $order->id,
+                'user_id' => null,
+                'tahap' => 'kontrak',
+                'start_time' => now(),
+                'deadline' => now()->addDays(3), // Deadline untuk kontrak
+                'duration' => 3,
+                'duration_actual' => 3,
+                'extend_time' => 0,
+                'status' => 'menunggu_response',
+            ]);
+        }
 
         return redirect()->back()
             ->with('success', 'RAB berhasil di-submit! Semua RAB (Internal, Kontrak, Vendor, Jasa) telah ACC.');

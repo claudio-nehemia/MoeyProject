@@ -4,12 +4,13 @@ namespace App\Http\Controllers;
 
 use Inertia\Inertia;
 use App\Models\Order;
+use App\Models\TaskResponse;
 use Illuminate\Http\Request;
 use App\Models\SurveyResults;
 use App\Models\JenisPengukuran;
+use Illuminate\Support\Facades\DB;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
 
 class SurveyResultsController extends Controller
 {
@@ -23,7 +24,7 @@ class SurveyResultsController extends Controller
         \Log::info('User ID: ' . $user->id);
         \Log::info('User Name: ' . $user->name);
         \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
-        
+
         // Get all orders with survey results relationship
         $surveys = Order::with(['surveyResults', 'jenisInterior', 'users.role'])
             ->visibleToUser($user)
@@ -31,7 +32,7 @@ class SurveyResultsController extends Controller
             ->get()
             ->map(function ($order) {
                 $surveyResult = $order->surveyResults;
-                
+
                 return [
                     'id' => $order->id,
                     'nama_project' => $order->nama_project,
@@ -40,18 +41,18 @@ class SurveyResultsController extends Controller
                     'jenis_interior' => $order->jenisInterior->nama_interior ?? '-',
                     'tanggal_masuk_customer' => $order->tanggal_masuk_customer,
                     'project_status' => $order->project_status,
-                    
+
                     // Survey status checks
-                    'has_survey' => $surveyResult !== null 
-                        && $surveyResult->response_time !== null 
+                    'has_survey' => $surveyResult !== null
+                        && $surveyResult->response_time !== null
                         && $surveyResult->is_draft == false
                         && ($surveyResult->feedback || $surveyResult->layout_files || $surveyResult->foto_lokasi_files),
-                    
+
                     'is_draft' => $surveyResult ? $surveyResult->is_draft : false,
-                    'has_draft' => $surveyResult !== null 
+                    'has_draft' => $surveyResult !== null
                         && $surveyResult->is_draft == true
                         && ($surveyResult->feedback || $surveyResult->layout_files || $surveyResult->foto_lokasi_files),
-                    
+
                     // Survey data
                     'survey_id' => $surveyResult->id ?? null,
                     'response_time' => $surveyResult->response_time ?? null,
@@ -59,13 +60,13 @@ class SurveyResultsController extends Controller
                     'pm_response_time' => $surveyResult->pm_response_time ?? null,
                     'pm_response_by' => $surveyResult->pm_response_by ?? null,
                     'feedback' => $surveyResult->feedback ?? null,
-                    
+
                     // Order data
                     'tanggal_survey' => $order->tanggal_survey,
                     'tahapan_proyek' => $order->tahapan_proyek,
                     'payment_status' => $order->payment_status,
                     'is_responded' => $surveyResult && $surveyResult->response_time !== null,
-                    
+
                     // Team members
                     'team' => $order->users->map(function ($user) {
                         return [
@@ -89,9 +90,9 @@ class SurveyResultsController extends Controller
     {
         try {
             DB::beginTransaction();
-            
+
             $order = Order::findOrFail($orderId);
-            
+
             // Check if STAFF already responded
             if ($order->surveyResults && $order->surveyResults->response_time) {
                 return back()->with('error', 'Staff response already recorded for this order.');
@@ -116,10 +117,25 @@ class SurveyResultsController extends Controller
                 'tahapan_proyek' => 'survey',
                 'project_status' => 'in_progress',
             ]);
-            
+
+            $taskResponse = TaskResponse::where('order_id', $order->id)
+                ->where('tahap', 'survey')
+                ->first();
+
+            if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+                $taskResponse->update([
+                    'user_id' => auth()->user()->id,
+                    'response_time' => now(),
+                    'deadline' => now()->addDays(6), // Tambah 3 hari lagi (total 6 hari)
+                    'duration' => 6, // Total duration jadi 6 hari
+                    'duration_actual' => $taskResponse->duration_actual, // Tetap 3 hari
+                    'status' => 'menunggu_input', // Status berubah jadi menunggu input
+                ]);
+            }
+
             DB::commit();
             return back()->with('success', 'Response recorded. You can now create the survey.');
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Error marking response: ' . $e->getMessage());
@@ -142,8 +158,10 @@ class SurveyResultsController extends Controller
         }
 
         // Check if published survey already exists
-        if (!$order->surveyResults->is_draft && 
-            ($order->surveyResults->feedback || $order->surveyResults->layout_files || $order->surveyResults->foto_lokasi_files)) {
+        if (
+            !$order->surveyResults->is_draft &&
+            ($order->surveyResults->feedback || $order->surveyResults->layout_files || $order->surveyResults->foto_lokasi_files)
+        ) {
             return redirect()->route('survey-results.edit', $order->surveyResults->id)
                 ->with('info', 'Survey data already exists. You can edit it.');
         }
@@ -151,7 +169,7 @@ class SurveyResultsController extends Controller
         return Inertia::render('SurveyResults/Create', [
             'order' => $order,
             'survey' => $order->surveyResults,
-            'jenisPengukuran' => $jenisPengukuran, 
+            'jenisPengukuran' => $jenisPengukuran,
             'selectedPengukuranIds' => $order->surveyResults->jenisPengukuran->pluck('id')->toArray() ?? [],
         ]);
     }
@@ -191,8 +209,8 @@ class SurveyResultsController extends Controller
             );
 
             /* ===============================
-            * UPLOAD LAYOUT FILES
-            * =============================== */
+             * UPLOAD LAYOUT FILES
+             * =============================== */
             $layoutFilesPaths = [];
 
             if ($request->hasFile('layout_files')) {
@@ -210,8 +228,8 @@ class SurveyResultsController extends Controller
             $validated['layout_files'] = $layoutFilesPaths ?: null;
 
             /* ===============================
-            * UPLOAD FOTO LOKASI
-            * =============================== */
+             * UPLOAD FOTO LOKASI
+             * =============================== */
             $fotoLokasiFilesPaths = [];
 
             if ($request->hasFile('foto_lokasi_files')) {
@@ -225,19 +243,19 @@ class SurveyResultsController extends Controller
             $validated['foto_lokasi_files'] = $fotoLokasiFilesPaths ?: null;
 
             /* ===============================
-            * UPDATE SURVEY
-            * =============================== */
+             * UPDATE SURVEY
+             * =============================== */
             $validated['is_draft'] = $isDraft;
             $survey->update($validated);
 
             /* ===============================
-            * SYNC JENIS PENGUKURAN
-            * =============================== */
+             * SYNC JENIS PENGUKURAN
+             * =============================== */
             $survey->jenisPengukuran()->sync($jenisPengukuranIds);
 
             /* ===============================
-            * UPLOAD MOM FILE (ORDER)
-            * =============================== */
+             * UPLOAD MOM FILE (ORDER)
+             * =============================== */
             if ($request->hasFile('mom_file')) {
                 $order = $survey->order;
 
@@ -250,8 +268,8 @@ class SurveyResultsController extends Controller
             }
 
             /* ===============================
-            * NOTIFICATION (only if published)
-            * =============================== */
+             * NOTIFICATION (only if published)
+             * =============================== */
             if (!$isDraft) {
                 $notificationService = new NotificationService();
                 $notificationService->sendMoodboardRequestNotification($survey->order);
@@ -260,12 +278,41 @@ class SurveyResultsController extends Controller
                     'tahapan_proyek' => 'moodboard',
                     'project_status' => 'in_progress',
                 ]);
+
+                $taskResponse = TaskResponse::where('order_id', $survey->order->id)
+                    ->where('tahap', 'survey')
+                    ->first();
+
+                if ($taskResponse) {
+                    $taskResponse->update([
+                        'update_data_time' => now(), // Kapan data diisi
+                        'status' => 'selesai',
+                    ]);
+                }
+
+                $nextTaskExists = TaskResponse::where('order_id', $survey->order->id)
+                    ->where('tahap', 'moodboard')
+                    ->exists();
+
+                if (!$nextTaskExists) {
+                    TaskResponse::create([
+                        'order_id' => $survey->order->id,
+                        'user_id' => null,
+                        'tahap' => 'moodboard',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3), // Contoh: deadline 5 hari untuk moodboard
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                    ]);
+                }
             }
 
             DB::commit();
 
-            $message = $isDraft 
-                ? 'Survey Results saved as draft successfully.' 
+            $message = $isDraft
+                ? 'Survey Results saved as draft successfully.'
                 : 'Survey Results published successfully.';
 
             return redirect()
@@ -301,7 +348,7 @@ class SurveyResultsController extends Controller
     public function edit($id)
     {
         $survey = SurveyResults::with(['order.jenisInterior', 'order.users.role', 'jenisPengukuran'])->findOrFail($id);
-        
+
         $jenisPengukuran = JenisPengukuran::all();
         $selectedPengukuranIds = $survey->jenisPengukuran->pluck('id')->toArray();
 
@@ -347,8 +394,8 @@ class SurveyResultsController extends Controller
             );
 
             /* ===============================
-            * HANDLE LAYOUT FILES (APPEND)
-            * =============================== */
+             * HANDLE LAYOUT FILES (APPEND)
+             * =============================== */
             $existingLayoutFiles = $survey->layout_files ?? [];
 
             if ($request->hasFile('layout_files')) {
@@ -366,8 +413,8 @@ class SurveyResultsController extends Controller
             $validated['layout_files'] = $existingLayoutFiles ?: null;
 
             /* ===============================
-            * HANDLE FOTO LOKASI (APPEND)
-            * =============================== */
+             * HANDLE FOTO LOKASI (APPEND)
+             * =============================== */
             $existingFotoFiles = $survey->foto_lokasi_files ?? [];
 
             if ($request->hasFile('foto_lokasi_files')) {
@@ -381,19 +428,19 @@ class SurveyResultsController extends Controller
             $validated['foto_lokasi_files'] = $existingFotoFiles ?: null;
 
             /* ===============================
-            * UPDATE SURVEY
-            * =============================== */
+             * UPDATE SURVEY
+             * =============================== */
             $validated['is_draft'] = $isDraft;
             $survey->update($validated);
 
             /* ===============================
-            * SYNC JENIS PENGUKURAN
-            * =============================== */
+             * SYNC JENIS PENGUKURAN
+             * =============================== */
             $survey->jenisPengukuran()->sync($jenisPengukuranIds);
 
             /* ===============================
-            * UPLOAD MOM FILE (ORDER)
-            * =============================== */
+             * UPLOAD MOM FILE (ORDER)
+             * =============================== */
             if ($request->hasFile('mom_file')) {
                 $order = $survey->order;
 
@@ -406,8 +453,8 @@ class SurveyResultsController extends Controller
             }
 
             /* ===============================
-            * NOTIFICATION (only if published from draft)
-            * =============================== */
+             * NOTIFICATION (only if published from draft)
+             * =============================== */
             if (!$isDraft && $wasDraft) {
                 $notificationService = new NotificationService();
                 $notificationService->sendMoodboardRequestNotification($survey->order);
@@ -416,12 +463,41 @@ class SurveyResultsController extends Controller
                     'tahapan_proyek' => 'moodboard',
                     'project_status' => 'in_progress',
                 ]);
+
+                $taskResponse = TaskResponse::where('order_id', $survey->order->id)
+                    ->where('tahap', 'survey')
+                    ->first();
+
+                if ($taskResponse) {
+                    $taskResponse->update([
+                        'update_data_time' => now(), // Kapan data diisi
+                        'status' => 'selesai',
+                    ]);
+                }
+
+                $nextTaskExists = TaskResponse::where('order_id', $survey->order->id)
+                    ->where('tahap', 'moodboard')
+                    ->exists();
+
+                if (!$nextTaskExists) {
+                    TaskResponse::create([
+                        'order_id' => $survey->order->id,
+                        'user_id' => null,
+                        'tahap' => 'moodboard',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3), // Contoh: deadline 5 hari untuk moodboard
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                    ]);
+                }
             }
 
             DB::commit();
 
-            $message = $isDraft 
-                ? 'Survey Results saved as draft successfully.' 
+            $message = $isDraft
+                ? 'Survey Results saved as draft successfully.'
                 : 'Survey Results published successfully.';
 
             return redirect()
@@ -444,7 +520,7 @@ class SurveyResultsController extends Controller
     {
         try {
             DB::beginTransaction();
-            
+
             $survey = SurveyResults::findOrFail($id);
 
             // Delete layout files
@@ -472,10 +548,10 @@ class SurveyResultsController extends Controller
             }
 
             $survey->delete();
-            
+
             DB::commit();
             return redirect()->route('survey-results.index')->with('success', 'Survey Results deleted successfully.');
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Error deleting survey: ' . $e->getMessage());
@@ -490,7 +566,7 @@ class SurveyResultsController extends Controller
     {
         try {
             DB::beginTransaction();
-            
+
             $survey = SurveyResults::findOrFail($id);
             $fileType = request()->query('type'); // 'layout' or 'foto'
 
@@ -505,10 +581,10 @@ class SurveyResultsController extends Controller
                     if (isset($files[$fileIndex]['thumbnail']) && Storage::disk('public')->exists($files[$fileIndex]['thumbnail'])) {
                         Storage::disk('public')->delete($files[$fileIndex]['thumbnail']);
                     }
-                    
+
                     array_splice($files, $fileIndex, 1);
                     $survey->update(['layout_files' => !empty($files) ? array_values($files) : null]);
-                    
+
                     DB::commit();
                     return back()->with('success', 'Layout file deleted successfully.');
                 }
@@ -523,10 +599,10 @@ class SurveyResultsController extends Controller
                     if (isset($files[$fileIndex]['thumbnail']) && Storage::disk('public')->exists($files[$fileIndex]['thumbnail'])) {
                         Storage::disk('public')->delete($files[$fileIndex]['thumbnail']);
                     }
-                    
+
                     array_splice($files, $fileIndex, 1);
                     $survey->update(['foto_lokasi_files' => !empty($files) ? array_values($files) : null]);
-                    
+
                     DB::commit();
                     return back()->with('success', 'Photo file deleted successfully.');
                 }
@@ -534,7 +610,7 @@ class SurveyResultsController extends Controller
 
             DB::rollBack();
             return back()->with('error', 'File not found.');
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Error deleting file: ' . $e->getMessage());
@@ -549,7 +625,7 @@ class SurveyResultsController extends Controller
     {
         try {
             DB::beginTransaction();
-            
+
             $survey = SurveyResults::findOrFail($id);
 
             if (!$survey->is_draft) {
@@ -561,10 +637,10 @@ class SurveyResultsController extends Controller
             // Send notification
             $notificationService = new NotificationService();
             $notificationService->sendMoodboardRequestNotification($survey->order);
-            
+
             DB::commit();
             return back()->with('success', 'Survey Results published successfully.');
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Error publishing survey: ' . $e->getMessage());

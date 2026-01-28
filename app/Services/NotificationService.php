@@ -2,9 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\Notification;
-use App\Models\Order;
 use App\Models\User;
+use App\Models\Order;
+use App\Models\Notification;
+use App\Models\TaskResponse;
 use App\Services\FCMService;
 
 class NotificationService
@@ -99,7 +100,7 @@ class NotificationService
         \Log::info('Order ID: ' . $order->id);
         \Log::info('Order Name: ' . $order->nama_project);
         \Log::info('Designers found: ' . $designers->count());
-        
+
         if ($designers->isEmpty()) {
             \Log::warning('No designers found in order team for order: ' . $order->id);
             \Log::warning('Please add a designer to the order team first.');
@@ -107,7 +108,7 @@ class NotificationService
 
         foreach ($designers as $designer) {
             \Log::info('Sending notification to designer: ' . $designer->name . ' (ID: ' . $designer->id . ')');
-            
+
             $notification = Notification::create([
                 'user_id' => $designer->id,
                 'order_id' => $order->id,
@@ -131,10 +132,10 @@ class NotificationService
                     'order_id' => $order->id,
                 ],
             ]);
-            
+
             \Log::info('Notification sent successfully to designer: ' . $designer->name);
         }
-        
+
         \Log::info('=== END SEND MOODBOARD NOTIFICATION ===');
 
         // Also send to Kepala Marketing in order teams
@@ -694,9 +695,38 @@ class NotificationService
 
     public function sendSurveyScheduleRequestNotification(Order $order)
     {
+        $projectManagers = User::whereHas('role', function ($query) {
+            $query->where('nama_role', 'Project Manager');
+        })->get();
         $pms = $order->users()->whereHas('role', function ($query) {
             $query->where('nama_role', 'Kepala Marketing');
         })->get();
+
+        foreach ($projectManagers as $pm) {
+            $notification = Notification::create([
+                'user_id' => $pm->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_SURVEY_SCHEDULE_REQUEST,
+                'title' => 'Survey Schedule Request - ' . $order->nama_project,
+                'message' => 'Anda ditugaskan untuk menjadwalkan ulang survey pada project "' . $order->nama_project . '". Silakan atur jadwal survey.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/survey-schedule',
+                ],
+            ]);
+
+            // 🔥 Send FCM push notification
+            $this->fcmService->sendToUser($pm->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
 
         foreach ($pms as $pm) {
             $notification = Notification::create([
@@ -704,7 +734,7 @@ class NotificationService
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_SURVEY_SCHEDULE_REQUEST,
                 'title' => 'Survey Schedule Request - ' . $order->nama_project,
-                'message' => 'Anda ditugaskan untuk menjadwalkan ulang survey pada project "' . $order->nama_project . '". Silakan atur jadwal survey.',
+                'message' => 'Project manager telah dijadwalkan ulang untuk survey pada project "' . $order->nama_project . '".',
                 'data' => [
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
@@ -796,7 +826,7 @@ class NotificationService
         $teams = $order->surveyUsers()->whereHas('role', function ($query) {
             $query->whereIn('nama_role', ['Surveyor', 'Drafter', 'Desainer']);
         })->get();
-        
+
         foreach ($teams as $team) {
             $notification = Notification::create([
                 'user_id' => $team->id,
@@ -919,7 +949,10 @@ class NotificationService
 
     public function sendWorkplanRequestNotification(Order $order)
     {
-        // Get Kepala Marketing in order teams
+        // Get project managers in survey teams
+        $projectManagers = $order->surveyUsers()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Project Manager');
+        })->get();
         $pms = $order->users()->whereHas('role', function ($query) {
             $query->where('nama_role', 'Kepala Marketing');
         })->get();
@@ -929,9 +962,9 @@ class NotificationService
         \Log::info('Order Name: ' . $order->nama_project);
         \Log::info('Kepala Marketing in team found: ' . $pms->count());
 
-        foreach ($pms as $pm) {
+        foreach ($projectManagers as $pm) {
             \Log::info('Sending notification to PM: ' . $pm->name . ' (ID: ' . $pm->id . ')');
-            
+
             $notification = Notification::create([
                 'user_id' => $pm->id,
                 'order_id' => $order->id,
@@ -955,10 +988,40 @@ class NotificationService
                     'order_id' => $order->id,
                 ],
             ]);
-            
+
             \Log::info('Notification sent successfully to PM: ' . $pm->name);
         }
-        
+
+        foreach ($pms as $pm) {
+            \Log::info('Sending notification to Kepala Marketing: ' . $pm->name . ' (ID: ' . $pm->id . ')');
+
+            $notification = Notification::create([
+                'user_id' => $pm->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_WORKPLAN_REQUEST,
+                'title' => 'Workplan Request - ' . $order->nama_project,
+                'message' => 'Survey ulang telah selesai untuk project "' . $order->nama_project . '". Project manager sedang membuat workplan.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/workplan',
+                ],
+            ]);
+
+            // 🔥 Send FCM push notification
+            $this->fcmService->sendToUser($pm->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+
+            \Log::info('Notification sent successfully to Kepala Marketing: ' . $pm->name);
+        }
+
         \Log::info('=== END SEND WORKPLAN NOTIFICATION ===');
     }
 
@@ -968,11 +1031,11 @@ class NotificationService
         $kepalaMarketingInTeam = $order->users()->whereHas('role', function ($query) {
             $query->where('nama_role', 'Kepala Marketing');
         })->get();
-        
+
         $estimators = User::whereHas('role', function ($query) {
             $query->where('nama_role', 'Estimator');
         })->get();
-        
+
         // Merge both collections
         $users = $kepalaMarketingInTeam->merge($estimators);
 
@@ -983,7 +1046,7 @@ class NotificationService
 
         foreach ($users as $user) {
             \Log::info('Sending notification to: ' . $user->name . ' (ID: ' . $user->id . ')');
-            
+
             $notification = Notification::create([
                 'user_id' => $user->id,
                 'order_id' => $order->id,
@@ -1007,10 +1070,10 @@ class NotificationService
                     'order_id' => $order->id,
                 ],
             ]);
-            
+
             \Log::info('Notification sent successfully to: ' . $user->name);
         }
-        
+
         \Log::info('=== END SEND APPROVAL RAB UPDATE NOTIFICATION ===');
     }
 
@@ -1020,13 +1083,18 @@ class NotificationService
         $kepalaMarketingInTeam = $order->users()->whereHas('role', function ($query) {
             $query->where('nama_role', 'Kepala Marketing');
         })->get();
-        
+
         $supervisors = User::whereHas('role', function ($query) {
             $query->where('nama_role', 'Supervisor');
         })->get();
-        
+
+        // project manager dari survey teams
+        $projectManagers = $order->surveyUsers()->whereHas('role', function ($query) {
+            $query->where('nama_role', 'Project Manager');
+        })->get();
+
         // Merge both collections
-        $users = $kepalaMarketingInTeam->merge($supervisors);
+        $users = $kepalaMarketingInTeam->merge($supervisors)->merge($projectManagers);
 
         \Log::info('=== SEND PROJECT MANAGEMENT NOTIFICATION ===');
         \Log::info('Order ID: ' . $order->id);
@@ -1035,7 +1103,7 @@ class NotificationService
 
         foreach ($users as $user) {
             \Log::info('Sending notification to: ' . $user->name . ' (ID: ' . $user->id . ') - Role: ' . $user->role->nama_role);
-            
+
             $notification = Notification::create([
                 'user_id' => $user->id,
                 'order_id' => $order->id,
@@ -1059,10 +1127,10 @@ class NotificationService
                     'order_id' => $order->id,
                 ],
             ]);
-            
+
             \Log::info('Notification sent successfully to: ' . $user->name);
         }
-        
+
         \Log::info('=== END SEND PROJECT MANAGEMENT NOTIFICATION ===');
     }
 
@@ -1114,5 +1182,86 @@ class NotificationService
         return Notification::where('id', $notificationId)
             ->where('user_id', $userId)
             ->delete();
+    }
+
+    public function sendTaskDeadlineReminderNotification(Order $order, TaskResponse $taskResponse, User $user)
+    {
+        $tahapNames = [
+            'survey' => 'Survey',
+            'moodboard' => 'Moodboard',
+            'estimasi' => 'Estimasi',
+            'cm_fee' => 'Commitment Fee',
+            'approval_design' => 'Approval Desain',
+            'desain_final' => 'Desain Final',
+            'item-pekerjaan' => 'Item Pekerjaan',
+            'rab_internal' => 'Rab Internal',
+            'kontrak' => 'Kontrak',
+            'invoice' => 'Invoice',
+            'survey_schedule' => 'Jadwal Survey',
+            'survey_ulang' => 'Survey Ulang',
+            'gambar_kerja' => 'Gambar Kerja',
+            'approval_material' => 'Approval Material',
+            'workplan' => 'Workplan',
+            'produksi' => 'Produksi',
+        ];
+
+        $tahapName = $tahapNames[$taskResponse->tahap] ?? $taskResponse->tahap;
+        $statusText = $taskResponse->status === 'menunggu_response'
+            ? 'Response'
+            : 'Input Data';
+
+        $notification = Notification::create([
+            'user_id' => $user->id,
+            'order_id' => $order->id,
+            'type' => 'task_deadline_reminder',
+            'title' => "Reminder: {$tahapName} - {$order->nama_project}",
+            'message' => "Deadline {$tahapName} untuk project \"{$order->nama_project}\" besok. Segera {$statusText}.",
+            'data' => [
+                'order_name' => $order->nama_project,
+                'customer_name' => $order->customer_name,
+                'tahap' => $taskResponse->tahap,
+                'deadline' => $taskResponse->deadline->toDateString(),
+                'action_url' => $this->getActionUrlForTahap($taskResponse->tahap),
+            ],
+        ]);
+
+        // Send FCM push notification
+        $this->fcmService->sendToUser($user->id, [
+            'title' => $notification->title,
+            'body' => $notification->message,
+            'data' => [
+                'notification_id' => $notification->id,
+                'type' => $notification->type,
+                'order_id' => $order->id,
+            ],
+        ]);
+    }
+
+    /**
+     * Get action URL berdasarkan tahap
+     */
+    private function getActionUrlForTahap(string $tahap): string
+    {
+        // disamakan dengan send task remindeer notification
+        $urls = [
+            'survey' => '/survey-results',
+            'moodboard' => '/moodboard',
+            'estimasi' => '/estimasi',
+            'cm_fee' => '/commitment-fee',
+            'approval_design' => '/moodboard',
+            'desain_final' => '/desain-final',
+            'item-pekerjaan' => '/item-pekerjaan',
+            'rab' => '/rab-internal',
+            'kontrak' => '/kontrak',
+            'invoice' => '/invoice',
+            'survey_schedule' => '/survey-schedule',
+            'survey_ulang' => '/survey-ulang',
+            'gambar_kerja' => '/gambar-kerja',
+            'approval_material' => '/approval-material',
+            'workplan' => '/workplan',
+            'produksi' => '/project-management',
+        ];
+
+        return $urls[$tahap] ?? '/order';
     }
 }

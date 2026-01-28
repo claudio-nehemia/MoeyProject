@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Inertia\Inertia;
 use App\Models\Order;
 use App\Models\Moodboard;
+use App\Models\TaskResponse;
 use Illuminate\Http\Request;
 use App\Models\MoodboardFile;
 use Illuminate\Support\Facades\Log;
@@ -23,7 +24,7 @@ class MoodboardController extends Controller
         \Log::info('User ID: ' . $user->id);
         \Log::info('User Name: ' . $user->name);
         \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
-        
+
         $orders = Order::with(['moodboard.estimasi', 'moodboard.itemPekerjaan', 'moodboard.commitmentFee', 'moodboard.kasarFiles.estimasiFile', 'moodboard.finalFiles', 'jenisInterior', 'users.role'])
             ->visibleToUser($user)
             ->orderBy('created_at', 'desc')
@@ -103,13 +104,13 @@ class MoodboardController extends Controller
             // Check if moodboard already exists
             if ($order->moodboard) {
                 Log::info('Moodboard already exists, updating response data');
-                
+
                 // Update existing moodboard with response data
                 $order->moodboard->update([
                     'response_time' => now(),
                     'response_by' => auth()->user()->name,
                 ]);
-                
+
                 $moodboard = $order->moodboard;
             } else {
                 // Create new moodboard
@@ -124,6 +125,21 @@ class MoodboardController extends Controller
             $order->update([
                 'tahapan_proyek' => 'moodboard',
             ]);
+
+            $taskResponse = TaskResponse::where('order_id', $order->id)
+                ->where('tahap', 'moodboard')
+                ->first();
+
+            if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+                $taskResponse->update([
+                    'user_id' => auth()->user()->id,
+                    'response_time' => now(),
+                    'deadline' => now()->addDays(6), // Tambah 3 hari (total 8 hari)
+                    'duration' => 6,
+                    'duration_actual' => $taskResponse->duration_actual,
+                    'status' => 'menunggu_input',
+                ]);
+            }
 
             Log::info('Moodboard processed with ID: ' . $moodboard->id);
             Log::info('=== RESPONSE MOODBOARD END ===');
@@ -189,6 +205,37 @@ class MoodboardController extends Controller
 
             $moodboard->status = 'pending';
             $moodboard->save();
+
+            $taskResponse = TaskResponse::where('order_id', $moodboard->order->id)
+                ->where('tahap', 'moodboard')
+                ->first();
+
+            if ($taskResponse) {
+                $taskResponse->update([
+                    'update_data_time' => now(), // Kapan data diisi
+                    'status' => 'selesai',
+                ]);
+
+                // Create task response untuk tahap selanjutnya (cm_fee)
+                $nextTaskExists = TaskResponse::where('order_id', $moodboard->order->id)
+                    ->where('tahap', 'estimasi')
+                    ->exists();
+
+                if (!$nextTaskExists) {
+                    TaskResponse::create([
+                        'order_id' => $moodboard->order->id,
+                        'user_id' => null,
+                        'tahap' => 'estimasi',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                    ]);
+                }
+            }
+
 
             Log::info('Moodboard saved successfully');
             Log::info('=== UPLOAD DESAIN KASAR END ===');
@@ -572,7 +619,7 @@ class MoodboardController extends Controller
             $moodboard->status = 'approved';
 
             $moodboard->save();
-            $moodboard->estimasi->save();
+            $moodboard->estimasi->save();   
 
             Log::info('Moodboard approved with selected file');
             Log::info('Moodboard kasar: ' . $moodboard->moodboard_kasar);
@@ -581,6 +628,36 @@ class MoodboardController extends Controller
 
             $notificationService = new NotificationService();
             $notificationService->sendCommitmentFeeRequestNotification($moodboard->order);
+
+            $taskResponse = TaskResponse::where('order_id', $moodboard->order->id)
+                ->where('tahap', 'approval_design')
+                ->first();
+
+            if ($taskResponse) {
+                $taskResponse->update([
+                    'update_data_time' => now(), // Kapan data diisi
+                    'status' => 'selesai',
+                ]);
+
+                // Create task response untuk tahap selanjutnya (cm_fee)
+                $nextTaskExists = TaskResponse::where('order_id', $moodboard->order->id)
+                    ->where('tahap', 'desain_final')
+                    ->exists();
+
+                if (!$nextTaskExists) {
+                    TaskResponse::create([
+                        'order_id' => $moodboard->order->id,
+                        'user_id' => null,
+                        'tahap' => 'desain_final',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                    ]);
+                }
+            }
 
             return back()->with('success', 'Desain kasar diterima. Menunggu commitment fee.');
         } catch (\Illuminate\Validation\ValidationException $e) {

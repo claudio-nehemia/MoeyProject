@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Inertia\Inertia;
 use App\Models\Termin;
 use App\Models\Kontrak;
+use App\Models\TaskResponse;
 use Illuminate\Http\Request;
 use App\Models\ItemPekerjaan;
 use App\Services\NotificationService;
@@ -24,57 +25,57 @@ class KontrakController extends Controller
             'rabKontrak.rabKontrakProduks',
             'kontrak.termin'
         ])
-        ->whereHas('rabInternal', function ($query) {
-            $query->where('is_submitted', true);
-        })
-        ->whereHas('rabKontrak') // Must have RAB Kontrak
-        ->get()
-        ->map(function ($itemPekerjaan) {
-            // Calculate grand total from RAB Kontrak
-            $grandTotalRabKontrak = $itemPekerjaan->rabKontrak 
-                ? $itemPekerjaan->rabKontrak->rabKontrakProduks->sum('harga_akhir')
-                : 0;
-            
-            $commitmentFee = $itemPekerjaan->moodboard->commitmentFee?->total_fee ?? 0;
-            $sisaPembayaran = $grandTotalRabKontrak - $commitmentFee;
+            ->whereHas('rabInternal', function ($query) {
+                $query->where('is_submitted', true);
+            })
+            ->whereHas('rabKontrak') // Must have RAB Kontrak
+            ->get()
+            ->map(function ($itemPekerjaan) {
+                // Calculate grand total from RAB Kontrak
+                $grandTotalRabKontrak = $itemPekerjaan->rabKontrak
+                    ? $itemPekerjaan->rabKontrak->rabKontrakProduks->sum('harga_akhir')
+                    : 0;
 
-            return [
-                'id' => $itemPekerjaan->id,
-                'order' => [
-                    'nama_project' => $itemPekerjaan->moodboard->order->nama_project,
-                    'company_name' => $itemPekerjaan->moodboard->order->company_name,
-                    'customer_name' => $itemPekerjaan->moodboard->order->customer_name,
-                ],
-                'commitment_fee' => $itemPekerjaan->moodboard->commitmentFee ? [
-                    'id' => $itemPekerjaan->moodboard->commitmentFee->id,
-                    'jumlah' => $itemPekerjaan->moodboard->commitmentFee->total_fee,
-                    'status' => $itemPekerjaan->moodboard->commitmentFee->payment_status === 'completed' ? 'Paid' : 'Pending',
-                ] : null,
-                'rab_kontrak' => [
-                    'id' => $itemPekerjaan->rabKontrak->id,
-                    'grand_total' => $grandTotalRabKontrak,
-                ],
-                'sisa_pembayaran' => $sisaPembayaran,
-                'kontrak' => $itemPekerjaan->kontrak ? [
-                    'id' => $itemPekerjaan->kontrak->id,
-                    'durasi_kontrak' => $itemPekerjaan->kontrak->durasi_kontrak,
-                    'harga_kontrak' => $itemPekerjaan->kontrak->harga_kontrak,
-                    'signed_contract_path' => $itemPekerjaan->kontrak->signed_contract_path 
-                        ? Storage::url($itemPekerjaan->kontrak->signed_contract_path) 
-                        : null,
-                    'signed_at' => $itemPekerjaan->kontrak->signed_at?->format('d M Y H:i'),
-                    'response_time' => $itemPekerjaan->kontrak->response_time?->format('d M Y H:i'),
-                    'response_by' => $itemPekerjaan->kontrak->response_by,
-                    'pm_response_time' => $itemPekerjaan->kontrak->pm_response_time?->format('d M Y H:i'),
-                    'pm_response_by' => $itemPekerjaan->kontrak->pm_response_by,
-                    'termin' => $itemPekerjaan->kontrak->termin ? [
-                        'id' => $itemPekerjaan->kontrak->termin->id,
-                        'nama' => $itemPekerjaan->kontrak->termin->nama_tipe,
-                        'tahapan' => $itemPekerjaan->kontrak->termin->tahapan ?? [],
+                $commitmentFee = $itemPekerjaan->moodboard->commitmentFee?->total_fee ?? 0;
+                $sisaPembayaran = $grandTotalRabKontrak - $commitmentFee;
+
+                return [
+                    'id' => $itemPekerjaan->id,
+                    'order' => [
+                        'nama_project' => $itemPekerjaan->moodboard->order->nama_project,
+                        'company_name' => $itemPekerjaan->moodboard->order->company_name,
+                        'customer_name' => $itemPekerjaan->moodboard->order->customer_name,
+                    ],
+                    'commitment_fee' => $itemPekerjaan->moodboard->commitmentFee ? [
+                        'id' => $itemPekerjaan->moodboard->commitmentFee->id,
+                        'jumlah' => $itemPekerjaan->moodboard->commitmentFee->total_fee,
+                        'status' => $itemPekerjaan->moodboard->commitmentFee->payment_status === 'completed' ? 'Paid' : 'Pending',
                     ] : null,
-                ] : null,
-            ];
-        });
+                    'rab_kontrak' => [
+                        'id' => $itemPekerjaan->rabKontrak->id,
+                        'grand_total' => $grandTotalRabKontrak,
+                    ],
+                    'sisa_pembayaran' => $sisaPembayaran,
+                    'kontrak' => $itemPekerjaan->kontrak ? [
+                        'id' => $itemPekerjaan->kontrak->id,
+                        'durasi_kontrak' => $itemPekerjaan->kontrak->durasi_kontrak,
+                        'harga_kontrak' => $itemPekerjaan->kontrak->harga_kontrak,
+                        'signed_contract_path' => $itemPekerjaan->kontrak->signed_contract_path
+                            ? Storage::url($itemPekerjaan->kontrak->signed_contract_path)
+                            : null,
+                        'signed_at' => $itemPekerjaan->kontrak->signed_at?->format('d M Y H:i'),
+                        'response_time' => $itemPekerjaan->kontrak->response_time?->format('d M Y H:i'),
+                        'response_by' => $itemPekerjaan->kontrak->response_by,
+                        'pm_response_time' => $itemPekerjaan->kontrak->pm_response_time?->format('d M Y H:i'),
+                        'pm_response_by' => $itemPekerjaan->kontrak->pm_response_by,
+                        'termin' => $itemPekerjaan->kontrak->termin ? [
+                            'id' => $itemPekerjaan->kontrak->termin->id,
+                            'nama' => $itemPekerjaan->kontrak->termin->nama_tipe,
+                            'tahapan' => $itemPekerjaan->kontrak->termin->tahapan ?? [],
+                        ] : null,
+                    ] : null,
+                ];
+            });
 
         return Inertia::render('Kontrak/Index', [
             'itemPekerjaans' => $itemPekerjaans,
@@ -106,7 +107,7 @@ class KontrakController extends Controller
 
         // Get existing kontrak (yang sudah dibuat di response())
         $kontrak = Kontrak::where('item_pekerjaan_id', $validated['item_pekerjaan_id'])->first();
-        
+
         if (!$kontrak) {
             return back()->withErrors(['error' => 'Kontrak belum di-response. Silakan response terlebih dahulu.']);
         }
@@ -116,9 +117,9 @@ class KontrakController extends Controller
         if (!$itemPekerjaan->rabKontrak) {
             return back()->withErrors(['error' => 'RAB Kontrak belum ada untuk Item Pekerjaan ini.']);
         }
-        
+
         $hargaKontrak = $itemPekerjaan->rabKontrak->rabKontrakProduks->sum('harga_akhir');
-        
+
         // Set tanggal mulai dan tanggal selesai berdasarkan durasi kontrak
         $validated['harga_kontrak'] = $hargaKontrak;
         $validated['tanggal_mulai'] = now();
@@ -134,7 +135,7 @@ class KontrakController extends Controller
                 'tahapan_proyek' => 'kontrak',
                 'project_status' => 'deal',
             ]);
-            
+
             return redirect()->route('kontrak.index')->with('success', 'Kontrak berhasil dilengkapi!');
         } catch (\Exception $e) {
             \Log::error('Kontrak Update Error:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
@@ -162,6 +163,23 @@ class KontrakController extends Controller
             'response_time' => now(),
             'response_by' => auth()->user()->name,
         ]);
+
+        $itempekerjaan = ItemPekerjaan::with('moodboard.order')->find($validated['item_pekerjaan_id']);
+        $order = $itempekerjaan->moodboard->order;
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'kontrak')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays(6), // Tambah 3 hari (total 8 hari)
+                'duration' => 6,
+                'duration_actual' => $taskResponse->duration_actual,
+                'status' => 'menunggu_input',
+            ]);
+        }
 
         return back()->with('success', 'Response kontrak berhasil.');
     }
@@ -303,6 +321,38 @@ class KontrakController extends Controller
             'signed_contract_path' => $path,
             'signed_at' => now(),
         ]);
+
+        $moodboard = $kontrak->itemPekerjaan->moodboard;
+
+        $taskResponse = TaskResponse::where('order_id', $moodboard->order->id)
+            ->where('tahap', 'kontrak')
+            ->first();
+
+        if ($taskResponse) {
+            $taskResponse->update([
+                'update_data_time' => now(), // Kapan data diisi
+                'status' => 'selesai',
+            ]);
+
+            // Create task response untuk tahap selanjutnya (cm_fee)
+            $nextTaskExists = TaskResponse::where('order_id', $moodboard->order->id)
+                ->where('tahap', 'invoice')
+                ->exists();
+
+            if (!$nextTaskExists) {
+                TaskResponse::create([
+                    'order_id' => $moodboard->order->id,
+                    'user_id' => null,
+                    'tahap' => 'invoice',
+                    'start_time' => now(),
+                    'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                    'duration' => 3,
+                    'duration_actual' => 3,
+                    'extend_time' => 0,
+                    'status' => 'menunggu_input',
+                ]);
+            }
+        }
 
         $notificationService = new NotificationService();
         $notificationService->sendInvoiceRequestNotification($kontrak->itemPekerjaan->moodboard->order);

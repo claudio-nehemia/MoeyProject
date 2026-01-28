@@ -71,6 +71,37 @@ class SurveyScheduleController extends Controller
         // SYNC TIM SURVEY
         $order->surveyUsers()->sync($validated['survey_schedule_users']);
 
+        // TaskResponse: survey schedule sudah diisi (bukan moodboard)
+        $taskResponse = \App\Models\TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'survey_schedule')
+            ->first();
+
+        if ($taskResponse) {
+            $taskResponse->update([
+                'update_data_time' => now(), // Kapan data diisi
+                'status' => 'selesai',
+            ]);
+
+            // Create task response untuk tahap selanjutnya (survey_ulang)
+            $nextTaskExists = \App\Models\TaskResponse::where('order_id', $order->id)
+                ->where('tahap', 'survey_ulang')
+                ->exists();
+
+            if (!$nextTaskExists) {
+                \App\Models\TaskResponse::create([
+                    'order_id' => $order->id,
+                    'user_id' => null,
+                    'tahap' => 'survey_ulang',
+                    'start_time' => now(),
+                    'deadline' => now()->addDays(3), // Deadline untuk survey_ulang
+                    'duration' => 3,
+                    'duration_actual' => 3,
+                    'extend_time' => 0,
+                    'status' => 'menunggu_response',
+                ]);
+            }
+        }
+
         $notificationService = new NotificationService();
         $notificationService->sendSurveyUlangRequestNotification($order);
 
@@ -85,6 +116,21 @@ class SurveyScheduleController extends Controller
             'survey_response_time' => now(),
             'survey_response_by' => auth()->user()->name,
         ]);
+
+        $taskResponse = \App\Models\TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'survey_schedule')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays(6),
+                'duration' => 6,
+                'duration_actual' => $taskResponse->duration_actual,
+                'status' => 'menunggu_input',
+            ]);
+        }
 
         return redirect()
             ->route('survey-schedule.index')

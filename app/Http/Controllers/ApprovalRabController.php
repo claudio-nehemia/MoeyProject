@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use Inertia\Inertia;
+use App\Models\TaskResponse;
 use Illuminate\Http\Request;
 use App\Models\ItemPekerjaan;
 use App\Models\ItemPekerjaanItem;
+use App\Services\NotificationService;
 
 class ApprovalRabController extends Controller
 {
@@ -22,64 +24,66 @@ class ApprovalRabController extends Controller
         \Log::info('User ID: ' . $user->id);
         \Log::info('User Name: ' . $user->name);
         \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
-        
+
         $items = ItemPekerjaan::with([
             'moodboard.order',
             'produks.jenisItems.items.item',
             'produks.bahanBakus.item', // 🔥 eager load bahan baku
         ])
-        ->whereHas('moodboard.order', function($query) use ($user) {
-            $query->visibleToSurveyUser($user);
-        })
-        ->whereHas('moodboard.order.gambarKerja', function($query) {
-            $query->whereNotNull('approved_time')
-                  ->whereNotNull('approved_by');
-        })
-        ->orderByDesc('created_at')
-        ->get()
-        ->map(function ($ip) {
+            ->whereHas('moodboard.order', function ($query) use ($user) {
+                $query->visibleToSurveyUser($user);
+            })
+            ->whereHas('moodboard.order.gambarKerja', function ($query) {
+                $query->whereNotNull('approved_time')
+                    ->whereNotNull('approved_by');
+            })
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($ip) {
 
-            $allItems = $ip->produks
-                ->flatMap(fn ($produk) =>
-                    $produk->jenisItems->flatMap(fn ($jenis) =>
-                        $jenis->items
-                    )
-                );
+                $allItems = $ip->produks
+                    ->flatMap(
+                        fn($produk) =>
+                        $produk->jenisItems->flatMap(
+                            fn($jenis) =>
+                            $jenis->items
+                        )
+                    );
 
-            // 🔥 Ambil semua bahan baku dari semua produk
-            $allBahanBaku = $ip->produks
-                ->flatMap(fn ($produk) => $produk->bahanBakus);
+                // 🔥 Ambil semua bahan baku dari semua produk
+                $allBahanBaku = $ip->produks
+                    ->flatMap(fn($produk) => $produk->bahanBakus);
 
-            return [
-                'id' => $ip->id,
-                'project_name' => $ip->moodboard->order->nama_project,
-                'company_name' => $ip->moodboard->order->company_name,
-                'customer_name' => $ip->moodboard->order->customer_name,
-                'total_items' => $allItems->count(),
-                'total_bahan_baku' => $allBahanBaku->count(), // 🔥 tambahan
+                return [
+                    'id' => $ip->id,
+                    'project_name' => $ip->moodboard->order->nama_project,
+                    'company_name' => $ip->moodboard->order->company_name,
+                    'customer_name' => $ip->moodboard->order->customer_name,
+                    'total_items' => $allItems->count(),
+                    'total_bahan_baku' => $allBahanBaku->count(), // 🔥 tambahan
+    
+                    // ⚠️ INI PENTING → supaya items_preview TIDAK undefined
+                    'items_preview' => $allItems
+                        ->map(fn($item) => [
+                            'id' => $item->id,
+                            'item_name' => $item->item->nama_item,
+                            'quantity' => $item->quantity,
+                            'keterangan_material' => $item->keterangan_material,
+                        ])
+                        ->values(),
 
-                // ⚠️ INI PENTING → supaya items_preview TIDAK undefined
-                'items_preview' => $allItems
-                    ->map(fn ($item) => [
-                        'id' => $item->id,
-                        'item_name' => $item->item->nama_item,
-                        'quantity' => $item->quantity,
-                        'keterangan_material' => $item->keterangan_material,
-                    ])
-                    ->values(),
-
-                // 🔥 tambahan preview bahan baku
-                'bahan_baku_preview' => $allBahanBaku
-                    ->map(fn ($bahan) => [
-                        'id' => $bahan->id,
-                        'item_name' => $bahan->item->nama_item,
-                        'harga_dasar' => $bahan->harga_dasar,
-                        'harga_jasa' => $bahan->harga_jasa,
-                        'keterangan_bahan_baku' => $bahan->keterangan_bahan_baku,
-                    ])
-                    ->values(),
-            ];
-        });
+                    // 🔥 tambahan preview bahan baku
+                    'bahan_baku_preview' => $allBahanBaku
+                        ->map(fn($bahan) => [
+                            'id' => $bahan->id,
+                            'item_name' => $bahan->item->nama_item,
+                            'harga_dasar' => $bahan->harga_dasar,
+                            'harga_jasa' => $bahan->harga_jasa,
+                            'keterangan_bahan_baku' => $bahan->keterangan_bahan_baku,
+                        ])
+                        ->values(),
+                ];
+            });
 
         return Inertia::render('ApprovalRab/Index', [
             'items' => $items,
@@ -104,9 +108,11 @@ class ApprovalRabController extends Controller
         ])->findOrFail($itemPekerjaanId);
 
         $items = $itemPekerjaan->produks
-            ->flatMap(fn ($produk) =>
-                $produk->jenisItems->flatMap(fn ($jenis) =>
-                    $jenis->items->map(fn ($item) => [
+            ->flatMap(
+                fn($produk) =>
+                $produk->jenisItems->flatMap(
+                    fn($jenis) =>
+                    $jenis->items->map(fn($item) => [
                         'id' => $item->id,
 
                         // 🔥 penting untuk select
@@ -119,7 +125,7 @@ class ApprovalRabController extends Controller
                         'keterangan_material' => $item->keterangan_material,
 
                         // 🔥 list dropdown
-                        'available_items' => $jenis->jenisItem->items->map(fn ($i) => [
+                        'available_items' => $jenis->jenisItem->items->map(fn($i) => [
                             'id' => $i->id,
                             'name' => $i->nama_item,
                         ])->values(),
@@ -130,8 +136,9 @@ class ApprovalRabController extends Controller
 
         // 🔥 Ambil bahan baku dari semua produk
         $bahanBakus = $itemPekerjaan->produks
-            ->flatMap(fn ($produk) =>
-                $produk->bahanBakus->map(fn ($bahan) => [
+            ->flatMap(
+                fn($produk) =>
+                $produk->bahanBakus->map(fn($bahan) => [
                     'id' => $bahan->id,
                     'item_name' => $bahan->item->nama_item,
                     'produk' => $produk->produk->nama_produk,
@@ -192,8 +199,38 @@ class ApprovalRabController extends Controller
         $itemPekerjaan = ItemPekerjaan::with('moodboard.order')->findOrFail($itemPekerjaanId);
         $order = $itemPekerjaan->moodboard->order;
 
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'approval_material')
+            ->first();
+
+        if ($taskResponse) {
+            $taskResponse->update([
+                'update_data_time' => now(), // Kapan data diisi
+                'status' => 'selesai',
+            ]);
+
+            // Create task response untuk tahap selanjutnya (cm_fee)
+            $nextTaskExists = TaskResponse::where('order_id', $order->id)
+                ->where('tahap', 'workplan')
+                ->exists();
+
+            if (!$nextTaskExists) {
+                TaskResponse::create([
+                    'order_id' => $order->id,
+                    'user_id' => null,
+                    'tahap' => 'workplan',
+                    'start_time' => now(),
+                    'deadline' => now()->addDays(3), // Deadline untuk workplan
+                    'duration' => 3,
+                    'duration_actual' => 3,
+                    'extend_time' => 0,
+                    'status' => 'menunggu_response',
+                ]);
+            }
+        }
+
         // Send notification to PM and Estimator
-        $notificationService = new \App\Services\NotificationService();
+        $notificationService = new NotificationService();
         $notificationService->sendWorkplanRequestNotification($order);
 
         return redirect()

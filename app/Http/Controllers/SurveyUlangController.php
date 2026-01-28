@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\GambarKerja;
 use Inertia\Inertia;
 use App\Models\Order;
+use App\Models\GambarKerja;
 use App\Models\SurveyUlang;
+use App\Models\TaskResponse;
 use Illuminate\Http\Request;
 use App\Services\NotificationService;
 
@@ -19,7 +20,7 @@ class SurveyUlangController extends Controller
         \Log::info('User ID: ' . $user->id);
         \Log::info('User Name: ' . $user->name);
         \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
-        
+
         $surveys = Order::with(['surveyUlang', 'jenisInterior'])
             ->visibleToSurveyUser($user)
             ->where(function ($q) {
@@ -31,7 +32,7 @@ class SurveyUlangController extends Controller
 
                 // Determine status based on survey ulang progress
                 $status = 'pending'; // Belum response sama sekali
-
+    
                 if ($o->surveyUlang) {
                     // Check if survey details have been filled (survey_time exists)
                     if ($o->surveyUlang->survey_time) {
@@ -90,6 +91,21 @@ class SurveyUlangController extends Controller
             'response_by' => auth()->user()->name ?? 'System',
         ]);
 
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'survey_ulang')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays(6), // Tambah 3 hari (total 8 hari)
+                'duration' => 6,
+                'duration_actual' => $taskResponse->duration_actual,
+                'status' => 'menunggu_input',
+            ]);
+        }
+
         $order->update(['tahapan_proyek' => 'survey_ulang']);
 
         return back()->with('success', 'Permintaan survey ulang berhasil diterima. Silakan input hasil survey.');
@@ -123,7 +139,7 @@ class SurveyUlangController extends Controller
         // UPDATE existing survey ulang (yang sudah dibuat saat response)
         // Bukan create baru!
         $surveyUlang = $order->surveyUlang;
-        
+
         if (!$surveyUlang) {
             return back()->with('error', 'Survey ulang belum di-response. Silakan klik tombol Response terlebih dahulu.');
         }
@@ -142,6 +158,36 @@ class SurveyUlangController extends Controller
                 'order_id' => $order->id,
                 'status' => 'pending',
             ]);
+        }
+
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'survey_ulang')
+            ->first();
+
+        if ($taskResponse) {
+            $taskResponse->update([
+                'update_data_time' => now(), // Kapan data diisi
+                'status' => 'selesai',
+            ]);
+
+            // Create task response untuk tahap selanjutnya (cm_fee)
+            $nextTaskExists = TaskResponse::where('order_id', $order->id)
+                ->where('tahap', 'gambar_kerja')
+                ->exists();
+
+            if (!$nextTaskExists) {
+                TaskResponse::create([
+                    'order_id' => $order->id,
+                    'user_id' => null,
+                    'tahap' => 'gambar_kerja',
+                    'start_time' => now(),
+                    'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                    'duration' => 3,
+                    'duration_actual' => 3,
+                    'extend_time' => 0,
+                    'status' => 'menunggu_response',
+                ]);
+            }
         }
 
         // update tahapan utama

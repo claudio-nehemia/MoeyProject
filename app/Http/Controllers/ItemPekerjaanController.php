@@ -7,6 +7,7 @@ use Inertia\Inertia;
 use App\Models\Produk;
 use App\Models\JenisItem;
 use App\Models\Moodboard;
+use App\Models\TaskResponse;
 use Illuminate\Http\Request;
 use App\Models\ItemPekerjaan;
 use App\Models\ItemPekerjaanItem;
@@ -28,55 +29,55 @@ class ItemPekerjaanController extends Controller
             'itemPekerjaan.produks.jenisItems.jenisItem',
             'itemPekerjaan.produks.jenisItems.items.item'
         ])
-        ->whereNotNull('moodboard_final')
-        ->get()
-        ->map(function ($moodboard) {
-            return [
-                'id' => $moodboard->id,
-                'pm_response_by' => $moodboard->pm_response_by,
-                'pm_response_time' => $moodboard->pm_response_time,
-                'order' => [
-                    'id' => $moodboard->order->id,
-                    'nama_project' => $moodboard->order->nama_project,
-                    'company_name' => $moodboard->order->company_name,
-                    'customer_name' => $moodboard->order->customer_name,
-                ],
-                'itemPekerjaan' => $moodboard->itemPekerjaan ? [
-                    'id' => $moodboard->itemPekerjaan->id,
-                    'response_by' => $moodboard->itemPekerjaan->response_by,
-                    'response_time' => $moodboard->itemPekerjaan->response_time,
-                    'pm_response_by' => $moodboard->itemPekerjaan->pm_response_by,
-                    'pm_response_time' => $moodboard->itemPekerjaan->pm_response_time,
-                    'status' => $moodboard->itemPekerjaan->status,
-                    'produks' => $moodboard->itemPekerjaan->produks->map(function ($produk) {
-                        return [
-                            'id' => $produk->id,
-                            'produk_id' => $produk->produk_id,
-                            'produk_name' => $produk->produk->nama_produk,
-                            'quantity' => $produk->quantity,
-                            'panjang' => $produk->panjang,
-                            'lebar' => $produk->lebar,
-                            'tinggi' => $produk->tinggi,
-                            'jenisItems' => $produk->jenisItems->map(function ($jenisItem) {
-                                return [
-                                    'id' => $jenisItem->id,
-                                    'jenis_item_id' => $jenisItem->jenis_item_id,
-                                    'jenis_item_name' => $jenisItem->jenisItem->nama_jenis_item,
-                                    'items' => $jenisItem->items->map(function ($item) {
-                                        return [
-                                            'id' => $item->id,
-                                            'item_id' => $item->item_id,
-                                            'item_name' => $item->item->nama_item,
-                                            'quantity' => $item->quantity,
-                                        ];
-                                    }),
-                                ];
-                            }),
-                        ];
-                    }),
-                ] : null,
-            ];
-        });
+            ->whereNotNull('moodboard_final')
+            ->get()
+            ->map(function ($moodboard) {
+                return [
+                    'id' => $moodboard->id,
+                    'pm_response_by' => $moodboard->pm_response_by,
+                    'pm_response_time' => $moodboard->pm_response_time,
+                    'order' => [
+                        'id' => $moodboard->order->id,
+                        'nama_project' => $moodboard->order->nama_project,
+                        'company_name' => $moodboard->order->company_name,
+                        'customer_name' => $moodboard->order->customer_name,
+                    ],
+                    'itemPekerjaan' => $moodboard->itemPekerjaan ? [
+                        'id' => $moodboard->itemPekerjaan->id,
+                        'response_by' => $moodboard->itemPekerjaan->response_by,
+                        'response_time' => $moodboard->itemPekerjaan->response_time,
+                        'pm_response_by' => $moodboard->itemPekerjaan->pm_response_by,
+                        'pm_response_time' => $moodboard->itemPekerjaan->pm_response_time,
+                        'status' => $moodboard->itemPekerjaan->status,
+                        'produks' => $moodboard->itemPekerjaan->produks->map(function ($produk) {
+                            return [
+                                'id' => $produk->id,
+                                'produk_id' => $produk->produk_id,
+                                'produk_name' => $produk->produk->nama_produk,
+                                'quantity' => $produk->quantity,
+                                'panjang' => $produk->panjang,
+                                'lebar' => $produk->lebar,
+                                'tinggi' => $produk->tinggi,
+                                'jenisItems' => $produk->jenisItems->map(function ($jenisItem) {
+                                    return [
+                                        'id' => $jenisItem->id,
+                                        'jenis_item_id' => $jenisItem->jenis_item_id,
+                                        'jenis_item_name' => $jenisItem->jenisItem->nama_jenis_item,
+                                        'items' => $jenisItem->items->map(function ($item) {
+                                            return [
+                                                'id' => $item->id,
+                                                'item_id' => $item->item_id,
+                                                'item_name' => $item->item->nama_item,
+                                                'quantity' => $item->quantity,
+                                            ];
+                                        }),
+                                    ];
+                                }),
+                            ];
+                        }),
+                    ] : null,
+                ];
+            });
 
         return Inertia::render('ItemPekerjaan/index', [
             'moodboards' => $moodboards,
@@ -88,10 +89,10 @@ class ItemPekerjaanController extends Controller
         try {
             Log::info('=== ITEM PEKERJAAN RESPONSE START ===');
             Log::info('Moodboard ID: ' . $moodboardId);
-            
+
             $moodboard = Moodboard::findOrFail($moodboardId);
 
-            if($moodboard->itemPekerjaan) {
+            if ($moodboard->itemPekerjaan) {
                 Log::warning('Item Pekerjaan already exists for moodboard: ' . $moodboardId);
                 return back()->with('error', 'Item Pekerjaan response sudah ada untuk moodboard ini.');
             }
@@ -101,7 +102,22 @@ class ItemPekerjaanController extends Controller
                 'response_by' => auth()->user()->name,
                 'response_time' => now(),
             ]);
-            
+
+            $taskResponse = TaskResponse::where('order_id', $moodboard->order->id)
+                ->where('tahap', 'item_pekerjaan')
+                ->first();
+
+            if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+                $taskResponse->update([
+                    'user_id' => auth()->user()->id,
+                    'response_time' => now(),
+                    'deadline' => now()->addDays(6), // Tambah 3 hari (total 8 hari)
+                    'duration' => 6,
+                    'duration_actual' => $taskResponse->duration_actual,
+                    'status' => 'menunggu_input',
+                ]);
+            }
+
             Log::info('Item Pekerjaan created with ID: ' . $itemPekerjaan->id);
             Log::info('=== ITEM PEKERJAAN RESPONSE END ===');
 
@@ -117,7 +133,7 @@ class ItemPekerjaanController extends Controller
     public function create($itemPekerjaanId)
     {
         $itemPekerjaan = ItemPekerjaan::with('moodboard.order')->findOrFail($itemPekerjaanId);
-        
+
         // Get master data
         $produks = Produk::with('bahanBakus')->select('id', 'nama_produk')->get();
         $jenisItems = JenisItem::where('nama_jenis_item', '!=', 'Bahan Baku')
@@ -189,14 +205,14 @@ class ItemPekerjaanController extends Controller
             // Save produks and nested data
             foreach ($validated['produks'] as $produkData) {
                 // Set dimensi - gunakan nilai yang diinput, atau null jika kosong
-                $panjang = isset($produkData['panjang']) && is_numeric($produkData['panjang']) 
-                    ? (float)$produkData['panjang'] 
+                $panjang = isset($produkData['panjang']) && is_numeric($produkData['panjang'])
+                    ? (float) $produkData['panjang']
                     : null;
-                $lebar = isset($produkData['lebar']) && is_numeric($produkData['lebar']) 
-                    ? (float)$produkData['lebar'] 
+                $lebar = isset($produkData['lebar']) && is_numeric($produkData['lebar'])
+                    ? (float) $produkData['lebar']
                     : null;
-                $tinggi = isset($produkData['tinggi']) && is_numeric($produkData['tinggi']) 
-                    ? (float)$produkData['tinggi'] 
+                $tinggi = isset($produkData['tinggi']) && is_numeric($produkData['tinggi'])
+                    ? (float) $produkData['tinggi']
                     : null;
 
                 $produk = ItemPekerjaanProduk::create([
@@ -212,10 +228,10 @@ class ItemPekerjaanController extends Controller
                 // Save selected bahan baku ke tabel item_pekerjaan_produk_bahan_bakus
                 if (isset($produkData['bahan_bakus']) && count($produkData['bahan_bakus']) > 0) {
                     $masterProduk = Produk::with('bahanBakus')->find($produkData['produk_id']);
-                    
+
                     // DEBUG: Log master produk bahan bakus
                     Log::info('ItemPekerjaan Store - Produk ID: ' . $produkData['produk_id']);
-                    Log::info('ItemPekerjaan Store - Master Produk BahanBakus: ' . json_encode($masterProduk->bahanBakus->map(function($b) {
+                    Log::info('ItemPekerjaan Store - Master Produk BahanBakus: ' . json_encode($masterProduk->bahanBakus->map(function ($b) {
                         return [
                             'id' => $b->id,
                             'nama_item' => $b->nama_item,
@@ -224,11 +240,11 @@ class ItemPekerjaanController extends Controller
                         ];
                     })->toArray()));
                     Log::info('ItemPekerjaan Store - Selected BahanBaku IDs: ' . json_encode($produkData['bahan_bakus']));
-                    
+
                     foreach ($produkData['bahan_bakus'] as $bahanBakuId) {
                         // Get harga_dasar and harga_jasa from produk_items pivot
                         $bahanBakuItem = $masterProduk->bahanBakus->firstWhere('id', $bahanBakuId);
-                        
+
                         Log::info('ItemPekerjaan Store - BahanBaku ID: ' . $bahanBakuId . ', Found: ' . ($bahanBakuItem ? 'YES' : 'NO'));
                         if ($bahanBakuItem) {
                             Log::info('ItemPekerjaan Store - BahanBaku pivot data: ' . json_encode([
@@ -236,7 +252,7 @@ class ItemPekerjaanController extends Controller
                                 'harga_jasa' => $bahanBakuItem->pivot->harga_jasa ?? 'NULL',
                             ]));
                         }
-                        
+
                         $hargaDasar = $bahanBakuItem?->pivot?->harga_dasar ?? 0;
                         $hargaJasa = $bahanBakuItem?->pivot?->harga_jasa ?? 0;
 
@@ -272,12 +288,42 @@ class ItemPekerjaanController extends Controller
                 }
             }
 
-            $statusMessage = $validated['status'] === 'draft' 
-                ? 'Data item pekerjaan berhasil disimpan sebagai draft.' 
+            $statusMessage = $validated['status'] === 'draft'
+                ? 'Data item pekerjaan berhasil disimpan sebagai draft.'
                 : 'Data item pekerjaan berhasil dipublish.';
 
             $notificationService = new NotificationService();
             $notificationService->sendRabInternalRequestNotification($itemPekerjaan->moodboard->order);
+
+            $taskResponse = TaskResponse::where('order_id', $itemPekerjaan->moodboard->order->id)
+                ->where('tahap', 'item_pekerjaan')
+                ->first();
+
+            if ($taskResponse) {
+                $taskResponse->update([
+                    'update_data_time' => now(), // Kapan data diisi
+                    'status' => 'selesai',
+                ]);
+
+                // Create task response untuk tahap selanjutnya (cm_fee)
+                $nextTaskExists = TaskResponse::where('order_id', $itemPekerjaan->moodboard->order->id)
+                    ->where('tahap', 'rab_internal')
+                    ->exists();
+
+                if (!$nextTaskExists) {
+                    TaskResponse::create([
+                        'order_id' => $itemPekerjaan->moodboard->order->id,
+                        'user_id' => null,
+                        'tahap' => 'rab_internal',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                    ]);
+                }
+            }
 
             return redirect()->route('item-pekerjaan.index')
                 ->with('success', $statusMessage);
@@ -296,7 +342,7 @@ class ItemPekerjaanController extends Controller
             'produks.jenisItems.jenisItem',
             'produks.jenisItems.items.item'
         ])->findOrFail($itemPekerjaanId);
-        
+
         // Get master data
         $produks = Produk::with('bahanBakus')->select('id', 'nama_produk')->get();
         $jenisItems = JenisItem::where('nama_jenis_item', '!=', 'Bahan Baku')
@@ -447,7 +493,7 @@ class ItemPekerjaanController extends Controller
             ]);
 
             $itemPekerjaan = ItemPekerjaan::findOrFail($itemPekerjaanId);
-            
+
             // Update status
             $itemPekerjaan->update(['status' => $validated['status']]);
 
@@ -461,14 +507,14 @@ class ItemPekerjaanController extends Controller
                     // Update existing
                     $produk = ItemPekerjaanProduk::find($produkData['id']);
                     // Set dimensi - gunakan nilai yang diinput, atau null jika kosong
-                    $panjang = isset($produkData['panjang']) && is_numeric($produkData['panjang']) 
-                        ? (float)$produkData['panjang'] 
+                    $panjang = isset($produkData['panjang']) && is_numeric($produkData['panjang'])
+                        ? (float) $produkData['panjang']
                         : null;
-                    $lebar = isset($produkData['lebar']) && is_numeric($produkData['lebar']) 
-                        ? (float)$produkData['lebar'] 
+                    $lebar = isset($produkData['lebar']) && is_numeric($produkData['lebar'])
+                        ? (float) $produkData['lebar']
                         : null;
-                    $tinggi = isset($produkData['tinggi']) && is_numeric($produkData['tinggi']) 
-                        ? (float)$produkData['tinggi'] 
+                    $tinggi = isset($produkData['tinggi']) && is_numeric($produkData['tinggi'])
+                        ? (float) $produkData['tinggi']
                         : null;
 
                     $produk->update([
@@ -483,14 +529,14 @@ class ItemPekerjaanController extends Controller
                 } else {
                     // Create new
                     // Set dimensi - gunakan nilai yang diinput, atau null jika kosong
-                    $panjang = isset($produkData['panjang']) && is_numeric($produkData['panjang']) 
-                        ? (float)$produkData['panjang'] 
+                    $panjang = isset($produkData['panjang']) && is_numeric($produkData['panjang'])
+                        ? (float) $produkData['panjang']
                         : null;
-                    $lebar = isset($produkData['lebar']) && is_numeric($produkData['lebar']) 
-                        ? (float)$produkData['lebar'] 
+                    $lebar = isset($produkData['lebar']) && is_numeric($produkData['lebar'])
+                        ? (float) $produkData['lebar']
                         : null;
-                    $tinggi = isset($produkData['tinggi']) && is_numeric($produkData['tinggi']) 
-                        ? (float)$produkData['tinggi'] 
+                    $tinggi = isset($produkData['tinggi']) && is_numeric($produkData['tinggi'])
+                        ? (float) $produkData['tinggi']
                         : null;
 
                     $produk = ItemPekerjaanProduk::create([
@@ -508,13 +554,13 @@ class ItemPekerjaanController extends Controller
                 // Update selected bahan baku
                 // Delete old bahan baku dan create new
                 $produk->bahanBakus()->delete();
-                
+
                 if (isset($produkData['bahan_bakus']) && count($produkData['bahan_bakus']) > 0) {
                     $masterProduk = Produk::with('bahanBakus')->find($produkData['produk_id']);
-                    
+
                     // DEBUG: Log master produk bahan bakus
                     Log::info('ItemPekerjaan Update - Produk ID: ' . $produkData['produk_id']);
-                    Log::info('ItemPekerjaan Update - Master Produk BahanBakus: ' . json_encode($masterProduk->bahanBakus->map(function($b) {
+                    Log::info('ItemPekerjaan Update - Master Produk BahanBakus: ' . json_encode($masterProduk->bahanBakus->map(function ($b) {
                         return [
                             'id' => $b->id,
                             'nama_item' => $b->nama_item,
@@ -523,11 +569,11 @@ class ItemPekerjaanController extends Controller
                         ];
                     })->toArray()));
                     Log::info('ItemPekerjaan Update - Selected BahanBaku IDs: ' . json_encode($produkData['bahan_bakus']));
-                    
+
                     foreach ($produkData['bahan_bakus'] as $bahanBakuId) {
                         // Get harga_dasar and harga_jasa from produk_items pivot
                         $bahanBakuItem = $masterProduk->bahanBakus->firstWhere('id', $bahanBakuId);
-                        
+
                         Log::info('ItemPekerjaan Update - BahanBaku ID: ' . $bahanBakuId . ', Found: ' . ($bahanBakuItem ? 'YES' : 'NO'));
                         if ($bahanBakuItem) {
                             Log::info('ItemPekerjaan Update - BahanBaku pivot data: ' . json_encode([
@@ -535,7 +581,7 @@ class ItemPekerjaanController extends Controller
                                 'harga_jasa' => $bahanBakuItem->pivot->harga_jasa ?? 'NULL',
                             ]));
                         }
-                        
+
                         $hargaDasar = $bahanBakuItem?->pivot?->harga_dasar ?? 0;
                         $hargaJasa = $bahanBakuItem?->pivot?->harga_jasa ?? 0;
 
@@ -609,8 +655,8 @@ class ItemPekerjaanController extends Controller
             $produksToDelete = array_diff($existingProdukIds, $submittedProdukIds);
             ItemPekerjaanProduk::whereIn('id', $produksToDelete)->delete();
 
-            $statusMessage = $validated['status'] === 'draft' 
-                ? 'Data item pekerjaan berhasil disimpan sebagai draft.' 
+            $statusMessage = $validated['status'] === 'draft'
+                ? 'Data item pekerjaan berhasil disimpan sebagai draft.'
                 : 'Data item pekerjaan berhasil dipublish.';
 
             return redirect()->route('item-pekerjaan.index')
@@ -627,7 +673,7 @@ class ItemPekerjaanController extends Controller
         try {
             $produk = ItemPekerjaanProduk::findOrFail($produkId);
             $produk->delete();
-            
+
             return back()->with('success', 'Produk berhasil dihapus.');
         } catch (\Exception $e) {
             Log::error('Delete produk error: ' . $e->getMessage());
@@ -640,7 +686,7 @@ class ItemPekerjaanController extends Controller
         try {
             $jenisItem = ItemPekerjaanJenisItem::findOrFail($jenisItemId);
             $jenisItem->delete();
-            
+
             return back()->with('success', 'Jenis item berhasil dihapus.');
         } catch (\Exception $e) {
             Log::error('Delete jenis item error: ' . $e->getMessage());
@@ -653,7 +699,7 @@ class ItemPekerjaanController extends Controller
         try {
             $item = ItemPekerjaanItem::findOrFail($itemId);
             $item->delete();
-            
+
             return back()->with('success', 'Item berhasil dihapus.');
         } catch (\Exception $e) {
             Log::error('Delete item error: ' . $e->getMessage());

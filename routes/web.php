@@ -1,7 +1,7 @@
 <?php
 
-use GuzzleHttp\Middleware;
 use Inertia\Inertia;
+use GuzzleHttp\Middleware;
 use Laravel\Fortify\Features;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ItemController;
@@ -20,6 +20,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\JenisItemController;
 use App\Http\Controllers\MoodboardController;
 use App\Http\Controllers\RabVendorController;
+use App\Http\Controllers\PmResponseController;
 use App\Http\Controllers\RabKontrakController;
 use App\Http\Controllers\ApprovalRabController;
 use App\Http\Controllers\DesainFinalController;
@@ -27,6 +28,7 @@ use App\Http\Controllers\GambarKerjaController;
 use App\Http\Controllers\RabInternalController;
 use App\Http\Controllers\SurveyUlangController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\TaskResponseController;
 use App\Http\Controllers\WorkplanItemController;
 use App\Http\Controllers\CommitmentFeeController;
 use App\Http\Controllers\ItemPekerjaanController;
@@ -35,7 +37,6 @@ use App\Http\Controllers\SurveyResultsController;
 use App\Http\Controllers\SurveyScheduleController;
 use App\Http\Controllers\JenisPengukuranController;
 use App\Http\Controllers\ProjectManagementController;
-use App\Http\Controllers\PmResponseController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -447,7 +448,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // WORKPLAN ROUTES
     Route::middleware(['permission:workplan.index'])->group(function () {
         Route::get('/workplan', [WorkplanItemController::class, 'index'])->name('workplan.index');
-        Route::post('/workplan/{order}/response', [WorkplanItemController::class, 'response'])->name('workplan.response');        Route::post('/workplan/{order}/response', [WorkplanItemController::class, 'response'])->name('workplan.response');
+        Route::post('/workplan/{order}/response', [WorkplanItemController::class, 'response'])->name('workplan.response');
+        Route::post('/workplan/{order}/response', [WorkplanItemController::class, 'response'])->name('workplan.response');
         Route::get('/workplan/{order}/create', [WorkplanItemController::class, 'create'])->name('workplan.create');
         Route::post('/workplan/{order}', [WorkplanItemController::class, 'store'])->name('workplan.store');
         Route::get('/workplan/{order}/edit', [WorkplanItemController::class, 'edit'])->name('workplan.edit');
@@ -585,6 +587,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/survey-result/{id}', [PmResponseController::class, 'surveyResult'])->name('survey-result');
         Route::post('/workplan/{id}', [PmResponseController::class, 'workplan'])->name('workplan');
     });
+
+    Route::post('/task-response/{orderId}/{tahap}/extend', [TaskResponseController::class, 'requestExtension'])
+        ->name('task-response.extend');
+    Route::get('/task-response/{orderId}/{tahap}', [TaskResponseController::class, 'getTaskResponse'])
+        ->name('task-response.show');
 
 });
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Inertia\Inertia;
 use App\Models\Moodboard;
+use App\Models\TaskResponse;
 use Illuminate\Http\Request;
 use App\Models\MoodboardFile;
 use Illuminate\Support\Facades\Log;
@@ -19,9 +20,9 @@ class DesainFinalController extends Controller
         \Log::info('User ID: ' . $user->id);
         \Log::info('User Name: ' . $user->name);
         \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
-        
+
         $moodboards = Moodboard::with(['order', 'finalFiles', 'commitmentFee'])
-            ->whereHas('order', function($query) use ($user) {
+            ->whereHas('order', function ($query) use ($user) {
                 $query->visibleToUser($user);
             })
             ->whereHas('commitmentFee', function ($query) {
@@ -82,6 +83,21 @@ class DesainFinalController extends Controller
                 'tahapan_proyek' => 'desain_final',
             ]);
 
+            $taskResponse = TaskResponse::where('order_id', $moodboard->order->id)
+                ->where('tahap', 'desain_final')
+                ->first();
+
+            if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+                $taskResponse->update([
+                    'user_id' => auth()->user()->id,
+                    'response_time' => now(),
+                    'deadline' => now()->addDays(6), // Tambah 3 hari (total 8 hari)
+                    'duration' => 6,
+                    'duration_actual' => $taskResponse->duration_actual,
+                    'status' => 'menunggu_input',
+                ]);
+            }
+
             Log::info('Desain final response created');
             Log::info('=== RESPONSE DESAIN FINAL END ===');
 
@@ -134,7 +150,7 @@ class DesainFinalController extends Controller
 
                 foreach ($files as $index => $file) {
                     Log::info("Processing file {$index}: " . $file->getClientOriginalName());
-                    
+
                     $path = $file->store('moodboards/final', 'public');
                     Log::info("File stored at: {$path}");
 
@@ -156,6 +172,36 @@ class DesainFinalController extends Controller
                 'tahapan_proyek' => 'desain_final',
             ]);
 
+            $taskResponse = TaskResponse::where('order_id', $moodboard->order->id)
+                ->where('tahap', 'desain_final')
+                ->first();
+
+            if ($taskResponse) {
+                $taskResponse->update([
+                    'update_data_time' => now(), // Kapan data diisi
+                    'status' => 'selesai',
+                ]);
+
+                // Create task response untuk tahap selanjutnya (cm_fee)
+                $nextTaskExists = TaskResponse::where('order_id', $moodboard->order->id)
+                    ->where('tahap', 'item_pekerjaan')
+                    ->exists();
+
+                if (!$nextTaskExists) {
+                    TaskResponse::create([
+                        'order_id' => $moodboard->order->id,
+                        'user_id' => null,
+                        'tahap' => 'item_pekerjaan',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                    ]);
+                }
+            }
+
             Log::info('Desain final uploaded successfully');
             Log::info('=== UPLOAD DESAIN FINAL END ===');
 
@@ -176,11 +222,11 @@ class DesainFinalController extends Controller
             Log::info('=== ACCEPT DESAIN FINAL START ===');
             Log::info('Moodboard ID: ' . $moodboardId);
             Log::info('Request data: ', $request->all());
-            
+
             $validated = $request->validate([
                 'moodboard_file_id' => 'required|exists:moodboard_files,id',
             ]);
-            
+
             $moodboard = Moodboard::findOrFail($moodboardId);
             Log::info('Moodboard found');
 
@@ -193,7 +239,7 @@ class DesainFinalController extends Controller
             // Update moodboard with selected file
             $moodboard->moodboard_final = $moodboardFile->file_path;
             $moodboard->save();
-            
+
             Log::info('Desain final accepted');
             Log::info('Moodboard final: ' . $moodboard->moodboard_final);
             Log::info('=== ACCEPT DESAIN FINAL END ===');
@@ -255,11 +301,11 @@ class DesainFinalController extends Controller
             $file = MoodboardFile::where('id', $fileId)
                 ->where('file_type', 'final')
                 ->firstOrFail();
-            
+
             Log::info('File found: ' . $file->original_name);
 
             $moodboard = Moodboard::findOrFail($file->moodboard_id);
-            
+
             // If this file is the approved final, clear moodboard_final
             if ($moodboard->moodboard_final === $file->file_path) {
                 Log::info('This is the approved final file, clearing moodboard_final');
@@ -302,7 +348,7 @@ class DesainFinalController extends Controller
             $oldFile = MoodboardFile::where('id', $fileId)
                 ->where('file_type', 'final')
                 ->firstOrFail();
-            
+
             Log::info('Old file found: ' . $oldFile->original_name);
 
             $moodboard = Moodboard::findOrFail($oldFile->moodboard_id);
