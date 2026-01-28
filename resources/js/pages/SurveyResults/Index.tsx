@@ -1,6 +1,8 @@
+import ExtendModal from '@/components/ExtendModal';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import axios from 'axios';
 import { useEffect, useState } from 'react';
 
 interface Survey {
@@ -44,8 +46,15 @@ export default function Index({ surveys }: Props) {
     });
     const [mounted, setMounted] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+    const [showExtendModal, setShowExtendModal] = useState<{
+        orderId: number;
+        tahap: string;
+    } | null>(null);
 
-    const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
+    const { auth } = usePage<{
+        auth: { user: { isKepalaMarketing: boolean } };
+    }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
 
     useEffect(() => {
@@ -62,6 +71,22 @@ export default function Index({ surveys }: Props) {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    useEffect(() => {
+        surveys.forEach((survey) => {
+            axios
+                .get(`/task-response/${survey.id}/survey`)
+                .then((res: any) => {
+                    setTaskResponses((prev) => ({
+                        ...prev,
+                        [survey.id]: res.data,
+                    }));
+                })
+                .catch((err: any) =>
+                    console.error('Error fetching task response:', err),
+                );
+        });
+    }, [surveys]);
 
     const handleMarkResponse = (orderId: number) => {
         if (confirm('Mark this survey as responded?')) {
@@ -80,21 +105,29 @@ export default function Index({ surveys }: Props) {
     };
 
     const handlePmResponse = (surveyId: number) => {
-        if (confirm('Apakah Anda yakin ingin memberikan Marketing response untuk survey result ini?')) {
+        if (
+            confirm(
+                'Apakah Anda yakin ingin memberikan Marketing response untuk survey result ini?',
+            )
+        ) {
             console.log('Marketing Response surveyId:', surveyId);
-            router.post(`/pm-response/survey-result/${surveyId}`, {}, {
-                onSuccess: () => {
-                    console.log('Marketing response recorded successfully');
-                    // Force full page reload untuk update tampilan
-                    router.visit(window.location.pathname, {
-                        preserveScroll: true,
-                        preserveState: false,
-                    });
+            router.post(
+                `/pm-response/survey-result/${surveyId}`,
+                {},
+                {
+                    onSuccess: () => {
+                        console.log('Marketing response recorded successfully');
+                        // Force full page reload untuk update tampilan
+                        router.visit(window.location.pathname, {
+                            preserveScroll: true,
+                            preserveState: false,
+                        });
+                    },
+                    onError: (errors) => {
+                        console.error('Marketing response error:', errors);
+                    },
                 },
-                onError: (errors) => {
-                    console.error('Marketing response error:', errors);
-                },
-            });
+            );
         }
     };
 
@@ -448,14 +481,27 @@ export default function Index({ surveys }: Props) {
                                                     >
                                                         {survey.project_status}
                                                     </span>
-                                                    {survey.is_draft && survey.response_time && (
-                                                        <span className="w-fit flex items-center gap-1.5 rounded-lg border-2 border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 px-3 py-1 text-xs font-bold text-amber-700 shadow-sm">
-                                                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                            </svg>
-                                                            DRAFT
-                                                        </span>
-                                                    )}
+                                                    {survey.is_draft &&
+                                                        survey.response_time && (
+                                                            <span className="flex w-fit items-center gap-1.5 rounded-lg border-2 border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 px-3 py-1 text-xs font-bold text-amber-700 shadow-sm">
+                                                                <svg
+                                                                    className="h-3.5 w-3.5"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    viewBox="0 0 24 24"
+                                                                >
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth={
+                                                                            2.5
+                                                                        }
+                                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                                                    />
+                                                                </svg>
+                                                                DRAFT
+                                                            </span>
+                                                        )}
                                                 </div>
 
                                                 <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
@@ -506,7 +552,9 @@ export default function Index({ surveys }: Props) {
                                                             Tahapan Proyek
                                                         </p>
                                                         <p className="truncate font-semibold text-stone-900">
-                                                            {formatTahapanProyek(survey.tahapan_proyek)}
+                                                            {formatTahapanProyek(
+                                                                survey.tahapan_proyek,
+                                                            )}
                                                         </p>
                                                     </div>
                                                     <div>
@@ -514,7 +562,9 @@ export default function Index({ surveys }: Props) {
                                                             Payment Status
                                                         </p>
                                                         <p className="truncate font-semibold text-stone-900">
-                                                            {formatPaymentStatus(survey.payment_status)}
+                                                            {formatPaymentStatus(
+                                                                survey.payment_status,
+                                                            )}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -625,10 +675,22 @@ export default function Index({ surveys }: Props) {
 
                                                         {/* Marketing Response Badge */}
                                                         {survey.pm_response_time && (
-                                                            <div className="mt-2 bg-purple-50 border border-purple-200 rounded-lg p-2">
-                                                                <p className="text-xs font-semibold text-purple-900">✓ Marketing Response</p>
-                                                                <p className="text-xs text-purple-700">By: {survey.pm_response_by}</p>
-                                                                <p className="text-xs text-purple-700">{formatDate(survey.pm_response_time)}</p>
+                                                            <div className="mt-2 rounded-lg border border-purple-200 bg-purple-50 p-2">
+                                                                <p className="text-xs font-semibold text-purple-900">
+                                                                    ✓ Marketing
+                                                                    Response
+                                                                </p>
+                                                                <p className="text-xs text-purple-700">
+                                                                    By:{' '}
+                                                                    {
+                                                                        survey.pm_response_by
+                                                                    }
+                                                                </p>
+                                                                <p className="text-xs text-purple-700">
+                                                                    {formatDate(
+                                                                        survey.pm_response_time,
+                                                                    )}
+                                                                </p>
                                                             </div>
                                                         )}
                                                     </div>
@@ -638,13 +700,91 @@ export default function Index({ surveys }: Props) {
                                             {/* Right Section - Actions */}
                                             <div className="flex flex-row justify-end gap-2 lg:flex-col lg:justify-start">
                                                 {/* Marketing Response Button - INDEPENDENT dari general response */}
-                                                {isKepalaMarketing && !survey.pm_response_time && (
-                                                    <button
-                                                        onClick={() => handlePmResponse(survey.survey_id || survey.id)}
-                                                        className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-purple-600 hover:to-purple-700 sm:px-4 sm:text-sm"
-                                                    >
-                                                        Marketing Response
-                                                    </button>
+                                                {isKepalaMarketing &&
+                                                    !survey.pm_response_time && (
+                                                        <button
+                                                            onClick={() =>
+                                                                handlePmResponse(
+                                                                    survey.survey_id ||
+                                                                        survey.id,
+                                                                )
+                                                            }
+                                                            className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-purple-600 hover:to-purple-700 sm:px-4 sm:text-sm"
+                                                        >
+                                                            Marketing Response
+                                                        </button>
+                                                    )}
+
+                                                {taskResponses[survey.id] &&
+                                                    taskResponses[survey.id]
+                                                        .status !==
+                                                        'selesai' && (
+                                                        <div className="mt-2 rounded border border-yellow-200 bg-yellow-50 p-2 text-xs">
+                                                            <div className="flex items-center justify-between">
+                                                                <div>
+                                                                    <p className="text-yellow-700">
+                                                                        Deadline:{' '}
+                                                                        {new Date(
+                                                                            taskResponses[
+                                                                                survey.id
+                                                                            ].deadline,
+                                                                        ).toLocaleDateString(
+                                                                            'id-ID',
+                                                                        )}
+                                                                    </p>
+                                                                    {taskResponses[
+                                                                        survey
+                                                                            .id
+                                                                    ]
+                                                                        .extend_time >
+                                                                        0 && (
+                                                                        <p className="text-orange-600">
+                                                                            Perpanjangan:{' '}
+                                                                            {
+                                                                                taskResponses[
+                                                                                    survey
+                                                                                        .id
+                                                                                ]
+                                                                                    .extend_time
+                                                                            }
+                                                                            x
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                                <button
+                                                                    onClick={() =>
+                                                                        setShowExtendModal(
+                                                                            {
+                                                                                orderId:
+                                                                                    survey.id,
+                                                                                tahap: 'survey',
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                    className="rounded bg-orange-500 px-2 py-1 text-xs text-white hover:bg-orange-600"
+                                                                >
+                                                                    Minta
+                                                                    Perpanjangan
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                {/* Extend Modal */}
+                                                {showExtendModal && (
+                                                    <ExtendModal
+                                                        orderId={
+                                                            showExtendModal.orderId
+                                                        }
+                                                        tahap={
+                                                            showExtendModal.tahap
+                                                        }
+                                                        onClose={() =>
+                                                            setShowExtendModal(
+                                                                null,
+                                                            )
+                                                        }
+                                                    />
                                                 )}
 
                                                 {/* General Response - Trigger dari response_time NULL */}
@@ -695,12 +835,18 @@ export default function Index({ surveys }: Props) {
                                                                     <path
                                                                         strokeLinecap="round"
                                                                         strokeLinejoin="round"
-                                                                        strokeWidth={2}
+                                                                        strokeWidth={
+                                                                            2
+                                                                        }
                                                                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                                                                     />
                                                                 </svg>
-                                                                <span className="hidden sm:inline">Edit Draft</span>
-                                                                <span className="sm:hidden">Edit</span>
+                                                                <span className="hidden sm:inline">
+                                                                    Edit Draft
+                                                                </span>
+                                                                <span className="sm:hidden">
+                                                                    Edit
+                                                                </span>
                                                             </Link>
                                                         ) : (
                                                             <Link
@@ -716,12 +862,19 @@ export default function Index({ surveys }: Props) {
                                                                     <path
                                                                         strokeLinecap="round"
                                                                         strokeLinejoin="round"
-                                                                        strokeWidth={2}
+                                                                        strokeWidth={
+                                                                            2
+                                                                        }
                                                                         d="M12 4v16m8-8H4"
                                                                     />
                                                                 </svg>
-                                                                <span className="hidden sm:inline">Create Survey</span>
-                                                                <span className="sm:hidden">Create</span>
+                                                                <span className="hidden sm:inline">
+                                                                    Create
+                                                                    Survey
+                                                                </span>
+                                                                <span className="sm:hidden">
+                                                                    Create
+                                                                </span>
                                                             </Link>
                                                         )}
                                                     </>
@@ -741,18 +894,26 @@ export default function Index({ surveys }: Props) {
                                                                 <path
                                                                     strokeLinecap="round"
                                                                     strokeLinejoin="round"
-                                                                    strokeWidth={2}
+                                                                    strokeWidth={
+                                                                        2
+                                                                    }
                                                                     d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                                                                 />
                                                                 <path
                                                                     strokeLinecap="round"
                                                                     strokeLinejoin="round"
-                                                                    strokeWidth={2}
+                                                                    strokeWidth={
+                                                                        2
+                                                                    }
                                                                     d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                                                                 />
                                                             </svg>
-                                                            <span className="hidden sm:inline">View</span>
-                                                            <span className="sm:hidden">View</span>
+                                                            <span className="hidden sm:inline">
+                                                                View
+                                                            </span>
+                                                            <span className="sm:hidden">
+                                                                View
+                                                            </span>
                                                         </Link>
                                                         <Link
                                                             href={`/survey-results/${survey.survey_id || survey.id}/edit`}
@@ -767,12 +928,18 @@ export default function Index({ surveys }: Props) {
                                                                 <path
                                                                     strokeLinecap="round"
                                                                     strokeLinejoin="round"
-                                                                    strokeWidth={2}
+                                                                    strokeWidth={
+                                                                        2
+                                                                    }
                                                                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                                                                 />
                                                             </svg>
-                                                            <span className="hidden sm:inline">Edit</span>
-                                                            <span className="sm:hidden">Edit</span>
+                                                            <span className="hidden sm:inline">
+                                                                Edit
+                                                            </span>
+                                                            <span className="sm:hidden">
+                                                                Edit
+                                                            </span>
                                                         </Link>
                                                     </>
                                                 )}

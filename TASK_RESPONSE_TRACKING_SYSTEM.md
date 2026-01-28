@@ -1739,6 +1739,1053 @@ Tapi versi dengan router.post yang sudah saya buatkan di atas sudah cukup baik d
 
 ---
 
+## 🎯 IMPLEMENTASI EXTEND MODAL UNTUK SETIAP MENU
+
+### Konsep Dasar
+
+Extend modal perlu ditampilkan di **setiap tempat di mana user bisa input/update data** untuk task response yang statusnya **belum selesai**. 
+
+**Aturan:**
+1. **Menu dengan Response**: Extend modal muncul setelah user klik Response (status = `menunggu_input`)
+2. **Menu tanpa Response**: Extend modal muncul langsung saat user mulai input data (status = `menunggu_input`)
+3. **Multiple Input Points**: Jika ada beberapa tempat input (contoh: moodboard punya upload desain kasar dan accept desain), extend modal muncul di **semua tempat** tersebut
+
+### 1. Survey - SurveyResults/Index.tsx
+
+**Lokasi**: Di Index page, tampilkan untuk setiap order yang punya task response survey
+
+```tsx
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
+
+// Di dalam component
+const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+
+// Fetch task response untuk semua order
+useEffect(() => {
+    surveys.forEach(survey => {
+        axios.get(`/task-response/${survey.id}/survey`)
+            .then(res => {
+                setTaskResponses(prev => ({ ...prev, [survey.id]: res.data }));
+            })
+            .catch(err => console.error('Error fetching task response:', err));
+    });
+}, [surveys]);
+
+// Di dalam card setiap survey, tambahkan:
+{taskResponses[survey.id] && taskResponses[survey.id].status !== 'selesai' && (
+    <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+        <div className="flex justify-between items-center">
+            <div>
+                <p className="text-yellow-700">
+                    Deadline: {new Date(taskResponses[survey.id].deadline).toLocaleDateString('id-ID')}
+                </p>
+                {taskResponses[survey.id].extend_time > 0 && (
+                    <p className="text-orange-600">Perpanjangan: {taskResponses[survey.id].extend_time}x</p>
+                )}
+            </div>
+            <button
+                onClick={() => setShowExtendModal({ orderId: survey.id, tahap: 'survey' })}
+                className="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+            >
+                Minta Perpanjangan
+            </button>
+        </div>
+    </div>
+)}
+
+{/* Extend Modal */}
+{showExtendModal && (
+    <ExtendModal
+        orderId={showExtendModal.orderId}
+        tahap={showExtendModal.tahap}
+        onClose={() => setShowExtendModal(null)}
+    />
+)}
+```
+
+### 2. Moodboard - Moodboard/Index.tsx (KASUS KHUSUS: 2 TEMPAT)
+
+**Lokasi**: Di 2 tempat (karena moodboard punya 2 fase input):
+1. **Saat Upload Desain Kasar** (di modal upload atau di card) - Status: `menunggu_input`
+2. **Saat Accept Desain** (di modal accept atau di card) - Status: `menunggu_input` (masih sama, karena belum selesai sampai accept)
+
+**Konsep**: 
+- Task response moodboard dibuat saat survey selesai (status: `menunggu_response`)
+- User klik Response → status jadi `menunggu_input`
+- User upload desain kasar → status masih `menunggu_input` (belum selesai)
+- User accept desain → status jadi `selesai` (baru selesai)
+- Jadi extend modal muncul di **kedua tempat** tersebut (upload dan accept)
+
+```tsx
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
+
+// Di dalam component
+const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+
+// Fetch task response untuk semua order
+useEffect(() => {
+    orders.forEach(order => {
+        axios.get(`/task-response/${order.id}/moodboard`)
+            .then(res => {
+                setTaskResponses(prev => ({ ...prev, [order.id]: res.data }));
+            })
+            .catch(err => console.error('Error fetching task response:', err));
+    });
+}, [orders]);
+
+// 1. Di card moodboard (sebelum tombol action)
+{taskResponses[order.id] && taskResponses[order.id].status !== 'selesai' && (
+    <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+        <div className="flex justify-between items-center">
+            <div>
+                <p className="text-yellow-700">
+                    Deadline: {new Date(taskResponses[order.id].deadline).toLocaleDateString('id-ID')}
+                </p>
+                {taskResponses[order.id].extend_time > 0 && (
+                    <p className="text-orange-600">Perpanjangan: {taskResponses[order.id].extend_time}x</p>
+                )}
+            </div>
+            <button
+                onClick={() => setShowExtendModal({ orderId: order.id, tahap: 'moodboard' })}
+                className="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+            >
+                Minta Perpanjangan
+            </button>
+        </div>
+    </div>
+)}
+
+// 2. Di dalam modal upload desain kasar (MoodboardModal component)
+// File: resources/js/components/MoodboardModal.tsx
+// Tambahkan props untuk taskResponse dan showExtendModal
+interface Props {
+    show: boolean;
+    order: Order;
+    mode: 'create' | 'upload-kasar' | 'revise';
+    onClose: () => void;
+    taskResponse?: any; // Tambahkan ini
+    onShowExtendModal?: (orderId: number, tahap: string) => void; // Tambahkan ini
+}
+
+// Di dalam component, tambahkan di bagian atas modal (sebelum form upload)
+// Hanya tampilkan jika mode === 'upload-kasar' dan taskResponse ada
+{mode === 'upload-kasar' && taskResponse && taskResponse.status !== 'selesai' && (
+    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+        <div className="flex justify-between items-center">
+            <div>
+                <p className="text-sm text-yellow-700">
+                    Deadline: {new Date(taskResponse.deadline).toLocaleDateString('id-ID')}
+                </p>
+                {taskResponse.extend_time > 0 && (
+                    <p className="text-xs text-orange-600 mt-1">
+                        Perpanjangan: {taskResponse.extend_time}x
+                    </p>
+                )}
+            </div>
+            {onShowExtendModal && (
+                <button
+                    onClick={() => onShowExtendModal(order.id, 'moodboard')}
+                    className="px-3 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+                >
+                    Minta Perpanjangan
+                </button>
+            )}
+        </div>
+    </div>
+)}
+
+// 3. Di dalam card moodboard, saat ada tombol Accept (di expanded card)
+// File: resources/js/pages/Moodboard/Index.tsx
+// Di bagian expanded card, sebelum tombol Accept atau di dalam section accept
+{taskResponses[order.id] && 
+ taskResponses[order.id].status !== 'selesai' && 
+ moodboard.kasar_files.length > 0 && 
+ moodboard.status === 'pending' && 
+ isExpanded && (
+    <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+        <div className="flex justify-between items-center">
+            <div>
+                <p className="text-yellow-700">
+                    Deadline: {new Date(taskResponses[order.id].deadline).toLocaleDateString('id-ID')}
+                </p>
+                {taskResponses[order.id].extend_time > 0 && (
+                    <p className="text-orange-600">Perpanjangan: {taskResponses[order.id].extend_time}x</p>
+                )}
+            </div>
+            <button
+                onClick={() => setShowExtendModal({ orderId: order.id, tahap: 'moodboard' })}
+                className="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+            >
+                Minta Perpanjangan
+            </button>
+        </div>
+    </div>
+)}
+
+// 4. Update pemanggilan MoodboardModal di Index.tsx
+// Saat memanggil modal untuk upload kasar, pass taskResponse dan onShowExtendModal
+{showUploadKasarModal && (
+    <MoodboardModal
+        show={showUploadKasarModal}
+        order={selectedOrder}
+        mode="upload-kasar"
+        onClose={() => setShowUploadKasarModal(false)}
+        taskResponse={taskResponses[selectedOrder?.id]}
+        onShowExtendModal={(orderId, tahap) => setShowExtendModal({ orderId, tahap })}
+    />
+)}
+
+{/* Extend Modal */}
+{showExtendModal && (
+    <ExtendModal
+        orderId={showExtendModal.orderId}
+        tahap={showExtendModal.tahap}
+        onClose={() => setShowExtendModal(null)}
+    />
+)}
+```
+
+### 3. Estimasi - Estimasi/Index.tsx
+
+**Lokasi**: Di Index page, tampilkan untuk setiap moodboard yang punya task response estimasi
+
+```tsx
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
+
+// Di dalam component
+const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+
+// Fetch task response untuk semua moodboard
+useEffect(() => {
+    moodboards.forEach(moodboard => {
+        const orderId = moodboard.order?.id;
+        if (orderId) {
+            axios.get(`/task-response/${orderId}/estimasi`)
+                .then(res => {
+                    setTaskResponses(prev => ({ ...prev, [orderId]: res.data }));
+                })
+                .catch(err => console.error('Error fetching task response:', err));
+        }
+    });
+}, [moodboards]);
+
+// Di dalam card setiap moodboard, tambahkan:
+{taskResponses[moodboard.order?.id] && taskResponses[moodboard.order?.id].status !== 'selesai' && (
+    <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+        <div className="flex justify-between items-center">
+            <div>
+                <p className="text-yellow-700">
+                    Deadline: {new Date(taskResponses[moodboard.order?.id].deadline).toLocaleDateString('id-ID')}
+                </p>
+            </div>
+            <button
+                onClick={() => setShowExtendModal({ orderId: moodboard.order?.id, tahap: 'estimasi' })}
+                className="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+            >
+                Minta Perpanjangan
+            </button>
+        </div>
+    </div>
+)}
+
+{/* Extend Modal */}
+{showExtendModal && (
+    <ExtendModal
+        orderId={showExtendModal.orderId}
+        tahap={showExtendModal.tahap}
+        onClose={() => setShowExtendModal(null)}
+    />
+)}
+```
+
+### 4. Commitment Fee - CommitmentFee/Index.tsx
+
+**Lokasi**: Di Index page atau di detail page saat upload payment proof
+
+```tsx
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
+
+// Di dalam component
+const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+
+// Fetch task response
+useEffect(() => {
+    commitmentFees.forEach(fee => {
+        const orderId = fee.moodboard?.order?.id;
+        if (orderId) {
+            axios.get(`/task-response/${orderId}/cm_fee`)
+                .then(res => {
+                    setTaskResponses(prev => ({ ...prev, [orderId]: res.data }));
+                })
+                .catch(err => console.error('Error fetching task response:', err));
+        }
+    });
+}, [commitmentFees]);
+
+// Di card atau di form upload payment proof
+{taskResponses[orderId] && taskResponses[orderId].status !== 'selesai' && (
+    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+        <div className="flex justify-between items-center">
+            <div>
+                <p className="text-sm text-yellow-700">
+                    Deadline: {new Date(taskResponses[orderId].deadline).toLocaleDateString('id-ID')}
+                </p>
+            </div>
+            <button
+                onClick={() => setShowExtendModal({ orderId, tahap: 'cm_fee' })}
+                className="px-3 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+            >
+                Minta Perpanjangan
+            </button>
+        </div>
+    </div>
+)}
+
+{/* Extend Modal */}
+{showExtendModal && (
+    <ExtendModal
+        orderId={showExtendModal.orderId}
+        tahap={showExtendModal.tahap}
+        onClose={() => setShowExtendModal(null)}
+    />
+)}
+```
+
+### 5. Desain Final - DesainFinal/Index.tsx
+
+**Lokasi**: Di Index page, tampilkan untuk setiap moodboard
+
+```tsx
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
+
+// Di dalam component
+const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+
+// Fetch task response
+useEffect(() => {
+    moodboards.forEach(moodboard => {
+        const orderId = moodboard.order?.id;
+        if (orderId) {
+            axios.get(`/task-response/${orderId}/desain_final`)
+                .then(res => {
+                    setTaskResponses(prev => ({ ...prev, [orderId]: res.data }));
+                })
+                .catch(err => console.error('Error fetching task response:', err));
+        }
+    });
+}, [moodboards]);
+
+// Di card moodboard
+{taskResponses[moodboard.order?.id] && taskResponses[moodboard.order?.id].status !== 'selesai' && (
+    <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+        <div className="flex justify-between items-center">
+            <div>
+                <p className="text-yellow-700">
+                    Deadline: {new Date(taskResponses[moodboard.order?.id].deadline).toLocaleDateString('id-ID')}
+                </p>
+            </div>
+            <button
+                onClick={() => setShowExtendModal({ orderId: moodboard.order?.id, tahap: 'desain_final' })}
+                className="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+            >
+                Minta Perpanjangan
+            </button>
+        </div>
+    </div>
+)}
+
+{/* Extend Modal */}
+{showExtendModal && (
+    <ExtendModal
+        orderId={showExtendModal.orderId}
+        tahap={showExtendModal.tahap}
+        onClose={() => setShowExtendModal(null)}
+    />
+)}
+```
+
+### 6. Item Pekerjaan - ItemPekerjaan/Index.tsx
+
+**Lokasi**: Di Index page atau di form create/edit
+
+```tsx
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
+
+// Di dalam component
+const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+
+// Fetch task response
+useEffect(() => {
+    itemPekerjaans.forEach(ip => {
+        const orderId = ip.moodboard?.order?.id;
+        if (orderId) {
+            axios.get(`/task-response/${orderId}/item_pekerjaan`)
+                .then(res => {
+                    setTaskResponses(prev => ({ ...prev, [orderId]: res.data }));
+                })
+                .catch(err => console.error('Error fetching task response:', err));
+        }
+    });
+}, [itemPekerjaans]);
+
+// Di card atau di form
+{taskResponses[orderId] && taskResponses[orderId].status !== 'selesai' && (
+    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+        <div className="flex justify-between items-center">
+            <div>
+                <p className="text-sm text-yellow-700">
+                    Deadline: {new Date(taskResponses[orderId].deadline).toLocaleDateString('id-ID')}
+                </p>
+            </div>
+            <button
+                onClick={() => setShowExtendModal({ orderId, tahap: 'item_pekerjaan' })}
+                className="px-3 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+            >
+                Minta Perpanjangan
+            </button>
+        </div>
+    </div>
+)}
+
+{/* Extend Modal */}
+{showExtendModal && (
+    <ExtendModal
+        orderId={showExtendModal.orderId}
+        tahap={showExtendModal.tahap}
+        onClose={() => setShowExtendModal(null)}
+    />
+)}
+```
+
+### 7. RAB Internal - RabInternal/Index.tsx dan Create/Edit.tsx
+
+**Lokasi**: Di Index page dan di form Create/Edit
+
+```tsx
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
+
+// Di Index.tsx - di card
+const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+
+// Fetch task response
+useEffect(() => {
+    itemPekerjaans.forEach(ip => {
+        const orderId = ip.moodboard?.order?.id;
+        if (orderId) {
+            axios.get(`/task-response/${orderId}/rab_internal`)
+                .then(res => {
+                    setTaskResponses(prev => ({ ...prev, [orderId]: res.data }));
+                })
+                .catch(err => console.error('Error fetching task response:', err));
+        }
+    });
+}, [itemPekerjaans]);
+
+// Di card
+{taskResponses[orderId] && taskResponses[orderId].status !== 'selesai' && (
+    <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+        <div className="flex justify-between items-center">
+            <div>
+                <p className="text-yellow-700">
+                    Deadline: {new Date(taskResponses[orderId].deadline).toLocaleDateString('id-ID')}
+                </p>
+            </div>
+            <button
+                onClick={() => setShowExtendModal({ orderId, tahap: 'rab_internal' })}
+                className="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+            >
+                Minta Perpanjangan
+            </button>
+        </div>
+    </div>
+)}
+
+// Di Create/Edit.tsx - di bagian atas form (sebelum form input)
+{taskResponse && taskResponse.status !== 'selesai' && (
+    <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div className="flex justify-between items-center">
+            <div>
+                <h4 className="text-sm font-semibold text-gray-800 mb-2">Informasi Deadline</h4>
+                <p className="text-sm text-yellow-700">
+                    Deadline: {new Date(taskResponse.deadline).toLocaleDateString('id-ID')}
+                </p>
+            </div>
+            <button
+                onClick={() => setShowExtendModal({ orderId: rabInternal.itemPekerjaan.order.id, tahap: 'rab_internal' })}
+                className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
+            >
+                Minta Perpanjangan
+            </button>
+        </div>
+    </div>
+)}
+
+{/* Extend Modal */}
+{showExtendModal && (
+    <ExtendModal
+        orderId={showExtendModal.orderId}
+        tahap={showExtendModal.tahap}
+        onClose={() => setShowExtendModal(null)}
+    />
+)}
+```
+
+### 8. Kontrak - Kontrak/Index.tsx
+
+**Lokasi**: Di Index page dan di form upload signed contract
+
+```tsx
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
+
+// Di dalam component
+const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+
+// Fetch task response
+useEffect(() => {
+    itemPekerjaans.forEach(ip => {
+        const orderId = ip.moodboard?.order?.id;
+        if (orderId) {
+            axios.get(`/task-response/${orderId}/kontrak`)
+                .then(res => {
+                    setTaskResponses(prev => ({ ...prev, [orderId]: res.data }));
+                })
+                .catch(err => console.error('Error fetching task response:', err));
+        }
+    });
+}, [itemPekerjaans]);
+
+// Di card atau di form upload signed contract
+{taskResponses[orderId] && taskResponses[orderId].status !== 'selesai' && (
+    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+        <div className="flex justify-between items-center">
+            <div>
+                <p className="text-sm text-yellow-700">
+                    Deadline: {new Date(taskResponses[orderId].deadline).toLocaleDateString('id-ID')}
+                </p>
+            </div>
+            <button
+                onClick={() => setShowExtendModal({ orderId, tahap: 'kontrak' })}
+                className="px-3 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+            >
+                Minta Perpanjangan
+            </button>
+        </div>
+    </div>
+)}
+
+{/* Extend Modal */}
+{showExtendModal && (
+    <ExtendModal
+        orderId={showExtendModal.orderId}
+        tahap={showExtendModal.tahap}
+        onClose={() => setShowExtendModal(null)}
+    />
+)}
+```
+
+### 9. Invoice - Invoice/Index.tsx dan Show.tsx
+
+**Lokasi**: Di Index page dan di Show page saat upload bukti bayar
+
+```tsx
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
+
+// Di dalam component
+const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+
+// Fetch task response
+useEffect(() => {
+    itemPekerjaans.forEach(ip => {
+        const orderId = ip.moodboard?.order?.id;
+        if (orderId) {
+            axios.get(`/task-response/${orderId}/invoice`)
+                .then(res => {
+                    setTaskResponses(prev => ({ ...prev, [orderId]: res.data }));
+                })
+                .catch(err => console.error('Error fetching task response:', err));
+        }
+    });
+}, [itemPekerjaans]);
+
+// Di card atau di form upload bukti bayar
+{taskResponses[orderId] && taskResponses[orderId].status !== 'selesai' && (
+    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+        <div className="flex justify-between items-center">
+            <div>
+                <p className="text-sm text-yellow-700">
+                    Deadline: {new Date(taskResponses[orderId].deadline).toLocaleDateString('id-ID')}
+                </p>
+            </div>
+            <button
+                onClick={() => setShowExtendModal({ orderId, tahap: 'invoice' })}
+                className="px-3 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+            >
+                Minta Perpanjangan
+            </button>
+        </div>
+    </div>
+)}
+
+{/* Extend Modal */}
+{showExtendModal && (
+    <ExtendModal
+        orderId={showExtendModal.orderId}
+        tahap={showExtendModal.tahap}
+        onClose={() => setShowExtendModal(null)}
+    />
+)}
+```
+
+### 10. Survey Schedule - SurveySchedule/Index.tsx
+
+**Lokasi**: Di Index page, tampilkan untuk setiap order
+
+```tsx
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
+
+// Di dalam component
+const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+
+// Fetch task response
+useEffect(() => {
+    orders.forEach(order => {
+        axios.get(`/task-response/${order.id}/survey_schedule`)
+            .then(res => {
+                setTaskResponses(prev => ({ ...prev, [order.id]: res.data }));
+            })
+            .catch(err => console.error('Error fetching task response:', err));
+    });
+}, [orders]);
+
+// Di card order
+{taskResponses[order.id] && taskResponses[order.id].status !== 'selesai' && (
+    <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+        <div className="flex justify-between items-center">
+            <div>
+                <p className="text-yellow-700">
+                    Deadline: {new Date(taskResponses[order.id].deadline).toLocaleDateString('id-ID')}
+                </p>
+            </div>
+            <button
+                onClick={() => setShowExtendModal({ orderId: order.id, tahap: 'survey_schedule' })}
+                className="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+            >
+                Minta Perpanjangan
+            </button>
+        </div>
+    </div>
+)}
+
+{/* Extend Modal */}
+{showExtendModal && (
+    <ExtendModal
+        orderId={showExtendModal.orderId}
+        tahap={showExtendModal.tahap}
+        onClose={() => setShowExtendModal(null)}
+    />
+)}
+```
+
+### 11. Survey Ulang - SurveyUlang/Index.tsx
+
+**Lokasi**: Di Index page dan di form Create/Edit
+
+```tsx
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
+
+// Di dalam component
+const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+
+// Fetch task response
+useEffect(() => {
+    surveys.forEach(survey => {
+        axios.get(`/task-response/${survey.id}/survey_ulang`)
+            .then(res => {
+                setTaskResponses(prev => ({ ...prev, [survey.id]: res.data }));
+            })
+            .catch(err => console.error('Error fetching task response:', err));
+    });
+}, [surveys]);
+
+// Di card atau di form
+{taskResponses[survey.id] && taskResponses[survey.id].status !== 'selesai' && (
+    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+        <div className="flex justify-between items-center">
+            <div>
+                <p className="text-sm text-yellow-700">
+                    Deadline: {new Date(taskResponses[survey.id].deadline).toLocaleDateString('id-ID')}
+                </p>
+            </div>
+            <button
+                onClick={() => setShowExtendModal({ orderId: survey.id, tahap: 'survey_ulang' })}
+                className="px-3 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+            >
+                Minta Perpanjangan
+            </button>
+        </div>
+    </div>
+)}
+
+{/* Extend Modal */}
+{showExtendModal && (
+    <ExtendModal
+        orderId={showExtendModal.orderId}
+        tahap={showExtendModal.tahap}
+        onClose={() => setShowExtendModal(null)}
+    />
+)}
+```
+
+### 12. Gambar Kerja - GambarKerja/Index.tsx
+
+**Lokasi**: Di Index page dan di form upload
+
+```tsx
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
+
+// Di dalam component
+const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+
+// Fetch task response
+useEffect(() => {
+    items.forEach(item => {
+        const orderId = item.order?.id;
+        if (orderId) {
+            axios.get(`/task-response/${orderId}/gambar_kerja`)
+                .then(res => {
+                    setTaskResponses(prev => ({ ...prev, [orderId]: res.data }));
+                })
+                .catch(err => console.error('Error fetching task response:', err));
+        }
+    });
+}, [items]);
+
+// Di card atau di form upload
+{taskResponses[orderId] && taskResponses[orderId].status !== 'selesai' && (
+    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+        <div className="flex justify-between items-center">
+            <div>
+                <p className="text-sm text-yellow-700">
+                    Deadline: {new Date(taskResponses[orderId].deadline).toLocaleDateString('id-ID')}
+                </p>
+            </div>
+            <button
+                onClick={() => setShowExtendModal({ orderId, tahap: 'gambar_kerja' })}
+                className="px-3 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+            >
+                Minta Perpanjangan
+            </button>
+        </div>
+    </div>
+)}
+
+{/* Extend Modal */}
+{showExtendModal && (
+    <ExtendModal
+        orderId={showExtendModal.orderId}
+        tahap={showExtendModal.tahap}
+        onClose={() => setShowExtendModal(null)}
+    />
+)}
+```
+
+### 13. Approval Material (ApprovalRab) - ApprovalRab/Index.tsx dan Edit.tsx
+
+**Lokasi**: Di Index page dan di form Edit
+
+```tsx
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
+
+// Di dalam component
+const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+
+// Fetch task response
+useEffect(() => {
+    items.forEach(item => {
+        const orderId = item.moodboard?.order?.id;
+        if (orderId) {
+            axios.get(`/task-response/${orderId}/approval_material`)
+                .then(res => {
+                    setTaskResponses(prev => ({ ...prev, [orderId]: res.data }));
+                })
+                .catch(err => console.error('Error fetching task response:', err));
+        }
+    });
+}, [items]);
+
+// Di card atau di form edit
+{taskResponses[orderId] && taskResponses[orderId].status !== 'selesai' && (
+    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+        <div className="flex justify-between items-center">
+            <div>
+                <p className="text-sm text-yellow-700">
+                    Deadline: {new Date(taskResponses[orderId].deadline).toLocaleDateString('id-ID')}
+                </p>
+            </div>
+            <button
+                onClick={() => setShowExtendModal({ orderId, tahap: 'approval_material' })}
+                className="px-3 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+            >
+                Minta Perpanjangan
+            </button>
+        </div>
+    </div>
+)}
+
+{/* Extend Modal */}
+{showExtendModal && (
+    <ExtendModal
+        orderId={showExtendModal.orderId}
+        tahap={showExtendModal.tahap}
+        onClose={() => setShowExtendModal(null)}
+    />
+)}
+```
+
+### 14. Workplan - Workplan/Index.tsx dan Create/Edit.tsx
+
+**Lokasi**: Di Index page dan di form Create/Edit
+
+```tsx
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
+
+// Di dalam component
+const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+
+// Fetch task response
+useEffect(() => {
+    orders.forEach(order => {
+        axios.get(`/task-response/${order.id}/workplan`)
+            .then(res => {
+                setTaskResponses(prev => ({ ...prev, [order.id]: res.data }));
+            })
+            .catch(err => console.error('Error fetching task response:', err));
+    });
+}, [orders]);
+
+// Di card order
+{taskResponses[order.id] && taskResponses[order.id].status !== 'selesai' && (
+    <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+        <div className="flex justify-between items-center">
+            <div>
+                <p className="text-yellow-700">
+                    Deadline: {new Date(taskResponses[order.id].deadline).toLocaleDateString('id-ID')}
+                </p>
+            </div>
+            <button
+                onClick={() => setShowExtendModal({ orderId: order.id, tahap: 'workplan' })}
+                className="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+            >
+                Minta Perpanjangan
+            </button>
+        </div>
+    </div>
+)}
+
+// Di Create/Edit.tsx - di bagian atas form
+{taskResponse && taskResponse.status !== 'selesai' && (
+    <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div className="flex justify-between items-center">
+            <div>
+                <h4 className="text-sm font-semibold text-gray-800 mb-2">Informasi Deadline</h4>
+                <p className="text-sm text-yellow-700">
+                    Deadline: {new Date(taskResponse.deadline).toLocaleDateString('id-ID')}
+                </p>
+            </div>
+            <button
+                onClick={() => setShowExtendModal({ orderId: order.id, tahap: 'workplan' })}
+                className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
+            >
+                Minta Perpanjangan
+            </button>
+        </div>
+    </div>
+)}
+
+{/* Extend Modal */}
+{showExtendModal && (
+    <ExtendModal
+        orderId={showExtendModal.orderId}
+        tahap={showExtendModal.tahap}
+        onClose={() => setShowExtendModal(null)}
+    />
+)}
+```
+
+### 15. Produksi (ProjectManagement) - ProjectManagement/Index.tsx dan Detail.tsx
+
+**Lokasi**: Di Index page dan di Detail page saat update stage
+
+```tsx
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
+
+// Di dalam component
+const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+
+// Fetch task response
+useEffect(() => {
+    orders.forEach(order => {
+        axios.get(`/task-response/${order.id}/produksi`)
+            .then(res => {
+                setTaskResponses(prev => ({ ...prev, [order.id]: res.data }));
+            })
+            .catch(err => console.error('Error fetching task response:', err));
+    });
+}, [orders]);
+
+// Di card order
+{taskResponses[order.id] && taskResponses[order.id].status !== 'selesai' && (
+    <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+        <div className="flex justify-between items-center">
+            <div>
+                <p className="text-yellow-700">
+                    Deadline: {new Date(taskResponses[order.id].deadline).toLocaleDateString('id-ID')}
+                </p>
+            </div>
+            <button
+                onClick={() => setShowExtendModal({ orderId: order.id, tahap: 'produksi' })}
+                className="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+            >
+                Minta Perpanjangan
+            </button>
+        </div>
+    </div>
+)}
+
+// Di Detail.tsx - di bagian atas atau di form update stage
+{taskResponse && taskResponse.status !== 'selesai' && (
+    <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div className="flex justify-between items-center">
+            <div>
+                <h4 className="text-sm font-semibold text-gray-800 mb-2">Informasi Deadline</h4>
+                <p className="text-sm text-yellow-700">
+                    Deadline: {new Date(taskResponse.deadline).toLocaleDateString('id-ID')}
+                </p>
+            </div>
+            <button
+                onClick={() => setShowExtendModal({ orderId: order.id, tahap: 'produksi' })}
+                className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
+            >
+                Minta Perpanjangan
+            </button>
+        </div>
+    </div>
+)}
+
+{/* Extend Modal */}
+{showExtendModal && (
+    <ExtendModal
+        orderId={showExtendModal.orderId}
+        tahap={showExtendModal.tahap}
+        onClose={() => setShowExtendModal(null)}
+    />
+)}
+```
+
+### Ringkasan Lokasi Extend Modal per Menu
+
+| Menu | Lokasi Extend Modal | Jumlah Tempat |
+|------|-------------------|---------------|
+| **Survey** | Index page (di card) | 1 |
+| **Moodboard** | Index page (di card) + Modal upload kasar + Expanded card (accept) | 3 |
+| **Estimasi** | Index page (di card) | 1 |
+| **Commitment Fee** | Index page (di card) + Form upload payment proof | 2 |
+| **Desain Final** | Index page (di card) | 1 |
+| **Item Pekerjaan** | Index page (di card) + Form create/edit | 2 |
+| **RAB Internal** | Index page (di card) + Form create/edit | 2 |
+| **Kontrak** | Index page (di card) + Form upload signed contract | 2 |
+| **Invoice** | Index page (di card) + Show page (upload bukti bayar) | 2 |
+| **Survey Schedule** | Index page (di card) | 1 |
+| **Survey Ulang** | Index page (di card) + Form create/edit | 2 |
+| **Gambar Kerja** | Index page (di card) + Form upload | 2 |
+| **Approval Material** | Index page (di card) + Form edit | 2 |
+| **Workplan** | Index page (di card) + Form create/edit | 2 |
+| **Produksi** | Index page (di card) + Detail page (update stage) | 2 |
+
+### Catatan Penting untuk Implementasi
+
+1. **Multiple Input Points (Contoh: Moodboard)**:
+   - Extend modal muncul di **semua tempat** user bisa input data
+   - Moodboard: Upload desain kasar + Accept desain (2 tempat)
+   - Pastikan fetch task response sekali, lalu tampilkan di semua tempat yang relevan
+
+2. **State Management**:
+   - Gunakan `Record<number, any>` untuk menyimpan multiple task responses (key = orderId)
+   - Gunakan state `showExtendModal` dengan object `{ orderId, tahap }` untuk handle multiple modal
+
+3. **Fetch Task Response**:
+   - Fetch di `useEffect` saat component mount atau data berubah
+   - Handle error dengan catch dan set ke null jika tidak ada
+
+4. **Conditional Rendering**:
+   - Hanya tampilkan extend modal jika `status !== 'selesai'`
+   - Tampilkan info deadline dan extend count jika ada
+
+5. **Tahap Name Mapping**:
+   - Pastikan `tahap` yang dikirim ke ExtendModal sesuai dengan yang ada di database
+   - Gunakan mapping yang sama dengan yang ada di `CheckTaskDeadlines.php`
+
+6. **Multiple Input Points (Khusus Moodboard)**:
+   - Moodboard punya 2 fase input: Upload Desain Kasar → Accept Desain
+   - Extend modal muncul di **kedua tempat** tersebut
+   - Task response baru selesai setelah Accept Desain (bukan setelah Upload Kasar)
+   - Jadi extend modal tetap muncul di Accept Desain meskipun sudah upload kasar
+
+7. **Helper Function untuk Fetch Task Response**:
+   - Bisa buat helper function untuk fetch task response agar tidak duplikasi kode:
+   ```tsx
+   const fetchTaskResponse = async (orderId: number, tahap: string) => {
+       try {
+           const res = await axios.get(`/task-response/${orderId}/${tahap}`);
+           setTaskResponses(prev => ({ ...prev, [orderId]: res.data }));
+       } catch (err) {
+           console.error('Error fetching task response:', err);
+           setTaskResponses(prev => ({ ...prev, [orderId]: null }));
+       }
+   };
+   ```
+
+8. **Auto Refresh setelah Extend**:
+   - Setelah extend berhasil, refresh task response untuk update deadline
+   ```tsx
+   // Di ExtendModal, setelah submit berhasil
+   router.reload({ only: ['taskResponses'] }); // Jika pass dari backend
+   // Atau
+   fetchTaskResponse(orderId, tahap); // Jika fetch manual
+   ```
+
+---
+
 ## 📋 Checklist Implementasi
 
 ### ✅ Survey (Lengkap)
@@ -1756,13 +2803,45 @@ Tapi versi dengan router.post yang sudah saya buatkan di atas sudah cukup baik d
 
 ### ⏳ Tahap Lainnya (Ikuti Template)
 - [ ] Moodboard
+  - [ ] Extend modal di Index page (card)
+  - [ ] Extend modal di Modal upload desain kasar
+  - [ ] Extend modal di Expanded card (accept desain)
+- [ ] Estimasi
+  - [ ] Extend modal di Index page (card)
 - [ ] Commitment Fee
+  - [ ] Extend modal di Index page (card)
+  - [ ] Extend modal di Form upload payment proof
 - [ ] Desain Final
-- [ ] RAB
+  - [ ] Extend modal di Index page (card)
+- [ ] Item Pekerjaan
+  - [ ] Extend modal di Index page (card)
+  - [ ] Extend modal di Form create/edit
+- [ ] RAB Internal
+  - [ ] Extend modal di Index page (card)
+  - [ ] Extend modal di Form create/edit
 - [ ] Kontrak
+  - [ ] Extend modal di Index page (card)
+  - [ ] Extend modal di Form upload signed contract
+- [ ] Invoice
+  - [ ] Extend modal di Index page (card)
+  - [ ] Extend modal di Show page (upload bukti bayar)
+- [ ] Survey Schedule
+  - [ ] Extend modal di Index page (card)
 - [ ] Survey Ulang
+  - [ ] Extend modal di Index page (card)
+  - [ ] Extend modal di Form create/edit
 - [ ] Gambar Kerja
+  - [ ] Extend modal di Index page (card)
+  - [ ] Extend modal di Form upload
+- [ ] Approval Material
+  - [ ] Extend modal di Index page (card)
+  - [ ] Extend modal di Form edit
+- [ ] Workplan
+  - [ ] Extend modal di Index page (card)
+  - [ ] Extend modal di Form create/edit
 - [ ] Produksi
+  - [ ] Extend modal di Index page (card)
+  - [ ] Extend modal di Detail page (update stage)
 
 ---
 
@@ -1878,17 +2957,24 @@ class LogController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Tahap options
+        // Tahap options (harus sinkron dengan CheckTaskDeadlines + task_responses)
         $tahapOptions = [
-            'survey' => 'Survey',
-            'moodboard' => 'Moodboard',
-            'cm_fee' => 'Commitment Fee',
-            'desain_final' => 'Desain Final',
-            'rab' => 'RAB',
-            'kontrak' => 'Kontrak',
-            'survey_ulang' => 'Survey Ulang',
-            'gambar_kerja' => 'Gambar Kerja',
-            'produksi' => 'Produksi',
+            'survey'            => 'Survey',
+            'moodboard'         => 'Moodboard',
+            'estimasi'          => 'Estimasi',
+            'cm_fee'            => 'Commitment Fee',
+            'approval_design'   => 'Approval Design',
+            'desain_final'      => 'Desain Final',
+            'item_pekerjaan'    => 'Item Pekerjaan',
+            'rab_internal'      => 'RAB Internal',
+            'kontrak'           => 'Kontrak',
+            'invoice'           => 'Invoice',
+            'survey_schedule'   => 'Survey Schedule',
+            'survey_ulang'      => 'Survey Ulang',
+            'gambar_kerja'      => 'Gambar Kerja',
+            'approval_material' => 'Approval Material',
+            'workplan'          => 'Workplan',
+            'produksi'          => 'Produksi',
         ];
 
         // Status options
@@ -2006,10 +3092,13 @@ Route::middleware(['auth'])->group(function () {
 
 **File**: `resources/js/pages/Log/Index.tsx` (BARU)
 
+**Menggunakan struktur sidebar yang sama dengan menu lainnya (Navbar + Sidebar):**
+
 ```tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import Navbar from '@/components/Navbar';
+import Sidebar from '@/components/Sidebar';
 import { PageProps } from '@/types';
 
 interface TaskResponse {
@@ -2077,10 +3166,32 @@ export default function Index({
     statusOptions,
     filters 
 }: Props) {
+    const [sidebarOpen, setSidebarOpen] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth >= 1024;
+        }
+        return true;
+    });
+    const [mounted, setMounted] = useState(false);
     const [selectedUserId, setSelectedUserId] = useState<number | ''>(filters.user_id || '');
     const [selectedOrderId, setSelectedOrderId] = useState<number | ''>(filters.order_id || '');
     const [selectedTahap, setSelectedTahap] = useState<string>(filters.tahap || '');
     const [selectedStatus, setSelectedStatus] = useState<string>(filters.status || '');
+
+    useEffect(() => {
+        setMounted(true);
+
+        const handleResize = () => {
+            if (window.innerWidth >= 1024) {
+                setSidebarOpen(true);
+            } else {
+                setSidebarOpen(false);
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const handleFilter = () => {
         router.get('/log', {
@@ -2117,18 +3228,52 @@ export default function Index({
         return new Date(date).toLocaleString('id-ID');
     };
 
-    return (
-        <AuthenticatedLayout
-            header={
-                <h2 className="font-semibold text-xl text-gray-800 leading-tight">
-                    Log Task Response
-                </h2>
-            }
-        >
-            <Head title="Log Task Response" />
+    if (!mounted) return null;
 
-            <div className="py-12">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-stone-50 via-slate-50 to-stone-50">
+            <Head title="Log Task Response" />
+            <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+            <Sidebar
+                isOpen={sidebarOpen}
+                currentPage="log"
+                onClose={() => setSidebarOpen(false)}
+            />
+
+            {/* Main Content */}
+            <main className="px-2 pt-12 pb-6 pl-0 transition-all sm:px-4 sm:pl-60">
+                {/* Header */}
+                <div className="mb-4 sm:mb-6">
+                    <div className="mb-2 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-0">
+                        <div className="flex items-center gap-2.5">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-slate-400 to-slate-600 shadow-md">
+                                <svg
+                                    className="h-4 w-4 text-white"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                    />
+                                </svg>
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-stone-900 sm:text-3xl">
+                                    Log Task Response
+                                </h1>
+                                <p className="text-xs text-stone-600">
+                                    Monitoring progress dan deadline semua task response
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="max-w-7xl mx-auto">
                     {/* Filters */}
                     <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6 p-6">
                         <h3 className="text-lg font-semibold mb-4">Filter</h3>
@@ -2342,8 +3487,8 @@ export default function Index({
                         </div>
                     </div>
                 </div>
-            </div>
-        </AuthenticatedLayout>
+            </main>
+        </div>
     );
 }
 ```

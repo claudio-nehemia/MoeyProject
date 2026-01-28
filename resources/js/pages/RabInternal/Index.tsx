@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react';
 import { router, Link, Head } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
 
 interface Order {
+    id: number;
     nama_project: string;
     company_name: string;
     customer_name: string;
@@ -27,9 +30,18 @@ interface Props {
     itemPekerjaans: ItemPekerjaan[];
 }
 
+interface TaskResponse {
+    status: string;
+    deadline: string;
+    order_id: number;
+    tahap: string;
+}
+
 export default function Index({ itemPekerjaans }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [activeTab, setActiveTab] = useState<'internal' | 'kontrak'>('internal');
+    const [taskResponses, setTaskResponses] = useState<Record<number, TaskResponse>>({});
+    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
 
     useEffect(() => {
         const handleResize = () => {
@@ -38,6 +50,20 @@ export default function Index({ itemPekerjaans }: Props) {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    // Fetch task response untuk semua item pekerjaan
+    useEffect(() => {
+        itemPekerjaans.forEach(itemPekerjaan => {
+            const orderId = itemPekerjaan.order?.id;
+            if (orderId) {
+                axios.get(`/task-response/${orderId}/rab_internal`)
+                    .then(res => {
+                        setTaskResponses(prev => ({ ...prev, [orderId]: res.data }));
+                    })
+                    .catch(err => console.error('Error fetching task response:', err));
+            }
+        });
+    }, [itemPekerjaans]);
 
     const handleResponse = (itemPekerjaanId: number) => {
         if (confirm('Apakah Anda yakin ingin membuat RAB Internal untuk item pekerjaan ini?')) {
@@ -55,6 +81,14 @@ export default function Index({ itemPekerjaans }: Props) {
 
     const navigateToJasa = () => {
         router.get('/rab-jasa');
+    };
+
+    const calculateDaysLeft = (deadline: string) => {
+        const now = new Date();
+        const deadlineDate = new Date(deadline);
+        const diffTime = deadlineDate.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays;
     };
 
     return (
@@ -143,71 +177,135 @@ export default function Index({ itemPekerjaans }: Props) {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
-                                            {itemPekerjaans.map((itemPekerjaan) => (
-                                                <tr key={itemPekerjaan.id}>
-                                                    <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                        {itemPekerjaan.order.nama_project}
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-300">
-                                                        {itemPekerjaan.order.company_name}
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-300">
-                                                        {itemPekerjaan.order.customer_name}
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-6 py-4 text-sm">
-                                                        {itemPekerjaan.status === 'published' ? (
-                                                            <span className="inline-flex rounded-full bg-emerald-100 px-2 text-xs font-semibold leading-5 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
-                                                                ✓ Published
-                                                            </span>
-                                                        ) : (
-                                                            <span className="inline-flex rounded-full bg-amber-100 px-2 text-xs font-semibold leading-5 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                                                                📝 Draft
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-6 py-4 text-sm">
-                                                        {itemPekerjaan.rabInternal ? (
-                                                            <span className="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                                                Sudah Ada ({itemPekerjaan.rabInternal.total_produks} produk)
-                                                            </span>
-                                                        ) : (
-                                                            <span className="inline-flex rounded-full bg-yellow-100 px-2 text-xs font-semibold leading-5 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                                                                Belum Ada
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-6 py-4 text-sm font-medium">
-                                                        {itemPekerjaan.rabInternal ? (
-                                                            <div className="flex space-x-2">
-                                                                <Link
-                                                                    href={`/rab-internal/${itemPekerjaan.rabInternal.id}/show`}
-                                                                    className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
-                                                                >
-                                                                    Lihat RAB
-                                                                </Link>
-                                                                <span className="text-gray-300">|</span>
-                                                                <Link
-                                                                    href={`/rab-internal/${itemPekerjaan.rabInternal.id}/edit`}
-                                                                    className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300"
-                                                                >
-                                                                    Edit
-                                                                </Link>
+                                            {itemPekerjaans.map((itemPekerjaan) => {
+                                                const orderId = itemPekerjaan.order?.id;
+                                                const taskResponse = orderId ? taskResponses[orderId] : null;
+                                                const daysLeft = taskResponse?.deadline ? calculateDaysLeft(taskResponse.deadline) : null;
+
+                                                return (
+                                                    <tr key={itemPekerjaan.id}>
+                                                        <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                            <div>
+                                                                <div className="whitespace-nowrap">
+                                                                    {itemPekerjaan.order.nama_project}
+                                                                </div>
+                                                                {/* Task Response Deadline */}
+                                                                {taskResponse && taskResponse.status !== 'selesai' && (
+                                                                    <div className="mt-2">
+                                                                        <div className={`p-2 rounded border text-xs ${
+                                                                            daysLeft !== null && daysLeft < 0 
+                                                                                ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800' 
+                                                                                : daysLeft !== null && daysLeft <= 3
+                                                                                ? 'bg-orange-50 border-orange-200 dark:bg-orange-900/20 dark:border-orange-800'
+                                                                                : 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
+                                                                        }`}>
+                                                                            <div className="flex justify-between items-center gap-2">
+                                                                                <div className="min-w-0">
+                                                                                    <p className={`font-semibold mb-0.5 ${
+                                                                                        daysLeft !== null && daysLeft < 0
+                                                                                            ? 'text-red-900 dark:text-red-300'
+                                                                                            : daysLeft !== null && daysLeft <= 3
+                                                                                            ? 'text-orange-900 dark:text-orange-300'
+                                                                                            : 'text-yellow-900 dark:text-yellow-300'
+                                                                                    }`}>
+                                                                                        {daysLeft !== null && daysLeft < 0 ? '⚠️ Terlewat' : '⏰ Deadline'}
+                                                                                    </p>
+                                                                                    <p className={`${
+                                                                                        daysLeft !== null && daysLeft < 0
+                                                                                            ? 'text-red-700 dark:text-red-400'
+                                                                                            : daysLeft !== null && daysLeft <= 3
+                                                                                            ? 'text-orange-700 dark:text-orange-400'
+                                                                                            : 'text-yellow-700 dark:text-yellow-400'
+                                                                                    }`}>
+                                                                                        {new Date(taskResponse.deadline).toLocaleDateString('id-ID')}
+                                                                                    </p>
+                                                                                    {daysLeft !== null && (
+                                                                                        <p className={`font-medium ${
+                                                                                            daysLeft < 0
+                                                                                                ? 'text-red-700 dark:text-red-400'
+                                                                                                : daysLeft <= 3
+                                                                                                ? 'text-orange-700 dark:text-orange-400'
+                                                                                                : 'text-yellow-700 dark:text-yellow-400'
+                                                                                        }`}>
+                                                                                            {daysLeft < 0 
+                                                                                                ? `${Math.abs(daysLeft)}h terlambat` 
+                                                                                                : `${daysLeft}h lagi`}
+                                                                                        </p>
+                                                                                    )}
+                                                                                </div>
+                                                                                <button
+                                                                                    onClick={() => orderId && setShowExtendModal({ orderId, tahap: 'rab_internal' })}
+                                                                                    className="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600 transition-colors whitespace-nowrap flex-shrink-0"
+                                                                                >
+                                                                                    Perpanjang
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                        ) : itemPekerjaan.status === 'published' ? (
-                                                            <button
-                                                                onClick={() => handleResponse(itemPekerjaan.id)}
-                                                                className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
-                                                            >
-                                                                Response RAB
-                                                            </button>
-                                                        ) : (
-                                                            <span className="text-gray-400 text-xs italic">
-                                                                Submit Item Pekerjaan dahulu
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-300">
+                                                            {itemPekerjaan.order.company_name}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-300">
+                                                            {itemPekerjaan.order.customer_name}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-6 py-4 text-sm">
+                                                            {itemPekerjaan.status === 'published' ? (
+                                                                <span className="inline-flex rounded-full bg-emerald-100 px-2 text-xs font-semibold leading-5 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+                                                                    ✓ Published
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex rounded-full bg-amber-100 px-2 text-xs font-semibold leading-5 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                                                                    📝 Draft
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-6 py-4 text-sm">
+                                                            {itemPekerjaan.rabInternal ? (
+                                                                <span className="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                                                    Sudah Ada ({itemPekerjaan.rabInternal.total_produks} produk)
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex rounded-full bg-yellow-100 px-2 text-xs font-semibold leading-5 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                                                    Belum Ada
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium">
+                                                            {itemPekerjaan.rabInternal ? (
+                                                                <div className="flex space-x-2">
+                                                                    <Link
+                                                                        href={`/rab-internal/${itemPekerjaan.rabInternal.id}/show`}
+                                                                        className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                                                    >
+                                                                        Lihat RAB
+                                                                    </Link>
+                                                                    <span className="text-gray-300">|</span>
+                                                                    <Link
+                                                                        href={`/rab-internal/${itemPekerjaan.rabInternal.id}/edit`}
+                                                                        className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300"
+                                                                    >
+                                                                        Edit
+                                                                    </Link>
+                                                                </div>
+                                                            ) : itemPekerjaan.status === 'published' ? (
+                                                                <button
+                                                                    onClick={() => handleResponse(itemPekerjaan.id)}
+                                                                    className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                                                                >
+                                                                    Response RAB
+                                                                </button>
+                                                            ) : (
+                                                                <span className="text-gray-400 text-xs italic">
+                                                                    Submit Item Pekerjaan dahulu
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>
@@ -216,6 +314,15 @@ export default function Index({ itemPekerjaans }: Props) {
                     </div>
                 </div>
             </div>
+
+            {/* Extend Modal */}
+            {showExtendModal && (
+                <ExtendModal
+                    orderId={showExtendModal.orderId}
+                    tahap={showExtendModal.tahap}
+                    onClose={() => setShowExtendModal(null)}
+                />
+            )}
         </>
     );
 }

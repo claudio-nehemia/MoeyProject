@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
 
 interface Order {
     id: number;
@@ -54,6 +56,13 @@ interface Props {
     moodboards: Moodboard[];
 }
 
+interface TaskResponse {
+    status: string;
+    deadline: string;
+    order_id: number;
+    tahap: string;
+}
+
 const statusLabels: Record<string, string> = {
     pending: 'Menunggu Review',
     approved: 'Disetujui',
@@ -90,9 +99,25 @@ export default function EstimasiIndex({ moodboards }: Props) {
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
+    const [taskResponses, setTaskResponses] = useState<Record<number, TaskResponse>>({});
+    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
 
     const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
+
+    // Fetch task response untuk semua moodboard
+    useEffect(() => {
+        moodboards.forEach(moodboard => {
+            const orderId = moodboard.order?.id;
+            if (orderId) {
+                axios.get(`/task-response/${orderId}/estimasi`)
+                    .then(res => {
+                        setTaskResponses(prev => ({ ...prev, [orderId]: res.data }));
+                    })
+                    .catch(err => console.error('Error fetching task response:', err));
+            }
+        });
+    }, [moodboards]);
 
     const filteredMoodboards = moodboards.filter((moodboard) => {
         const search = searchQuery.toLowerCase();
@@ -183,6 +208,14 @@ export default function EstimasiIndex({ moodboards }: Props) {
         });
     };
 
+    const calculateDaysLeft = (deadline: string) => {
+        const now = new Date();
+        const deadlineDate = new Date(deadline);
+        const diffTime = deadlineDate.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays;
+    };
+
     return (
         <div className="flex h-screen bg-stone-50">
             <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
@@ -236,164 +269,230 @@ export default function EstimasiIndex({ moodboards }: Props) {
                             </div>
                         </div>
                     ) : (
-                        filteredMoodboards.map((moodboard) => (
-                            <div key={moodboard.id} className="rounded-xl border-2 bg-white border-stone-200 hover:border-blue-300 transition-all overflow-hidden">
-                                <div className="p-4 sm:p-5">
-                                    {/* Project Info */}
-                                    <div className="mb-4 pb-4 border-b border-stone-200">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div>
-                                                <h3 className="text-lg sm:text-xl font-bold text-stone-900 mb-1">
-                                                    {moodboard.order?.nama_project}
-                                                </h3>
-                                                <p className="text-sm text-stone-600">{moodboard.order?.company_name}</p>
-                                                <p className="text-xs text-stone-500 mt-1">Customer: {moodboard.order?.customer_name}</p>
+                        filteredMoodboards.map((moodboard) => {
+                            const orderId = moodboard.order?.id;
+                            const taskResponse = orderId ? taskResponses[orderId] : null;
+                            const daysLeft = taskResponse?.deadline ? calculateDaysLeft(taskResponse.deadline) : null;
+
+                            return (
+                                <div key={moodboard.id} className="rounded-xl border-2 bg-white border-stone-200 hover:border-blue-300 transition-all overflow-hidden">
+                                    <div className="p-4 sm:p-5">
+                                        {/* Project Info */}
+                                        <div className="mb-4 pb-4 border-b border-stone-200">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <h3 className="text-lg sm:text-xl font-bold text-stone-900 mb-1">
+                                                        {moodboard.order?.nama_project}
+                                                    </h3>
+                                                    <p className="text-sm text-stone-600">{moodboard.order?.company_name}</p>
+                                                    <p className="text-xs text-stone-500 mt-1">Customer: {moodboard.order?.customer_name}</p>
+                                                </div>
+                                                <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${statusColors[moodboard.status].badge} ${statusColors[moodboard.status].text}`}>
+                                                    {statusLabels[moodboard.status]}
+                                                </span>
                                             </div>
-                                            <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${statusColors[moodboard.status].badge} ${statusColors[moodboard.status].text}`}>
-                                                {statusLabels[moodboard.status]}
-                                            </span>
                                         </div>
-                                    </div>
 
-                                    {/* Estimasi Response Info */}
-                                    {!moodboard.estimasi && (
-                                        <div className="mb-4">
-                                            <button
-                                                onClick={() => handleResponseEstimasi(moodboard)}
-                                                disabled={loading}
-                                                className="w-full px-4 py-3 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-lg transition-all disabled:opacity-50"
-                                            >
-                                                {loading ? 'Memproses...' : 'Buat Response Estimasi'}
-                                            </button>
-                                        </div>
-                                    )}
-
-                                    {moodboard.estimasi && (
-                                        <div className="mb-4">
-                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                                <p className="text-xs font-semibold text-blue-900 mb-1">Response Estimasi:</p>
-                                                <p className="text-xs text-blue-700">Oleh: {moodboard.estimasi.response_by}</p>
-                                                <p className="text-xs text-blue-700">
-                                                    Waktu: {moodboard.estimasi.response_time ? new Date(moodboard.estimasi.response_time).toLocaleString('id-ID') : '-'}
-                                                </p>
+                                        {/* Task Response Deadline */}
+                                        {taskResponse && taskResponse.status !== 'selesai' && (
+                                            <div className="mb-4">
+                                                <div className={`p-3 rounded-lg border ${
+                                                    daysLeft !== null && daysLeft < 0 
+                                                        ? 'bg-red-50 border-red-200' 
+                                                        : daysLeft !== null && daysLeft <= 3
+                                                        ? 'bg-orange-50 border-orange-200'
+                                                        : 'bg-yellow-50 border-yellow-200'
+                                                }`}>
+                                                    <div className="flex justify-between items-center">
+                                                        <div>
+                                                            <p className={`text-xs font-semibold mb-1 ${
+                                                                daysLeft !== null && daysLeft < 0
+                                                                    ? 'text-red-900'
+                                                                    : daysLeft !== null && daysLeft <= 3
+                                                                    ? 'text-orange-900'
+                                                                    : 'text-yellow-900'
+                                                            }`}>
+                                                                {daysLeft !== null && daysLeft < 0 ? '⚠️ Deadline Terlewat' : '⏰ Deadline Estimasi'}
+                                                            </p>
+                                                            <p className={`text-xs ${
+                                                                daysLeft !== null && daysLeft < 0
+                                                                    ? 'text-red-700'
+                                                                    : daysLeft !== null && daysLeft <= 3
+                                                                    ? 'text-orange-700'
+                                                                    : 'text-yellow-700'
+                                                            }`}>
+                                                                {new Date(taskResponse.deadline).toLocaleDateString('id-ID', {
+                                                                    weekday: 'long',
+                                                                    year: 'numeric',
+                                                                    month: 'long',
+                                                                    day: 'numeric'
+                                                                })}
+                                                            </p>
+                                                            {daysLeft !== null && (
+                                                                <p className={`text-xs mt-1 font-medium ${
+                                                                    daysLeft < 0
+                                                                        ? 'text-red-700'
+                                                                        : daysLeft <= 3
+                                                                        ? 'text-orange-700'
+                                                                        : 'text-yellow-700'
+                                                                }`}>
+                                                                    {daysLeft < 0 
+                                                                        ? `Terlambat ${Math.abs(daysLeft)} hari` 
+                                                                        : `${daysLeft} hari lagi`}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <button
+                                                            onClick={() => orderId && setShowExtendModal({ orderId, tahap: 'estimasi' })}
+                                                            className="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-medium hover:bg-orange-600 transition-colors"
+                                                        >
+                                                            Minta Perpanjangan
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
+                                        )}
 
-                                            {/* PM Response Badge */}
-                                            {moodboard.estimasi.pm_response_time && (
-                                                <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-2">
-                                                    <p className="text-xs font-semibold text-purple-900">✓ PM Response:</p>
-                                                    <p className="text-xs text-purple-700">By: {moodboard.estimasi.pm_response_by}</p>
-                                                    <p className="text-xs text-purple-700">
-                                                        {moodboard.estimasi.pm_response_time ? new Date(moodboard.estimasi.pm_response_time).toLocaleString('id-ID') : '-'}
+                                        {/* Estimasi Response Info */}
+                                        {!moodboard.estimasi && (
+                                            <div className="mb-4">
+                                                <button
+                                                    onClick={() => handleResponseEstimasi(moodboard)}
+                                                    disabled={loading}
+                                                    className="w-full px-4 py-3 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-lg transition-all disabled:opacity-50"
+                                                >
+                                                    {loading ? 'Memproses...' : 'Buat Response Estimasi'}
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {moodboard.estimasi && (
+                                            <div className="mb-4">
+                                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                                    <p className="text-xs font-semibold text-blue-900 mb-1">Response Estimasi:</p>
+                                                    <p className="text-xs text-blue-700">Oleh: {moodboard.estimasi.response_by}</p>
+                                                    <p className="text-xs text-blue-700">
+                                                        Waktu: {moodboard.estimasi.response_time ? new Date(moodboard.estimasi.response_time).toLocaleString('id-ID') : '-'}
                                                     </p>
                                                 </div>
-                                            )}
-                                        </div>
-                                    )}
 
-                                    {/* Marketing Response Button - INDEPENDENT */}
-                                    {isKepalaMarketing && !moodboard.pm_response_time && (
-                                        <div className="mb-4">
-                                            <button
-                                                onClick={() => handlePmResponse(moodboard.id)}
-                                                className="w-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg transition-all"
-                                            >
-                                                Marketing Response
-                                            </button>
-                                        </div>
-                                    )}
+                                                {/* PM Response Badge */}
+                                                {moodboard.estimasi.pm_response_time && (
+                                                    <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-2">
+                                                        <p className="text-xs font-semibold text-purple-900">✓ PM Response:</p>
+                                                        <p className="text-xs text-purple-700">By: {moodboard.estimasi.pm_response_by}</p>
+                                                        <p className="text-xs text-purple-700">
+                                                            {moodboard.estimasi.pm_response_time ? new Date(moodboard.estimasi.pm_response_time).toLocaleString('id-ID') : '-'}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
-                                    {/* PM Response Badge */}
-                                    {moodboard.pm_response_time && (
-                                        <div className="mb-4 bg-purple-50 border border-purple-200 rounded-lg p-3">
-                                            <p className="text-xs font-semibold text-purple-900">✓ PM Response</p>
-                                            <p className="text-xs text-purple-700">By: {moodboard.pm_response_by}</p>
-                                            <p className="text-xs text-purple-700">
-                                                {new Date(moodboard.pm_response_time).toLocaleString('id-ID')}
-                                            </p>
-                                        </div>
-                                    )}
+                                        {/* Marketing Response Button - INDEPENDENT */}
+                                        {isKepalaMarketing && !moodboard.pm_response_time && (
+                                            <div className="mb-4">
+                                                <button
+                                                    onClick={() => handlePmResponse(moodboard.id)}
+                                                    className="w-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg transition-all"
+                                                >
+                                                    Marketing Response
+                                                </button>
+                                            </div>
+                                        )}
 
-                                    {/* Kasar Files List */}
-                                    {moodboard.estimasi && moodboard.kasar_files.length > 0 && (
-                                        <div>
-                                            <p className="text-sm font-semibold text-stone-700 mb-3">
-                                                File Desain Kasar ({moodboard.kasar_files.length}):
-                                            </p>
-                                            <div className="space-y-3">
-                                                {moodboard.kasar_files.map((kasarFile, idx) => (
-                                                    <div key={kasarFile.id} className="border border-stone-200 rounded-lg p-3 bg-stone-50">
-                                                        <div className="flex items-start gap-3">
-                                                            {/* Preview Image */}
-                                                            <div className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-stone-200">
-                                                                <img
-                                                                    src={kasarFile.url}
-                                                                    alt={kasarFile.original_name}
-                                                                    className="w-full h-full object-cover"
-                                                                />
-                                                            </div>
+                                        {/* PM Response Badge */}
+                                        {moodboard.pm_response_time && (
+                                            <div className="mb-4 bg-purple-50 border border-purple-200 rounded-lg p-3">
+                                                <p className="text-xs font-semibold text-purple-900">✓ PM Response</p>
+                                                <p className="text-xs text-purple-700">By: {moodboard.pm_response_by}</p>
+                                                <p className="text-xs text-purple-700">
+                                                    {new Date(moodboard.pm_response_time).toLocaleString('id-ID')}
+                                                </p>
+                                            </div>
+                                        )}
 
-                                                            {/* File Info & Actions */}
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className="text-sm font-semibold text-stone-900 truncate mb-1">
-                                                                    File #{idx + 1}: {kasarFile.original_name}
-                                                                </p>
-                                                                
-                                                                {kasarFile.estimasi_file ? (
-                                                                    <div className="space-y-2">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                                            </svg>
-                                                                            <span className="text-xs font-medium text-emerald-700">
-                                                                                ✓ Estimasi sudah diupload
-                                                                            </span>
+                                        {/* Kasar Files List */}
+                                        {moodboard.estimasi && moodboard.kasar_files.length > 0 && (
+                                            <div>
+                                                <p className="text-sm font-semibold text-stone-700 mb-3">
+                                                    File Desain Kasar ({moodboard.kasar_files.length}):
+                                                </p>
+                                                <div className="space-y-3">
+                                                    {moodboard.kasar_files.map((kasarFile, idx) => (
+                                                        <div key={kasarFile.id} className="border border-stone-200 rounded-lg p-3 bg-stone-50">
+                                                            <div className="flex items-start gap-3">
+                                                                {/* Preview Image */}
+                                                                <div className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-stone-200">
+                                                                    <img
+                                                                        src={kasarFile.url}
+                                                                        alt={kasarFile.original_name}
+                                                                        className="w-full h-full object-cover"
+                                                                    />
+                                                                </div>
+
+                                                                {/* File Info & Actions */}
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-semibold text-stone-900 truncate mb-1">
+                                                                        File #{idx + 1}: {kasarFile.original_name}
+                                                                    </p>
+                                                                    
+                                                                    {kasarFile.estimasi_file ? (
+                                                                        <div className="space-y-2">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                                </svg>
+                                                                                <span className="text-xs font-medium text-emerald-700">
+                                                                                    ✓ Estimasi sudah diupload
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="flex gap-2">
+                                                                                <a
+                                                                                    href={kasarFile.estimasi_file.url}
+                                                                                    target="_blank"
+                                                                                    rel="noopener noreferrer"
+                                                                                    className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded transition-all"
+                                                                                >
+                                                                                    Download Estimasi
+                                                                                </a>
+                                                                                <button
+                                                                                    onClick={() => openUploadModal(moodboard, kasarFile)}
+                                                                                    className="px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded transition-all"
+                                                                                >
+                                                                                    Update
+                                                                                </button>
+                                                                            </div>
                                                                         </div>
-                                                                        <div className="flex gap-2">
-                                                                            <a
-                                                                                href={kasarFile.estimasi_file.url}
-                                                                                target="_blank"
-                                                                                rel="noopener noreferrer"
-                                                                                className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded transition-all"
-                                                                            >
-                                                                                Download Estimasi
-                                                                            </a>
+                                                                    ) : (
+                                                                        <div className="space-y-2">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                                                </svg>
+                                                                                <span className="text-xs font-medium text-amber-700">
+                                                                                    Belum upload estimasi
+                                                                                </span>
+                                                                            </div>
                                                                             <button
                                                                                 onClick={() => openUploadModal(moodboard, kasarFile)}
-                                                                                className="px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded transition-all"
+                                                                                className="px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 rounded transition-all"
                                                                             >
-                                                                                Update
+                                                                                Upload Estimasi
                                                                             </button>
                                                                         </div>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="space-y-2">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                                                            </svg>
-                                                                            <span className="text-xs font-medium text-amber-700">
-                                                                                Belum upload estimasi
-                                                                            </span>
-                                                                        </div>
-                                                                        <button
-                                                                            onClick={() => openUploadModal(moodboard, kasarFile)}
-                                                                            className="px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 rounded transition-all"
-                                                                        >
-                                                                            Upload Estimasi
-                                                                        </button>
-                                                                    </div>
-                                                                )}
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                ))}
+                                                    ))}
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
 
@@ -501,6 +600,15 @@ export default function EstimasiIndex({ moodboards }: Props) {
                             </form>
                         </div>
                     </div>
+                )}
+
+                {/* Extend Modal */}
+                {showExtendModal && (
+                    <ExtendModal
+                        orderId={showExtendModal.orderId}
+                        tahap={showExtendModal.tahap}
+                        onClose={() => setShowExtendModal(null)}
+                    />
                 )}
             </main>
         </div>

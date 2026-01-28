@@ -1,7 +1,9 @@
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
+import ExtendModal from "@/components/ExtendModal";
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import { useEffect, useState } from "react";
+import axios from "axios";
 
 interface SurveyUlang {
     id: number;
@@ -28,6 +30,8 @@ export default function Index({ surveys }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [mounted, setMounted] = useState(false);
     const [search, setSearch] = useState("");
+    const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
 
     const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
@@ -38,6 +42,24 @@ export default function Index({ surveys }: Props) {
         window.addEventListener("resize", handleResize);
         return () => window.removeEventListener("resize", handleResize);
     }, []);
+
+    // Fetch task response untuk semua survey ulang (tahap: survey_ulang)
+    useEffect(() => {
+        surveys.forEach((survey) => {
+            axios
+                .get(`/task-response/${survey.id}/survey_ulang`)
+                .then((res) => {
+                    if (res.data) {
+                        setTaskResponses((prev) => ({ ...prev, [survey.id]: res.data }));
+                    }
+                })
+                .catch((err) => {
+                    if (err.response?.status !== 404) {
+                        console.error("Error fetching task response (survey_ulang):", err);
+                    }
+                });
+        });
+    }, [surveys]);
 
     const formatStatus = (status: string) => {
         switch (status) {
@@ -156,7 +178,10 @@ export default function Index({ surveys }: Props) {
                                 </p>
                             </div>
                         ) : (
-                            filtered.map((s) => (
+                            filtered.map((s) => {
+                                const taskResponse = taskResponses[s.id];
+
+                                return (
                                 <div
                                     key={s.id}
                                     className="rounded-xl bg-white border border-stone-200 p-5 shadow hover:shadow-lg transition-all"
@@ -212,6 +237,42 @@ export default function Index({ surveys }: Props) {
                                                         {s.response_time ? formatDateTime(s.response_time) : "-"}
                                                     </p>
                                                 </div>
+
+                                                {/* Deadline & Extend Button */}
+                                                {taskResponse && taskResponse.status !== "selesai" && (
+                                                    <div className="col-span-2 mt-2">
+                                                        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between gap-3">
+                                                            <div>
+                                                                <p className="text-xs font-medium text-yellow-800">
+                                                                    Deadline Survey Ulang
+                                                                </p>
+                                                                <p className="text-sm font-semibold text-yellow-900">
+                                                                    {new Date(taskResponse.deadline).toLocaleDateString("id-ID", {
+                                                                        day: "numeric",
+                                                                        month: "long",
+                                                                        year: "numeric",
+                                                                    })}
+                                                                </p>
+                                                                {taskResponse.extend_time > 0 && (
+                                                                    <p className="mt-1 text-xs text-orange-600">
+                                                                        Perpanjangan: {taskResponse.extend_time}x
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            <button
+                                                                onClick={() =>
+                                                                    setShowExtendModal({
+                                                                        orderId: s.id,
+                                                                        tahap: "survey_ulang",
+                                                                    })
+                                                                }
+                                                                className="px-3 py-1.5 bg-orange-500 text-white rounded-md text-xs font-medium hover:bg-orange-600 transition-colors"
+                                                            >
+                                                                Minta Perpanjangan
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
 
                                                 {/* PM Response Badge */}
                                                 {s.pm_response_time && (
@@ -276,11 +337,19 @@ export default function Index({ surveys }: Props) {
                                         </div>
                                     </div>
                                 </div>
-                            ))
+                            )})
                         )}
                     </div>
                 </div>
             </div>
+            {/* Extend Modal */}
+            {showExtendModal && (
+                <ExtendModal
+                    orderId={showExtendModal.orderId}
+                    tahap={showExtendModal.tahap}
+                    onClose={() => setShowExtendModal(null)}
+                />
+            )}
         </>
     );
 }

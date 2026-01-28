@@ -362,6 +362,23 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Delete Moodboard',
                 'group' => 'Operations - Moodboard'
             ],
+
+            // Log Permissions
+            [
+                'name' => 'log.index',
+                'display_name' => 'View Log Task Response',
+                'group' => 'Operations - Log'
+            ],
+            [
+                'name' => 'log.by-user',
+                'display_name' => 'View Log by User',
+                'group' => 'Operations - Log'
+            ],
+            [
+                'name' => 'log.by-order',
+                'display_name' => 'View Log by Order',
+                'group' => 'Operations - Log'
+            ],
             
             // Estimasi Permissions
             [

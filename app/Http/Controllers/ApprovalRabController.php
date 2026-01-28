@@ -56,6 +56,7 @@ class ApprovalRabController extends Controller
 
                 return [
                     'id' => $ip->id,
+                    'order_id' => $ip->moodboard->order->id,
                     'project_name' => $ip->moodboard->order->nama_project,
                     'company_name' => $ip->moodboard->order->company_name,
                     'customer_name' => $ip->moodboard->order->customer_name,

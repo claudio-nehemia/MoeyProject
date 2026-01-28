@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { router, Head, usePage } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
 
 interface Order {
     id: number;
@@ -54,9 +56,32 @@ export default function DesainFinalIndex({ moodboards }: Props) {
     const [selectedFile, setSelectedFile] = useState<MoodboardFile | null>(null);
     const [replaceFile, setReplaceFile] = useState<File | null>(null);
     const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
+    const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
 
     const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
+
+    // Fetch task response untuk semua moodboard (tahap: desain_final)
+    useEffect(() => {
+        moodboards.forEach((moodboard) => {
+            const orderId = moodboard.order?.id;
+            if (orderId) {
+                axios
+                    .get(`/task-response/${orderId}/desain_final`)
+                    .then((res) => {
+                        if (res.data) {
+                            setTaskResponses((prev) => ({ ...prev, [orderId]: res.data }));
+                        }
+                    })
+                    .catch((err) => {
+                        if (err.response?.status !== 404) {
+                            console.error('Error fetching task response (desain_final):', err);
+                        }
+                    });
+            }
+        });
+    }, [moodboards]);
 
     const filteredMoodboards = moodboards.filter((moodboard) => {
         const search = searchQuery.toLowerCase();
@@ -279,28 +304,74 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                             <div key={moodboard.id} className="rounded-xl border-2 bg-white border-stone-200 hover:border-indigo-300 transition-all overflow-hidden">
                                 <div className="p-4 sm:p-5">
                                     {/* Project Info */}
-                                    <div className="mb-4 pb-4 border-b border-stone-200">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div>
-                                                <h3 className="text-lg sm:text-xl font-bold text-stone-900 mb-1">
-                                                    {moodboard.order?.nama_project}
-                                                </h3>
-                                                <p className="text-sm text-stone-600">{moodboard.order?.company_name}</p>
-                                                <p className="text-xs text-stone-500 mt-1">Customer: {moodboard.order?.customer_name}</p>
-                                            </div>
-                                            <div className="flex flex-col items-end gap-1">
-                                                {moodboard.moodboard_final && (
-                                                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 whitespace-nowrap">
-                                                        ✓ Final Approved
-                                                    </span>
-                                                )}
-                                                {moodboard.has_response_final && (
-                                                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-violet-100 text-violet-700 whitespace-nowrap">
-                                                        ✓ Responded
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
+                                    {(() => {
+                                        const orderId = moodboard.order?.id;
+                                        const taskResponse = orderId ? taskResponses[orderId] : null;
+                                        return (
+                                            <>
+                                                <div className="mb-4 pb-4 border-b border-stone-200">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div>
+                                                            <h3 className="text-lg sm:text-xl font-bold text-stone-900 mb-1">
+                                                                {moodboard.order?.nama_project}
+                                                            </h3>
+                                                            <p className="text-sm text-stone-600">{moodboard.order?.company_name}</p>
+                                                            <p className="text-xs text-stone-500 mt-1">Customer: {moodboard.order?.customer_name}</p>
+                                                        </div>
+                                                        <div className="flex flex-col items-end gap-1">
+                                                            {moodboard.moodboard_final && (
+                                                                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 whitespace-nowrap">
+                                                                    ✓ Final Approved
+                                                                </span>
+                                                            )}
+                                                            {moodboard.has_response_final && (
+                                                                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-violet-100 text-violet-700 whitespace-nowrap">
+                                                                    ✓ Responded
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Deadline & Extend Button untuk Desain Final */}
+                                                    {taskResponse && taskResponse.status !== 'selesai' && (
+                                                        <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                                            <div className="flex justify-between items-center gap-3">
+                                                                <div>
+                                                                    <p className="text-xs font-medium text-yellow-800">
+                                                                        Deadline Desain Final
+                                                                    </p>
+                                                                    <p className="text-sm font-semibold text-yellow-900">
+                                                                        {new Date(taskResponse.deadline).toLocaleDateString('id-ID', {
+                                                                            day: 'numeric',
+                                                                            month: 'long',
+                                                                            year: 'numeric',
+                                                                        })}
+                                                                    </p>
+                                                                    {taskResponse.extend_time > 0 && (
+                                                                        <p className="mt-1 text-xs text-orange-600">
+                                                                            Perpanjangan: {taskResponse.extend_time}x
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                                <button
+                                                                    onClick={() =>
+                                                                        orderId &&
+                                                                        setShowExtendModal({
+                                                                            orderId,
+                                                                            tahap: 'desain_final',
+                                                                        })
+                                                                    }
+                                                                    className="px-3 py-1.5 bg-orange-500 text-white rounded-md text-xs font-medium hover:bg-orange-600 transition-colors"
+                                                                >
+                                                                    Minta Perpanjangan
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
                                         {/* Response Info */}
                                         {moodboard.has_response_final && moodboard.response_final_by && (
                                             <div className="mt-3 px-3 py-2 bg-violet-50 border border-violet-200 rounded-lg">
@@ -772,6 +843,15 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                             </form>
                         </div>
                     </div>
+                )}
+
+                {/* Extend Modal */}
+                {showExtendModal && (
+                    <ExtendModal
+                        orderId={showExtendModal.orderId}
+                        tahap={showExtendModal.tahap}
+                        onClose={() => setShowExtendModal(null)}
+                    />
                 )}
             </main>
         </div>

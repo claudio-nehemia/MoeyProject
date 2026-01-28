@@ -1,9 +1,11 @@
 import MoodboardModal from '@/components/MoodboardModal';
+import ExtendModal from '@/components/ExtendModal';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
-import {Link} from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
+import axios from 'axios';
 
 interface Team {
     id: number;
@@ -55,6 +57,15 @@ interface Order {
     team: Team[];
 }
 
+interface TaskResponse {
+    id: number;
+    order_id: number;
+    tahap: string;
+    status: string;
+    deadline: string;
+    extend_time: number;
+}
+
 interface Props {
     orders: Order[];
 }
@@ -100,13 +111,15 @@ export default function Index({ orders }: Props) {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [showModal, setShowModal] = useState(false);
-    const [modalMode, setModalMode] = useState<
-        'create' | 'upload-kasar' | 'revise'
-    >('create');
+    const [modalMode, setModalMode] = useState<'create' | 'upload-kasar' | 'revise'>('create');
     const [filteredOrders, setFilteredOrders] = useState(orders);
     const [replaceFileId, setReplaceFileId] = useState<number | null>(null);
     const [newFile, setNewFile] = useState<File | null>(null);
     const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
+    
+    // State untuk ExtendModal
+    const [taskResponses, setTaskResponses] = useState<Record<number, TaskResponse>>({});
+    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
 
     useEffect(() => {
         setMounted(true);
@@ -116,6 +129,24 @@ export default function Index({ orders }: Props) {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    // Fetch task responses untuk semua order
+    useEffect(() => {
+        orders.forEach(order => {
+            axios.get(`/task-response/${order.id}/moodboard`)
+                .then(res => {
+                    if (res.data) {
+                        setTaskResponses(prev => ({ ...prev, [order.id]: res.data }));
+                    }
+                })
+                .catch(err => {
+                    // Tidak perlu console.error jika task response belum ada
+                    if (err.response?.status !== 404) {
+                        console.error('Error fetching task response:', err);
+                    }
+                });
+        });
+    }, [orders]);
 
     useEffect(() => {
         const filtered = orders.filter(
@@ -385,10 +416,9 @@ export default function Index({ orders }: Props) {
                         filteredOrders.map((order) => {
                             const moodboard = order.moodboard;
                             const status = getMoodboardStatus(moodboard);
-                            const statusColor = status
-                                ? statusColors[status]
-                                : null;
+                            const statusColor = status ? statusColors[status] : null;
                             const isExpanded = expandedCards.has(order.id);
+                            const taskResponse = taskResponses[order.id];
 
                             return (
                                 <div
@@ -431,194 +461,232 @@ export default function Index({ orders }: Props) {
                                             </button>
                                         </div>
 
+                                        {/* DEADLINE & EXTEND BUTTON - DI CARD (TEMPAT 1) */}
+                                        {taskResponse && taskResponse.status !== 'selesai' && moodboard && (
+                                            <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                                                <div className="flex justify-between items-center">
+                                                    <div>
+                                                        <p className="text-yellow-700">
+                                                            Deadline: {new Date(taskResponse.deadline).toLocaleDateString('id-ID')}
+                                                        </p>
+                                                        {taskResponse.extend_time > 0 && (
+                                                            <p className="text-orange-600">
+                                                                Perpanjangan: {taskResponse.extend_time}x
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setShowExtendModal({ orderId: order.id, tahap: 'moodboard' })}
+                                                        className="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+                                                    >
+                                                        Minta Perpanjangan
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {/* Expanded Details */}
                                         {isExpanded && (
                                             <>
                                                 {/* Info */}
                                                 <div className="mb-3 space-y-1.5 border-b border-stone-200 pb-3">
-                                            <div className="flex items-center justify-between text-xs">
-                                                <span className="text-stone-600">
-                                                    Customer:
-                                                </span>
-                                                <span className="font-medium text-stone-900">
-                                                    {order.customer_name}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center justify-between text-xs">
-                                                <span className="text-stone-600">
-                                                    Jenis Interior:
-                                                </span>
-                                                <span className="font-medium text-stone-900">
-                                                    {order.jenis_interior}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center justify-between text-xs">
-                                                <span className="text-stone-600">
-                                                    Tanggal Masuk:
-                                                </span>
-                                                <span className="font-medium text-stone-900">
-                                                    {new Date(
-                                                        order.tanggal_masuk_customer,
-                                                    ).toLocaleDateString(
-                                                        'id-ID',
-                                                    )}
-                                                </span>
-                                            </div>
-                                        </div>
+                                                    <div className="flex items-center justify-between text-xs">
+                                                        <span className="text-stone-600">Customer:</span>
+                                                        <span className="font-medium text-stone-900">
+                                                            {order.customer_name}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-xs">
+                                                        <span className="text-stone-600">Jenis Interior:</span>
+                                                        <span className="font-medium text-stone-900">
+                                                            {order.jenis_interior}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-xs">
+                                                        <span className="text-stone-600">Tanggal Masuk:</span>
+                                                        <span className="font-medium text-stone-900">
+                                                            {new Date(order.tanggal_masuk_customer).toLocaleDateString('id-ID')}
+                                                        </span>
+                                                    </div>
+                                                </div>
 
-                                        {/* Moodboard Status */}
-                                        {moodboard && (
-                                            <div className="mb-4 space-y-3 border-b border-stone-200 pb-4">
-                                                {/* List Kasar Files with Actions */}
-                                                {moodboard.kasar_files.length > 0 && (
-                                                    <div className="mb-2">
-                                                        <p className="text-xs font-semibold text-stone-700 mb-2">
-                                                            File Kasar ({moodboard.kasar_files.length}):
-                                                        </p>
-                                                        <div className="space-y-2">
-                                                            {moodboard.kasar_files.map((file, idx) => {
-                                                                const isAcceptedFile = moodboard.moodboard_kasar === file.file_path;
-                                                                return (
-                                                                <div 
-                                                                    key={file.id} 
-                                                                    className={`border-2 rounded-lg p-2 transition-all ${
-                                                                        isAcceptedFile 
-                                                                            ? 'border-emerald-400 bg-emerald-50 shadow-md' 
-                                                                            : 'border-stone-200 bg-stone-50'
-                                                                    }`}
-                                                                >
-                                                                    {isAcceptedFile && (
-                                                                        <div className="mb-2 flex items-center gap-1.5 bg-emerald-500 text-white px-2 py-1 rounded-md">
-                                                                            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                                                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                                                            </svg>
-                                                                            <span className="text-xs font-bold">DESAIN TERPILIH</span>
-                                                                        </div>
-                                                                    )}
-                                                                    <div className="flex items-center gap-2 mb-2">
-                                                                        <div className={`flex-shrink-0 w-16 h-16 rounded overflow-hidden ${
-                                                                            isAcceptedFile ? 'ring-2 ring-emerald-400' : 'bg-stone-200'
-                                                                        }`}>
-                                                                            <img
-                                                                                src={file.url}
-                                                                                alt={file.original_name}
-                                                                                className="w-full h-full object-cover"
-                                                                            />
-                                                                        </div>
-                                                                        <div className="flex-1 min-w-0">
-                                                                            <p className="text-xs font-medium text-stone-900 truncate">
-                                                                                #{idx + 1}: {file.original_name}
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
-                                                                    
-                                                                    <div className="grid grid-cols-2 gap-1.5">
-                                                                        <a
-                                                                            href={file.url}
-                                                                            target="_blank"
-                                                                            rel="noopener noreferrer"
-                                                                            className="px-2 py-1 text-xs font-medium text-center text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded transition-all"
-                                                                        >
-                                                                            👁️ Lihat
-                                                                        </a>
-                                                                        
-                                                                        {moodboard.status !== 'approved' && (
-                                                                            <>
-                                                                                <button
-                                                                                    onClick={() => handleReplaceFileClick(file.id)}
-                                                                                    className="px-2 py-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded transition-all"
-                                                                                >
-                                                                                    🔄 Ganti
-                                                                                </button>
-                                                                                <input
-                                                                                    type="file"
-                                                                                    id={`replace-file-${file.id}`}
-                                                                                    accept=".jpg,.jpeg,.png,.pdf"
-                                                                                    className="hidden"
-                                                                                    onChange={(e) => handleReplaceFileChange(e, file.id)}
-                                                                                />
-                                                                                <button
-                                                                                    onClick={() => handleDeleteFile(file.id, file.original_name)}
-                                                                                    className="px-2 py-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 rounded transition-all"
-                                                                                >
-                                                                                    🗑️ Hapus
-                                                                                </button>
-                                                                            </>
-                                                                        )}
-                                                                        
-                                                                        {moodboard.status === 'pending' && moodboard.has_estimasi && (
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    if (window.confirm(`Pilih desain "${file.original_name}" sebagai moodboard kasar?`)) {
-                                                                                        router.post(`/moodboard/accept/${moodboard.id}`, {
-                                                                                            moodboard_file_id: file.id,
-                                                                                        });
-                                                                                    }
-                                                                                }}
-                                                                                className="col-span-2 px-2 py-1 text-xs font-medium text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded transition-all"
+                                                {/* Moodboard Status */}
+                                                {moodboard && (
+                                                    <div className="mb-4 space-y-3 border-b border-stone-200 pb-4">
+                                                        {/* List Kasar Files with Actions */}
+                                                        {moodboard.kasar_files.length > 0 && (
+                                                            <div className="mb-2">
+                                                                <p className="text-xs font-semibold text-stone-700 mb-2">
+                                                                    File Kasar ({moodboard.kasar_files.length}):
+                                                                </p>
+                                                                <div className="space-y-2">
+                                                                    {moodboard.kasar_files.map((file, idx) => {
+                                                                        const isAcceptedFile = moodboard.moodboard_kasar === file.file_path;
+                                                                        return (
+                                                                            <div 
+                                                                                key={file.id} 
+                                                                                className={`border-2 rounded-lg p-2 transition-all ${
+                                                                                    isAcceptedFile 
+                                                                                        ? 'border-emerald-400 bg-emerald-50 shadow-md' 
+                                                                                        : 'border-stone-200 bg-stone-50'
+                                                                                }`}
                                                                             >
-                                                                                ✓ Terima Desain Ini
-                                                                            </button>
-                                                                        )}
-                                                                    </div>
-
-                                                                    <div
-                                                                        className={`mt-2 rounded-lg border p-2 ${file.estimasi_file
-                                                                            ? 'border-emerald-200 bg-emerald-50'
-                                                                            : 'border-stone-200 bg-white'}`}
-                                                                    >
-                                                                        {file.estimasi_file ? (
-                                                                            <div className="flex items-center justify-between gap-2">
-                                                                                <div className="min-w-0">
-                                                                                    <p className="text-[11px] font-semibold text-emerald-900">File Estimasi</p>
-                                                                                    <p className="text-[11px] text-emerald-700 truncate">{file.estimasi_file.original_name}</p>
+                                                                                {isAcceptedFile && (
+                                                                                    <div className="mb-2 flex items-center gap-1.5 bg-emerald-500 text-white px-2 py-1 rounded-md">
+                                                                                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                                                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                                                        </svg>
+                                                                                        <span className="text-xs font-bold">DESAIN TERPILIH</span>
+                                                                                    </div>
+                                                                                )}
+                                                                                <div className="flex items-center gap-2 mb-2">
+                                                                                    <div className={`flex-shrink-0 w-16 h-16 rounded overflow-hidden ${
+                                                                                        isAcceptedFile ? 'ring-2 ring-emerald-400' : 'bg-stone-200'
+                                                                                    }`}>
+                                                                                        <img
+                                                                                            src={file.url}
+                                                                                            alt={file.original_name}
+                                                                                            className="w-full h-full object-cover"
+                                                                                        />
+                                                                                    </div>
+                                                                                    <div className="flex-1 min-w-0">
+                                                                                        <p className="text-xs font-medium text-stone-900 truncate">
+                                                                                            #{idx + 1}: {file.original_name}
+                                                                                        </p>
+                                                                                    </div>
                                                                                 </div>
-                                                                                <a
-                                                                                    href={file.estimasi_file.url}
-                                                                                    target="_blank"
-                                                                                    rel="noopener noreferrer"
-                                                                                    className="flex-shrink-0 inline-flex items-center px-2 py-1 text-[11px] font-semibold text-white bg-emerald-500 hover:bg-emerald-600 rounded"
+                                                                                
+                                                                                <div className="grid grid-cols-2 gap-1.5">
+                                                                                    <a
+                                                                                        href={file.url}
+                                                                                        target="_blank"
+                                                                                        rel="noopener noreferrer"
+                                                                                        className="px-2 py-1 text-xs font-medium text-center text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded transition-all"
+                                                                                    >
+                                                                                        👁️ Lihat
+                                                                                    </a>
+                                                                                    
+                                                                                    {moodboard.status !== 'approved' && (
+                                                                                        <>
+                                                                                            <button
+                                                                                                onClick={() => handleReplaceFileClick(file.id)}
+                                                                                                className="px-2 py-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded transition-all"
+                                                                                            >
+                                                                                                🔄 Ganti
+                                                                                            </button>
+                                                                                            <input
+                                                                                                type="file"
+                                                                                                id={`replace-file-${file.id}`}
+                                                                                                accept=".jpg,.jpeg,.png,.pdf"
+                                                                                                className="hidden"
+                                                                                                onChange={(e) => handleReplaceFileChange(e, file.id)}
+                                                                                            />
+                                                                                            <button
+                                                                                                onClick={() => handleDeleteFile(file.id, file.original_name)}
+                                                                                                className="px-2 py-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 rounded transition-all"
+                                                                                            >
+                                                                                                🗑️ Hapus
+                                                                                            </button>
+                                                                                        </>
+                                                                                    )}
+                                                                                    
+                                                                                    {/* DEADLINE & EXTEND BUTTON - SEBELUM ACCEPT (TEMPAT 3) */}
+                                                                                    {moodboard.status === 'pending' && moodboard.has_estimasi && taskResponse && taskResponse.status !== 'selesai' && (
+                                                                                        <div className="col-span-2 mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                                                                                            <div className="flex justify-between items-center">
+                                                                                                <div>
+                                                                                                    <p className="text-[11px] text-yellow-700">
+                                                                                                        Deadline: {new Date(taskResponse.deadline).toLocaleDateString('id-ID')}
+                                                                                                    </p>
+                                                                                                    {taskResponse.extend_time > 0 && (
+                                                                                                        <p className="text-[11px] text-orange-600">
+                                                                                                            Perpanjangan: {taskResponse.extend_time}x
+                                                                                                        </p>
+                                                                                                    )}
+                                                                                                </div>
+                                                                                                <button
+                                                                                                    onClick={() => setShowExtendModal({ orderId: order.id, tahap: 'moodboard' })}
+                                                                                                    className="px-2 py-1 bg-orange-500 text-white rounded text-[11px] hover:bg-orange-600"
+                                                                                                >
+                                                                                                    Perpanjang
+                                                                                                </button>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    )}
+
+                                                                                    {moodboard.status === 'pending' && moodboard.has_estimasi && (
+                                                                                        <button
+                                                                                            onClick={() => {
+                                                                                                if (window.confirm(`Pilih desain "${file.original_name}" sebagai moodboard kasar?`)) {
+                                                                                                    router.post(`/moodboard/accept/${moodboard.id}`, {
+                                                                                                        moodboard_file_id: file.id,
+                                                                                                    });
+                                                                                                }
+                                                                                            }}
+                                                                                            className="col-span-2 px-2 py-1 text-xs font-medium text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded transition-all"
+                                                                                        >
+                                                                                            ✓ Terima Desain Ini
+                                                                                        </button>
+                                                                                    )}
+                                                                                </div>
+
+                                                                                <div
+                                                                                    className={`mt-2 rounded-lg border p-2 ${file.estimasi_file
+                                                                                        ? 'border-emerald-200 bg-emerald-50'
+                                                                                        : 'border-stone-200 bg-white'}`}
                                                                                 >
-                                                                                    📥 Unduh
-                                                                                </a>
+                                                                                    {file.estimasi_file ? (
+                                                                                        <div className="flex items-center justify-between gap-2">
+                                                                                            <div className="min-w-0">
+                                                                                                <p className="text-[11px] font-semibold text-emerald-900">File Estimasi</p>
+                                                                                                <p className="text-[11px] text-emerald-700 truncate">{file.estimasi_file.original_name}</p>
+                                                                                            </div>
+                                                                                            <a
+                                                                                                href={file.estimasi_file.url}
+                                                                                                target="_blank"
+                                                                                                rel="noopener noreferrer"
+                                                                                                className="flex-shrink-0 inline-flex items-center px-2 py-1 text-[11px] font-semibold text-white bg-emerald-500 hover:bg-emerald-600 rounded"
+                                                                                            >
+                                                                                                📥 Unduh
+                                                                                            </a>
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <p className="text-[11px] text-stone-600">
+                                                                                            Belum ada file estimasi yang diupload untuk desain ini.
+                                                                                        </p>
+                                                                                    )}
+                                                                                </div>
                                                                             </div>
-                                                                        ) : (
-                                                                            <p className="text-[11px] text-stone-600">
-                                                                                Belum ada file estimasi yang diupload untuk desain ini.
-                                                                            </p>
-                                                                        )}
-                                                                    </div>
+                                                                        );
+                                                                    })}
                                                                 </div>
-                                                            )
-                                                            })}
-                                                        </div>
+                                                            </div>
+                                                        )}
+
+                                                        {moodboard.notes && (
+                                                            <div className="mb-2 bg-orange-50 border border-orange-200 rounded-lg p-2">
+                                                                <p className="text-xs font-semibold text-orange-900 mb-0.5">Catatan:</p>
+                                                                <p className="text-xs text-orange-700 line-clamp-2">{moodboard.notes}</p>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )}
 
-                                                {moodboard.notes && (
-                                                    <div className="mb-2 bg-orange-50 border border-orange-200 rounded-lg p-2">
-                                                        <p className="text-xs font-semibold text-orange-900 mb-0.5">Catatan:</p>
-                                                        <p className="text-xs text-orange-700 line-clamp-2">{moodboard.notes}</p>
+                                                {/* Team */}
+                                                <div className="mb-3">
+                                                    <p className="text-xs font-semibold text-stone-700 mb-1.5">Tim:</p>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {order.team.map((member) => (
+                                                            <span
+                                                                key={member.id}
+                                                                className="px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full text-xs font-medium"
+                                                            >
+                                                                {member.name}
+                                                            </span>
+                                                        ))}
                                                     </div>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* Team */}
-                                        <div className="mb-3">
-                                            <p className="text-xs font-semibold text-stone-700 mb-1.5">Tim:</p>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {order.team.map((member) => (
-                                                    <span
-                                                        key={member.id}
-                                                        className="px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full text-xs font-medium"
-                                                    >
-                                                        {member.name}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </>
+                                                </div>
+                                            </>
                                         )}
 
                                         {/* Actions - Always Visible */}
@@ -655,13 +723,24 @@ export default function Index({ orders }: Props) {
                 </div>
             </main>
 
-            {/* Modal */}
+            {/* Moodboard Modal */}
             {selectedOrder && (
                 <MoodboardModal
                     show={showModal}
                     order={selectedOrder}
                     mode={modalMode}
                     onClose={closeModal}
+                    taskResponse={taskResponses[selectedOrder.id]}
+                    onShowExtendModal={(orderId, tahap) => setShowExtendModal({ orderId, tahap })}
+                />
+            )}
+
+            {/* Extend Modal */}
+            {showExtendModal && (
+                <ExtendModal
+                    orderId={showExtendModal.orderId}
+                    tahap={showExtendModal.tahap}
+                    onClose={() => setShowExtendModal(null)}
                 />
             )}
         </div>

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { router, Link, Head, usePage } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
 
 interface Order {
     id: number;
@@ -69,11 +71,20 @@ interface Props {
     jenisItems: JenisItem[];
 }
 
+interface TaskResponse {
+    status: string;
+    deadline: string;
+    order_id: number;
+    tahap: string;
+}
+
 export default function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(false);
     const [expandedProduk, setExpandedProduk] = useState<number[]>([]);
+    const [taskResponses, setTaskResponses] = useState<Record<number, TaskResponse>>({});
+    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
 
     const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
@@ -85,6 +96,20 @@ export default function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: 
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    // Fetch task response untuk semua moodboard
+    useEffect(() => {
+        moodboards.forEach(moodboard => {
+            const orderId = moodboard.order?.id;
+            if (orderId) {
+                axios.get(`/task-response/${orderId}/item_pekerjaan`)
+                    .then(res => {
+                        setTaskResponses(prev => ({ ...prev, [orderId]: res.data }));
+                    })
+                    .catch(err => console.error('Error fetching task response:', err));
+            }
+        });
+    }, [moodboards]);
 
     const filteredMoodboards = moodboards.filter((moodboard) => {
         const search = searchQuery.toLowerCase();
@@ -132,6 +157,14 @@ export default function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: 
             hour: '2-digit',
             minute: '2-digit',
         });
+    };
+
+    const calculateDaysLeft = (deadline: string) => {
+        const now = new Date();
+        const deadlineDate = new Date(deadline);
+        const diffTime = deadlineDate.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays;
     };
 
     return (
@@ -222,127 +255,202 @@ export default function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: 
                                 </p>
                             </div>
                         ) : (
-                            filteredMoodboards.map((moodboard) => (
-                                <div
-                                    key={moodboard.id}
-                                    className="overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md"
-                                >
-                                    {/* Order Info Header */}
-                                    <div className="border-b border-stone-100 bg-gradient-to-r from-purple-50 to-white p-6">
-                                        <div className="flex items-start justify-between">
-                                            <div>
-                                                <h3 className="text-xl font-semibold text-stone-800">
-                                                    {moodboard.order.nama_project}
-                                                </h3>
-                                                <div className="mt-2 space-y-1 text-sm text-stone-600">
-                                                    <p>
-                                                        <span className="font-medium">Company:</span> {moodboard.order.company_name}
-                                                    </p>
-                                                    <p>
-                                                        <span className="font-medium">Customer:</span> {moodboard.order.customer_name}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            
-                                            {!moodboard.itemPekerjaan ? (
-                                                <button
-                                                    onClick={() => handleResponseItemPekerjaan(moodboard.id)}
-                                                    disabled={loading}
-                                                    className="rounded-lg bg-purple-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-purple-700 disabled:bg-stone-300"
-                                                >
-                                                    Response Input Item Pekerjaan
-                                                </button>
-                                            ) : (
-                                                <div className="flex items-center gap-2">
-                                                    {/* Status Badge */}
-                                                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                                        moodboard.itemPekerjaan.status === 'published' 
-                                                            ? 'bg-emerald-100 text-emerald-700' 
-                                                            : 'bg-amber-100 text-amber-700'
-                                                    }`}>
-                                                        {moodboard.itemPekerjaan.status === 'published' ? '✓ Published' : '📝 Draft'}
-                                                    </span>
-                                                    <Link
-                                                        href={`/item-pekerjaan/${moodboard.itemPekerjaan.id}/show`}
-                                                        className="rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-700"
-                                                    >
-                                                        Lihat Detail
-                                                    </Link>
-                                                    <Link
-                                                        href={`/item-pekerjaan/${moodboard.itemPekerjaan.id}/edit`}
-                                                        className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-                                                    >
-                                                        Edit
-                                                    </Link>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                            filteredMoodboards.map((moodboard) => {
+                                const orderId = moodboard.order?.id;
+                                const taskResponse = orderId ? taskResponses[orderId] : null;
+                                const daysLeft = taskResponse?.deadline ? calculateDaysLeft(taskResponse.deadline) : null;
 
-                                    {/* Content Area */}
-                                    {moodboard.itemPekerjaan && (
-                                        <div className="p-6">
-                                            {/* Response Info */}
-                                            <div className={`rounded-lg p-4 ${
-                                                moodboard.itemPekerjaan.status === 'published' 
-                                                    ? 'bg-blue-50' 
-                                                    : 'bg-amber-50'
-                                            }`}>
-                                                <div className={`flex items-center gap-2 text-sm ${
-                                                    moodboard.itemPekerjaan.status === 'published' 
-                                                        ? 'text-blue-800' 
-                                                        : 'text-amber-800'
-                                                }`}>
-                                                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                    </svg>
-                                                    <span>
-                                                        <strong>Response by:</strong> {moodboard.itemPekerjaan.response_by} • {formatDateTime(moodboard.itemPekerjaan.response_time)}
-                                                    </span>
+                                return (
+                                    <div
+                                        key={moodboard.id}
+                                        className="overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+                                    >
+                                        {/* Order Info Header */}
+                                        <div className="border-b border-stone-100 bg-gradient-to-r from-purple-50 to-white p-6">
+                                            <div className="flex items-start justify-between">
+                                                <div>
+                                                    <h3 className="text-xl font-semibold text-stone-800">
+                                                        {moodboard.order.nama_project}
+                                                    </h3>
+                                                    <div className="mt-2 space-y-1 text-sm text-stone-600">
+                                                        <p>
+                                                            <span className="font-medium">Company:</span> {moodboard.order.company_name}
+                                                        </p>
+                                                        <p>
+                                                            <span className="font-medium">Customer:</span> {moodboard.order.customer_name}
+                                                        </p>
+                                                    </div>
                                                 </div>
-
-                                                {/* Marketing Response Button - INDEPENDENT */}
-                                                {isKepalaMarketing && !moodboard.pm_response_time && (
-                                                    <div className="mt-3">
-                                                        <button
-                                                            onClick={() => handlePmResponse(moodboard.id)}
-                                                            className="w-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg transition-all"
+                                                
+                                                {!moodboard.itemPekerjaan ? (
+                                                    <button
+                                                        onClick={() => handleResponseItemPekerjaan(moodboard.id)}
+                                                        disabled={loading}
+                                                        className="rounded-lg bg-purple-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-purple-700 disabled:bg-stone-300"
+                                                    >
+                                                        Response Input Item Pekerjaan
+                                                    </button>
+                                                ) : (
+                                                    <div className="flex items-center gap-2">
+                                                        {/* Status Badge */}
+                                                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                                            moodboard.itemPekerjaan.status === 'published' 
+                                                                ? 'bg-emerald-100 text-emerald-700' 
+                                                                : 'bg-amber-100 text-amber-700'
+                                                        }`}>
+                                                            {moodboard.itemPekerjaan.status === 'published' ? '✓ Published' : '📝 Draft'}
+                                                        </span>
+                                                        <Link
+                                                            href={`/item-pekerjaan/${moodboard.itemPekerjaan.id}/show`}
+                                                            className="rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-700"
                                                         >
-                                                            Marketing Response
+                                                            Lihat Detail
+                                                        </Link>
+                                                        <Link
+                                                            href={`/item-pekerjaan/${moodboard.itemPekerjaan.id}/edit`}
+                                                            className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                                                        >
+                                                            Edit
+                                                        </Link>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Task Response Deadline */}
+                                        {taskResponse && taskResponse.status !== 'selesai' && (
+                                            <div className="px-6 pt-4">
+                                                <div className={`p-3 rounded-lg border ${
+                                                    daysLeft !== null && daysLeft < 0 
+                                                        ? 'bg-red-50 border-red-200' 
+                                                        : daysLeft !== null && daysLeft <= 3
+                                                        ? 'bg-orange-50 border-orange-200'
+                                                        : 'bg-yellow-50 border-yellow-200'
+                                                }`}>
+                                                    <div className="flex justify-between items-center">
+                                                        <div>
+                                                            <p className={`text-xs font-semibold mb-1 ${
+                                                                daysLeft !== null && daysLeft < 0
+                                                                    ? 'text-red-900'
+                                                                    : daysLeft !== null && daysLeft <= 3
+                                                                    ? 'text-orange-900'
+                                                                    : 'text-yellow-900'
+                                                            }`}>
+                                                                {daysLeft !== null && daysLeft < 0 ? '⚠️ Deadline Terlewat' : '⏰ Deadline Item Pekerjaan'}
+                                                            </p>
+                                                            <p className={`text-xs ${
+                                                                daysLeft !== null && daysLeft < 0
+                                                                    ? 'text-red-700'
+                                                                    : daysLeft !== null && daysLeft <= 3
+                                                                    ? 'text-orange-700'
+                                                                    : 'text-yellow-700'
+                                                            }`}>
+                                                                {new Date(taskResponse.deadline).toLocaleDateString('id-ID', {
+                                                                    weekday: 'long',
+                                                                    year: 'numeric',
+                                                                    month: 'long',
+                                                                    day: 'numeric'
+                                                                })}
+                                                            </p>
+                                                            {daysLeft !== null && (
+                                                                <p className={`text-xs mt-1 font-medium ${
+                                                                    daysLeft < 0
+                                                                        ? 'text-red-700'
+                                                                        : daysLeft <= 3
+                                                                        ? 'text-orange-700'
+                                                                        : 'text-yellow-700'
+                                                                }`}>
+                                                                    {daysLeft < 0 
+                                                                        ? `Terlambat ${Math.abs(daysLeft)} hari` 
+                                                                        : `${daysLeft} hari lagi`}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <button
+                                                            onClick={() => orderId && setShowExtendModal({ orderId, tahap: 'item_pekerjaan' })}
+                                                            className="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-medium hover:bg-orange-600 transition-colors"
+                                                        >
+                                                            Minta Perpanjangan
                                                         </button>
                                                     </div>
-                                                )}
-
-                                                {/* PM Response Badge */}
-                                                {moodboard.pm_response_time && (
-                                                    <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-2">
-                                                        <p className="text-xs font-semibold text-purple-900">✓ PM Response</p>
-                                                        <p className="text-xs text-purple-700">By: {moodboard.pm_response_by}</p>
-                                                        <p className="text-xs text-purple-700">{formatDateTime(moodboard.pm_response_time!)}</p>
-                                                    </div>
-                                                )}
-
-                                                <div className={`mt-3 text-sm ${
-                                                    moodboard.itemPekerjaan.status === 'published' 
-                                                        ? 'text-blue-700' 
-                                                        : 'text-amber-700'
-                                                }`}>
-                                                    <strong>Total Produk:</strong> {moodboard.itemPekerjaan.produks.length} produk
                                                 </div>
-                                                {moodboard.itemPekerjaan.status === 'draft' && (
-                                                    <div className="mt-2 text-xs text-amber-600">
-                                                        ⚠️ Status masih draft. RAB Internal belum bisa diproses sampai di-publish.
-                                                    </div>
-                                                )}
                                             </div>
-                                        </div>
-                                    )}
-                                </div>
-                            ))
+                                        )}
+
+                                        {/* Content Area */}
+                                        {moodboard.itemPekerjaan && (
+                                            <div className="p-6">
+                                                {/* Response Info */}
+                                                <div className={`rounded-lg p-4 ${
+                                                    moodboard.itemPekerjaan.status === 'published' 
+                                                        ? 'bg-blue-50' 
+                                                        : 'bg-amber-50'
+                                                }`}>
+                                                    <div className={`flex items-center gap-2 text-sm ${
+                                                        moodboard.itemPekerjaan.status === 'published' 
+                                                            ? 'text-blue-800' 
+                                                            : 'text-amber-800'
+                                                    }`}>
+                                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                        <span>
+                                                            <strong>Response by:</strong> {moodboard.itemPekerjaan.response_by} • {formatDateTime(moodboard.itemPekerjaan.response_time)}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Marketing Response Button - INDEPENDENT */}
+                                                    {isKepalaMarketing && !moodboard.pm_response_time && (
+                                                        <div className="mt-3">
+                                                            <button
+                                                                onClick={() => handlePmResponse(moodboard.id)}
+                                                                className="w-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg transition-all"
+                                                            >
+                                                                Marketing Response
+                                                            </button>
+                                                        </div>
+                                                    )}
+
+                                                    {/* PM Response Badge */}
+                                                    {moodboard.pm_response_time && (
+                                                        <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-2">
+                                                            <p className="text-xs font-semibold text-purple-900">✓ PM Response</p>
+                                                            <p className="text-xs text-purple-700">By: {moodboard.pm_response_by}</p>
+                                                            <p className="text-xs text-purple-700">{formatDateTime(moodboard.pm_response_time!)}</p>
+                                                        </div>
+                                                    )}
+
+                                                    <div className={`mt-3 text-sm ${
+                                                        moodboard.itemPekerjaan.status === 'published' 
+                                                            ? 'text-blue-700' 
+                                                            : 'text-amber-700'
+                                                    }`}>
+                                                        <strong>Total Produk:</strong> {moodboard.itemPekerjaan.produks.length} produk
+                                                    </div>
+                                                    {moodboard.itemPekerjaan.status === 'draft' && (
+                                                        <div className="mt-2 text-xs text-amber-600">
+                                                            ⚠️ Status masih draft. RAB Internal belum bisa diproses sampai di-publish.
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })
                         )}
                     </div>
                 </div>
             </div>
+
+            {/* Extend Modal */}
+            {showExtendModal && (
+                <ExtendModal
+                    orderId={showExtendModal.orderId}
+                    tahap={showExtendModal.tahap}
+                    onClose={() => setShowExtendModal(null)}
+                />
+            )}
         </>
     );
 }

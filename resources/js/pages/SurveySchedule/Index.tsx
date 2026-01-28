@@ -1,7 +1,9 @@
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import ExtendModal from '@/components/ExtendModal';
 import { Head, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
+import axios from 'axios';
 
 /* ================= TYPES ================= */
 interface SurveyUser {
@@ -36,11 +38,31 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [tanggalSurvey, setTanggalSurvey] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
+  const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+  const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
 
   useEffect(() => {
     setMounted(true);
     setSidebarOpen(window.innerWidth >= 1024);
   }, []);
+
+  // Fetch task response untuk semua order (tahap: survey_schedule)
+  useEffect(() => {
+    orders.forEach((order) => {
+      axios
+        .get(`/task-response/${order.id}/survey_schedule`)
+        .then((res) => {
+          if (res.data) {
+            setTaskResponses((prev) => ({ ...prev, [order.id]: res.data }));
+          }
+        })
+        .catch((err) => {
+          if (err.response?.status !== 404) {
+            console.error('Error fetching task response (survey_schedule):', err);
+          }
+        });
+    });
+  }, [orders]);
 
   const toggleUser = (id: number) => {
     setSelectedUsers(prev =>
@@ -137,6 +159,7 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props)
                 const hasResponse = !!order.survey_response_time;
                 const hasPmResponse = !!order.pm_survey_response_time;
                 const showScheduleButton = hasResponse;
+                const taskResponse = taskResponses[order.id];
 
                 return (
                   <div
@@ -196,6 +219,37 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props)
                         </div>
                       )}
                     </div>
+
+                    {/* Deadline & Extend Button */}
+                    {taskResponse && taskResponse.status !== 'selesai' && (
+                      <div className="mb-3">
+                        <div className="p-3 rounded border border-yellow-200 bg-yellow-50 flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-medium text-yellow-800">
+                              Deadline Survey Schedule
+                            </p>
+                            <p className="text-sm font-semibold text-yellow-900">
+                              {new Date(taskResponse.deadline).toLocaleDateString('id-ID', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric',
+                              })}
+                            </p>
+                            {taskResponse.extend_time > 0 && (
+                              <p className="mt-1 text-xs text-orange-600">
+                                Perpanjangan: {taskResponse.extend_time}x
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => setShowExtendModal({ orderId: order.id, tahap: 'survey_schedule' })}
+                            className="px-3 py-1.5 bg-orange-500 text-white rounded-md text-xs font-medium hover:bg-orange-600 transition-colors"
+                          >
+                            Minta Perpanjangan
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {/* ACTION BUTTONS */}
                     <div className="flex gap-2 flex-wrap">
@@ -301,6 +355,15 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props)
             </div>
           </div>
         </div>
+      )}
+
+      {/* Extend Modal */}
+      {showExtendModal && (
+        <ExtendModal
+          orderId={showExtendModal.orderId}
+          tahap={showExtendModal.tahap}
+          onClose={() => setShowExtendModal(null)}
+        />
       )}
     </>
   );

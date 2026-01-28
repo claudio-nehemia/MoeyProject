@@ -146,9 +146,9 @@ class SurveyResultsController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create(string $id)
+    public function create(string $orderId)
     {
-        $order = Order::with(['jenisInterior', 'surveyResults', 'users.role'])->findOrFail($id);
+        $order = Order::with(['jenisInterior', 'surveyResults', 'users.role'])->findOrFail($orderId);
         $jenisPengukuran = JenisPengukuran::all();
 
         // Check if user has clicked Response button first

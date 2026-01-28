@@ -1,7 +1,9 @@
 import { Head, router } from '@inertiajs/react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
 
 interface Order {
     id: number;
@@ -73,6 +75,29 @@ export default function Index({ itemPekerjaans }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [expandedRows, setExpandedRows] = useState<number[]>([]);
     const [activeFilter, setActiveFilter] = useState<'semua' | 'belum_bayar' | 'dp' | 'proses' | 'lunas'>('semua');
+    const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+
+    // Fetch task response untuk semua project (tahap: invoice)
+    useEffect(() => {
+        itemPekerjaans.forEach((item) => {
+            const orderId = item.order?.id;
+            if (orderId) {
+                axios
+                    .get(`/task-response/${orderId}/invoice`)
+                    .then((res) => {
+                        if (res.data) {
+                            setTaskResponses((prev) => ({ ...prev, [orderId]: res.data }));
+                        }
+                    })
+                    .catch((err) => {
+                        if (err.response?.status !== 404) {
+                            console.error('Error fetching task response (invoice):', err);
+                        }
+                    });
+            }
+        });
+    }, [itemPekerjaans]);
 
     // Helper function to determine payment status category
     const getPaymentCategory = (item: ItemPekerjaan): 'belum_bayar' | 'dp' | 'proses' | 'lunas' => {
@@ -319,8 +344,8 @@ export default function Index({ itemPekerjaans }: Props) {
                             </div>
                         </div>
 
-                        {/* Projects List */}
-                        <div className="space-y-6">
+                                {/* Projects List */}
+                                <div className="space-y-6">
                             {filteredItems.length === 0 ? (
                                 <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
                                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
@@ -346,7 +371,11 @@ export default function Index({ itemPekerjaans }: Props) {
                                     </p>
                                 </div>
                             ) : (
-                                filteredItems.map((item) => (
+                                filteredItems.map((item) => {
+                                    const orderId = item.order.id;
+                                    const taskResponse = taskResponses[orderId];
+
+                                    return (
                                     <div key={item.id} className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
                                         {/* Project Header */}
                                         <div 
@@ -407,8 +436,42 @@ export default function Index({ itemPekerjaans }: Props) {
                                                 </div>
                                             </div>
 
+                                            {/* Task Response Deadline & Extend Button */}
+                                            {taskResponse && taskResponse.status !== 'selesai' && (
+                                                <div className="mt-4 mb-4 p-3 rounded-lg border border-amber-200 bg-amber-50">
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <div>
+                                                            <p className="text-xs font-medium text-amber-800">
+                                                                Deadline Invoice
+                                                            </p>
+                                                            <p className="text-sm font-semibold text-amber-900">
+                                                                {new Date(taskResponse.deadline).toLocaleDateString('id-ID', {
+                                                                    day: 'numeric',
+                                                                    month: 'long',
+                                                                    year: 'numeric',
+                                                                })}
+                                                            </p>
+                                                            {taskResponse.extend_time > 0 && (
+                                                                <p className="mt-1 text-xs text-orange-600">
+                                                                    Perpanjangan: {taskResponse.extend_time}x
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setShowExtendModal({ orderId, tahap: 'invoice' });
+                                                            }}
+                                                            className="px-3 py-1.5 bg-orange-500 text-white rounded-md text-xs font-medium hover:bg-orange-600 transition-colors"
+                                                        >
+                                                            Minta Perpanjangan
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             {/* Summary Row */}
-                                            <div className="mt-4 grid grid-cols-2 md:grid-cols-6 gap-4">
+                                            <div className="mt-2 grid grid-cols-2 md:grid-cols-6 gap-4">
                                                 <div className="bg-gray-50 rounded-lg p-3">
                                                     <div className="text-xs text-gray-500">Harga Kontrak</div>
                                                     <div className="text-sm font-bold text-gray-900">{formatRupiah(item.harga_kontrak || 0)}</div>
@@ -582,12 +645,21 @@ export default function Index({ itemPekerjaans }: Props) {
                                             </div>
                                         )}
                                     </div>
-                                ))
+                                )})
                             )}
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Extend Modal */}
+            {showExtendModal && (
+                <ExtendModal
+                    orderId={showExtendModal.orderId}
+                    tahap={showExtendModal.tahap}
+                    onClose={() => setShowExtendModal(null)}
+                />
+            )}
         </div>
     );
 }

@@ -1,8 +1,10 @@
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import { Head, router, usePage } from '@inertiajs/react';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import KontrakModal from './KontrakModal';
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
 
 interface CommitmentFee {
     id: number;
@@ -38,6 +40,7 @@ interface Kontrak {
 }
 
 interface Order {
+    id: number;
     nama_project: string;
     company_name: string;
     customer_name: string;
@@ -77,9 +80,25 @@ export default function Index({ itemPekerjaans, termins }: Props) {
     const fileInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>(
         {},
     );
+    const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
 
     const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
+
+    // Fetch task responses
+    useEffect(() => {
+        itemPekerjaans.forEach(item => {
+            const orderId = item.order.id;
+            if (orderId) {
+                axios.get(`/task-response/${orderId}/kontrak`)
+                    .then(res => {
+                        setTaskResponses(prev => ({ ...prev, [orderId]: res.data }));
+                    })
+                    .catch(err => console.error('Error fetching task response:', err));
+            }
+        });
+    }, [itemPekerjaans]);
 
     const handleOpenModal = (itemPekerjaan: ItemPekerjaan) => {
         setSelectedItemPekerjaan(itemPekerjaan);
@@ -210,7 +229,8 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                 </tr>
                                             ) : (
                                                 itemPekerjaans.map((item) => {
-                                                    // Get tahap 1 info from termin
+                                                    const orderId = item.order.id;
+                                                    const taskResponse = taskResponses[orderId];
                                                     const tahap1 =
                                                         item.kontrak?.termin
                                                             ?.tahapan?.[0];
@@ -424,7 +444,6 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                             </div>
                                                                         </div>
 
-                                                                        {/* PM Response Badge */}
                                                                         {item.kontrak.pm_response_time && (
                                                                             <div className="mt-2 bg-purple-50 border border-purple-200 rounded-lg p-2">
                                                                                 <p className="text-xs font-semibold text-purple-900">✓ PM Response</p>
@@ -482,6 +501,32 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                     </button>
                                                                 ) : (
                                                                     <div className="space-y-2">
+                                                                        {/* Task Response Deadline & Extend Button */}
+                                                                        {taskResponse && taskResponse.status !== 'selesai' && (
+                                                                            <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                                                                <div className="flex justify-between items-center">
+                                                                                    <div>
+                                                                                        <p className="text-xs font-medium text-yellow-800">
+                                                                                            Deadline Kontrak
+                                                                                        </p>
+                                                                                        <p className="text-sm font-semibold text-yellow-900">
+                                                                                            {new Date(taskResponse.deadline).toLocaleDateString('id-ID', {
+                                                                                                day: 'numeric',
+                                                                                                month: 'long',
+                                                                                                year: 'numeric'
+                                                                                            })}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                    <button
+                                                                                        onClick={() => setShowExtendModal({ orderId, tahap: 'kontrak' })}
+                                                                                        className="px-3 py-1.5 bg-orange-500 text-white rounded-md text-xs font-medium hover:bg-orange-600 transition-colors"
+                                                                                    >
+                                                                                        Perpanjang
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+
                                                                         {/* PM Response Button */}
                                                                         {isKepalaMarketing && !item.kontrak.pm_response_time && (
                                                                             <button
@@ -514,7 +559,7 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                         <div className="flex flex-wrap items-center gap-2">
                                                                             {/* Download Draft PDF */}
                                                                             <a
-                                                                                href={`/kontrak/${item.kontrak.id}/print`}
+                                                                                href={`/kontrak/${item.kontrak!.id}/print`}
                                                                                 target="_blank"
                                                                                 className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all duration-200 hover:bg-blue-700 hover:shadow-md"
                                                                                 title="Download Draft Kontrak"
@@ -645,7 +690,7 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                                 .signed_contract_path && (
                                                                                 <>
                                                                                     <a
-                                                                                        href={`/kontrak/${item.kontrak.id}/download-signed`}
+                                                                                        href={`/kontrak/${item.kontrak!.id}/download-signed`}
                                                                                         className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all duration-200 hover:bg-green-700 hover:shadow-md"
                                                                                         title="Download Kontrak TTD"
                                                                                     >
@@ -698,9 +743,7 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                         </div>
 
                                                                         {/* Signed At Info */}
-                                                                        {item
-                                                                            .kontrak
-                                                                            .signed_at && (
+                                                                        {item.kontrak?.signed_at && (
                                                                             <div className="text-xs text-gray-500">
                                                                                 TTD:{' '}
                                                                                 {
@@ -735,6 +778,15 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                     }}
                     itemPekerjaan={selectedItemPekerjaan}
                     termins={termins}
+                />
+            )}
+
+            {/* Extend Modal */}
+            {showExtendModal && (
+                <ExtendModal
+                    orderId={showExtendModal.orderId}
+                    tahap={showExtendModal.tahap}
+                    onClose={() => setShowExtendModal(null)}
                 />
             )}
         </div>

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
 
 interface ItemPreview {
     item_name: string;
@@ -18,6 +20,7 @@ interface BahanBakuPreview {
 
 interface Row {
     id: number;
+    order_id: number;
     project_name: string;
     company_name: string;
     customer_name: string;
@@ -34,12 +37,35 @@ interface Props {
 export default function ApprovalRabIndex({ items }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [search, setSearch] = useState('');
+    const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
 
     useEffect(() => {
         const resize = () => setSidebarOpen(window.innerWidth >= 1024);
         window.addEventListener('resize', resize);
         return () => window.removeEventListener('resize', resize);
     }, []);
+
+    // Fetch task response untuk semua approval material (tahap: approval_material)
+    useEffect(() => {
+        items.forEach((row) => {
+            const orderId = row.order_id;
+            if (orderId) {
+                axios
+                    .get(`/task-response/${orderId}/approval_material`)
+                    .then((res) => {
+                        if (res.data) {
+                            setTaskResponses((prev) => ({ ...prev, [orderId]: res.data }));
+                        }
+                    })
+                    .catch((err) => {
+                        if (err.response?.status !== 404) {
+                            console.error('Error fetching task response (approval_material):', err);
+                        }
+                    });
+            }
+        });
+    }, [items]);
 
     const filtered = items.filter((row) => {
         const s = search.toLowerCase();
@@ -97,13 +123,17 @@ export default function ApprovalRabIndex({ items }: Props) {
                                 Tidak ada data
                             </div>
                         ) : (
-                            filtered.map((row) => (
+                            filtered.map((row) => {
+                                const orderId = row.order_id;
+                                const taskResponse = orderId ? taskResponses[orderId] : null;
+
+                                return (
                                 <div
                                     key={row.id}
                                     className="rounded-lg border border-stone-200 bg-white shadow-sm hover:shadow-md transition"
                                 >
                                     {/* Header */}
-                                    <div className="border-b bg-gradient-to-r from-amber-50 to-white p-6 flex justify-between">
+                                    <div className="border-b bg-gradient-to-r from-amber-50 to-white p-6 flex justify-between gap-4">
                                         <div>
                                             <h3 className="text-xl font-semibold text-stone-800">
                                                 {row.project_name}
@@ -114,6 +144,37 @@ export default function ApprovalRabIndex({ items }: Props) {
                                             <p className="text-sm text-stone-600">
                                                 <strong>Customer:</strong> {row.customer_name}
                                             </p>
+
+                                            {/* Deadline & Extend Button */}
+                                            {taskResponse && taskResponse.status !== 'selesai' && (
+                                                <div className="mt-3">
+                                                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between gap-3">
+                                                        <div>
+                                                            <p className="text-xs font-medium text-yellow-800">
+                                                                Deadline Approval Material
+                                                            </p>
+                                                            <p className="text-sm font-semibold text-yellow-900">
+                                                                {new Date(taskResponse.deadline).toLocaleDateString('id-ID', {
+                                                                    day: 'numeric',
+                                                                    month: 'long',
+                                                                    year: 'numeric',
+                                                                })}
+                                                            </p>
+                                                            {taskResponse.extend_time > 0 && (
+                                                                <p className="mt-1 text-xs text-orange-600">
+                                                                    Perpanjangan: {taskResponse.extend_time}x
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <button
+                                                            onClick={() => orderId && setShowExtendModal({ orderId, tahap: 'approval_material' })}
+                                                            className="px-3 py-1.5 bg-orange-500 text-white rounded-md text-xs font-medium hover:bg-orange-600 transition-colors"
+                                                        >
+                                                            Minta Perpanjangan
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <button
@@ -204,11 +265,20 @@ export default function ApprovalRabIndex({ items }: Props) {
                                         </div>
                                     </div>
                                 </div>
-                            ))
+                            )})
                         )}
                     </div>
                 </div>
             </div>
+
+            {/* Extend Modal */}
+            {showExtendModal && (
+                <ExtendModal
+                    orderId={showExtendModal.orderId}
+                    tahap={showExtendModal.tahap}
+                    onClose={() => setShowExtendModal(null)}
+                />
+            )}
         </>
     );
 }

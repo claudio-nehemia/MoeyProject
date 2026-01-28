@@ -7,11 +7,19 @@ interface Team {
     role: string;
 }
 
+interface EstimasiFile {
+    id: number;
+    file_path: string;
+    original_name: string;
+    url: string;
+}
+
 interface MoodboardFile {
     id: number;
     file_path: string;
     original_name: string;
     url: string;
+    estimasi_file: EstimasiFile | null;
 }
 
 interface Moodboard {
@@ -28,8 +36,20 @@ interface Moodboard {
 interface Order {
     id: number;
     nama_project: string;
+    company_name: string;
+    customer_name: string;
+    jenis_interior: string;
     moodboard: Moodboard | null;
     team: Team[];
+}
+
+interface TaskResponse {
+    id: number;
+    order_id: number;
+    tahap: string;
+    status: string;
+    deadline: string;
+    extend_time: number;
 }
 
 interface Props {
@@ -37,9 +57,18 @@ interface Props {
     order: Order;
     mode: 'create' | 'upload-kasar' | 'revise';
     onClose: () => void;
+    taskResponse?: TaskResponse;
+    onShowExtendModal?: (orderId: number, tahap: string) => void;
 }
 
-export default function MoodboardModal({ show, order, mode, onClose }: Props) {
+export default function MoodboardModal({ 
+    show, 
+    order, 
+    mode, 
+    onClose,
+    taskResponse,
+    onShowExtendModal 
+}: Props) {
     const [files, setFiles] = useState<File[]>([]);
     const [notes, setNotes] = useState('');
     const [loading, setLoading] = useState(false);
@@ -72,7 +101,6 @@ export default function MoodboardModal({ show, order, mode, onClose }: Props) {
                 const formData = new FormData();
                 formData.append('moodboard_id', order.moodboard!.id.toString());
                 
-                // Append multiple files
                 files.forEach((file) => {
                     formData.append('moodboard_kasar[]', file);
                 });
@@ -166,6 +194,36 @@ export default function MoodboardModal({ show, order, mode, onClose }: Props) {
 
                 {/* Content */}
                 <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
+                    {/* DEADLINE & EXTEND BUTTON - DI MODAL UPLOAD KASAR (TEMPAT 2) */}
+                    {mode === 'upload-kasar' && taskResponse && taskResponse.status !== 'selesai' && (
+                        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <p className="text-sm text-yellow-700">
+                                        Deadline: {new Date(taskResponse.deadline).toLocaleDateString('id-ID')}
+                                    </p>
+                                    {taskResponse.extend_time > 0 && (
+                                        <p className="text-xs text-orange-600 mt-1">
+                                            Perpanjangan: {taskResponse.extend_time}x
+                                        </p>
+                                    )}
+                                </div>
+                                {onShowExtendModal && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            onShowExtendModal(order.id, 'moodboard');
+                                            onClose();
+                                        }}
+                                        className="px-3 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+                                    >
+                                        Minta Perpanjangan
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Description */}
                     <p className="text-xs sm:text-sm text-stone-600">{description}</p>
 
@@ -199,10 +257,9 @@ export default function MoodboardModal({ show, order, mode, onClose }: Props) {
                     {mode === 'upload-kasar' && (
                         <div>
                             <label className="block text-xs sm:text-sm font-semibold text-stone-700 mb-2">
-                                {mode === 'upload-kasar' ? 'Tambah File Desain Kasar' : 'Desain Final'}
+                                Tambah File Desain Kasar
                             </label>
                             
-                            {/* File Input */}
                             <div className="relative border-2 border-dashed border-violet-300 rounded-lg p-4 sm:p-6 text-center hover:border-violet-400 transition-colors">
                                 <input
                                     type="file"
@@ -210,7 +267,7 @@ export default function MoodboardModal({ show, order, mode, onClose }: Props) {
                                     onChange={handleFileChange}
                                     className="hidden"
                                     id="file-upload"
-                                    multiple={mode === 'upload-kasar'}
+                                    multiple
                                     required={files.length === 0}
                                 />
                                 <label htmlFor="file-upload" className="cursor-pointer">
@@ -218,13 +275,12 @@ export default function MoodboardModal({ show, order, mode, onClose }: Props) {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3v-5" />
                                     </svg>
                                     <p className="text-xs sm:text-sm font-medium text-stone-900">
-                                        {mode === 'upload-kasar' ? 'Pilih file (bisa multiple)' : 'Pilih file'}
+                                        Pilih file (bisa multiple)
                                     </p>
                                     <p className="text-xs text-stone-500 mt-1">JPG, PNG, PDF</p>
                                 </label>
                             </div>
 
-                            {/* Selected Files List */}
                             {files.length > 0 && (
                                 <div className="mt-3 space-y-2">
                                     <p className="text-xs font-semibold text-stone-700">
@@ -245,7 +301,6 @@ export default function MoodboardModal({ show, order, mode, onClose }: Props) {
                                                     type="button"
                                                     onClick={() => removeFile(idx)}
                                                     className="flex-shrink-0 p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
-                                                    title="Hapus file"
                                                 >
                                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

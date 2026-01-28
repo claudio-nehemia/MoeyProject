@@ -4,6 +4,7 @@ use Inertia\Inertia;
 use GuzzleHttp\Middleware;
 use Laravel\Fortify\Features;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\LogController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
@@ -58,6 +59,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/{id}/response', [NotificationController::class, 'handleResponse'])->name('response');
             Route::delete('/{id}', [NotificationController::class, 'destroy'])->name('destroy');
         });
+    });
+
+    Route::middleware(['auth', 'permission:log.index'])->group(function () {
+        Route::get('/log', [LogController::class, 'index'])->name('log.index');
+        Route::get('/log/user/{userId}', [LogController::class, 'byUser'])
+            ->middleware('permission:log.by-user')
+            ->name('log.by-user');
+        Route::get('/log/order/{orderId}', [LogController::class, 'byOrder'])
+            ->middleware('permission:log.by-order')
+            ->name('log.by-order');
     });
 
     // MASTER DATA ROUTES = Admin
@@ -203,6 +214,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('survey-results', [SurveyResultsController::class, 'index'])->name('survey-results.index');
     });
     Route::middleware(['permission:survey-results.create'])->group(function () {
+        Route::get('survey-results/order/{orderId}/create', [SurveyResultsController::class, 'create'])
+            ->name('survey-results.create');
         Route::post('survey-results', [SurveyResultsController::class, 'store'])->name('survey-results.store');
         Route::post('survey-results/{orderId}/mark-response', [SurveyResultsController::class, 'markResponse'])
             ->name('survey-results.mark-response');

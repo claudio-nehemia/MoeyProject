@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { router, Head, usePage } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
+import ExtendModal from '@/components/ExtendModal';
+import axios from 'axios';
 
 /* ================= TYPES ================= */
 
@@ -47,9 +49,38 @@ export default function GambarKerjaIndex({ items }: Props) {
     const [reviseNotes, setReviseNotes] = useState('');
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
 
     const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
+
+    useEffect(() => {
+        const handleResize = () => setSidebarOpen(window.innerWidth >= 1024);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    // Fetch task response untuk semua project (tahap: gambar_kerja)
+    useEffect(() => {
+        items.forEach((item) => {
+            const orderId = item.order?.id;
+            if (orderId) {
+                axios
+                    .get(`/task-response/${orderId}/gambar_kerja`)
+                    .then((res) => {
+                        if (res.data) {
+                            setTaskResponses((prev) => ({ ...prev, [orderId]: res.data }));
+                        }
+                    })
+                    .catch((err) => {
+                        if (err.response?.status !== 404) {
+                            console.error('Error fetching task response (gambar_kerja):', err);
+                        }
+                    });
+            }
+        });
+    }, [items]);
 
     /* ================= FILTER ================= */
 
@@ -189,7 +220,11 @@ export default function GambarKerjaIndex({ items }: Props) {
 
                 {/* ================= LIST ================= */}
                 <div className="grid grid-cols-1 gap-4">
-                    {filteredItems.map((item) => (
+                    {filteredItems.map((item) => {
+                        const orderId = item.order.id;
+                        const taskResponse = taskResponses[orderId];
+
+                        return (
                         <div key={item.id}
                             className="rounded-xl border-2 bg-white border-stone-200 hover:border-indigo-300 transition-all overflow-hidden">
                             <div className="p-4 sm:p-5">
@@ -216,6 +251,37 @@ export default function GambarKerjaIndex({ items }: Props) {
                                             </span>
                                         )}
                                     </div>
+
+                                    {/* Deadline & Extend Button */}
+                                    {taskResponse && taskResponse.status !== 'selesai' && (
+                                        <div className="mt-3">
+                                            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between gap-3">
+                                                <div>
+                                                    <p className="text-xs font-medium text-yellow-800">
+                                                        Deadline Gambar Kerja
+                                                    </p>
+                                                    <p className="text-sm font-semibold text-yellow-900">
+                                                        {new Date(taskResponse.deadline).toLocaleDateString('id-ID', {
+                                                            day: 'numeric',
+                                                            month: 'long',
+                                                            year: 'numeric',
+                                                        })}
+                                                    </p>
+                                                    {taskResponse.extend_time > 0 && (
+                                                        <p className="mt-1 text-xs text-orange-600">
+                                                            Perpanjangan: {taskResponse.extend_time}x
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    onClick={() => setShowExtendModal({ orderId, tahap: 'gambar_kerja' })}
+                                                    className="px-3 py-1.5 bg-orange-500 text-white rounded-md text-xs font-medium hover:bg-orange-600 transition-colors"
+                                                >
+                                                    Minta Perpanjangan
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* RESPONSE */}
@@ -390,6 +456,15 @@ export default function GambarKerjaIndex({ items }: Props) {
                             </div>
                         </div>
                     </div>
+                )}
+
+                {/* Extend Modal */}
+                {showExtendModal && (
+                    <ExtendModal
+                        orderId={showExtendModal.orderId}
+                        tahap={showExtendModal.tahap}
+                        onClose={() => setShowExtendModal(null)}
+                    />
                 )}
 
             </main>

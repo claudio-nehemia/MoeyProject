@@ -1,8 +1,10 @@
 import Navbar from '@/components/Navbar';
 import SearchFilter from '@/components/SearchFilter';
 import Sidebar from '@/components/Sidebar';
+import ExtendModal from '@/components/ExtendModal';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 
 interface PengajuanPerpanjanganTimeline {
     id: number;
@@ -47,6 +49,8 @@ export default function Index({ orders }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [searchQuery, setSearchQuery] = useState('');
     const [filteredOrders, setFilteredOrders] = useState(orders);
+    const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
 
     useEffect(() => {
         const handleResize = () => {
@@ -55,6 +59,24 @@ export default function Index({ orders }: Props) {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    // Fetch task response untuk semua project (tahap: workplan)
+    useEffect(() => {
+        orders.forEach((order) => {
+            axios
+                .get(`/task-response/${order.id}/workplan`)
+                .then((res) => {
+                    if (res.data) {
+                        setTaskResponses((prev) => ({ ...prev, [order.id]: res.data }));
+                    }
+                })
+                .catch((err) => {
+                    if (err.response?.status !== 404) {
+                        console.error('Error fetching task response (workplan):', err);
+                    }
+                });
+        });
+    }, [orders]);
 
     useEffect(() => {
         const filtered = orders.filter(
@@ -248,7 +270,10 @@ export default function Index({ orders }: Props) {
                             </p>
                         </div>
                     ) : (
-                        filteredOrders.map((order) => (
+                        filteredOrders.map((order) => {
+                            const taskResponse = taskResponses[order.id];
+
+                            return (
                             <div
                                 key={order.id}
                                 className="group overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm transition-all hover:border-amber-300 hover:shadow-md"
@@ -320,6 +345,37 @@ export default function Index({ orders }: Props) {
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* Deadline & Extend Button */}
+                                    {taskResponse && taskResponse.status !== 'selesai' && (
+                                        <div className="mt-3">
+                                            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between gap-3">
+                                                <div>
+                                                    <p className="text-xs font-medium text-yellow-800">
+                                                        Deadline Workplan
+                                                    </p>
+                                                    <p className="text-sm font-semibold text-yellow-900">
+                                                        {new Date(taskResponse.deadline).toLocaleDateString('id-ID', {
+                                                            day: 'numeric',
+                                                            month: 'long',
+                                                            year: 'numeric',
+                                                        })}
+                                                    </p>
+                                                    {taskResponse.extend_time > 0 && (
+                                                        <p className="mt-1 text-xs text-orange-600">
+                                                            Perpanjangan: {taskResponse.extend_time}x
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    onClick={() => setShowExtendModal({ orderId: order.id, tahap: 'workplan' })}
+                                                    className="px-3 py-1.5 bg-orange-500 text-white rounded-md text-xs font-medium hover:bg-orange-600 transition-colors"
+                                                >
+                                                    Minta Perpanjangan
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Progress Bar */}
                                     <div className="mt-4">
@@ -409,10 +465,18 @@ export default function Index({ orders }: Props) {
                                     </div>
                                 </div>
                             </div>
-                        ))
+                        )})
                     )}
                 </div>
             </main>
+            {/* Extend Modal */}
+            {showExtendModal && (
+                <ExtendModal
+                    orderId={showExtendModal.orderId}
+                    tahap={showExtendModal.tahap}
+                    onClose={() => setShowExtendModal(null)}
+                />
+            )}
         </div>
     );
 }
