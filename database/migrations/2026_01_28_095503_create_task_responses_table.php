@@ -25,7 +25,8 @@ return new class extends Migration
                 'menunggu_response', // Belum klik Response
                 'menunggu_input',    // Sudah Response, belum isi data
                 'selesai',           // Sudah Response dan sudah isi data (bukan draft)
-                'telat'              // Lewat deadline
+                'telat',              // Lewat deadline
+                'telat_submit'        // Lewat deadline dan sudah submit
             ])->default('menunggu_response');
             $table->timestamps();
             

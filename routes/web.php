@@ -69,6 +69,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/log/order/{orderId}', [LogController::class, 'byOrder'])
             ->middleware('permission:log.by-order')
             ->name('log.by-order');
+        Route::get('/log/task-response/{taskResponseId}/extend-log', [LogController::class, 'extendLog'])
+            ->name('log.extend-log');
     });
 
     // MASTER DATA ROUTES = Admin
@@ -468,7 +470,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/workplan/{order}/edit', [WorkplanItemController::class, 'edit'])->name('workplan.edit');
         Route::put('/workplan/{order}', [WorkplanItemController::class, 'update'])->name('workplan.update');
         Route::post('/workplan/{workplan}/update-status', [WorkplanItemController::class, 'updateStatus'])->name('workplan.update.status');
-        Route::get('/workplan/export/excel', [WorkplanItemController::class, 'export'])->name('workplan.export');
+        Route::get('/workplan/export/{orderId}', [WorkplanItemController::class, 'export'])->name('workplan.export');
     });
 
     // SUERVEY ULANG
@@ -592,6 +594,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/moodboard/{id}', [PmResponseController::class, 'moodboard'])->name('moodboard');
         Route::post('/estimasi/{id}', [PmResponseController::class, 'estimasi'])->name('estimasi');
         Route::post('/commitment-fee/{id}', [PmResponseController::class, 'commitmentFee'])->name('commitment-fee');
+        Route::post('/pm-response/desain-final/{id}', [PmResponseController::class, 'desainFinal'])->name('pm-response.desain-final');
         Route::post('/item-pekerjaan/{id}', [PmResponseController::class, 'itemPekerjaan'])->name('item-pekerjaan');
         Route::post('/survey-ulang/{id}', [PmResponseController::class, 'surveyUlang'])->name('survey-ulang');
         Route::post('/survey-schedule/{id}', [PmResponseController::class, 'surveySchedule'])->name('pm-response.survey-schedule');

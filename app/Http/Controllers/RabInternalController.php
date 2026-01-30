@@ -88,6 +88,11 @@ class RabInternalController extends Controller
                     'duration_actual' => $taskResponse->duration_actual,
                     'status' => 'menunggu_input',
                 ]);
+            } elseif ($taskResponse && $taskResponse->isOverdue()) {
+                $taskResponse->update([
+                    'user_id' => auth()->user()->id,
+                    'response_time' => now(),
+                ]);
             }
 
             Log::info('RAB Internal created with ID: ' . $rabInternal->id);
@@ -305,11 +310,18 @@ class RabInternalController extends Controller
                 ->first();
 
             if ($taskResponse) {
-                $taskResponse->update([
-                    'update_data_time' => now(), // Kapan data diisi
-                    'status' => 'selesai',
-                ]);
-                
+                if ($taskResponse->isOverdue()) {
+                    $taskResponse->update([
+                        'status' => 'telat_submit',
+                        'update_data_time' => now(),
+                    ]);
+                } else {
+                    $taskResponse->update([
+                        'update_data_time' => now(),
+                        'status' => 'selesai',
+                    ]);
+                }
+
                 // Catatan: Task response untuk kontrak akan dibuat saat submit RAB
                 // (di method submit() setelah semua RAB type sudah ada)
                 // Jadi tidak perlu create di sini
@@ -644,12 +656,17 @@ class RabInternalController extends Controller
                 ->first();
 
             if ($taskResponse) {
-                $taskResponse->update([
-                    'update_data_time' => now(),
-                    'status' => 'selesai',
-                ]);
-
-                
+                if ($taskResponse->isOverdue()) {
+                    $taskResponse->update([
+                        'status' => 'telat_submit',
+                        'update_data_time' => now(),
+                    ]);
+                } else {
+                    $taskResponse->update([
+                        'update_data_time' => now(),
+                        'status' => 'selesai',
+                    ]);
+                }
             }
 
             DB::commit();
@@ -718,6 +735,19 @@ class RabInternalController extends Controller
                 'duration_actual' => 3,
                 'extend_time' => 0,
                 'status' => 'menunggu_response',
+            ]);
+
+            TaskResponse::create([
+                'order_id' => $order->id,
+                'user_id' => null,
+                'tahap' => 'kontrak',
+                'start_time' => now(),
+                'deadline' => now()->addDays(3), // Deadline untuk kontrak
+                'duration' => 3,
+                'duration_actual' => 3,
+                'extend_time' => 0,
+                'status' => 'menunggu_response',
+                'is_marketing' => true,
             ]);
         }
 

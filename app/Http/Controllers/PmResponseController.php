@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Moodboard;
+use App\Models\Order;
+use App\Models\Kontrak;
 use App\Models\Estimasi;
+use App\Models\Moodboard;
+use App\Models\GambarKerja;
+use App\Models\SurveyUlang;
+use App\Models\TaskResponse;
+use Illuminate\Http\Request;
 use App\Models\CommitmentFee;
 use App\Models\ItemPekerjaan;
-use App\Models\SurveyUlang;
-use App\Models\GambarKerja;
-use App\Models\Kontrak;
 use App\Models\SurveyResults;
-use App\Models\Order;
 
 class PmResponseController extends Controller
 {
@@ -36,12 +37,12 @@ class PmResponseController extends Controller
         \Log::info('Model: ' . get_class($model));
         \Log::info('Before update - response_time: ' . ($model->response_time ?? 'null'));
         \Log::info('Before update - pm_response_time: ' . ($model->pm_response_time ?? 'null'));
-        
+
         $model->update([
             'pm_response_time' => now(),
             'pm_response_by' => auth()->user()->name,
         ]);
-        
+
         $model->refresh();
         \Log::info('After update - response_time: ' . ($model->response_time ?? 'null'));
         \Log::info('After update - pm_response_time: ' . $model->pm_response_time);
@@ -51,39 +52,56 @@ class PmResponseController extends Controller
     // Survey Schedule (Order)
     public function surveySchedule($id)
     {
-        if ($check = $this->checkPm()) return $check;
-        
+        if ($check = $this->checkPm())
+            return $check;
+
         \Log::info('=== PM RESPONSE SURVEY SCHEDULE START ===');
         \Log::info('Order ID: ' . $id);
-        
+
         $order = Order::findOrFail($id);
-        
+
         $order->update([
             'pm_survey_response_time' => now(),
             'pm_survey_response_by' => auth()->user()->name,
         ]);
-        
+
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'survey')
+            ->where('is_marketing', true)
+            ->first();
+        if ($taskResponse) {
+            $taskResponse->update([
+                'response_time' => now(),
+                'status' => 'selesai',
+                'user_id' => auth()->user()->id,
+            ]);
+            \Log::info('Associated TaskResponse ID: ' . $taskResponse->id . ' response_time updated.');
+        } else {    
+            \Log::info('No associated TaskResponse found for Order ID: ' . $order->id);
+        }
+
         \Log::info('Survey Schedule PM Response recorded for Order ID: ' . $order->id);
         \Log::info('=== PM RESPONSE SURVEY SCHEDULE END ===');
-        
+
         return back()->with('success', 'PM Response berhasil dicatat untuk Survey Schedule.');
     }
 
-    // Moodboard
+    // Moodboard (Tahap Moodboard - setelah survey)
     public function moodboard($id)
     {
-        if ($check = $this->checkPm()) return $check;
-        
+        if ($check = $this->checkPm())
+            return $check;
+
         \Log::info('=== PM RESPONSE MOODBOARD START ===');
         \Log::info('ID received: ' . $id);
-        
+
         $moodboard = Moodboard::find($id);
-        
+
         if (!$moodboard) {
             \Log::info('Moodboard not found by ID, trying order_id');
             $moodboard = Moodboard::where('order_id', $id)->first();
         }
-        
+
         if (!$moodboard) {
             \Log::info('Moodboard not found, creating new with order_id: ' . $id);
             $moodboard = Moodboard::create([
@@ -95,76 +113,222 @@ class PmResponseController extends Controller
             \Log::info('Moodboard created with ID: ' . $moodboard->id);
             return back()->with('success', 'Moodboard dibuat dan PM Response berhasil dicatat.');
         }
-        
+
         \Log::info('Moodboard found, ID: ' . $moodboard->id . ', updating PM response');
         $this->recordResponse($moodboard);
+        $taskresponse = TaskResponse::where('order_id', $moodboard->order->id)
+            ->where('tahap', 'moodboard')
+            ->where('is_marketing', true)
+            ->first();
+        if ($taskresponse) {
+            $taskresponse->update([
+                'response_time' => now(),
+                'status' => 'selesai',
+                'user_id' => auth()->user()->id,
+            ]);
+            \Log::info('Associated TaskResponse ID: ' . $taskresponse->id . ' response_time updated.');
+        } else {
+            \Log::info('No associated TaskResponse found for Order ID: ' . $moodboard->order->id);
+        }
         \Log::info('=== PM RESPONSE MOODBOARD END ===');
         return back()->with('success', 'PM Response berhasil dicatat untuk Moodboard.');
+    }
+
+    // Desain Final (Tahap Desain Final - setelah commitment fee)
+    public function desainFinal($id)
+    {
+        if ($check = $this->checkPm())
+            return $check;
+
+        \Log::info('=== PM RESPONSE DESAIN FINAL START ===');
+        \Log::info('Moodboard ID: ' . $id);
+
+        $moodboard = Moodboard::findOrFail($id);
+        \Log::info('Moodboard found, ID: ' . $moodboard->id);
+
+        // Check if already has pm_response for desain final
+        if ($moodboard->pm_response_time) {
+            \Log::info('PM Response already exists for desain final');
+            return back()->with('info', 'PM Response sudah pernah dicatat untuk Desain Final.');
+        }
+
+        $this->recordResponse($moodboard);
+        
+        // Update task response marketing untuk desain_final
+        $taskresponse = TaskResponse::where('order_id', $moodboard->order->id)
+            ->where('tahap', 'desain_final')
+            ->where('is_marketing', true)
+            ->first();
+            
+        if ($taskresponse) {
+            $taskresponse->update([
+                'response_time' => now(),
+                'status' => 'selesai',
+                'user_id' => auth()->user()->id,
+            ]);
+            \Log::info('Associated TaskResponse ID: ' . $taskresponse->id . ' response_time updated.');
+        } else {
+            \Log::info('No associated TaskResponse found for Order ID: ' . $moodboard->order->id);
+        }
+        
+        \Log::info('=== PM RESPONSE DESAIN FINAL END ===');
+        return back()->with('success', 'PM Response berhasil dicatat untuk Desain Final.');
     }
 
     // Estimasi
     public function estimasi($id)
     {
-        if ($check = $this->checkPm()) return $check;
+        if ($check = $this->checkPm())
+            return $check;
         $this->recordResponse(Estimasi::findOrFail($id));
+        $taskresponse = TaskResponse::where('order_id', Estimasi::findOrFail($id)->moodboard->order->id)
+            ->where('tahap', 'estimasi')
+            ->where('is_marketing', true)
+            ->first();
+        if ($taskresponse) {
+            $taskresponse->update([
+                'response_time' => now(),
+                'status' => 'selesai',
+                'user_id' => auth()->user()->id,
+            ]);
+            \Log::info('Associated TaskResponse ID: ' . $taskresponse->id . ' response_time updated.');
+        } else {
+            \Log::info('No associated TaskResponse found for Order ID: ' . Estimasi::findOrFail($id)->moodboard->order->id);
+        }
         return back()->with('success', 'PM Response berhasil dicatat untuk Estimasi.');
     }
 
     // Commitment Fee
     public function commitmentFee($id)
     {
-        if ($check = $this->checkPm()) return $check;
+        if ($check = $this->checkPm())
+            return $check;
         $this->recordResponse(CommitmentFee::findOrFail($id));
+        $taskresponse = TaskResponse::where('order_id', CommitmentFee::findOrFail($id)->moodboard->order->id)
+            ->where('tahap', 'cm_fee')
+            ->where('is_marketing', true)
+            ->first();
+        if ($taskresponse) {
+            $taskresponse->update([
+                'response_time' => now(),
+                'status' => 'selesai',
+                'user_id' => auth()->user()->id,
+            ]);
+            \Log::info('Associated TaskResponse ID: ' . $taskresponse->id . ' response_time updated.');
+        } else {
+            \Log::info('No associated TaskResponse found for Order ID: ' . CommitmentFee::findOrFail($id)->moodboard->order->id);
+        }
         return back()->with('success', 'PM Response berhasil dicatat untuk Commitment Fee.');
     }
 
     // Item Pekerjaan
     public function itemPekerjaan($id)
     {
-        if ($check = $this->checkPm()) return $check;
+        if ($check = $this->checkPm())
+            return $check;
         $this->recordResponse(ItemPekerjaan::findOrFail($id));
+        $taskresponse = TaskResponse::where('order_id', ItemPekerjaan::findOrFail($id)->moodboard->order->id)
+            ->where('tahap', 'item_pekerjaan')
+            ->where('is_marketing', true)
+            ->first();
+        if ($taskresponse) {
+            $taskresponse->update([
+                'response_time' => now(),
+                'status' => 'selesai',
+                'user_id' => auth()->user()->id,
+            ]);
+            \Log::info('Associated TaskResponse ID: ' . $taskresponse->id . ' response_time updated.');
+        } else {
+            \Log::info('No associated TaskResponse found for Order ID: ' . ItemPekerjaan::findOrFail($id)->moodboard->order->id);
+        }
         return back()->with('success', 'PM Response berhasil dicatat untuk Item Pekerjaan.');
     }
 
     // Survey Ulang
     public function surveyUlang($id)
     {
-        if ($check = $this->checkPm()) return $check;
+        if ($check = $this->checkPm())
+            return $check;
         $this->recordResponse(SurveyUlang::findOrFail($id));
+        $taskresponse = TaskResponse::where('order_id', SurveyUlang::findOrFail($id)->order->id)
+            ->where('tahap', 'survey_ulang')
+            ->where('is_marketing', true)
+            ->first();
+        if ($taskresponse) {
+            $taskresponse->update([
+                'response_time' => now(),
+                'status' => 'selesai',
+                'user_id' => auth()->user()->id,
+            ]);
+            \Log::info('Associated TaskResponse ID: ' . $taskresponse->id . ' response_time updated.');
+        } else {
+            \Log::info('No associated TaskResponse found for Order ID: ' . SurveyUlang::findOrFail($id)->order->id);
+        }
         return back()->with('success', 'PM Response berhasil dicatat untuk Survey Ulang.');
     }
 
     // Gambar Kerja
     public function gambarKerja($id)
     {
-        if ($check = $this->checkPm()) return $check;
+        if ($check = $this->checkPm())
+            return $check;
         $this->recordResponse(GambarKerja::findOrFail($id));
+        $taskresponse = TaskResponse::where('order_id', GambarKerja::findOrFail($id)->order->id)
+            ->where('tahap', 'gambar_kerja')
+            ->where('is_marketing', true)
+            ->first();
+        if ($taskresponse) {
+            $taskresponse->update([
+                'response_time' => now(),
+                'status' => 'selesai',
+                'user_id' => auth()->user()->id,
+            ]);
+            \Log::info('Associated TaskResponse ID: ' . $taskresponse->id . ' response_time updated.');
+        } else {
+            \Log::info('No associated TaskResponse found for Order ID: ' . GambarKerja::findOrFail($id)->order->id);
+        }
         return back()->with('success', 'PM Response berhasil dicatat untuk Gambar Kerja.');
     }
 
     // Kontrak
     public function kontrak($id)
     {
-        if ($check = $this->checkPm()) return $check;
+        if ($check = $this->checkPm())
+            return $check;
         $this->recordResponse(Kontrak::findOrFail($id));
+        $taskResponse = TaskResponse::where('order_id', Kontrak::findOrFail($id)->itemPekerjaan->moodboard->order->id)
+            ->where('tahap', 'kontrak')
+            ->where('is_marketing', true)
+            ->first();
+        if ($taskResponse) {
+            $taskResponse->update([
+                'response_time' => now(),
+                'status' => 'selesai',
+                'user_id' => auth()->user()->id,
+            ]);
+            \Log::info('Associated TaskResponse ID: ' . $taskResponse->id . ' response_time updated.');
+        } else {
+            \Log::info('No associated TaskResponse found for Order ID: ' . Kontrak::findOrFail($id)->itemPekerjaan->moodboard->order->id);
+        }
         return back()->with('success', 'PM Response berhasil dicatat untuk Kontrak.');
     }
 
     // Survey Result
     public function surveyResult($id)
     {
-        if ($check = $this->checkPm()) return $check;
-        
+        if ($check = $this->checkPm())
+            return $check;
+
         \Log::info('=== PM RESPONSE SURVEY RESULT START ===');
         \Log::info('ID received: ' . $id);
-        
+
         $surveyResult = SurveyResults::find($id);
-        
+
         if (!$surveyResult) {
             \Log::info('Survey Result not found by ID, trying order_id');
             $surveyResult = SurveyResults::where('order_id', $id)->first();
         }
-        
+
         if (!$surveyResult) {
             \Log::info('Survey Result not found, creating new with order_id: ' . $id);
             $surveyResult = SurveyResults::create([
@@ -175,32 +339,47 @@ class PmResponseController extends Controller
             \Log::info('Survey Result created with ID: ' . $surveyResult->id);
             return back()->with('success', 'Survey Result dibuat dan Marketing Response berhasil dicatat.');
         }
-        
+
         \Log::info('Survey Result found, ID: ' . $surveyResult->id . ', updating Marketing response');
         $this->recordResponse($surveyResult);
         \Log::info('=== PM RESPONSE SURVEY RESULT END ===');
+        $taskResponse = TaskResponse::where('order_id', $surveyResult->order->id)
+            ->where('tahap', 'survey')
+            ->where('is_marketing', true)
+            ->first();
+        if ($taskResponse) {
+            $taskResponse->update([
+                'response_time' => now(),
+                'status' => 'selesai',
+                'user_id' => auth()->user()->id,
+            ]);
+            \Log::info('Associated TaskResponse ID: ' . $taskResponse->id . ' response_time updated.');
+        } else {
+            \Log::info('No associated TaskResponse found for Order ID: ' . $surveyResult->order->id);
+        }
         return back()->with('success', 'Marketing Response berhasil dicatat untuk Survey Result.');
     }
-
+    
     // Workplan
     public function workplan($orderId)
     {
-        if ($check = $this->checkPm()) return $check;
-        
-        $order = \App\Models\Order::with('moodboard.itemPekerjaans.produks.workplanItems')->findOrFail($orderId);
-        
+        if ($check = $this->checkPm())
+            return $check;
+
+        $order = Order::with('moodboard.itemPekerjaans.produks.workplanItems')->findOrFail($orderId);
+
         $workplanItems = $order->moodboard
             ->itemPekerjaans
             ->flatMap(fn($ip) => $ip->produks)
             ->flatMap(fn($produk) => $produk->workplanItems);
-        
+
         foreach ($workplanItems as $item) {
             $item->update([
                 'pm_response_time' => now(),
                 'pm_response_by' => auth()->user()->name,
             ]);
         }
-        
+
         return back()->with('success', 'PM Response berhasil dicatat untuk Workplan.');
     }
 }

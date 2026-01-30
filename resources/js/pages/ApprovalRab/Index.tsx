@@ -37,8 +37,22 @@ interface Props {
 export default function ApprovalRabIndex({ items }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [search, setSearch] = useState('');
-    const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
-    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+    // Dual task response state
+    const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: any; marketing?: any }>>({});
+    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: any } | null>(null);
+    // Kepala Marketing
+    const isKepalaMarketing = (window as any)?.Inertia?.page?.props?.auth?.user?.isKepalaMarketing || false;
+
+    const formatDeadline = (value: string | null | undefined) => {
+        if (value == null || value === '') return '-';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '-';
+        return d.toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+        });
+    };
 
     useEffect(() => {
         const resize = () => setSidebarOpen(window.innerWidth >= 1024);
@@ -46,21 +60,45 @@ export default function ApprovalRabIndex({ items }: Props) {
         return () => window.removeEventListener('resize', resize);
     }, []);
 
-    // Fetch task response untuk semua approval material (tahap: approval_material)
+    // Fetch dual task responses (regular & marketing)
     useEffect(() => {
         items.forEach((row) => {
             const orderId = row.order_id;
             if (orderId) {
+                // Regular
                 axios
                     .get(`/task-response/${orderId}/approval_material`)
                     .then((res) => {
-                        if (res.data) {
-                            setTaskResponses((prev) => ({ ...prev, [orderId]: res.data }));
-                        }
+                        const task = Array.isArray(res.data) ? res.data[0] : res.data;
+                        setTaskResponses((prev) => ({
+                            ...prev,
+                            [orderId]: {
+                                ...prev[orderId],
+                                regular: task ?? null,
+                            },
+                        }));
                     })
                     .catch((err) => {
                         if (err.response?.status !== 404) {
-                            console.error('Error fetching task response (approval_material):', err);
+                            console.error('Error fetching regular task response (approval_material):', err);
+                        }
+                    });
+                // Marketing
+                axios
+                    .get(`/task-response/${orderId}/approval_material?is_marketing=1`)
+                    .then((res) => {
+                        const task = Array.isArray(res.data) ? res.data[0] : res.data;
+                        setTaskResponses((prev) => ({
+                            ...prev,
+                            [orderId]: {
+                                ...prev[orderId],
+                                marketing: task ?? null,
+                            },
+                        }));
+                    })
+                    .catch((err) => {
+                        if (err.response?.status !== 404) {
+                            console.error('Error fetching marketing task response (approval_material):', err);
                         }
                     });
             }
@@ -125,7 +163,8 @@ export default function ApprovalRabIndex({ items }: Props) {
                         ) : (
                             filtered.map((row) => {
                                 const orderId = row.order_id;
-                                const taskResponse = orderId ? taskResponses[orderId] : null;
+                                const taskResponse = orderId ? taskResponses[orderId]?.regular : null;
+                                const marketingTaskResponse = orderId ? taskResponses[orderId]?.marketing : null;
 
                                 return (
                                 <div
@@ -145,7 +184,7 @@ export default function ApprovalRabIndex({ items }: Props) {
                                                 <strong>Customer:</strong> {row.customer_name}
                                             </p>
 
-                                            {/* Deadline & Extend Button */}
+                                            {/* Deadline & Minta Perpanjangan - REGULAR */}
                                             {taskResponse && taskResponse.status !== 'selesai' && (
                                                 <div className="mt-3">
                                                     <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between gap-3">
@@ -154,11 +193,7 @@ export default function ApprovalRabIndex({ items }: Props) {
                                                                 Deadline Approval Material
                                                             </p>
                                                             <p className="text-sm font-semibold text-yellow-900">
-                                                                {new Date(taskResponse.deadline).toLocaleDateString('id-ID', {
-                                                                    day: 'numeric',
-                                                                    month: 'long',
-                                                                    year: 'numeric',
-                                                                })}
+                                                                {formatDeadline(taskResponse.deadline)}
                                                             </p>
                                                             {taskResponse.extend_time > 0 && (
                                                                 <p className="mt-1 text-xs text-orange-600">
@@ -167,10 +202,36 @@ export default function ApprovalRabIndex({ items }: Props) {
                                                             )}
                                                         </div>
                                                         <button
-                                                            onClick={() => orderId && setShowExtendModal({ orderId, tahap: 'approval_material' })}
+                                                            onClick={() => orderId && setShowExtendModal({ orderId, tahap: 'approval_material', isMarketing: false, taskResponse })}
                                                             className="px-3 py-1.5 bg-orange-500 text-white rounded-md text-xs font-medium hover:bg-orange-600 transition-colors"
                                                         >
                                                             Minta Perpanjangan
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {/* Deadline & Minta Perpanjangan - MARKETING (Kepala Marketing only) */}
+                                            {isKepalaMarketing && marketingTaskResponse && marketingTaskResponse.status !== 'selesai' && (
+                                                <div className="mt-3">
+                                                    <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg flex items-center justify-between gap-3">
+                                                        <div>
+                                                            <p className="text-xs font-medium text-purple-800">
+                                                                Deadline Approval Material (Marketing)
+                                                            </p>
+                                                            <p className="text-sm font-semibold text-purple-900">
+                                                                {formatDeadline(marketingTaskResponse.deadline)}
+                                                            </p>
+                                                            {marketingTaskResponse.extend_time > 0 && (
+                                                                <p className="mt-1 text-xs text-purple-600">
+                                                                    Perpanjangan: {marketingTaskResponse.extend_time}x
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <button
+                                                            onClick={() => orderId && setShowExtendModal({ orderId, tahap: 'approval_material', isMarketing: true, taskResponse: marketingTaskResponse })}
+                                                            className="px-3 py-1.5 bg-purple-500 text-white rounded-md text-xs font-medium hover:bg-purple-600 transition-colors"
+                                                        >
+                                                            Minta Perpanjangan (Marketing)
                                                         </button>
                                                     </div>
                                                 </div>
@@ -276,6 +337,8 @@ export default function ApprovalRabIndex({ items }: Props) {
                 <ExtendModal
                     orderId={showExtendModal.orderId}
                     tahap={showExtendModal.tahap}
+                    taskResponse={showExtendModal.taskResponse}
+                    isMarketing={showExtendModal.isMarketing}
                     onClose={() => setShowExtendModal(null)}
                 />
             )}

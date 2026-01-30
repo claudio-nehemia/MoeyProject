@@ -86,8 +86,9 @@ export default function Index({ itemPekerjaans }: Props) {
                 axios
                     .get(`/task-response/${orderId}/invoice`)
                     .then((res) => {
-                        if (res.data) {
-                            setTaskResponses((prev) => ({ ...prev, [orderId]: res.data }));
+                        const task = Array.isArray(res.data) ? res.data[0] : res.data;
+                        if (task) {
+                            setTaskResponses((prev) => ({ ...prev, [orderId]: task }));
                         }
                     })
                     .catch((err) => {
@@ -164,6 +165,17 @@ export default function Index({ itemPekerjaans }: Props) {
             currency: 'IDR',
             minimumFractionDigits: 0,
         }).format(amount);
+    };
+
+    const formatDeadline = (value: string | null | undefined) => {
+        if (value == null || value === '') return '-';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '-';
+        return d.toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+        });
     };
 
     const getStepStatusBadge = (step: StepInfo) => {
@@ -436,8 +448,10 @@ export default function Index({ itemPekerjaans }: Props) {
                                                 </div>
                                             </div>
 
-                                            {/* Task Response Deadline & Extend Button */}
-                                            {taskResponse && taskResponse.status !== 'selesai' && (
+                                            {/* Task Response Deadline & Minta Perpanjangan - hanya setelah response */}
+                                            {taskResponse &&
+                                                taskResponse.status !== 'selesai' &&
+                                                (
                                                 <div className="mt-4 mb-4 p-3 rounded-lg border border-amber-200 bg-amber-50">
                                                     <div className="flex items-center justify-between gap-3">
                                                         <div>
@@ -445,11 +459,7 @@ export default function Index({ itemPekerjaans }: Props) {
                                                                 Deadline Invoice
                                                             </p>
                                                             <p className="text-sm font-semibold text-amber-900">
-                                                                {new Date(taskResponse.deadline).toLocaleDateString('id-ID', {
-                                                                    day: 'numeric',
-                                                                    month: 'long',
-                                                                    year: 'numeric',
-                                                                })}
+                                                                {formatDeadline(taskResponse.deadline)}
                                                             </p>
                                                             {taskResponse.extend_time > 0 && (
                                                                 <p className="mt-1 text-xs text-orange-600">
@@ -657,6 +667,8 @@ export default function Index({ itemPekerjaans }: Props) {
                 <ExtendModal
                     orderId={showExtendModal.orderId}
                     tahap={showExtendModal.tahap}
+                    taskResponse={taskResponses[showExtendModal.orderId]}
+                    isMarketing={false}
                     onClose={() => setShowExtendModal(null)}
                 />
             )}

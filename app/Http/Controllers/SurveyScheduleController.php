@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Order;
 use App\Models\User;
-use App\Services\NotificationService;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Models\Order;
+use App\Models\TaskResponse;
+use Illuminate\Http\Request;
+use App\Services\NotificationService;
 
 class SurveyScheduleController extends Controller
 {
@@ -77,10 +78,17 @@ class SurveyScheduleController extends Controller
             ->first();
 
         if ($taskResponse) {
-            $taskResponse->update([
-                'update_data_time' => now(), // Kapan data diisi
-                'status' => 'selesai',
-            ]);
+            if ($taskResponse->isOverdue()) {
+                $taskResponse->update([
+                    'status' => 'telat_submit',
+                    'update_data_time' => now(),
+                ]);
+            } else {
+                $taskResponse->update([
+                    'update_data_time' => now(),
+                    'status' => 'selesai',
+                ]);
+            }
 
             // Create task response untuk tahap selanjutnya (survey_ulang)
             $nextTaskExists = \App\Models\TaskResponse::where('order_id', $order->id)
@@ -88,7 +96,7 @@ class SurveyScheduleController extends Controller
                 ->exists();
 
             if (!$nextTaskExists) {
-                \App\Models\TaskResponse::create([
+                TaskResponse::create([
                     'order_id' => $order->id,
                     'user_id' => null,
                     'tahap' => 'survey_ulang',
@@ -98,6 +106,19 @@ class SurveyScheduleController extends Controller
                     'duration_actual' => 3,
                     'extend_time' => 0,
                     'status' => 'menunggu_response',
+                ]);
+
+                TaskResponse::create([
+                    'order_id' => $order->id,
+                    'user_id' => null,
+                    'tahap' => 'survey_ulang',
+                    'start_time' => now(),
+                    'deadline' => now()->addDays(3), // Deadline untuk survey_ulang
+                    'duration' => 3,
+                    'duration_actual' => 3,
+                    'extend_time' => 0,
+                    'status' => 'menunggu_response',
+                    'is_marketing' => true,
                 ]);
             }
         }
@@ -129,6 +150,11 @@ class SurveyScheduleController extends Controller
                 'duration' => 6,
                 'duration_actual' => $taskResponse->duration_actual,
                 'status' => 'menunggu_input',
+            ]);
+        } elseif ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
             ]);
         }
 

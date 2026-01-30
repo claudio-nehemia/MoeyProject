@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\TaskResponse;
-use App\Models\Order;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Models\Order;
+use App\Models\TaskResponse;
+use Illuminate\Http\Request;
+use App\Models\TaskResponseExtendLog;
 
 class LogController extends Controller
 {
@@ -82,6 +83,7 @@ class LogController extends Controller
             'menunggu_input' => 'Menunggu Input',
             'selesai' => 'Selesai',
             'telat' => 'Telat',
+            'telat_submit' => 'Telat Submit',
         ];
 
         return Inertia::render('Log/Index', [
@@ -169,6 +171,46 @@ class LogController extends Controller
         return Inertia::render('Log/ByOrder', [
             'order' => $order,
             'taskResponses' => $taskResponses,
+        ]);
+    }
+
+    /**
+     * Halaman log perpanjangan (extend) untuk suatu task response.
+     * Diakses per baris dari halaman Log Index.
+     */
+    public function extendLog($taskResponseId)
+    {
+        $taskResponse = TaskResponse::with(['order', 'user.role'])
+            ->findOrFail($taskResponseId);
+
+        $extendLogs = TaskResponseExtendLog::with('user')
+            ->where('task_response_id', $taskResponseId)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $tahapOptions = [
+            'survey' => 'Survey',
+            'moodboard' => 'Moodboard',
+            'estimasi' => 'Estimasi',
+            'cm_fee' => 'Commitment Fee',
+            'approval_design' => 'Approval Design',
+            'desain_final' => 'Desain Final',
+            'item_pekerjaan' => 'Item Pekerjaan',
+            'rab_internal' => 'RAB Internal',
+            'kontrak' => 'Kontrak',
+            'invoice' => 'Invoice',
+            'survey_schedule' => 'Survey Schedule',
+            'survey_ulang' => 'Survey Ulang',
+            'gambar_kerja' => 'Gambar Kerja',
+            'approval_material' => 'Approval Material',
+            'workplan' => 'Workplan',
+            'produksi' => 'Produksi',
+        ];
+
+        return Inertia::render('Log/ExtendLog', [
+            'taskResponse' => $taskResponse,
+            'extendLogs' => $extendLogs,
+            'tahapOptions' => $tahapOptions,
         ]);
     }
 }

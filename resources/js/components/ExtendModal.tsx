@@ -1,16 +1,27 @@
-import React, { useState } from 'react';
 import { router } from '@inertiajs/react';
+import React, { useState } from 'react';
 
 interface ExtendModalProps {
     orderId: number;
     tahap: string;
+    taskResponse: any; // Tambah ini
+    isMarketing: boolean; // Tambah ini
     onClose: () => void;
 }
 
-export default function ExtendModal({ orderId, tahap, onClose }: ExtendModalProps) {
+export default function ExtendModal({
+    orderId,
+    tahap,
+    taskResponse,
+    isMarketing,
+    onClose,
+    refetchTaskResponses,
+}: ExtendModalProps & { refetchTaskResponses?: () => void }) {
     const [days, setDays] = useState<number>(1);
     const [reason, setReason] = useState<string>('');
-    const [errors, setErrors] = useState<{ days?: string; reason?: string }>({});
+    const [errors, setErrors] = useState<{ days?: string; reason?: string }>(
+        {},
+    );
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const tahapNames: Record<string, string> = {
@@ -23,7 +34,7 @@ export default function ExtendModal({ orderId, tahap, onClose }: ExtendModalProp
         item_pekerjaan: 'Item Pekerjaan',
         rab_internal: 'RAB Internal',
         kontrak: 'Kontrak',
-        invoice: 'Invoice', 
+        invoice: 'Invoice',
         survey_schedule: 'Survey Schedule',
         survey_ulang: 'Survey Ulang',
         gambar_kerja: 'Gambar Kerja',
@@ -34,20 +45,19 @@ export default function ExtendModal({ orderId, tahap, onClose }: ExtendModalProp
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
-        // Validation
+
         const newErrors: { days?: string; reason?: string } = {};
-        
+
         if (!days || days < 1 || days > 30) {
             newErrors.days = 'Hari harus antara 1-30 hari';
         }
-        
+
         if (!reason.trim()) {
             newErrors.reason = 'Alasan perpanjangan wajib diisi';
         } else if (reason.trim().length < 10) {
             newErrors.reason = 'Alasan minimal 10 karakter';
         }
-        
+
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
             return;
@@ -56,19 +66,18 @@ export default function ExtendModal({ orderId, tahap, onClose }: ExtendModalProp
         setIsSubmitting(true);
         setErrors({});
 
-        // Submit form
         router.post(
             `/task-response/${orderId}/${tahap}/extend`,
             {
                 days,
                 reason: reason.trim(),
+                is_marketing: isMarketing,
             },
             {
                 preserveScroll: true,
                 onSuccess: () => {
+                    if (refetchTaskResponses) refetchTaskResponses();
                     onClose();
-                    // Reload page untuk update data
-                    router.reload({ only: ['taskResponse'] });
                 },
                 onError: (errors) => {
                     setErrors(errors as any);
@@ -77,32 +86,32 @@ export default function ExtendModal({ orderId, tahap, onClose }: ExtendModalProp
                 onFinish: () => {
                     setIsSubmitting(false);
                 },
-            }
+            },
         );
     };
 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto">
             {/* Backdrop */}
-            <div 
-                className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+            <div
+                className="bg-opacity-50 fixed inset-0 bg-black transition-opacity"
                 onClick={onClose}
             />
 
             {/* Modal */}
             <div className="flex min-h-full items-center justify-center p-4">
-                <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div className="relative w-full max-w-md rounded-lg bg-white shadow-xl">
                     {/* Header */}
-                    <div className="flex items-center justify-between p-6 border-b">
+                    <div className="flex items-center justify-between border-b p-6">
                         <h3 className="text-lg font-semibold text-gray-900">
                             Minta Perpanjangan - {tahapNames[tahap] || tahap}
                         </h3>
                         <button
                             onClick={onClose}
-                            className="text-gray-400 hover:text-gray-500 transition-colors"
+                            className="text-gray-400 transition-colors hover:text-gray-500"
                         >
                             <svg
-                                className="w-6 h-6"
+                                className="h-6 w-6"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -124,9 +133,10 @@ export default function ExtendModal({ orderId, tahap, onClose }: ExtendModalProp
                             <div>
                                 <label
                                     htmlFor="days"
-                                    className="block text-sm font-medium text-gray-700 mb-1"
+                                    className="mb-1 block text-sm font-medium text-gray-700"
                                 >
-                                    Tambah Hari <span className="text-red-500">*</span>
+                                    Tambah Hari{' '}
+                                    <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="number"
@@ -135,20 +145,30 @@ export default function ExtendModal({ orderId, tahap, onClose }: ExtendModalProp
                                     max="30"
                                     value={days}
                                     onChange={(e) => {
-                                        const value = parseInt(e.target.value) || 1;
-                                        setDays(Math.max(1, Math.min(30, value)));
+                                        const value =
+                                            parseInt(e.target.value) || 1;
+                                        setDays(
+                                            Math.max(1, Math.min(30, value)),
+                                        );
                                         if (errors.days) {
-                                            setErrors({ ...errors, days: undefined });
+                                            setErrors({
+                                                ...errors,
+                                                days: undefined,
+                                            });
                                         }
                                     }}
-                                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                                        errors.days ? 'border-red-500' : 'border-gray-300'
+                                    className={`w-full rounded-md border px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
+                                        errors.days
+                                            ? 'border-red-500'
+                                            : 'border-gray-300'
                                     }`}
                                     placeholder="Masukkan jumlah hari (1-30)"
                                     disabled={isSubmitting}
                                 />
                                 {errors.days && (
-                                    <p className="mt-1 text-sm text-red-600">{errors.days}</p>
+                                    <p className="mt-1 text-sm text-red-600">
+                                        {errors.days}
+                                    </p>
                                 )}
                                 <p className="mt-1 text-xs text-gray-500">
                                     Maksimal 30 hari per perpanjangan
@@ -159,9 +179,10 @@ export default function ExtendModal({ orderId, tahap, onClose }: ExtendModalProp
                             <div>
                                 <label
                                     htmlFor="reason"
-                                    className="block text-sm font-medium text-gray-700 mb-1"
+                                    className="mb-1 block text-sm font-medium text-gray-700"
                                 >
-                                    Alasan Perpanjangan <span className="text-red-500">*</span>
+                                    Alasan Perpanjangan{' '}
+                                    <span className="text-red-500">*</span>
                                 </label>
                                 <textarea
                                     id="reason"
@@ -170,17 +191,24 @@ export default function ExtendModal({ orderId, tahap, onClose }: ExtendModalProp
                                     onChange={(e) => {
                                         setReason(e.target.value);
                                         if (errors.reason) {
-                                            setErrors({ ...errors, reason: undefined });
+                                            setErrors({
+                                                ...errors,
+                                                reason: undefined,
+                                            });
                                         }
                                     }}
-                                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                                        errors.reason ? 'border-red-500' : 'border-gray-300'
+                                    className={`w-full rounded-md border px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
+                                        errors.reason
+                                            ? 'border-red-500'
+                                            : 'border-gray-300'
                                     }`}
                                     placeholder="Jelaskan alasan mengapa perlu perpanjangan deadline..."
                                     disabled={isSubmitting}
                                 />
                                 {errors.reason && (
-                                    <p className="mt-1 text-sm text-red-600">{errors.reason}</p>
+                                    <p className="mt-1 text-sm text-red-600">
+                                        {errors.reason}
+                                    </p>
                                 )}
                                 <p className="mt-1 text-xs text-gray-500">
                                     Minimal 10 karakter. {reason.length}/500
@@ -194,18 +222,20 @@ export default function ExtendModal({ orderId, tahap, onClose }: ExtendModalProp
                                 type="button"
                                 onClick={onClose}
                                 disabled={isSubmitting}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Batal
                             </button>
                             <button
                                 type="submit"
-                                disabled={isSubmitting || !reason.trim() || days < 1}
-                                className="px-4 py-2 text-sm font-medium text-white bg-orange-600 border border-transparent rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                disabled={
+                                    isSubmitting || !reason.trim() || days < 1
+                                }
+                                className="flex items-center gap-2 rounded-md border border-transparent bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 {isSubmitting && (
                                     <svg
-                                        className="animate-spin h-4 w-4 text-white"
+                                        className="h-4 w-4 animate-spin text-white"
                                         xmlns="http://www.w3.org/2000/svg"
                                         fill="none"
                                         viewBox="0 0 24 24"
@@ -225,7 +255,9 @@ export default function ExtendModal({ orderId, tahap, onClose }: ExtendModalProp
                                         />
                                     </svg>
                                 )}
-                                {isSubmitting ? 'Mengirim...' : 'Ajukan Perpanjangan'}
+                                {isSubmitting
+                                    ? 'Mengirim...'
+                                    : 'Ajukan Perpanjangan'}
                             </button>
                         </div>
                     </form>

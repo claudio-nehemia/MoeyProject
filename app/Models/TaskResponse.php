@@ -14,12 +14,14 @@ class TaskResponse extends Model
         'start_time',
         'response_time',
         'update_data_time',
+        'notif_time',
         'deadline',
         'duration',
         'duration_actual',
         'extend_time',
         'extend_reason',
         'status',
+        'is_marketing',
     ];
 
     protected $casts = [
@@ -40,11 +42,13 @@ class TaskResponse extends Model
     }
 
     /**
-     * Cek apakah sudah lewat deadline
+     * Cek apakah sudah lewat deadline (dan belum selesai / belum submit).
+     * telat_submit = sudah submit terlambat, tidak dianggap "masih overdue".
      */
     public function isOverdue(): bool
     {
-        return $this->deadline < now() && $this->status !== 'selesai';
+        return $this->deadline < now()
+            && !in_array($this->status, ['selesai', 'telat_submit'], true);
     }
 
     /**

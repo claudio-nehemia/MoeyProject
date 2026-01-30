@@ -129,6 +129,17 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props)
     });
   };
 
+  const formatDeadline = (value: string | null | undefined) => {
+    if (value == null || value === '') return '-';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '-';
+    return d.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  };
+
   if (!mounted) return null;
 
   return (
@@ -220,8 +231,10 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props)
                       )}
                     </div>
 
-                    {/* Deadline & Extend Button */}
-                    {taskResponse && taskResponse.status !== 'selesai' && (
+                    {/* Deadline & Minta Perpanjangan - hanya setelah response */}
+                    {taskResponse &&
+                      taskResponse.status !== 'selesai' &&
+                      (
                       <div className="mb-3">
                         <div className="p-3 rounded border border-yellow-200 bg-yellow-50 flex items-center justify-between gap-3">
                           <div>
@@ -229,11 +242,7 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props)
                               Deadline Survey Schedule
                             </p>
                             <p className="text-sm font-semibold text-yellow-900">
-                              {new Date(taskResponse.deadline).toLocaleDateString('id-ID', {
-                                day: 'numeric',
-                                month: 'long',
-                                year: 'numeric',
-                              })}
+                              {formatDeadline(taskResponse.deadline)}
                             </p>
                             {taskResponse.extend_time > 0 && (
                               <p className="mt-1 text-xs text-orange-600">

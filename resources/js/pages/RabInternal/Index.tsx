@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { usePage } from '@inertiajs/react';
 import { router, Link, Head } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
@@ -35,13 +36,17 @@ interface TaskResponse {
     deadline: string;
     order_id: number;
     tahap: string;
+    extend_time?: number;
+    is_marketing?: number;
 }
-
-export default function Index({ itemPekerjaans }: Props) {
+function Index({ itemPekerjaans }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [activeTab, setActiveTab] = useState<'internal' | 'kontrak'>('internal');
-    const [taskResponses, setTaskResponses] = useState<Record<number, TaskResponse>>({});
-    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+    // Dual task response state
+    const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: TaskResponse; marketing?: TaskResponse }>>({});
+    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: TaskResponse } | null>(null);
+    const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
+    const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
 
     useEffect(() => {
         const handleResize = () => {
@@ -51,16 +56,45 @@ export default function Index({ itemPekerjaans }: Props) {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // Fetch task response untuk semua item pekerjaan
+    // Fetch dual task response (regular & marketing) untuk semua item pekerjaan
     useEffect(() => {
-        itemPekerjaans.forEach(itemPekerjaan => {
+        (itemPekerjaans as ItemPekerjaan[]).forEach((itemPekerjaan: ItemPekerjaan) => {
             const orderId = itemPekerjaan.order?.id;
             if (orderId) {
+                // Regular
                 axios.get(`/task-response/${orderId}/rab_internal`)
                     .then(res => {
-                        setTaskResponses(prev => ({ ...prev, [orderId]: res.data }));
+                        const task = Array.isArray(res.data) ? res.data[0] : res.data;
+                        setTaskResponses(prev => ({
+                            ...prev,
+                            [orderId]: {
+                                ...prev[orderId],
+                                regular: task ?? null,
+                            },
+                        }));
                     })
-                    .catch(err => console.error('Error fetching task response:', err));
+                    .catch(err => {
+                        if (err.response?.status !== 404) {
+                            console.error('Error fetching regular task response (rab_internal):', err);
+                        }
+                    });
+                // Marketing
+                axios.get(`/task-response/${orderId}/rab_internal?is_marketing=1`)
+                    .then(res => {
+                        const task = Array.isArray(res.data) ? res.data[0] : res.data;
+                        setTaskResponses(prev => ({
+                            ...prev,
+                            [orderId]: {
+                                ...prev[orderId],
+                                marketing: task ?? null,
+                            },
+                        }));
+                    })
+                    .catch(err => {
+                        if (err.response?.status !== 404) {
+                            console.error('Error fetching marketing task response (rab_internal):', err);
+                        }
+                    });
             }
         });
     }, [itemPekerjaans]);
@@ -86,9 +120,17 @@ export default function Index({ itemPekerjaans }: Props) {
     const calculateDaysLeft = (deadline: string) => {
         const now = new Date();
         const deadlineDate = new Date(deadline);
+        if (Number.isNaN(deadlineDate.getTime())) return null;
         const diffTime = deadlineDate.getTime() - now.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         return diffDays;
+    };
+
+    const formatDeadline = (value: string | null | undefined) => {
+        if (value == null || value === '') return '-';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '-';
+        return d.toLocaleDateString('id-ID');
     };
 
     return (
@@ -177,10 +219,12 @@ export default function Index({ itemPekerjaans }: Props) {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
-                                            {itemPekerjaans.map((itemPekerjaan) => {
+                                            {(itemPekerjaans as ItemPekerjaan[]).map((itemPekerjaan: ItemPekerjaan) => {
                                                 const orderId = itemPekerjaan.order?.id;
-                                                const taskResponse = orderId ? taskResponses[orderId] : null;
-                                                const daysLeft = taskResponse?.deadline ? calculateDaysLeft(taskResponse.deadline) : null;
+                                                const taskResponseRegular = orderId ? taskResponses[orderId]?.regular : null;
+                                                const taskResponseMarketing = orderId ? taskResponses[orderId]?.marketing : null;
+                                                const daysLeftRegular = taskResponseRegular?.deadline ? calculateDaysLeft(taskResponseRegular.deadline) : null;
+                                                const daysLeftMarketing = taskResponseMarketing?.deadline ? calculateDaysLeft(taskResponseMarketing.deadline) : null;
 
                                                 return (
                                                     <tr key={itemPekerjaan.id}>
@@ -189,55 +233,85 @@ export default function Index({ itemPekerjaans }: Props) {
                                                                 <div className="whitespace-nowrap">
                                                                     {itemPekerjaan.order.nama_project}
                                                                 </div>
-                                                                {/* Task Response Deadline */}
-                                                                {taskResponse && taskResponse.status !== 'selesai' && (
+                                                                {/* Task Response Deadline - REGULAR */}
+                                                                {taskResponseRegular && taskResponseRegular.status !== 'selesai' && (
                                                                     <div className="mt-2">
                                                                         <div className={`p-2 rounded border text-xs ${
-                                                                            daysLeft !== null && daysLeft < 0 
+                                                                            daysLeftRegular !== null && daysLeftRegular < 0 
                                                                                 ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800' 
-                                                                                : daysLeft !== null && daysLeft <= 3
+                                                                                : daysLeftRegular !== null && daysLeftRegular <= 3
                                                                                 ? 'bg-orange-50 border-orange-200 dark:bg-orange-900/20 dark:border-orange-800'
                                                                                 : 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
                                                                         }`}>
                                                                             <div className="flex justify-between items-center gap-2">
                                                                                 <div className="min-w-0">
                                                                                     <p className={`font-semibold mb-0.5 ${
-                                                                                        daysLeft !== null && daysLeft < 0
+                                                                                        daysLeftRegular !== null && daysLeftRegular < 0
                                                                                             ? 'text-red-900 dark:text-red-300'
-                                                                                            : daysLeft !== null && daysLeft <= 3
+                                                                                            : daysLeftRegular !== null && daysLeftRegular <= 3
                                                                                             ? 'text-orange-900 dark:text-orange-300'
                                                                                             : 'text-yellow-900 dark:text-yellow-300'
                                                                                     }`}>
-                                                                                        {daysLeft !== null && daysLeft < 0 ? '⚠️ Terlewat' : '⏰ Deadline'}
+                                                                                        {daysLeftRegular !== null && daysLeftRegular < 0 ? '⚠️ Terlewat' : '⏰ Deadline'}
                                                                                     </p>
                                                                                     <p className={`${
-                                                                                        daysLeft !== null && daysLeft < 0
+                                                                                        daysLeftRegular !== null && daysLeftRegular < 0
                                                                                             ? 'text-red-700 dark:text-red-400'
-                                                                                            : daysLeft !== null && daysLeft <= 3
+                                                                                            : daysLeftRegular !== null && daysLeftRegular <= 3
                                                                                             ? 'text-orange-700 dark:text-orange-400'
                                                                                             : 'text-yellow-700 dark:text-yellow-400'
                                                                                     }`}>
-                                                                                        {new Date(taskResponse.deadline).toLocaleDateString('id-ID')}
+                                                                                        {formatDeadline(taskResponseRegular.deadline)}
                                                                                     </p>
-                                                                                    {daysLeft !== null && (
+                                                                                    {daysLeftRegular !== null && (
                                                                                         <p className={`font-medium ${
-                                                                                            daysLeft < 0
+                                                                                            daysLeftRegular < 0
                                                                                                 ? 'text-red-700 dark:text-red-400'
-                                                                                                : daysLeft <= 3
+                                                                                                : daysLeftRegular <= 3
                                                                                                 ? 'text-orange-700 dark:text-orange-400'
                                                                                                 : 'text-yellow-700 dark:text-yellow-400'
                                                                                         }`}>
-                                                                                            {daysLeft < 0 
-                                                                                                ? `${Math.abs(daysLeft)}h terlambat` 
-                                                                                                : `${daysLeft}h lagi`}
+                                                                                            {daysLeftRegular < 0 
+                                                                                                ? `${Math.abs(daysLeftRegular)}h terlambat` 
+                                                                                                : `${daysLeftRegular}h lagi`}
                                                                                         </p>
                                                                                     )}
                                                                                 </div>
                                                                                 <button
-                                                                                    onClick={() => orderId && setShowExtendModal({ orderId, tahap: 'rab_internal' })}
+                                                                                    onClick={() => orderId && setShowExtendModal({ orderId, tahap: 'rab_internal', isMarketing: false, taskResponse: taskResponseRegular })}
                                                                                     className="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600 transition-colors whitespace-nowrap flex-shrink-0"
                                                                                 >
                                                                                     Perpanjang
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                                {/* Task Response Deadline - MARKETING (Kepala Marketing only) */}
+                                                                {isKepalaMarketing && taskResponseMarketing && taskResponseMarketing.status !== 'selesai' && (
+                                                                    <div className="mt-2">
+                                                                        <div className="p-2 rounded border text-xs bg-purple-50 border-purple-200">
+                                                                            <div className="flex justify-between items-center gap-2">
+                                                                                <div className="min-w-0">
+                                                                                    <p className="font-semibold mb-0.5 text-purple-900">
+                                                                                        ⏰ Deadline (Marketing)
+                                                                                    </p>
+                                                                                    <p className="text-purple-700">
+                                                                                        {formatDeadline(taskResponseMarketing.deadline)}
+                                                                                    </p>
+                                                                                    {daysLeftMarketing !== null && (
+                                                                                        <p className="font-medium text-purple-700">
+                                                                                            {daysLeftMarketing < 0 
+                                                                                                ? `${Math.abs(daysLeftMarketing)}h terlambat` 
+                                                                                                : `${daysLeftMarketing}h lagi`}
+                                                                                        </p>
+                                                                                    )}
+                                                                                </div>
+                                                                                <button
+                                                                                    onClick={() => orderId && setShowExtendModal({ orderId, tahap: 'rab_internal', isMarketing: true, taskResponse: taskResponseMarketing })}
+                                                                                    className="px-2 py-1 bg-purple-500 text-white rounded text-xs hover:bg-purple-600 transition-colors whitespace-nowrap flex-shrink-0"
+                                                                                >
+                                                                                    Perpanjang (Marketing)
                                                                                 </button>
                                                                             </div>
                                                                         </div>
@@ -320,9 +394,12 @@ export default function Index({ itemPekerjaans }: Props) {
                 <ExtendModal
                     orderId={showExtendModal.orderId}
                     tahap={showExtendModal.tahap}
+                    taskResponse={showExtendModal.taskResponse}
+                    isMarketing={showExtendModal.isMarketing}
                     onClose={() => setShowExtendModal(null)}
                 />
             )}
         </>
     );
 }
+export default Index;

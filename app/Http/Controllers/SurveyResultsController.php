@@ -125,11 +125,16 @@ class SurveyResultsController extends Controller
             if ($taskResponse && $taskResponse->status === 'menunggu_response') {
                 $taskResponse->update([
                     'user_id' => auth()->user()->id,
-                    'response_time' => now(),
-                    'deadline' => now()->addDays(6), // Tambah 3 hari lagi (total 6 hari)
-                    'duration' => 6, // Total duration jadi 6 hari
-                    'duration_actual' => $taskResponse->duration_actual, // Tetap 3 hari
-                    'status' => 'menunggu_input', // Status berubah jadi menunggu input
+                    'response_time' => now(),   
+                    'deadline' => now()->addDays(6),
+                    'duration' => 6,
+                    'duration_actual' => $taskResponse->duration_actual,
+                    'status' => 'menunggu_input',
+                ]);
+            } else if ($taskResponse && $taskResponse->isOverdue()) {
+                $taskResponse->update([
+                    'user_id' => auth()->user()->id,
+                    'response_time' => now(),   
                 ]);
             }
 
@@ -284,10 +289,17 @@ class SurveyResultsController extends Controller
                     ->first();
 
                 if ($taskResponse) {
-                    $taskResponse->update([
-                        'update_data_time' => now(), // Kapan data diisi
-                        'status' => 'selesai',
-                    ]);
+                    if ($taskResponse->isOverdue()) {
+                        $taskResponse->update([
+                            'status' => 'telat_submit',
+                            'update_data_time' => now(), // Kapan data diisi
+                        ]);
+                    } else {
+                        $taskResponse->update([
+                            'update_data_time' => now(), // Kapan data diisi
+                            'status' => 'selesai',
+                        ]);
+                    }
                 }
 
                 $nextTaskExists = TaskResponse::where('order_id', $survey->order->id)
@@ -305,6 +317,19 @@ class SurveyResultsController extends Controller
                         'duration_actual' => 3,
                         'extend_time' => 0,
                         'status' => 'menunggu_response',
+                    ]);
+
+                    TaskResponse::create([
+                        'order_id' => $survey->order->id,
+                        'user_id' => null,
+                        'tahap' => 'moodboard',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3), // Contoh: deadline 5 hari untuk moodboard
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                        'is_marketing' => true,
                     ]);
                 }
             }
@@ -469,10 +494,17 @@ class SurveyResultsController extends Controller
                     ->first();
 
                 if ($taskResponse) {
-                    $taskResponse->update([
-                        'update_data_time' => now(), // Kapan data diisi
-                        'status' => 'selesai',
-                    ]);
+                    if ($taskResponse->isOverdue()) {
+                        $taskResponse->update([
+                            'status' => 'telat_submit',
+                            'update_data_time' => now(), // Kapan data diisi
+                        ]);
+                    } else {
+                        $taskResponse->update([
+                            'update_data_time' => now(), // Kapan data diisi
+                            'status' => 'selesai',
+                        ]);
+                    }
                 }
 
                 $nextTaskExists = TaskResponse::where('order_id', $survey->order->id)
@@ -490,6 +522,19 @@ class SurveyResultsController extends Controller
                         'duration_actual' => 3,
                         'extend_time' => 0,
                         'status' => 'menunggu_response',
+                    ]);
+
+                    TaskResponse::create([
+                        'order_id' => $survey->order->id,
+                        'user_id' => null,
+                        'tahap' => 'moodboard',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3), // Contoh: deadline 5 hari untuk moodboard
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                        'is_marketing' => true,
                     ]);
                 }
             }

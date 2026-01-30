@@ -76,15 +76,17 @@ interface TaskResponse {
     deadline: string;
     order_id: number;
     tahap: string;
+    extend_time?: number;
+    is_marketing?: number;
 }
-
-export default function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: Props) {
+function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(false);
     const [expandedProduk, setExpandedProduk] = useState<number[]>([]);
-    const [taskResponses, setTaskResponses] = useState<Record<number, TaskResponse>>({});
-    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+    // Dual task response state
+    const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: TaskResponse; marketing?: TaskResponse }>>({});
+    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: TaskResponse } | null>(null);
 
     const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
@@ -97,16 +99,45 @@ export default function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: 
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // Fetch task response untuk semua moodboard
+    // Fetch dual task response (regular & marketing) untuk semua moodboard
     useEffect(() => {
         moodboards.forEach(moodboard => {
             const orderId = moodboard.order?.id;
             if (orderId) {
+                // Regular
                 axios.get(`/task-response/${orderId}/item_pekerjaan`)
                     .then(res => {
-                        setTaskResponses(prev => ({ ...prev, [orderId]: res.data }));
+                        const task = Array.isArray(res.data) ? res.data[0] : res.data;
+                        setTaskResponses(prev => ({
+                            ...prev,
+                            [orderId]: {
+                                ...prev[orderId],
+                                regular: task ?? null,
+                            },
+                        }));
                     })
-                    .catch(err => console.error('Error fetching task response:', err));
+                    .catch(err => {
+                        if (err.response?.status !== 404) {
+                            console.error('Error fetching regular task response (item_pekerjaan):', err);
+                        }
+                    });
+                // Marketing
+                axios.get(`/task-response/${orderId}/item_pekerjaan?is_marketing=1`)
+                    .then(res => {
+                        const task = Array.isArray(res.data) ? res.data[0] : res.data;
+                        setTaskResponses(prev => ({
+                            ...prev,
+                            [orderId]: {
+                                ...prev[orderId],
+                                marketing: task ?? null,
+                            },
+                        }));
+                    })
+                    .catch(err => {
+                        if (err.response?.status !== 404) {
+                            console.error('Error fetching marketing task response (item_pekerjaan):', err);
+                        }
+                    });
             }
         });
     }, [moodboards]);
@@ -159,9 +190,22 @@ export default function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: 
         });
     };
 
+    const formatDeadline = (value: string | null | undefined) => {
+        if (value == null || value === '') return '-';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '-';
+        return d.toLocaleDateString('id-ID', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        });
+    };
+
     const calculateDaysLeft = (deadline: string) => {
         const now = new Date();
         const deadlineDate = new Date(deadline);
+        if (Number.isNaN(deadlineDate.getTime())) return null;
         const diffTime = deadlineDate.getTime() - now.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         return diffDays;
@@ -256,9 +300,12 @@ export default function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: 
                             </div>
                         ) : (
                             filteredMoodboards.map((moodboard) => {
+
                                 const orderId = moodboard.order?.id;
-                                const taskResponse = orderId ? taskResponses[orderId] : null;
-                                const daysLeft = taskResponse?.deadline ? calculateDaysLeft(taskResponse.deadline) : null;
+                                const taskResponseRegular = orderId ? taskResponses[orderId]?.regular : null;
+                                const taskResponseMarketing = orderId ? taskResponses[orderId]?.marketing : null;
+                                const daysLeftRegular = taskResponseRegular?.deadline ? calculateDaysLeft(taskResponseRegular.deadline) : null;
+                                const daysLeftMarketing = taskResponseMarketing?.deadline ? calculateDaysLeft(taskResponseMarketing.deadline) : null;
 
                                 return (
                                     <div
@@ -317,60 +364,86 @@ export default function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: 
                                             </div>
                                         </div>
 
-                                        {/* Task Response Deadline */}
-                                        {taskResponse && taskResponse.status !== 'selesai' && (
+                                        {/* Task Response Deadline - REGULAR */}
+                                        {taskResponseRegular && taskResponseRegular.status !== 'selesai' && (
                                             <div className="px-6 pt-4">
                                                 <div className={`p-3 rounded-lg border ${
-                                                    daysLeft !== null && daysLeft < 0 
+                                                    daysLeftRegular !== null && daysLeftRegular < 0 
                                                         ? 'bg-red-50 border-red-200' 
-                                                        : daysLeft !== null && daysLeft <= 3
+                                                        : daysLeftRegular !== null && daysLeftRegular <= 3
                                                         ? 'bg-orange-50 border-orange-200'
                                                         : 'bg-yellow-50 border-yellow-200'
                                                 }`}>
                                                     <div className="flex justify-between items-center">
                                                         <div>
                                                             <p className={`text-xs font-semibold mb-1 ${
-                                                                daysLeft !== null && daysLeft < 0
+                                                                daysLeftRegular !== null && daysLeftRegular < 0
                                                                     ? 'text-red-900'
-                                                                    : daysLeft !== null && daysLeft <= 3
+                                                                    : daysLeftRegular !== null && daysLeftRegular <= 3
                                                                     ? 'text-orange-900'
                                                                     : 'text-yellow-900'
                                                             }`}>
-                                                                {daysLeft !== null && daysLeft < 0 ? '⚠️ Deadline Terlewat' : '⏰ Deadline Item Pekerjaan'}
+                                                                {daysLeftRegular !== null && daysLeftRegular < 0 ? '⚠️ Deadline Terlewat' : '⏰ Deadline Item Pekerjaan'}
                                                             </p>
                                                             <p className={`text-xs ${
-                                                                daysLeft !== null && daysLeft < 0
+                                                                daysLeftRegular !== null && daysLeftRegular < 0
                                                                     ? 'text-red-700'
-                                                                    : daysLeft !== null && daysLeft <= 3
+                                                                    : daysLeftRegular !== null && daysLeftRegular <= 3
                                                                     ? 'text-orange-700'
                                                                     : 'text-yellow-700'
                                                             }`}>
-                                                                {new Date(taskResponse.deadline).toLocaleDateString('id-ID', {
-                                                                    weekday: 'long',
-                                                                    year: 'numeric',
-                                                                    month: 'long',
-                                                                    day: 'numeric'
-                                                                })}
+                                                                {formatDeadline(taskResponseRegular.deadline)}
                                                             </p>
-                                                            {daysLeft !== null && (
+                                                            {daysLeftRegular !== null && (
                                                                 <p className={`text-xs mt-1 font-medium ${
-                                                                    daysLeft < 0
+                                                                    daysLeftRegular < 0
                                                                         ? 'text-red-700'
-                                                                        : daysLeft <= 3
+                                                                        : daysLeftRegular <= 3
                                                                         ? 'text-orange-700'
                                                                         : 'text-yellow-700'
                                                                 }`}>
-                                                                    {daysLeft < 0 
-                                                                        ? `Terlambat ${Math.abs(daysLeft)} hari` 
-                                                                        : `${daysLeft} hari lagi`}
+                                                                    {daysLeftRegular < 0 
+                                                                        ? `Terlambat ${Math.abs(daysLeftRegular)} hari` 
+                                                                        : `${daysLeftRegular} hari lagi`}
                                                                 </p>
                                                             )}
                                                         </div>
                                                         <button
-                                                            onClick={() => orderId && setShowExtendModal({ orderId, tahap: 'item_pekerjaan' })}
+                                                            onClick={() => orderId && setShowExtendModal({ orderId, tahap: 'item_pekerjaan', isMarketing: false, taskResponse: taskResponseRegular })}
                                                             className="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-medium hover:bg-orange-600 transition-colors"
                                                         >
                                                             Minta Perpanjangan
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Task Response Deadline - MARKETING (Kepala Marketing only) */}
+                                        {isKepalaMarketing && taskResponseMarketing && taskResponseMarketing.status !== 'selesai' && (
+                                            <div className="px-6 pt-2">
+                                                <div className="p-3 rounded-lg border bg-purple-50 border-purple-200">
+                                                    <div className="flex justify-between items-center">
+                                                        <div>
+                                                            <p className="text-xs font-semibold mb-1 text-purple-900">
+                                                                ⏰ Deadline Item Pekerjaan (Marketing)
+                                                            </p>
+                                                            <p className="text-xs text-purple-700">
+                                                                {formatDeadline(taskResponseMarketing.deadline)}
+                                                            </p>
+                                                            {daysLeftMarketing !== null && (
+                                                                <p className="text-xs mt-1 font-medium text-purple-700">
+                                                                    {daysLeftMarketing < 0 
+                                                                        ? `Terlambat ${Math.abs(daysLeftMarketing)} hari` 
+                                                                        : `${daysLeftMarketing} hari lagi`}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <button
+                                                            onClick={() => orderId && setShowExtendModal({ orderId, tahap: 'item_pekerjaan', isMarketing: true, taskResponse: taskResponseMarketing })}
+                                                            className="px-3 py-1.5 bg-purple-500 text-white rounded-lg text-xs font-medium hover:bg-purple-600 transition-colors"
+                                                        >
+                                                            Minta Perpanjangan (Marketing)
                                                         </button>
                                                     </div>
                                                 </div>
@@ -448,9 +521,12 @@ export default function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: 
                 <ExtendModal
                     orderId={showExtendModal.orderId}
                     tahap={showExtendModal.tahap}
+                    taskResponse={showExtendModal.taskResponse}
+                    isMarketing={showExtendModal.isMarketing}
                     onClose={() => setShowExtendModal(null)}
                 />
             )}
         </>
     );
 }
+export default ItemPekerjaanIndex;

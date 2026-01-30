@@ -219,7 +219,7 @@ class NotificationController extends Controller
     {
         // Check if estimasi already exists
         if ($order->estimasi) {
-            return redirect()->route('estimasi.edit', $order->estimasi->id);
+            return redirect()->route('estimasi.index');
         }
 
         // Create empty estimasi with response info
@@ -229,9 +229,9 @@ class NotificationController extends Controller
             'response_time' => now(),
         ]);
 
-        $order->update([
-            'tahapan_proyek' => 'estimasi',
-        ]);
+        // $order->update([
+        //     'tahapan_proyek' => 'estimasi',
+        // ]);
 
         return redirect()->route('estimasi.index')
             ->with('success', 'Response recorded. You can now create the estimasi.');

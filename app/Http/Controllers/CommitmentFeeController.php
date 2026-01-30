@@ -96,6 +96,11 @@ class CommitmentFeeController extends Controller
                     'duration_actual' => $taskResponse->duration_actual,
                     'status' => 'menunggu_input',
                 ]);
+            } elseif ($taskResponse && $taskResponse->isOverdue()) {
+                $taskResponse->update([
+                    'user_id' => auth()->user()->id,
+                    'response_time' => now(),
+                ]);
             }
 
             Log::info('Commitment Fee created with ID: ' . $commitmentFee->id);
@@ -181,10 +186,17 @@ class CommitmentFeeController extends Controller
                 ->first();
 
             if ($taskResponse) {
-                $taskResponse->update([
-                    'update_data_time' => now(), // Kapan data diisi
-                    'status' => 'selesai',
-                ]);
+                if ($taskResponse->isOverdue()) {
+                    $taskResponse->update([
+                        'status' => 'telat_submit',
+                        'update_data_time' => now(),
+                    ]);
+                } else {
+                    $taskResponse->update([
+                        'update_data_time' => now(),
+                        'status' => 'selesai',
+                    ]);
+                }
 
                 // Create task response untuk tahap selanjutnya (cm_fee)
                 $nextTaskExists = TaskResponse::where('order_id', $commitmentFee->moodboard->order->id)

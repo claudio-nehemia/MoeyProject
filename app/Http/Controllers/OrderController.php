@@ -94,7 +94,7 @@ class OrderController extends Controller
             'tanggal_masuk_customer' => 'required|date',
             'project_status' => 'nullable|string|max:100',
             'priority_level' => 'nullable|string|max:100',
-            'mom_file' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
+            'mom_file' => 'nullable|file|mimes:pdf,doc,docx',
             'user_ids' => 'nullable|array',
             'tanggal_survey' => 'nullable|string',
         ]);
@@ -154,6 +154,19 @@ class OrderController extends Controller
             'duration_actual' => 3, // Durasi actual 3 hari
             'extend_time' => 0,
             'status' => 'menunggu_response',
+        ]);
+
+        TaskResponse::create([
+            'order_id' => $order->id,
+            'user_id' => null, // Akan diisi saat user klik Response
+            'tahap' => 'survey',
+            'start_time' => now(),
+            'deadline' => now()->addDays(3), // Deadline 3 hari
+            'duration' => 3, // Durasi awal 3 hari
+            'duration_actual' => 3, // Durasi actual 3 hari
+            'extend_time' => 0,
+            'status' => 'menunggu_response',
+            'is_marketing' => true,
         ]);
 
         return redirect('/order')->with('success', 'Order created successfully.');
@@ -223,7 +236,7 @@ class OrderController extends Controller
             'tanggal_masuk_customer' => 'required|date',
             'project_status' => 'nullable|string|max:100',
             'priority_level' => 'nullable|string|max:100',
-            'mom_file' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
+            'mom_file' => 'nullable|file|mimes:pdf,doc,docx',
             'user_ids' => 'nullable|array',
             'tanggal_survey' => 'nullable|string',
         ]);

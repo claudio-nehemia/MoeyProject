@@ -3,6 +3,7 @@ import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
+
 import { useEffect, useState } from 'react';
 
 interface Survey {
@@ -46,10 +47,15 @@ export default function Index({ surveys }: Props) {
     });
     const [mounted, setMounted] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+    // Store both regular and marketing TaskResponse for each survey
+    const [taskResponses, setTaskResponses] = useState<
+        Record<number, { regular?: any; marketing?: any }>
+    >({});
     const [showExtendModal, setShowExtendModal] = useState<{
         orderId: number;
         tahap: string;
+        taskResponse: any; // Tambah ini
+        isMarketing: boolean;
     } | null>(null);
 
     const { auth } = usePage<{
@@ -74,16 +80,44 @@ export default function Index({ surveys }: Props) {
 
     useEffect(() => {
         surveys.forEach((survey) => {
+            // Fetch regular TaskResponse
             axios
                 .get(`/task-response/${survey.id}/survey`)
                 .then((res: any) => {
+                    const task = Array.isArray(res.data)
+                        ? res.data[0]
+                        : res.data;
                     setTaskResponses((prev) => ({
                         ...prev,
-                        [survey.id]: res.data,
+                        [survey.id]: {
+                            ...prev[survey.id],
+                            regular: task ?? null,
+                        },
                     }));
                 })
                 .catch((err: any) =>
-                    console.error('Error fetching task response:', err),
+                    console.error('Error fetching regular task response:', err),
+                );
+            // Fetch marketing TaskResponse (is_marketing=1)
+            axios
+                .get(`/task-response/${survey.id}/survey?is_marketing=1`)
+                .then((res: any) => {
+                    const task = Array.isArray(res.data)
+                        ? res.data[0]
+                        : res.data;
+                    setTaskResponses((prev) => ({
+                        ...prev,
+                        [survey.id]: {
+                            ...prev[survey.id],
+                            marketing: task ?? null,
+                        },
+                    }));
+                })
+                .catch((err: any) =>
+                    console.error(
+                        'Error fetching marketing task response:',
+                        err,
+                    ),
                 );
         });
     }, [surveys]);
@@ -96,7 +130,6 @@ export default function Index({ surveys }: Props) {
                 {
                     onSuccess: () => {
                         console.log('Survey marked as responded');
-                        // Force reload to get fresh data
                         router.reload({ only: ['surveys'] });
                     },
                 },
@@ -117,7 +150,6 @@ export default function Index({ surveys }: Props) {
                 {
                     onSuccess: () => {
                         console.log('Marketing response recorded successfully');
-                        // Force full page reload untuk update tampilan
                         router.visit(window.location.pathname, {
                             preserveScroll: true,
                             preserveState: false,
@@ -129,6 +161,52 @@ export default function Index({ surveys }: Props) {
                 },
             );
         }
+    };
+
+    // Tambahkan function ini setelah useEffect yang ada
+    const refetchTaskResponses = () => {
+        surveys.forEach((survey) => {
+            // Fetch regular TaskResponse
+            axios
+                .get(`/task-response/${survey.id}/survey`)
+                .then((res: any) => {
+                    const task = Array.isArray(res.data)
+                        ? res.data[0]
+                        : res.data;
+                    setTaskResponses((prev) => ({
+                        ...prev,
+                        [survey.id]: {
+                            ...prev[survey.id],
+                            regular: task ?? null,
+                        },
+                    }));
+                })
+                .catch((err: any) =>
+                    console.error('Error fetching regular task response:', err),
+                );
+
+            // Fetch marketing TaskResponse (is_marketing=1)
+            axios
+                .get(`/task-response/${survey.id}/survey?is_marketing=1`)
+                .then((res: any) => {
+                    const task = Array.isArray(res.data)
+                        ? res.data[0]
+                        : res.data;
+                    setTaskResponses((prev) => ({
+                        ...prev,
+                        [survey.id]: {
+                            ...prev[survey.id],
+                            marketing: task ?? null,
+                        },
+                    }));
+                })
+                .catch((err: any) =>
+                    console.error(
+                        'Error fetching marketing task response:',
+                        err,
+                    ),
+                );
+        });
     };
 
     const formatPaymentStatus = (status: string) => {
@@ -202,6 +280,17 @@ export default function Index({ surveys }: Props) {
         return new Date(date).toLocaleDateString('id-ID', {
             year: 'numeric',
             month: 'short',
+            day: 'numeric',
+        });
+    };
+
+    const formatDeadline = (value: string | null | undefined) => {
+        if (value == null || value === '') return '-';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '-';
+        return d.toLocaleDateString('id-ID', {
+            year: 'numeric',
+            month: 'long',
             day: 'numeric',
         });
     };
@@ -469,180 +558,78 @@ export default function Index({ surveys }: Props) {
                                     }}
                                 >
                                     <div className="p-4 sm:p-6">
-                                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                                            {/* Left Section - Project Info */}
-                                            <div className="flex-1">
-                                                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                                                    <h3 className="text-lg font-bold text-stone-900 sm:text-xl">
-                                                        {survey.nama_project}
-                                                    </h3>
-                                                    <span
-                                                        className={`w-fit rounded-lg border px-3 py-1 text-xs font-semibold ${getStatusColor(survey.project_status)}`}
-                                                    >
-                                                        {survey.project_status}
-                                                    </span>
-                                                    {survey.is_draft &&
-                                                        survey.response_time && (
-                                                            <span className="flex w-fit items-center gap-1.5 rounded-lg border-2 border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 px-3 py-1 text-xs font-bold text-amber-700 shadow-sm">
-                                                                <svg
-                                                                    className="h-3.5 w-3.5"
-                                                                    fill="none"
-                                                                    stroke="currentColor"
-                                                                    viewBox="0 0 24 24"
-                                                                >
-                                                                    <path
-                                                                        strokeLinecap="round"
-                                                                        strokeLinejoin="round"
-                                                                        strokeWidth={
-                                                                            2.5
-                                                                        }
-                                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                                                    />
-                                                                </svg>
-                                                                DRAFT
-                                                            </span>
-                                                        )}
-                                                </div>
-
-                                                <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-                                                    <div>
-                                                        <p className="mb-1 text-xs font-medium text-stone-500">
-                                                            Company
-                                                        </p>
-                                                        <p className="truncate font-semibold text-stone-900">
+                                        <div className="flex flex-col gap-4">
+                                            {/* Header Section */}
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                                <div className="flex-1">
+                                                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                                                        <h3 className="text-lg font-bold text-stone-900 sm:text-xl">
                                                             {
-                                                                survey.company_name
+                                                                survey.nama_project
                                                             }
-                                                        </p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="mb-1 text-xs font-medium text-stone-500">
-                                                            Customer
-                                                        </p>
-                                                        <p className="truncate font-semibold text-stone-900">
+                                                        </h3>
+                                                        <span
+                                                            className={`rounded-lg border px-3 py-1 text-xs font-semibold ${getStatusColor(survey.project_status)}`}
+                                                        >
                                                             {
-                                                                survey.customer_name
+                                                                survey.project_status
                                                             }
-                                                        </p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="mb-1 text-xs font-medium text-stone-500">
-                                                            Interior Type
-                                                        </p>
-                                                        <p className="truncate font-semibold text-stone-900">
-                                                            {
-                                                                survey.jenis_interior
-                                                            }
-                                                        </p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="mb-1 text-xs font-medium text-stone-500">
-                                                            Survey Date
-                                                        </p>
-                                                        <p className="truncate font-semibold text-stone-900">
-                                                            {survey.tanggal_survey
-                                                                ? formatSimpleDate(
-                                                                      survey.tanggal_survey,
-                                                                  )
-                                                                : '-'}
-                                                        </p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="mb-1 text-xs font-medium text-stone-500">
-                                                            Tahapan Proyek
-                                                        </p>
-                                                        <p className="truncate font-semibold text-stone-900">
-                                                            {formatTahapanProyek(
-                                                                survey.tahapan_proyek,
-                                                            )}
-                                                        </p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="mb-1 text-xs font-medium text-stone-500">
-                                                            Payment Status
-                                                        </p>
-                                                        <p className="truncate font-semibold text-stone-900">
-                                                            {formatPaymentStatus(
-                                                                survey.payment_status,
-                                                            )}
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                {/* Team Members */}
-                                                {survey.team &&
-                                                    survey.team.length > 0 && (
-                                                        <div className="mt-4 rounded-lg border-2 border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50 p-3 sm:rounded-xl sm:p-4">
-                                                            <div className="mb-3 flex items-center gap-2">
-                                                                <svg
-                                                                    className="h-4 w-4 text-indigo-600 sm:h-5 sm:w-5"
-                                                                    fill="none"
-                                                                    stroke="currentColor"
-                                                                    viewBox="0 0 24 24"
-                                                                >
-                                                                    <path
-                                                                        strokeLinecap="round"
-                                                                        strokeLinejoin="round"
-                                                                        strokeWidth={
-                                                                            2
-                                                                        }
-                                                                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                                                                    />
-                                                                </svg>
-                                                                <p className="text-xs font-bold text-indigo-900 sm:text-sm">
-                                                                    Project Team
-                                                                    (
-                                                                    {
-                                                                        survey
-                                                                            .team
-                                                                            .length
-                                                                    }
-                                                                    )
-                                                                </p>
-                                                            </div>
-                                                            <div className="flex flex-wrap gap-2">
-                                                                {survey.team.map(
-                                                                    (
-                                                                        member,
-                                                                    ) => (
-                                                                        <div
-                                                                            key={
-                                                                                member.id
+                                                        </span>
+                                                        {survey.is_draft &&
+                                                            survey.response_time && (
+                                                                <span className="flex items-center gap-1.5 rounded-lg border-2 border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 px-3 py-1 text-xs font-bold text-amber-700 shadow-sm">
+                                                                    <svg
+                                                                        className="h-3.5 w-3.5"
+                                                                        fill="none"
+                                                                        stroke="currentColor"
+                                                                        viewBox="0 0 24 24"
+                                                                    >
+                                                                        <path
+                                                                            strokeLinecap="round"
+                                                                            strokeLinejoin="round"
+                                                                            strokeWidth={
+                                                                                2.5
                                                                             }
-                                                                            className="inline-flex items-center gap-2 rounded-lg border-2 border-indigo-300 bg-white px-2 py-1.5 shadow-sm transition-all hover:shadow-md sm:px-3 sm:py-2"
-                                                                        >
-                                                                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white sm:h-8 sm:w-8">
-                                                                                {member.name
-                                                                                    .charAt(
-                                                                                        0,
-                                                                                    )
-                                                                                    .toUpperCase()}
-                                                                            </div>
-                                                                            <div className="min-w-0">
-                                                                                <p className="truncate text-xs leading-tight font-semibold text-stone-900 sm:text-sm">
-                                                                                    {
-                                                                                        member.name
-                                                                                    }
-                                                                                </p>
-                                                                                <p className="truncate text-xs font-medium text-indigo-600">
-                                                                                    {
-                                                                                        member.role
-                                                                                    }
-                                                                                </p>
-                                                                            </div>
-                                                                        </div>
-                                                                    ),
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    )}
+                                                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                                                        />
+                                                                    </svg>
+                                                                    DRAFT
+                                                                </span>
+                                                            )}
+                                                    </div>
+                                                </div>
 
-                                                {/* Response Info */}
-                                                {survey.response_time && (
-                                                    <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                                                        <div className="flex items-center gap-2">
+                                                {/* Action Buttons - Moved to top right */}
+                                                <div className="flex flex-wrap gap-2">
+                                                    {/* Marketing Response Button */}
+                                                    {isKepalaMarketing &&
+                                                        !survey.pm_response_time && (
+                                                            <button
+                                                                onClick={() =>
+                                                                    handlePmResponse(
+                                                                        survey.survey_id ||
+                                                                            survey.id,
+                                                                    )
+                                                                }
+                                                                className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-purple-600 hover:to-purple-700 sm:px-4 sm:text-sm"
+                                                            >
+                                                                Marketing
+                                                                Response
+                                                            </button>
+                                                        )}
+
+                                                    {/* General Response Buttons */}
+                                                    {!survey.response_time ? (
+                                                        <button
+                                                            onClick={() =>
+                                                                handleMarkResponse(
+                                                                    survey.id,
+                                                                )
+                                                            }
+                                                            className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-emerald-600 hover:to-emerald-700 sm:px-4 sm:text-sm"
+                                                        >
                                                             <svg
-                                                                className="h-4 w-4 flex-shrink-0 text-emerald-600 sm:h-5 sm:w-5"
+                                                                className="mr-1 h-4 w-4 sm:mr-2"
                                                                 fill="none"
                                                                 stroke="currentColor"
                                                                 viewBox="0 0 24 24"
@@ -656,175 +643,91 @@ export default function Index({ surveys }: Props) {
                                                                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                                                                 />
                                                             </svg>
-                                                            <div className="min-w-0 flex-1">
-                                                                <p className="truncate text-xs font-medium text-emerald-700">
-                                                                    Responded by{' '}
-                                                                    <span className="font-bold">
-                                                                        {
-                                                                            survey.response_by
-                                                                        }
-                                                                    </span>
-                                                                </p>
-                                                                <p className="mt-0.5 text-xs text-emerald-600">
-                                                                    {formatDate(
-                                                                        survey.response_time,
-                                                                    )}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Marketing Response Badge */}
-                                                        {survey.pm_response_time && (
-                                                            <div className="mt-2 rounded-lg border border-purple-200 bg-purple-50 p-2">
-                                                                <p className="text-xs font-semibold text-purple-900">
-                                                                    ✓ Marketing
-                                                                    Response
-                                                                </p>
-                                                                <p className="text-xs text-purple-700">
-                                                                    By:{' '}
-                                                                    {
-                                                                        survey.pm_response_by
-                                                                    }
-                                                                </p>
-                                                                <p className="text-xs text-purple-700">
-                                                                    {formatDate(
-                                                                        survey.pm_response_time,
-                                                                    )}
-                                                                </p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Right Section - Actions */}
-                                            <div className="flex flex-row justify-end gap-2 lg:flex-col lg:justify-start">
-                                                {/* Marketing Response Button - INDEPENDENT dari general response */}
-                                                {isKepalaMarketing &&
-                                                    !survey.pm_response_time && (
-                                                        <button
-                                                            onClick={() =>
-                                                                handlePmResponse(
-                                                                    survey.survey_id ||
-                                                                        survey.id,
-                                                                )
-                                                            }
-                                                            className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-purple-600 hover:to-purple-700 sm:px-4 sm:text-sm"
-                                                        >
-                                                            Marketing Response
-                                                        </button>
-                                                    )}
-
-                                                {taskResponses[survey.id] &&
-                                                    taskResponses[survey.id]
-                                                        .status !==
-                                                        'selesai' && (
-                                                        <div className="mt-2 rounded border border-yellow-200 bg-yellow-50 p-2 text-xs">
-                                                            <div className="flex items-center justify-between">
-                                                                <div>
-                                                                    <p className="text-yellow-700">
-                                                                        Deadline:{' '}
-                                                                        {new Date(
-                                                                            taskResponses[
-                                                                                survey.id
-                                                                            ].deadline,
-                                                                        ).toLocaleDateString(
-                                                                            'id-ID',
-                                                                        )}
-                                                                    </p>
-                                                                    {taskResponses[
-                                                                        survey
-                                                                            .id
-                                                                    ]
-                                                                        .extend_time >
-                                                                        0 && (
-                                                                        <p className="text-orange-600">
-                                                                            Perpanjangan:{' '}
-                                                                            {
-                                                                                taskResponses[
-                                                                                    survey
-                                                                                        .id
-                                                                                ]
-                                                                                    .extend_time
-                                                                            }
-                                                                            x
-                                                                        </p>
-                                                                    )}
-                                                                </div>
-                                                                <button
-                                                                    onClick={() =>
-                                                                        setShowExtendModal(
-                                                                            {
-                                                                                orderId:
-                                                                                    survey.id,
-                                                                                tahap: 'survey',
-                                                                            },
-                                                                        )
-                                                                    }
-                                                                    className="rounded bg-orange-500 px-2 py-1 text-xs text-white hover:bg-orange-600"
-                                                                >
-                                                                    Minta
-                                                                    Perpanjangan
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                {/* Extend Modal */}
-                                                {showExtendModal && (
-                                                    <ExtendModal
-                                                        orderId={
-                                                            showExtendModal.orderId
-                                                        }
-                                                        tahap={
-                                                            showExtendModal.tahap
-                                                        }
-                                                        onClose={() =>
-                                                            setShowExtendModal(
-                                                                null,
-                                                            )
-                                                        }
-                                                    />
-                                                )}
-
-                                                {/* General Response - Trigger dari response_time NULL */}
-                                                {!survey.response_time ? (
-                                                    // Belum response - Tampilkan tombol Response
-                                                    <button
-                                                        onClick={() =>
-                                                            handleMarkResponse(
-                                                                survey.id,
-                                                            )
-                                                        }
-                                                        className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-emerald-600 hover:to-emerald-700 sm:px-4 sm:text-sm"
-                                                    >
-                                                        <svg
-                                                            className="mr-1 h-4 w-4 sm:mr-2"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth={2}
-                                                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                            />
-                                                        </svg>
-                                                        <span className="hidden sm:inline">
                                                             Response
-                                                        </span>
-                                                        <span className="sm:hidden">
-                                                            Respond
-                                                        </span>
-                                                    </button>
-                                                ) : survey.is_draft ? (
-                                                    // Draft - Tampilkan tombol Create atau Edit Draft
-                                                    <>
-                                                        {survey.has_draft ? (
+                                                        </button>
+                                                    ) : survey.is_draft ? (
+                                                        <>
+                                                            {survey.has_draft ? (
+                                                                <Link
+                                                                    href={`/survey-results/${survey.survey_id || survey.id}/edit`}
+                                                                    className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-amber-600 hover:to-orange-600 sm:px-4 sm:text-sm"
+                                                                >
+                                                                    <svg
+                                                                        className="mr-1 h-4 w-4 sm:mr-2"
+                                                                        fill="none"
+                                                                        stroke="currentColor"
+                                                                        viewBox="0 0 24 24"
+                                                                    >
+                                                                        <path
+                                                                            strokeLinecap="round"
+                                                                            strokeLinejoin="round"
+                                                                            strokeWidth={
+                                                                                2
+                                                                            }
+                                                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                                                        />
+                                                                    </svg>
+                                                                    Edit Draft
+                                                                </Link>
+                                                            ) : (
+                                                                <Link
+                                                                    href={`/survey-results/order/${survey.id}/create`}
+                                                                    className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-cyan-600 hover:to-blue-600 sm:px-4 sm:text-sm"
+                                                                >
+                                                                    <svg
+                                                                        className="mr-1 h-4 w-4 sm:mr-2"
+                                                                        fill="none"
+                                                                        stroke="currentColor"
+                                                                        viewBox="0 0 24 24"
+                                                                    >
+                                                                        <path
+                                                                            strokeLinecap="round"
+                                                                            strokeLinejoin="round"
+                                                                            strokeWidth={
+                                                                                2
+                                                                            }
+                                                                            d="M12 4v16m8-8H4"
+                                                                        />
+                                                                    </svg>
+                                                                    Create
+                                                                    Survey
+                                                                </Link>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Link
+                                                                href={`/survey-results/${survey.survey_id || survey.id}`}
+                                                                className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-blue-600 hover:to-blue-700 sm:px-4 sm:text-sm"
+                                                            >
+                                                                <svg
+                                                                    className="mr-1 h-4 w-4 sm:mr-2"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    viewBox="0 0 24 24"
+                                                                >
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth={
+                                                                            2
+                                                                        }
+                                                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                                    />
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth={
+                                                                            2
+                                                                        }
+                                                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                                    />
+                                                                </svg>
+                                                                View
+                                                            </Link>
                                                             <Link
                                                                 href={`/survey-results/${survey.survey_id || survey.id}/edit`}
-                                                                className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-amber-600 hover:to-orange-600 sm:px-4 sm:text-sm"
+                                                                className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-amber-600 hover:to-amber-700 sm:px-4 sm:text-sm"
                                                             >
                                                                 <svg
                                                                     className="mr-1 h-4 w-4 sm:mr-2"
@@ -841,20 +744,235 @@ export default function Index({ surveys }: Props) {
                                                                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                                                                     />
                                                                 </svg>
-                                                                <span className="hidden sm:inline">
-                                                                    Edit Draft
-                                                                </span>
-                                                                <span className="sm:hidden">
-                                                                    Edit
-                                                                </span>
+                                                                Edit
                                                             </Link>
-                                                        ) : (
-                                                            <Link
-                                                                href={`/survey-results/order/${survey.id}/create`}
-                                                                className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-cyan-600 hover:to-blue-600 sm:px-4 sm:text-sm"
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {/* Project Info Grid */}
+                                            <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+                                                <div>
+                                                    <p className="mb-1 text-xs font-medium text-stone-500">
+                                                        Company
+                                                    </p>
+                                                    <p className="truncate font-semibold text-stone-900">
+                                                        {survey.company_name}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="mb-1 text-xs font-medium text-stone-500">
+                                                        Customer
+                                                    </p>
+                                                    <p className="truncate font-semibold text-stone-900">
+                                                        {survey.customer_name}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="mb-1 text-xs font-medium text-stone-500">
+                                                        Interior Type
+                                                    </p>
+                                                    <p className="truncate font-semibold text-stone-900">
+                                                        {survey.jenis_interior}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="mb-1 text-xs font-medium text-stone-500">
+                                                        Survey Date
+                                                    </p>
+                                                    <p className="truncate font-semibold text-stone-900">
+                                                        {survey.tanggal_survey
+                                                            ? formatSimpleDate(
+                                                                  survey.tanggal_survey,
+                                                              )
+                                                            : '-'}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="mb-1 text-xs font-medium text-stone-500">
+                                                        Tahapan Proyek
+                                                    </p>
+                                                    <p className="truncate font-semibold text-stone-900">
+                                                        {formatTahapanProyek(
+                                                            survey.tahapan_proyek,
+                                                        )}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="mb-1 text-xs font-medium text-stone-500">
+                                                        Payment Status
+                                                    </p>
+                                                    <p className="truncate font-semibold text-stone-900">
+                                                        {formatPaymentStatus(
+                                                            survey.payment_status,
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {/* Team Members */}
+                                            {survey.team &&
+                                                survey.team.length > 0 && (
+                                                    <div className="rounded-lg border-2 border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50 p-3 sm:rounded-xl sm:p-4">
+                                                        <div className="mb-3 flex items-center gap-2">
+                                                            <svg
+                                                                className="h-4 w-4 text-indigo-600 sm:h-5 sm:w-5"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={
+                                                                        2
+                                                                    }
+                                                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                                                                />
+                                                            </svg>
+                                                            <p className="text-xs font-bold text-indigo-900 sm:text-sm">
+                                                                Project Team (
+                                                                {
+                                                                    survey.team
+                                                                        .length
+                                                                }
+                                                                )
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {survey.team.map(
+                                                                (member) => (
+                                                                    <div
+                                                                        key={
+                                                                            member.id
+                                                                        }
+                                                                        className="inline-flex items-center gap-2 rounded-lg border-2 border-indigo-300 bg-white px-2 py-1.5 shadow-sm transition-all hover:shadow-md sm:px-3 sm:py-2"
+                                                                    >
+                                                                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white sm:h-8 sm:w-8">
+                                                                            {member.name
+                                                                                .charAt(
+                                                                                    0,
+                                                                                )
+                                                                                .toUpperCase()}
+                                                                        </div>
+                                                                        <div className="min-w-0">
+                                                                            <p className="truncate text-xs leading-tight font-semibold text-stone-900 sm:text-sm">
+                                                                                {
+                                                                                    member.name
+                                                                                }
+                                                                            </p>
+                                                                            <p className="truncate text-xs font-medium text-indigo-600">
+                                                                                {
+                                                                                    member.role
+                                                                                }
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                ),
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            {/* Deadline & Minta Perpanjangan - hanya setelah response */}
+                                            {/* Regular TaskResponse Deadline/Extend */}
+
+                                            {taskResponses[survey.id]
+                                                ?.regular &&
+                                                taskResponses[survey.id].regular
+                                                    .status !== 'selesai' && (
+                                                    <div className="rounded-lg border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 p-3 sm:p-4">
+                                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                            <div className="flex-1">
+                                                                <div className="mb-1 flex items-center gap-2">
+                                                                    <svg
+                                                                        className="h-5 w-5 text-amber-600"
+                                                                        fill="none"
+                                                                        stroke="currentColor"
+                                                                        viewBox="0 0 24 24"
+                                                                    >
+                                                                        <path
+                                                                            strokeLinecap="round"
+                                                                            strokeLinejoin="round"
+                                                                            strokeWidth={
+                                                                                2
+                                                                            }
+                                                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                                        />
+                                                                    </svg>
+                                                                    <p className="text-sm font-bold text-amber-900">
+                                                                        Deadline
+                                                                        Information
+                                                                    </p>
+                                                                </div>
+                                                                <p className="text-sm text-amber-700">
+                                                                    <span className="font-semibold">
+                                                                        Deadline:{' '}
+                                                                    </span>
+                                                                    {formatDeadline(
+                                                                        taskResponses[
+                                                                            survey
+                                                                                .id
+                                                                        ]
+                                                                            .regular
+                                                                            .deadline,
+                                                                    )}
+                                                                </p>
+                                                                {taskResponses[
+                                                                    survey.id
+                                                                ].regular
+                                                                    .extend_time >
+                                                                    0 && (
+                                                                    <p className="mt-1 text-sm font-semibold text-orange-600">
+                                                                        <span className="inline-flex items-center gap-1">
+                                                                            <svg
+                                                                                className="h-4 w-4"
+                                                                                fill="none"
+                                                                                stroke="currentColor"
+                                                                                viewBox="0 0 24 24"
+                                                                            >
+                                                                                <path
+                                                                                    strokeLinecap="round"
+                                                                                    strokeLinejoin="round"
+                                                                                    strokeWidth={
+                                                                                        2
+                                                                                    }
+                                                                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                                                />
+                                                                            </svg>
+                                                                            Diperpanjang:{' '}
+                                                                            {
+                                                                                taskResponses[
+                                                                                    survey
+                                                                                        .id
+                                                                                ]
+                                                                                    .regular
+                                                                                    .extend_time
+                                                                            }
+                                                                            x
+                                                                        </span>
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            <button
+                                                                onClick={() =>
+                                                                    setShowExtendModal(
+                                                                        {
+                                                                            orderId:
+                                                                                survey.id,
+                                                                            tahap: 'survey',
+                                                                            taskResponse:
+                                                                                taskResponses[
+                                                                                    survey
+                                                                                        .id
+                                                                                ]
+                                                                                    .regular, // PENTING: Pass yang regular
+                                                                            isMarketing: false, // PENTING: false untuk regular
+                                                                        },
+                                                                    )
+                                                                }
+                                                                className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-orange-600 hover:to-orange-700"
                                                             >
                                                                 <svg
-                                                                    className="mr-1 h-4 w-4 sm:mr-2"
+                                                                    className="h-4 w-4"
                                                                     fill="none"
                                                                     stroke="currentColor"
                                                                     viewBox="0 0 24 24"
@@ -865,85 +983,193 @@ export default function Index({ surveys }: Props) {
                                                                         strokeWidth={
                                                                             2
                                                                         }
-                                                                        d="M12 4v16m8-8H4"
+                                                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                                                                     />
                                                                 </svg>
-                                                                <span className="hidden sm:inline">
-                                                                    Create
-                                                                    Survey
-                                                                </span>
-                                                                <span className="sm:hidden">
-                                                                    Create
-                                                                </span>
-                                                            </Link>
-                                                        )}
-                                                    </>
-                                                ) : (
-                                                    // Published - Tampilkan tombol View & Edit
-                                                    <>
-                                                        <Link
-                                                            href={`/survey-results/${survey.survey_id || survey.id}`}
-                                                            className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-blue-600 hover:to-blue-700 sm:px-4 sm:text-sm"
-                                                        >
-                                                            <svg
-                                                                className="mr-1 h-4 w-4 sm:mr-2"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={
-                                                                        2
-                                                                    }
-                                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                                                />
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={
-                                                                        2
-                                                                    }
-                                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                                                />
-                                                            </svg>
-                                                            <span className="hidden sm:inline">
-                                                                View
-                                                            </span>
-                                                            <span className="sm:hidden">
-                                                                View
-                                                            </span>
-                                                        </Link>
-                                                        <Link
-                                                            href={`/survey-results/${survey.survey_id || survey.id}/edit`}
-                                                            className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-amber-600 hover:to-amber-700 sm:px-4 sm:text-sm"
-                                                        >
-                                                            <svg
-                                                                className="mr-1 h-4 w-4 sm:mr-2"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={
-                                                                        2
-                                                                    }
-                                                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                                                />
-                                                            </svg>
-                                                            <span className="hidden sm:inline">
-                                                                Edit
-                                                            </span>
-                                                            <span className="sm:hidden">
-                                                                Edit
-                                                            </span>
-                                                        </Link>
-                                                    </>
+                                                                Minta
+                                                                Perpanjangan
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 )}
-                                            </div>
+                                            {/* Info Task Response Marketing */}
+                                            {/* Marketing TaskResponse Deadline/Extend (for Kepala Marketing) */}
+                                            {taskResponses[survey.id]
+                                                ?.marketing &&
+                                                isKepalaMarketing &&
+                                                taskResponses[survey.id]
+                                                    .marketing.status !==
+                                                    'selesai' && (
+                                                    <div className="rounded-lg border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 p-3 sm:p-4">
+                                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                            <div className="flex-1">
+                                                                <div className="mb-1 flex items-center gap-2">
+                                                                    <svg
+                                                                        className="h-5 w-5 text-purple-600"
+                                                                        fill="none"
+                                                                        stroke="currentColor"
+                                                                        viewBox="0 0 24 24"
+                                                                    >
+                                                                        <path
+                                                                            strokeLinecap="round"
+                                                                            strokeLinejoin="round"
+                                                                            strokeWidth={
+                                                                                2
+                                                                            }
+                                                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                                        />
+                                                                    </svg>
+                                                                    <p className="text-sm font-bold text-purple-900">
+                                                                        Deadline
+                                                                        Information
+                                                                        (Marketing)
+                                                                    </p>
+                                                                </div>
+                                                                <p className="text-sm text-purple-700">
+                                                                    <span className="font-semibold">
+                                                                        Deadline:{' '}
+                                                                    </span>
+                                                                    {formatDeadline(
+                                                                        taskResponses[
+                                                                            survey
+                                                                                .id
+                                                                        ]
+                                                                            .marketing
+                                                                            .deadline,
+                                                                    )}
+                                                                </p>
+                                                                {taskResponses[
+                                                                    survey.id
+                                                                ].marketing
+                                                                    .extend_time >
+                                                                    0 && (
+                                                                    <p className="mt-1 text-sm font-semibold text-purple-600">
+                                                                        <span className="inline-flex items-center gap-1">
+                                                                            <svg
+                                                                                className="h-4 w-4"
+                                                                                fill="none"
+                                                                                stroke="currentColor"
+                                                                                viewBox="0 0 24 24"
+                                                                            >
+                                                                                <path
+                                                                                    strokeLinecap="round"
+                                                                                    strokeLinejoin="round"
+                                                                                    strokeWidth={
+                                                                                        2
+                                                                                    }
+                                                                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                                                />
+                                                                            </svg>
+                                                                            Diperpanjang:{' '}
+                                                                            {
+                                                                                taskResponses[
+                                                                                    survey
+                                                                                        .id
+                                                                                ]
+                                                                                    .marketing
+                                                                                    .extend_time
+                                                                            }
+                                                                            x
+                                                                        </span>
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            <button
+                                                                onClick={() =>
+                                                                    setShowExtendModal(
+                                                                        {
+                                                                            orderId:
+                                                                                survey.id,
+                                                                            tahap: 'survey',
+                                                                            taskResponse:
+                                                                                taskResponses[
+                                                                                    survey
+                                                                                        .id
+                                                                                ]
+                                                                                    .marketing, // PENTING: Pass yang marketing
+                                                                            isMarketing: true, // PENTING: true untuk marketing
+                                                                        },
+                                                                    )
+                                                                }
+                                                                className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-purple-600 hover:to-purple-700"
+                                                            >
+                                                                <svg
+                                                                    className="h-4 w-4"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    viewBox="0 0 24 24"
+                                                                >
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth={
+                                                                            2
+                                                                        }
+                                                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                                    />
+                                                                </svg>
+                                                                Minta
+                                                                Perpanjangan
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            {/* Response Info */}
+                                            {survey.response_time && (
+                                                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <svg
+                                                            className="h-4 w-4 flex-shrink-0 text-emerald-600 sm:h-5 sm:w-5"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={2}
+                                                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                            />
+                                                        </svg>
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="truncate text-xs font-medium text-emerald-700">
+                                                                Responded by{' '}
+                                                                <span className="font-bold">
+                                                                    {
+                                                                        survey.response_by
+                                                                    }
+                                                                </span>
+                                                            </p>
+                                                            <p className="mt-0.5 text-xs text-emerald-600">
+                                                                {formatDate(
+                                                                    survey.response_time,
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Marketing Response Badge */}
+                                                    {survey.pm_response_time && (
+                                                        <div className="mt-2 rounded-lg border border-purple-200 bg-purple-50 p-2">
+                                                            <p className="text-xs font-semibold text-purple-900">
+                                                                ✓ Marketing
+                                                                Response
+                                                            </p>
+                                                            <p className="text-xs text-purple-700">
+                                                                By:{' '}
+                                                                {
+                                                                    survey.pm_response_by
+                                                                }
+                                                            </p>
+                                                            <p className="text-xs text-purple-700">
+                                                                {formatDate(
+                                                                    survey.pm_response_time,
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -952,6 +1178,23 @@ export default function Index({ surveys }: Props) {
                     </div>
                 </div>
             </div>
+
+            {/* Extend Modal - Fixed z-index */}
+            {/* Extend Modal - pass correct TaskResponse (marketing if available and isKepalaMarketing) */}
+            {showExtendModal && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+                    <div className="relative w-full max-w-md">
+                        <ExtendModal
+                            orderId={showExtendModal.orderId}
+                            tahap={showExtendModal.tahap}
+                            taskResponse={showExtendModal.taskResponse}
+                            isMarketing={showExtendModal.isMarketing}
+                            refetchTaskResponses={refetchTaskResponses}
+                            onClose={() => setShowExtendModal(null)}
+                        />
+                    </div>
+                </div>
+            )}
         </>
     );
 }

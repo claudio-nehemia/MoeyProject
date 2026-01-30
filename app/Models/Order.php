@@ -49,6 +49,18 @@ class Order extends Model
         return $this->hasOne(Moodboard::class, 'order_id');
     }
 
+    public function estimasi()
+    {
+        return $this->hasOneThrough(
+            Estimasi::class,
+            Moodboard::class,
+            'order_id', // Foreign key on moodboard table
+            'moodboard_id', // Foreign key on estimasi table
+            'id', // Local key on orders table
+            'id' // Local key on moodboard table
+        );
+    }
+
     public function itemPekerjaans()
     {
         return $this->hasManyThrough(

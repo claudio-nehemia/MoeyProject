@@ -80,22 +80,52 @@ export default function Index({ itemPekerjaans, termins }: Props) {
     const fileInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>(
         {},
     );
-    const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
-    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+    // Dual task response state
+    const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: any; marketing?: any }>>({});
+    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: any } | null>(null);
 
     const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
 
-    // Fetch task responses
+    // Fetch dual task responses (regular & marketing)
     useEffect(() => {
         itemPekerjaans.forEach(item => {
             const orderId = item.order.id;
             if (orderId) {
+                // Regular
                 axios.get(`/task-response/${orderId}/kontrak`)
                     .then(res => {
-                        setTaskResponses(prev => ({ ...prev, [orderId]: res.data }));
+                        const task = Array.isArray(res.data) ? res.data[0] : res.data;
+                        setTaskResponses(prev => ({
+                            ...prev,
+                            [orderId]: {
+                                ...prev[orderId],
+                                regular: task ?? null,
+                            },
+                        }));
                     })
-                    .catch(err => console.error('Error fetching task response:', err));
+                    .catch(err => {
+                        if (err.response?.status !== 404) {
+                            console.error('Error fetching regular task response (kontrak):', err);
+                        }
+                    });
+                // Marketing
+                axios.get(`/task-response/${orderId}/kontrak?is_marketing=1`)
+                    .then(res => {
+                        const task = Array.isArray(res.data) ? res.data[0] : res.data;
+                        setTaskResponses(prev => ({
+                            ...prev,
+                            [orderId]: {
+                                ...prev[orderId],
+                                marketing: task ?? null,
+                            },
+                        }));
+                    })
+                    .catch(err => {
+                        if (err.response?.status !== 404) {
+                            console.error('Error fetching marketing task response (kontrak):', err);
+                        }
+                    });
             }
         });
     }, [itemPekerjaans]);
@@ -163,6 +193,17 @@ export default function Index({ itemPekerjaans, termins }: Props) {
             currency: 'IDR',
             minimumFractionDigits: 0,
         }).format(amount);
+    };
+
+    const formatDeadline = (value: string | null | undefined) => {
+        if (value == null || value === '') return '-';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '-';
+        return d.toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+        });
     };
 
     return (
@@ -502,7 +543,8 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                 ) : (
                                                                     <div className="space-y-2">
                                                                         {/* Task Response Deadline & Extend Button */}
-                                                                        {taskResponse && taskResponse.status !== 'selesai' && (
+                                                                        {/* Task Response Deadline - REGULAR */}
+                                                                        {taskResponses[orderId]?.regular && taskResponses[orderId]?.regular.status !== 'selesai' && (
                                                                             <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                                                                                 <div className="flex justify-between items-center">
                                                                                     <div>
@@ -510,18 +552,35 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                                             Deadline Kontrak
                                                                                         </p>
                                                                                         <p className="text-sm font-semibold text-yellow-900">
-                                                                                            {new Date(taskResponse.deadline).toLocaleDateString('id-ID', {
-                                                                                                day: 'numeric',
-                                                                                                month: 'long',
-                                                                                                year: 'numeric'
-                                                                                            })}
+                                                                                            {formatDeadline(taskResponses[orderId]?.regular.deadline)}
                                                                                         </p>
                                                                                     </div>
                                                                                     <button
-                                                                                        onClick={() => setShowExtendModal({ orderId, tahap: 'kontrak' })}
+                                                                                        onClick={() => setShowExtendModal({ orderId, tahap: 'kontrak', isMarketing: false, taskResponse: taskResponses[orderId]?.regular })}
                                                                                         className="px-3 py-1.5 bg-orange-500 text-white rounded-md text-xs font-medium hover:bg-orange-600 transition-colors"
                                                                                     >
                                                                                         Perpanjang
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                        {/* Task Response Deadline - MARKETING (Kepala Marketing only) */}
+                                                                        {isKepalaMarketing && taskResponses[orderId]?.marketing && taskResponses[orderId]?.marketing.status !== 'selesai' && (
+                                                                            <div className="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                                                                <div className="flex justify-between items-center">
+                                                                                    <div>
+                                                                                        <p className="text-xs font-medium text-purple-800">
+                                                                                            Deadline Kontrak (Marketing)
+                                                                                        </p>
+                                                                                        <p className="text-sm font-semibold text-purple-900">
+                                                                                            {formatDeadline(taskResponses[orderId]?.marketing.deadline)}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                    <button
+                                                                                        onClick={() => setShowExtendModal({ orderId, tahap: 'kontrak', isMarketing: true, taskResponse: taskResponses[orderId]?.marketing })}
+                                                                                        className="px-3 py-1.5 bg-purple-500 text-white rounded-md text-xs font-medium hover:bg-purple-600 transition-colors"
+                                                                                    >
+                                                                                        Perpanjang (Marketing)
                                                                                     </button>
                                                                                 </div>
                                                                             </div>
@@ -786,6 +845,8 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                 <ExtendModal
                     orderId={showExtendModal.orderId}
                     tahap={showExtendModal.tahap}
+                    taskResponse={showExtendModal.taskResponse}
+                    isMarketing={showExtendModal.isMarketing}
                     onClose={() => setShowExtendModal(null)}
                 />
             )}

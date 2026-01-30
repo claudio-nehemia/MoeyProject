@@ -83,18 +83,24 @@ class DesainFinalController extends Controller
                 'tahapan_proyek' => 'desain_final',
             ]);
 
+            // Update task response regular
             $taskResponse = TaskResponse::where('order_id', $moodboard->order->id)
                 ->where('tahap', 'desain_final')
+                ->where('is_marketing', false)
                 ->first();
 
             if ($taskResponse && $taskResponse->status === 'menunggu_response') {
                 $taskResponse->update([
                     'user_id' => auth()->user()->id,
                     'response_time' => now(),
-                    'deadline' => now()->addDays(6), // Tambah 3 hari (total 8 hari)
+                    'deadline' => now()->addDays(6),
                     'duration' => 6,
-                    'duration_actual' => $taskResponse->duration_actual,
                     'status' => 'menunggu_input',
+                ]);
+            } elseif ($taskResponse && $taskResponse->isOverdue()) {
+                $taskResponse->update([
+                    'user_id' => auth()->user()->id,
+                    'response_time' => now(),
                 ]);
             }
 
@@ -127,23 +133,22 @@ class DesainFinalController extends Controller
             $order = $moodboard->order;
             Log::info('Moodboard found: ' . $moodboard->id);
 
-            // Check if moodboard is approved
+            // Check validations
             if ($moodboard->status !== 'approved') {
                 Log::warning('Moodboard status is not approved: ' . $moodboard->status);
                 return back()->with('error', 'Moodboard harus disetujui terlebih dahulu.');
             }
 
-            // Check if commitment fee is completed
             if (!$moodboard->commitmentFee || $moodboard->commitmentFee->payment_status !== 'completed') {
                 Log::warning('Commitment fee not completed');
                 return back()->with('error', 'Commitment Fee harus diselesaikan terlebih dahulu.');
             }
 
-            // Check if response final has been done
             if (!$moodboard->response_final_time) {
                 Log::warning('Response final not done yet');
                 return back()->with('error', 'Silahkan response terlebih dahulu sebelum upload file.');
             }
+
             if ($request->hasFile('moodboard_final')) {
                 $files = $request->file('moodboard_final');
                 Log::info('Number of files: ' . count($files));
@@ -163,26 +168,32 @@ class DesainFinalController extends Controller
 
                     Log::info("MoodboardFile record created for file {$index}");
                 }
-
-                // JANGAN update moodboard_final di sini
-                // Biarkan kosong sampai user pilih file untuk di-approve
             }
 
             $order->update([
                 'tahapan_proyek' => 'desain_final',
             ]);
 
+            // Update task response regular
             $taskResponse = TaskResponse::where('order_id', $moodboard->order->id)
                 ->where('tahap', 'desain_final')
+                ->where('is_marketing', false)
                 ->first();
 
             if ($taskResponse) {
-                $taskResponse->update([
-                    'update_data_time' => now(), // Kapan data diisi
-                    'status' => 'selesai',
-                ]);
+                if ($taskResponse->isOverdue()) {
+                    $taskResponse->update([
+                        'status' => 'telat_submit',
+                        'update_data_time' => now(),
+                    ]);
+                } else {
+                    $taskResponse->update([
+                        'update_data_time' => now(),
+                        'status' => 'selesai',
+                    ]);
+                }
 
-                // Create task response untuk tahap selanjutnya (cm_fee)
+                // Create task response untuk tahap selanjutnya (item_pekerjaan)
                 $nextTaskExists = TaskResponse::where('order_id', $moodboard->order->id)
                     ->where('tahap', 'item_pekerjaan')
                     ->exists();
@@ -193,11 +204,25 @@ class DesainFinalController extends Controller
                         'user_id' => null,
                         'tahap' => 'item_pekerjaan',
                         'start_time' => now(),
-                        'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                        'deadline' => now()->addDays(3),
                         'duration' => 3,
                         'duration_actual' => 3,
                         'extend_time' => 0,
                         'status' => 'menunggu_response',
+                        'is_marketing' => false,
+                    ]);
+
+                    TaskResponse::create([
+                        'order_id' => $moodboard->order->id,
+                        'user_id' => null,
+                        'tahap' => 'item_pekerjaan',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3),
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                        'is_marketing' => true,
                     ]);
                 }
             }
@@ -274,7 +299,6 @@ class DesainFinalController extends Controller
 
             Log::info('Validation passed');
 
-            // Simpan ke kolom revisi_final, tidak perlu kosongkan moodboard_final
             $moodboard->revisi_final = $validated['notes'];
             $moodboard->save();
 

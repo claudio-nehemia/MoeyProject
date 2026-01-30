@@ -71,6 +71,11 @@ class GambarKerjaController extends Controller
                 'duration_actual' => $taskResponse->duration_actual,
                 'status' => 'menunggu_input',
             ]);
+        } elseif ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+            ]);
         }
 
         return back()->with('success', 'Gambar kerja di-response.');
@@ -126,28 +131,48 @@ class GambarKerjaController extends Controller
                 ->where('tahap', 'gambar_kerja')
                 ->first();
 
-            if ($taskResponse) {
+        if ($taskResponse) {
+            if ($taskResponse->isOverdue()) {
                 $taskResponse->update([
-                    'update_data_time' => now(), // Kapan data diisi
+                    'status' => 'telat_submit',
+                    'update_data_time' => now(),
+                ]);
+            } else {
+                $taskResponse->update([
+                    'update_data_time' => now(),
                     'status' => 'selesai',
                 ]);
+            }
 
-                // Create task response untuk tahap selanjutnya (cm_fee)
-                $nextTaskExists = TaskResponse::where('order_id', $gambarKerja->order->id)
-                    ->where('tahap', 'approval_material')
-                    ->exists();
+            // Create task response untuk tahap selanjutnya (cm_fee)
+            $nextTaskExists = TaskResponse::where('order_id', $gambarKerja->order->id)
+                ->where('tahap', 'approval_material')
+                ->exists();
 
-                if (!$nextTaskExists) {
-                    TaskResponse::create([
-                        'order_id' => $gambarKerja->order->id,
-                        'user_id' => null,
-                        'tahap' => 'approval_material',
-                        'start_time' => now(),
-                        'deadline' => now()->addDays(6), // Deadline untuk approval_material
-                        'duration' => 6,
-                        'duration_actual' => 6,
-                        'extend_time' => 0,
-                        'status' => 'menunggu_input',
+            if (!$nextTaskExists) {
+                TaskResponse::create([
+                    'order_id' => $gambarKerja->order->id,
+                    'user_id' => null,
+                    'tahap' => 'approval_material',
+                    'start_time' => now(),
+                    'deadline' => now()->addDays(6), // Deadline untuk approval_material
+                    'duration' => 6,
+                    'duration_actual' => 6,
+                    'extend_time' => 0,
+                    'status' => 'menunggu_input',
+                ]);
+
+                TaskResponse::create([
+                    'order_id' => $gambarKerja->order->id,
+                    'user_id' => null,
+                    'tahap' => 'workplan',
+                    'start_time' => now(),
+                    'deadline' => now()->addDays(6), // Deadline untuk approval_material
+                    'duration' => 6,
+                    'duration_actual' => 6,
+                    'extend_time' => 0,
+                    'status' => 'menunggu_response',
+                    'is_marketing' => true,
                 ]);
             }
         }

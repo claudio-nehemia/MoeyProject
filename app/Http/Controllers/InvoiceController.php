@@ -511,10 +511,17 @@ class InvoiceController extends Controller
                 ->first();
 
             if ($taskResponse) {
-                $taskResponse->update([
-                    'update_data_time' => now(), // Kapan data diisi
-                    'status' => 'selesai',
-                ]);
+                if ($taskResponse->isOverdue()) {
+                    $taskResponse->update([
+                        'status' => 'telat_submit',
+                        'update_data_time' => now(),
+                    ]);
+                } else {
+                    $taskResponse->update([
+                        'update_data_time' => now(),
+                        'status' => 'selesai',
+                    ]);
+                }
 
                 // Create task response untuk tahap selanjutnya (cm_fee)
                 $nextTaskExists = TaskResponse::where('order_id', $order->id)

@@ -212,6 +212,11 @@ class WorkplanItemController extends Controller
                     'duration_actual' => $taskResponse->duration_actual,
                     'status' => 'menunggu_input',
                 ]);
+            } elseif ($taskResponse && $taskResponse->isOverdue()) {
+                $taskResponse->update([
+                    'user_id' => auth()->user()->id,
+                    'response_time' => now(),
+                ]);
             }
         });
 
@@ -387,10 +392,17 @@ class WorkplanItemController extends Controller
                 ->first();
 
             if ($taskResponse) {
-                $taskResponse->update([
-                    'update_data_time' => now(), // Kapan data diisi
-                    'status' => 'selesai',
-                ]);            
+                if ($taskResponse->isOverdue()) {
+                    $taskResponse->update([
+                        'status' => 'telat_submit',
+                        'update_data_time' => now(),
+                    ]);
+                } else {
+                    $taskResponse->update([
+                        'update_data_time' => now(),
+                        'status' => 'selesai',
+                    ]);
+                }
             }
 
             // Create pengajuan perpanjangan timeline untuk store (create baru)
@@ -533,11 +545,16 @@ class WorkplanItemController extends Controller
         return back()->with('success', 'Status workplan diperbarui.');
     }
 
-    public function export()
+    /**
+     * Export workplan per order ID
+     */
+    public function export($orderId)
     {
+        $order = Order::findOrFail($orderId);
+        
         return Excel::download(
-            new WorkplanExport(),
-            'workplan_' . now()->format('Ymd_His') . '.xlsx'
+            new WorkplanExport($orderId),
+            'workplan_' . $order->nama_project . '_' . now()->format('Ymd_His') . '.xlsx'
         );
     }
 }

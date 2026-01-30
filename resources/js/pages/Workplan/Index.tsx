@@ -49,8 +49,9 @@ export default function Index({ orders }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [searchQuery, setSearchQuery] = useState('');
     const [filteredOrders, setFilteredOrders] = useState(orders);
-    const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
-    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+    // State untuk dua jenis TaskResponse
+    const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: any; marketing?: any }>>({});
+    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: any } | null>(null);
 
     useEffect(() => {
         const handleResize = () => {
@@ -60,19 +61,47 @@ export default function Index({ orders }: Props) {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // Fetch task response untuk semua project (tahap: workplan)
+    // Fetch dua jenis task response (regular & marketing) untuk semua project (tahap: workplan)
     useEffect(() => {
         orders.forEach((order) => {
+            // Regular
             axios
                 .get(`/task-response/${order.id}/workplan`)
                 .then((res) => {
-                    if (res.data) {
-                        setTaskResponses((prev) => ({ ...prev, [order.id]: res.data }));
+                    const task = Array.isArray(res.data) ? res.data[0] : res.data;
+                    if (task) {
+                        setTaskResponses((prev) => ({
+                            ...prev,
+                            [order.id]: {
+                                ...prev[order.id],
+                                regular: task,
+                            },
+                        }));
                     }
                 })
                 .catch((err) => {
                     if (err.response?.status !== 404) {
-                        console.error('Error fetching task response (workplan):', err);
+                        console.error('Error fetching regular task response (workplan):', err);
+                    }
+                });
+            // Marketing
+            axios
+                .get(`/task-response/${order.id}/workplan?is_marketing=1`)
+                .then((res) => {
+                    const task = Array.isArray(res.data) ? res.data[0] : res.data;
+                    if (task) {
+                        setTaskResponses((prev) => ({
+                            ...prev,
+                            [order.id]: {
+                                ...prev[order.id],
+                                marketing: task,
+                            },
+                        }));
+                    }
+                })
+                .catch((err) => {
+                    if (err.response?.status !== 404) {
+                        console.error('Error fetching marketing task response (workplan):', err);
                     }
                 });
         });
@@ -133,6 +162,13 @@ export default function Index({ orders }: Props) {
         return false;
     };
 
+    const formatDeadline = (value: string | null | undefined) => {
+        if (value == null || value === '') return '-';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '-';
+        return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    };
+
     const getStatusBadge = (progress: number) => {
         if (progress >= 100) {
             return (
@@ -162,6 +198,10 @@ export default function Index({ orders }: Props) {
                 Belum Ada
             </span>
         );
+    };
+
+    const handleExportExcel = (orderId: number) => {
+        window.location.href = `/workplan/export/${orderId}`;
     };
 
     return (
@@ -346,8 +386,8 @@ export default function Index({ orders }: Props) {
                                         </div>
                                     </div>
 
-                                    {/* Deadline & Extend Button */}
-                                    {taskResponse && taskResponse.status !== 'selesai' && (
+                                    {/* Deadline & Minta Perpanjangan - regular */}
+                                    {taskResponses[order.id]?.regular && taskResponses[order.id].regular.status !== 'selesai' && (
                                         <div className="mt-3">
                                             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between gap-3">
                                                 <div>
@@ -355,21 +395,43 @@ export default function Index({ orders }: Props) {
                                                         Deadline Workplan
                                                     </p>
                                                     <p className="text-sm font-semibold text-yellow-900">
-                                                        {new Date(taskResponse.deadline).toLocaleDateString('id-ID', {
-                                                            day: 'numeric',
-                                                            month: 'long',
-                                                            year: 'numeric',
-                                                        })}
+                                                        {formatDeadline(taskResponses[order.id].regular.deadline)}
                                                     </p>
-                                                    {taskResponse.extend_time > 0 && (
+                                                    {taskResponses[order.id].regular.extend_time > 0 && (
                                                         <p className="mt-1 text-xs text-orange-600">
-                                                            Perpanjangan: {taskResponse.extend_time}x
+                                                            Perpanjangan: {taskResponses[order.id].regular.extend_time}x
                                                         </p>
                                                     )}
                                                 </div>
                                                 <button
-                                                    onClick={() => setShowExtendModal({ orderId: order.id, tahap: 'workplan' })}
+                                                    onClick={() => setShowExtendModal({ orderId: order.id, tahap: 'workplan', isMarketing: false, taskResponse: taskResponses[order.id].regular })}
                                                     className="px-3 py-1.5 bg-orange-500 text-white rounded-md text-xs font-medium hover:bg-orange-600 transition-colors"
+                                                >
+                                                    Minta Perpanjangan
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {/* Deadline & Minta Perpanjangan - marketing (khusus Kepala Marketing) */}
+                                    {isKepalaMarketing && taskResponses[order.id]?.marketing && taskResponses[order.id].marketing.status !== 'selesai' && (
+                                        <div className="mt-3">
+                                            <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg flex items-center justify-between gap-3">
+                                                <div>
+                                                    <p className="text-xs font-medium text-purple-800">
+                                                        Deadline Workplan (Marketing)
+                                                    </p>
+                                                    <p className="text-sm font-semibold text-purple-900">
+                                                        {formatDeadline(taskResponses[order.id].marketing.deadline)}
+                                                    </p>
+                                                    {taskResponses[order.id].marketing.extend_time > 0 && (
+                                                        <p className="mt-1 text-xs text-purple-600">
+                                                            Perpanjangan: {taskResponses[order.id].marketing.extend_time}x
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    onClick={() => setShowExtendModal({ orderId: order.id, tahap: 'workplan', isMarketing: true, taskResponse: taskResponses[order.id].marketing })}
+                                                    className="px-3 py-1.5 bg-purple-500 text-white rounded-md text-xs font-medium hover:bg-purple-600 transition-colors"
                                                 >
                                                     Minta Perpanjangan
                                                 </button>
@@ -452,13 +514,15 @@ export default function Index({ orders }: Props) {
                                                 </span>
                                             )
                                         )}
+                                        
+                                        {/* Export Button - Pass order.id */}
                                         <button
-                                            onClick={() => window.location.href = '/workplan/export/excel'}
-                                            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
+                                            onClick={() => handleExportExcel(order.id)}
+                                            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700 transition-colors"
                                         >
                                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                                    d="M4 4v16h16M4 12h16M12 4v16" />
+                                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                             </svg>
                                             Export Excel
                                         </button>
@@ -474,6 +538,8 @@ export default function Index({ orders }: Props) {
                 <ExtendModal
                     orderId={showExtendModal.orderId}
                     tahap={showExtendModal.tahap}
+                    taskResponse={showExtendModal.taskResponse}
+                    isMarketing={showExtendModal.isMarketing}
                     onClose={() => setShowExtendModal(null)}
                 />
             )}
