@@ -170,37 +170,24 @@ class EstimasiController extends Controller
                         ]);
                     }
 
-                    // Create task response untuk tahap selanjutnya (cm_fee)
+                    // Create task response untuk tahap selanjutnya (approval_design)
+                    // Tidak perlu response, langsung menunggu_input karena desainer langsung bisa approve
                     $nextTaskExists = TaskResponse::where('order_id', $estimasi->moodboard->order->id)
-                        ->where('tahap', 'cm_fee')
+                        ->where('tahap', 'approval_design')
                         ->exists();
 
                     if (!$nextTaskExists) {
                         TaskResponse::create([
                             'order_id' => $estimasi->moodboard->order->id,
                             'user_id' => null,
-                            'tahap' => 'cm_fee',
+                            'tahap' => 'approval_design',
                             'start_time' => now(),
-                            'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                            'deadline' => now()->addDays(3), // Deadline untuk approval design
                             'duration' => 3,
                             'duration_actual' => 3,
                             'extend_time' => 0,
-                            'status' => 'menunggu_response',
+                            'status' => 'menunggu_input', // Langsung menunggu input, tidak perlu response
                         ]);
-
-                        TaskResponse::create([
-                            'order_id' => $estimasi->moodboard->order->id,
-                            'user_id' => null,
-                            'tahap' => 'cm_fee',
-                            'start_time' => now(),
-                            'deadline' => now()->addDays(3), // Deadline untuk cm_fee
-                            'duration' => 3,
-                            'duration_actual' => 3,
-                            'extend_time' => 0,
-                            'status' => 'menunggu_response',
-                            'is_marketing' => true,
-                        ]);
-
                     }
                 }
             }

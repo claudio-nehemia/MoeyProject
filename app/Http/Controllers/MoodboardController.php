@@ -667,6 +667,14 @@ class MoodboardController extends Controller
                 ->orderByDesc('id')
                 ->first();
 
+            $lastMarketingTask = TaskResponse::where('order_id', $moodboard->order->id)
+                ->where('tahap', 'estimasi')
+                ->where('is_marketing', true)
+                ->orderByDesc('extend_time')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
+                ->first();
+
             if ($taskResponse) {
                 if ($taskResponse->isOverdue()) {
                     $taskResponse->update([
@@ -682,20 +690,56 @@ class MoodboardController extends Controller
 
                 // Create task response untuk tahap selanjutnya (cm_fee)
                 $nextTaskExists = TaskResponse::where('order_id', $moodboard->order->id)
-                    ->where('tahap', 'desain_final')
+                    ->where('tahap', 'cm_fee')
                     ->exists();
 
                 if (!$nextTaskExists) {
                     TaskResponse::create([
                         'order_id' => $moodboard->order->id,
                         'user_id' => null,
-                        'tahap' => 'desain_final',
+                        'tahap' => 'cm_fee',
                         'start_time' => now(),
                         'deadline' => now()->addDays(3), // Deadline untuk cm_fee
                         'duration' => 3,
                         'duration_actual' => 3,
                         'extend_time' => 0,
                         'status' => 'menunggu_response',
+                    ]);
+
+                    
+                }
+            }
+
+            if ($lastMarketingTask && $lastMarketingTask->status !== 'selesai') {
+                if ($lastMarketingTask->isOverdue()) {
+                    $lastMarketingTask->update([
+                        'status' => 'telat_submit',
+                        'update_data_time' => now(),
+                    ]);
+                } else {
+                    $lastMarketingTask->update([
+                        'update_data_time' => now(),
+                        'status' => 'selesai',
+                    ]);
+                }
+
+                $nextMarketingTaskExists = TaskResponse::where('order_id', $moodboard->order->id)
+                    ->where('tahap', 'cm_fee')
+                    ->where('is_marketing', true)
+                    ->exists();
+
+                if (!$nextMarketingTaskExists) {
+                    TaskResponse::create([
+                        'order_id' => $moodboard->order->id,
+                        'user_id' => null,
+                        'tahap' => 'cm_fee',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                        'is_marketing' => true,
                     ]);
                 }
             }

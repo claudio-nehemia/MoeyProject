@@ -204,22 +204,35 @@ class CommitmentFeeController extends Controller
                     ]);
                 }
 
-                // Create task response untuk tahap selanjutnya (cm_fee)
+                // Create task response untuk tahap selanjutnya (desain_final)
                 $nextTaskExists = TaskResponse::where('order_id', $commitmentFee->moodboard->order->id)
-                    ->where('tahap', 'approval_design')
+                    ->where('tahap', 'desain_final')
                     ->exists();
 
                 if (!$nextTaskExists) {
                     TaskResponse::create([
                         'order_id' => $commitmentFee->moodboard->order->id,
                         'user_id' => null,
-                        'tahap' => 'approval_design',
+                        'tahap' => 'desain_final',
                         'start_time' => now(),
-                        'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                        'deadline' => now()->addDays(3), // Deadline untuk desain final
                         'duration' => 3,
                         'duration_actual' => 3,
                         'extend_time' => 0,
-                        'status' => 'menunggu_input',
+                        'status' => 'menunggu_response',
+                    ]);
+
+                    TaskResponse::create([
+                        'order_id' => $commitmentFee->moodboard->order->id,
+                        'user_id' => null,
+                        'tahap' => 'desain_final',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3), // Deadline untuk desain final
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                        'is_marketing' => true,
                     ]);
                 }
             }
