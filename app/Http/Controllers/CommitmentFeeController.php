@@ -85,6 +85,9 @@ class CommitmentFeeController extends Controller
 
             $taskResponse = TaskResponse::where('order_id', $moodboard->order->id)
                 ->where('tahap', 'cm_fee')
+                ->orderByDesc('extend_time')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
                 ->first();
 
             if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -183,6 +186,9 @@ class CommitmentFeeController extends Controller
 
             $taskResponse = TaskResponse::where('order_id', $commitmentFee->moodboard->order->id)
                 ->where('tahap', 'cm_fee')
+                ->orderByDesc('extend_time')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
                 ->first();
 
             if ($taskResponse) {
@@ -347,7 +353,7 @@ class CommitmentFeeController extends Controller
             'stampUrl' => public_path('assets/stamp.png'),
         ];
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.commitment_fee', $data)
+        $pdf = Pdf::loadView('pdf.commitment_fee', $data)
             ->setPaper('A4', 'portrait');
 
         return $pdf->stream('Commitment Fee - ' . $order->nama_project . '.pdf');

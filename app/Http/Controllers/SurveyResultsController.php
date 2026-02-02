@@ -26,12 +26,23 @@ class SurveyResultsController extends Controller
         \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
 
         // Get all orders with survey results relationship
-        $surveys = Order::with(['surveyResults', 'jenisInterior', 'users.role'])
+        // NOTE: We eager-load surveyResults.jenisPengukuran so draft status can reflect partial draft data.
+        $surveys = Order::with(['surveyResults.jenisPengukuran', 'jenisInterior', 'users.role'])
             ->visibleToUser($user)
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($order) {
                 $surveyResult = $order->surveyResults;
+
+                $hasFeedback = $surveyResult && is_string($surveyResult->feedback) && trim($surveyResult->feedback) !== '';
+                $hasLayoutFiles = $surveyResult && !empty($surveyResult->layout_files);
+                $hasFotoFiles = $surveyResult && !empty($surveyResult->foto_lokasi_files);
+                $hasJenisPengukuran = $surveyResult && $surveyResult->relationLoaded('jenisPengukuran')
+                    ? $surveyResult->jenisPengukuran->isNotEmpty()
+                    : ($surveyResult ? $surveyResult->jenisPengukuran()->exists() : false);
+                $hasMomFile = !empty($order->mom_file);
+
+                $hasAnyDraftData = $hasFeedback || $hasLayoutFiles || $hasFotoFiles || $hasJenisPengukuran || $hasMomFile;
 
                 return [
                     'id' => $order->id,
@@ -49,9 +60,11 @@ class SurveyResultsController extends Controller
                         && ($surveyResult->feedback || $surveyResult->layout_files || $surveyResult->foto_lokasi_files),
 
                     'is_draft' => $surveyResult ? $surveyResult->is_draft : false,
+                    // A draft should be treated as "has draft" even if only partial fields are filled
+                    // (e.g. jenis_pengukuran_ids or MOM file). This avoids the UI looking like it didn't save.
                     'has_draft' => $surveyResult !== null
                         && $surveyResult->is_draft == true
-                        && ($surveyResult->feedback || $surveyResult->layout_files || $surveyResult->foto_lokasi_files),
+                        && $hasAnyDraftData,
 
                     // Survey data
                     'survey_id' => $surveyResult->id ?? null,
@@ -120,6 +133,9 @@ class SurveyResultsController extends Controller
 
             $taskResponse = TaskResponse::where('order_id', $order->id)
                 ->where('tahap', 'survey')
+                ->orderByDesc('extend_time')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
                 ->first();
 
             if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -286,6 +302,9 @@ class SurveyResultsController extends Controller
 
                 $taskResponse = TaskResponse::where('order_id', $survey->order->id)
                     ->where('tahap', 'survey')
+                    ->orderByDesc('extend_time')
+                    ->orderByDesc('updated_at')
+                    ->orderByDesc('id')
                     ->first();
 
                 if ($taskResponse) {
@@ -491,6 +510,9 @@ class SurveyResultsController extends Controller
 
                 $taskResponse = TaskResponse::where('order_id', $survey->order->id)
                     ->where('tahap', 'survey')
+                    ->orderByDesc('extend_time')
+                    ->orderByDesc('updated_at')
+                    ->orderByDesc('id')
                     ->first();
 
                 if ($taskResponse) {

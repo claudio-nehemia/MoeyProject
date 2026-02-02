@@ -27,6 +27,7 @@ class Kontrak extends Model
         'harga_kontrak' => 'decimal:0',
         'signed_at' => 'datetime',
         'response_time' => 'datetime',
+        'pm_response_time' => 'datetime',
     ];
 
     public function termin()

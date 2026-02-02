@@ -28,6 +28,25 @@ class PmResponseController extends Controller
         return null;
     }
 
+    private function checkOriginalKepalaMarketing(Order $order)
+    {
+        $user = auth()->user();
+        if (!$user || !$user->role || $user->role->nama_role !== 'Kepala Marketing') {
+            return redirect()->back()->with('error', 'Unauthorized. Only Kepala Marketing can perform this action.');
+        }
+
+        $originalKepalaMarketing = $order->users()
+            ->whereHas('role', fn($q) => $q->where('nama_role', 'Kepala Marketing'))
+            ->orderBy('order_teams.created_at', 'asc')
+            ->first();
+
+        if (!$originalKepalaMarketing || ((int) $originalKepalaMarketing->id !== (int) $user->id)) {
+            return redirect()->back()->with('error', 'Unauthorized. Only Kepala Marketing assigned from the beginning can respond.');
+        }
+
+        return null;
+    }
+
     /**
      * Record PM response untuk model
      */
@@ -59,6 +78,8 @@ class PmResponseController extends Controller
         \Log::info('Order ID: ' . $id);
 
         $order = Order::findOrFail($id);
+        if ($check = $this->checkOriginalKepalaMarketing($order))
+            return $check;
 
         $order->update([
             'pm_survey_response_time' => now(),
@@ -68,6 +89,9 @@ class PmResponseController extends Controller
         $taskResponse = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'survey')
             ->where('is_marketing', true)
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->first();
         if ($taskResponse) {
             $taskResponse->update([
@@ -102,6 +126,15 @@ class PmResponseController extends Controller
             $moodboard = Moodboard::where('order_id', $id)->first();
         }
 
+        if ($moodboard) {
+            if ($check = $this->checkOriginalKepalaMarketing($moodboard->order))
+                return $check;
+        } else {
+            $order = Order::findOrFail($id);
+            if ($check = $this->checkOriginalKepalaMarketing($order))
+                return $check;
+        }
+
         if (!$moodboard) {
             \Log::info('Moodboard not found, creating new with order_id: ' . $id);
             $moodboard = Moodboard::create([
@@ -119,6 +152,9 @@ class PmResponseController extends Controller
         $taskresponse = TaskResponse::where('order_id', $moodboard->order->id)
             ->where('tahap', 'moodboard')
             ->where('is_marketing', true)
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->first();
         if ($taskresponse) {
             $taskresponse->update([
@@ -144,6 +180,8 @@ class PmResponseController extends Controller
         \Log::info('Moodboard ID: ' . $id);
 
         $moodboard = Moodboard::findOrFail($id);
+        if ($check = $this->checkOriginalKepalaMarketing($moodboard->order))
+            return $check;
         \Log::info('Moodboard found, ID: ' . $moodboard->id);
 
         // Check if already has pm_response for desain final
@@ -158,6 +196,9 @@ class PmResponseController extends Controller
         $taskresponse = TaskResponse::where('order_id', $moodboard->order->id)
             ->where('tahap', 'desain_final')
             ->where('is_marketing', true)
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->first();
             
         if ($taskresponse) {
@@ -180,10 +221,16 @@ class PmResponseController extends Controller
     {
         if ($check = $this->checkPm())
             return $check;
-        $this->recordResponse(Estimasi::findOrFail($id));
+        $estimasi = Estimasi::findOrFail($id);
+        if ($check = $this->checkOriginalKepalaMarketing($estimasi->moodboard->order))
+            return $check;
+        $this->recordResponse($estimasi);
         $taskresponse = TaskResponse::where('order_id', Estimasi::findOrFail($id)->moodboard->order->id)
             ->where('tahap', 'estimasi')
             ->where('is_marketing', true)
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->first();
         if ($taskresponse) {
             $taskresponse->update([
@@ -203,10 +250,16 @@ class PmResponseController extends Controller
     {
         if ($check = $this->checkPm())
             return $check;
-        $this->recordResponse(CommitmentFee::findOrFail($id));
+        $commitmentFee = CommitmentFee::findOrFail($id);
+        if ($check = $this->checkOriginalKepalaMarketing($commitmentFee->moodboard->order))
+            return $check;
+        $this->recordResponse($commitmentFee);
         $taskresponse = TaskResponse::where('order_id', CommitmentFee::findOrFail($id)->moodboard->order->id)
             ->where('tahap', 'cm_fee')
             ->where('is_marketing', true)
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->first();
         if ($taskresponse) {
             $taskresponse->update([
@@ -226,10 +279,16 @@ class PmResponseController extends Controller
     {
         if ($check = $this->checkPm())
             return $check;
-        $this->recordResponse(ItemPekerjaan::findOrFail($id));
+        $itemPekerjaan = ItemPekerjaan::findOrFail($id);
+        if ($check = $this->checkOriginalKepalaMarketing($itemPekerjaan->moodboard->order))
+            return $check;
+        $this->recordResponse($itemPekerjaan);
         $taskresponse = TaskResponse::where('order_id', ItemPekerjaan::findOrFail($id)->moodboard->order->id)
             ->where('tahap', 'item_pekerjaan')
             ->where('is_marketing', true)
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->first();
         if ($taskresponse) {
             $taskresponse->update([
@@ -249,10 +308,16 @@ class PmResponseController extends Controller
     {
         if ($check = $this->checkPm())
             return $check;
-        $this->recordResponse(SurveyUlang::findOrFail($id));
+        $surveyUlang = SurveyUlang::findOrFail($id);
+        if ($check = $this->checkOriginalKepalaMarketing($surveyUlang->order))
+            return $check;
+        $this->recordResponse($surveyUlang);
         $taskresponse = TaskResponse::where('order_id', SurveyUlang::findOrFail($id)->order->id)
             ->where('tahap', 'survey_ulang')
             ->where('is_marketing', true)
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->first();
         if ($taskresponse) {
             $taskresponse->update([
@@ -272,10 +337,16 @@ class PmResponseController extends Controller
     {
         if ($check = $this->checkPm())
             return $check;
-        $this->recordResponse(GambarKerja::findOrFail($id));
+        $gambarKerja = GambarKerja::findOrFail($id);
+        if ($check = $this->checkOriginalKepalaMarketing($gambarKerja->order))
+            return $check;
+        $this->recordResponse($gambarKerja);
         $taskresponse = TaskResponse::where('order_id', GambarKerja::findOrFail($id)->order->id)
             ->where('tahap', 'gambar_kerja')
             ->where('is_marketing', true)
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->first();
         if ($taskresponse) {
             $taskresponse->update([
@@ -295,10 +366,16 @@ class PmResponseController extends Controller
     {
         if ($check = $this->checkPm())
             return $check;
-        $this->recordResponse(Kontrak::findOrFail($id));
+        $kontrak = Kontrak::findOrFail($id);
+        if ($check = $this->checkOriginalKepalaMarketing($kontrak->itemPekerjaan->moodboard->order))
+            return $check;
+        $this->recordResponse($kontrak);
         $taskResponse = TaskResponse::where('order_id', Kontrak::findOrFail($id)->itemPekerjaan->moodboard->order->id)
             ->where('tahap', 'kontrak')
             ->where('is_marketing', true)
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->first();
         if ($taskResponse) {
             $taskResponse->update([
@@ -329,6 +406,15 @@ class PmResponseController extends Controller
             $surveyResult = SurveyResults::where('order_id', $id)->first();
         }
 
+        if ($surveyResult) {
+            if ($check = $this->checkOriginalKepalaMarketing($surveyResult->order))
+                return $check;
+        } else {
+            $order = Order::findOrFail($id);
+            if ($check = $this->checkOriginalKepalaMarketing($order))
+                return $check;
+        }
+
         if (!$surveyResult) {
             \Log::info('Survey Result not found, creating new with order_id: ' . $id);
             $surveyResult = SurveyResults::create([
@@ -346,6 +432,9 @@ class PmResponseController extends Controller
         $taskResponse = TaskResponse::where('order_id', $surveyResult->order->id)
             ->where('tahap', 'survey')
             ->where('is_marketing', true)
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->first();
         if ($taskResponse) {
             $taskResponse->update([
@@ -364,6 +453,10 @@ class PmResponseController extends Controller
     public function workplan($orderId)
     {
         if ($check = $this->checkPm())
+            return $check;
+
+        $orderForAuth = Order::findOrFail($orderId);
+        if ($check = $this->checkOriginalKepalaMarketing($orderForAuth))
             return $check;
 
         $order = Order::with('moodboard.itemPekerjaans.produks.workplanItems')->findOrFail($orderId);

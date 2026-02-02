@@ -168,6 +168,9 @@ class KontrakController extends Controller
         $order = $itempekerjaan->moodboard->order;
         $taskResponse = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'kontrak')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->first();
 
         if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -331,6 +334,9 @@ class KontrakController extends Controller
 
         $taskResponse = TaskResponse::where('order_id', $moodboard->order->id)
             ->where('tahap', 'kontrak')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->first();
 
         if ($taskResponse) {

@@ -26,12 +26,27 @@ interface Props {
     surveys: SurveyUlang[];
 }
 
+interface TaskResponse {
+    id: number;
+    order_id: number;
+    tahap: string;
+    status: string;
+    deadline: string | null;
+    extend_time: number;
+    is_marketing?: number;
+}
+
 export default function Index({ surveys }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [mounted, setMounted] = useState(false);
     const [search, setSearch] = useState("");
-    const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
-    const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+    const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: TaskResponse; marketing?: TaskResponse }>>({});
+    const [showExtendModal, setShowExtendModal] = useState<{
+        orderId: number;
+        tahap: string;
+        isMarketing: boolean;
+        taskResponse: TaskResponse;
+    } | null>(null);
 
     const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
@@ -43,23 +58,54 @@ export default function Index({ surveys }: Props) {
         return () => window.removeEventListener("resize", handleResize);
     }, []);
 
-    // Fetch task response untuk semua survey ulang (tahap: survey_ulang)
+    // Fetch task response untuk semua survey ulang (tahap: survey_ulang) - regular & marketing
     useEffect(() => {
         surveys.forEach((survey) => {
+            // Regular
             axios
                 .get(`/task-response/${survey.id}/survey_ulang`)
                 .then((res) => {
-                    if (res.data) {
-                        setTaskResponses((prev) => ({ ...prev, [survey.id]: res.data }));
+                    const task = Array.isArray(res.data) ? res.data[0] : res.data;
+                    if (task) {
+                        setTaskResponses((prev) => ({
+                            ...prev,
+                            [survey.id]: {
+                                ...prev[survey.id],
+                                regular: task,
+                            },
+                        }));
                     }
                 })
                 .catch((err) => {
                     if (err.response?.status !== 404) {
-                        console.error("Error fetching task response (survey_ulang):", err);
+                        console.error("Error fetching regular task response (survey_ulang):", err);
                     }
                 });
+
+            // Marketing (khusus Kepala Marketing)
+            if (isKepalaMarketing) {
+                axios
+                    .get(`/task-response/${survey.id}/survey_ulang?is_marketing=1`)
+                    .then((res) => {
+                        const task = Array.isArray(res.data) ? res.data[0] : res.data;
+                        if (task) {
+                            setTaskResponses((prev) => ({
+                                ...prev,
+                                [survey.id]: {
+                                    ...prev[survey.id],
+                                    marketing: task,
+                                },
+                            }));
+                        }
+                    })
+                    .catch((err) => {
+                        if (err.response?.status !== 404) {
+                            console.error("Error fetching marketing task response (survey_ulang):", err);
+                        }
+                    });
+            }
         });
-    }, [surveys]);
+    }, [surveys, isKepalaMarketing]);
 
     const formatStatus = (status: string) => {
         switch (status) {
@@ -190,7 +236,8 @@ export default function Index({ surveys }: Props) {
                             </div>
                         ) : (
                             filtered.map((s) => {
-                                const taskResponse = taskResponses[s.id];
+                                const taskResponseRegular = taskResponses[s.id]?.regular;
+                                const taskResponseMarketing = taskResponses[s.id]?.marketing;
 
                                 return (
                                 <div
@@ -249,10 +296,10 @@ export default function Index({ surveys }: Props) {
                                                     </p>
                                                 </div>
 
-                                                {/* Deadline & Extend Button */}
-                                                {taskResponse &&
-                                                    taskResponse.status !== "selesai" &&
-                                                    taskResponse.status !== "menunggu_response" && (
+                                                {/* Deadline & Extend Button - regular */}
+                                                {taskResponseRegular &&
+                                                    taskResponseRegular.status !== "selesai" &&
+                                                    taskResponseRegular.status !== "menunggu_response" && (
                                                     <div className="col-span-2 mt-2">
                                                         <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between gap-3">
                                                             <div>
@@ -260,11 +307,11 @@ export default function Index({ surveys }: Props) {
                                                                     Deadline Survey Ulang
                                                                 </p>
                                                                 <p className="text-sm font-semibold text-yellow-900">
-                                                                    {formatDeadline(taskResponse.deadline)}
+                                                                    {formatDeadline(taskResponseRegular.deadline)}
                                                                 </p>
-                                                                {taskResponse.extend_time > 0 && (
+                                                                {taskResponseRegular.extend_time > 0 && (
                                                                     <p className="mt-1 text-xs text-orange-600">
-                                                                        Perpanjangan: {taskResponse.extend_time}x
+                                                                        Perpanjangan: {taskResponseRegular.extend_time}x
                                                                     </p>
                                                                 )}
                                                             </div>
@@ -273,9 +320,48 @@ export default function Index({ surveys }: Props) {
                                                                     setShowExtendModal({
                                                                         orderId: s.id,
                                                                         tahap: "survey_ulang",
+                                                                        isMarketing: false,
+                                                                        taskResponse: taskResponseRegular,
                                                                     })
                                                                 }
                                                                 className="px-3 py-1.5 bg-orange-500 text-white rounded-md text-xs font-medium hover:bg-orange-600 transition-colors"
+                                                            >
+                                                                Minta Perpanjangan
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Deadline & Extend Button - marketing (khusus Kepala Marketing) */}
+                                                {isKepalaMarketing &&
+                                                    taskResponseMarketing &&
+                                                    taskResponseMarketing.status !== "selesai" &&
+                                                    taskResponseMarketing.status !== "menunggu_response" && (
+                                                    <div className="col-span-2 mt-2">
+                                                        <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg flex items-center justify-between gap-3">
+                                                            <div>
+                                                                <p className="text-xs font-medium text-purple-800">
+                                                                    Deadline Survey Ulang (Marketing)
+                                                                </p>
+                                                                <p className="text-sm font-semibold text-purple-900">
+                                                                    {formatDeadline(taskResponseMarketing.deadline)}
+                                                                </p>
+                                                                {taskResponseMarketing.extend_time > 0 && (
+                                                                    <p className="mt-1 text-xs text-purple-700">
+                                                                        Perpanjangan: {taskResponseMarketing.extend_time}x
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            <button
+                                                                onClick={() =>
+                                                                    setShowExtendModal({
+                                                                        orderId: s.id,
+                                                                        tahap: "survey_ulang",
+                                                                        isMarketing: true,
+                                                                        taskResponse: taskResponseMarketing,
+                                                                    })
+                                                                }
+                                                                className="px-3 py-1.5 bg-purple-600 text-white rounded-md text-xs font-medium hover:bg-purple-700 transition-colors"
                                                             >
                                                                 Minta Perpanjangan
                                                             </button>
@@ -356,6 +442,8 @@ export default function Index({ surveys }: Props) {
                 <ExtendModal
                     orderId={showExtendModal.orderId}
                     tahap={showExtendModal.tahap}
+                    taskResponse={showExtendModal.taskResponse}
+                    isMarketing={showExtendModal.isMarketing}
                     onClose={() => setShowExtendModal(null)}
                 />
             )}

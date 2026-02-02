@@ -201,6 +201,9 @@ class WorkplanItemController extends Controller
 
             $taskResponse = TaskResponse::where('order_id', $order->id)
                 ->where('tahap', 'workplan')
+                ->orderByDesc('extend_time')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
                 ->first();
 
             if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -389,6 +392,9 @@ class WorkplanItemController extends Controller
 
             $taskResponse = TaskResponse::where('order_id', $order->id)
                 ->where('tahap', 'workplan')
+                ->orderByDesc('extend_time')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
                 ->first();
 
             if ($taskResponse) {

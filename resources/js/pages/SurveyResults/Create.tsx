@@ -43,9 +43,10 @@ interface Props {
     order: Order;
     survey: Survey;
     jenisPengukuran: { id: number; nama_pengukuran: string }[];
+    selectedPengukuranIds: number[];
 }
 
-export default function Create({ order, survey, jenisPengukuran }: Props) {
+export default function Create({ order, survey, jenisPengukuran, selectedPengukuranIds }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 1024;
@@ -53,13 +54,15 @@ export default function Create({ order, survey, jenisPengukuran }: Props) {
         return true;
     });
 
+    const initialSelectedPengukuran = selectedPengukuranIds || [];
+
     const { data, setData, post, processing, errors } = useForm({
         survey_id: survey.id,
         feedback: '',
         layout_files: [] as File[],
         foto_lokasi_files: [] as File[],
         mom_file: null as File | null,
-        jenis_pengukuran_ids: [] as number[],
+        jenis_pengukuran_ids: initialSelectedPengukuran as number[],
         action: 'publish' as 'save_draft' | 'publish',
     });
 
@@ -67,7 +70,7 @@ export default function Create({ order, survey, jenisPengukuran }: Props) {
 
     // list & selection
     const [jenisList, setJenisList] = useState<Pengukuran[]>(jenisPengukuran);
-    const [selectedPengukuran, setSelectedPengukuran] = useState<number[]>([]); 
+    const [selectedPengukuran, setSelectedPengukuran] = useState<number[]>(initialSelectedPengukuran);
 
     // form untuk create jenis
     const {

@@ -288,6 +288,9 @@ class InvoiceController extends Controller
         $order = $itemPekerjaan->moodboard->order;
         $taskResponse = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'invoice')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->first();
 
         if ($taskResponse && $taskResponse->status === 'menunggu_input' && !$taskResponse->user_id) {
@@ -508,6 +511,9 @@ class InvoiceController extends Controller
 
             $taskResponse = TaskResponse::where('order_id', $order->id)
                 ->where('tahap', 'invoice')
+                ->orderByDesc('extend_time')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
                 ->first();
 
             if ($taskResponse) {

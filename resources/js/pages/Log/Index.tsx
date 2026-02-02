@@ -12,7 +12,7 @@ interface TaskResponse {
     start_time: string;
     response_time: string | null;
     update_data_time: string | null;
-    deadline: string;
+    deadline: string | null;
     duration: number;
     duration_actual: number;
     extend_time: number;

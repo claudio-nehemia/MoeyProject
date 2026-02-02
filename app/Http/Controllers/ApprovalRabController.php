@@ -202,6 +202,9 @@ class ApprovalRabController extends Controller
 
         $taskResponse = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'approval_material')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->first();
 
         if ($taskResponse) {

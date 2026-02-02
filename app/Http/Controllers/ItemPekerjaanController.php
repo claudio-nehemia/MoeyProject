@@ -105,6 +105,9 @@ class ItemPekerjaanController extends Controller
 
             $taskResponse = TaskResponse::where('order_id', $moodboard->order->id)
                 ->where('tahap', 'item_pekerjaan')
+                ->orderByDesc('extend_time')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
                 ->first();
 
             if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -302,6 +305,9 @@ class ItemPekerjaanController extends Controller
 
             $taskResponse = TaskResponse::where('order_id', $itemPekerjaan->moodboard->order->id)
                 ->where('tahap', 'item_pekerjaan')
+                ->orderByDesc('extend_time')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
                 ->first();
 
             if ($taskResponse) {

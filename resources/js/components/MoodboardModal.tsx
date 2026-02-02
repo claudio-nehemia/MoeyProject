@@ -48,7 +48,7 @@ interface TaskResponse {
     order_id: number;
     tahap: string;
     status: string;
-    deadline: string;
+    deadline: string | null;
     extend_time: number;
 }
 
@@ -200,7 +200,10 @@ export default function MoodboardModal({
                             <div className="flex justify-between items-center">
                                 <div>
                                     <p className="text-sm text-yellow-700">
-                                        Deadline: {new Date(taskResponse.deadline).toLocaleDateString('id-ID')}
+                                        Deadline:{' '}
+                                        {taskResponse.deadline && !Number.isNaN(new Date(taskResponse.deadline).getTime())
+                                            ? new Date(taskResponse.deadline).toLocaleDateString('id-ID')
+                                            : '-'}
                                     </p>
                                     {taskResponse.extend_time > 0 && (
                                         <p className="text-xs text-orange-600 mt-1">

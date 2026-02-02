@@ -47,7 +47,7 @@ interface Props {
 
 interface TaskResponse {
     status: string;
-    deadline: string;
+    deadline: string | null;
     order_id: number;
     tahap: string;
     extend_time?: number;
@@ -273,7 +273,8 @@ export default function Index({ moodboards }: Props) {
         });
     };
 
-    const calculateDaysLeft = (deadline: string) => {
+    const calculateDaysLeft = (deadline: string | null | undefined) => {
+        if (!deadline) return null;
         const now = new Date();
         const deadlineDate = new Date(deadline);
         if (Number.isNaN(deadlineDate.getTime())) return null;

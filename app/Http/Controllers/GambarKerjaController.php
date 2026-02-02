@@ -60,6 +60,9 @@ class GambarKerjaController extends Controller
 
         $taskResponse = TaskResponse::where('order_id', $gambarKerja->order->id)
             ->where('tahap', 'gambar_kerja')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->first();
 
         if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -129,6 +132,9 @@ class GambarKerjaController extends Controller
 
         $taskResponse = TaskResponse::where('order_id', $gambarKerja->order->id)
                 ->where('tahap', 'gambar_kerja')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
                 ->first();
 
         if ($taskResponse) {

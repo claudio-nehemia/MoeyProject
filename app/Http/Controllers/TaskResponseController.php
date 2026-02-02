@@ -26,9 +26,14 @@ class TaskResponseController extends Controller
             DB::beginTransaction();
 
             // PENTING: Filter berdasarkan is_marketing
+            // NOTE: In some environments there may be multiple rows for the same (order_id, tahap, is_marketing)
+            // due to legacy logic. Always target the "active" one (highest extend_time, then most recently updated).
             $taskResponse = TaskResponse::where('order_id', $orderId)
                 ->where('tahap', $tahap)
-                ->where('is_marketing', $validated['is_marketing'] ?? false) 
+                ->where('is_marketing', (bool) ($validated['is_marketing'] ?? false))
+                ->orderByDesc('extend_time')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
                 ->firstOrFail();
 
             $newDeadline = $taskResponse->deadline->copy()->addDays($validated['days']);
@@ -72,8 +77,27 @@ class TaskResponseController extends Controller
         if (!is_null($isMarketing)) {
             $query->where('is_marketing', (int)$isMarketing);
         }
-        $taskResponse = $query->orderBy('created_at', 'desc')->first();
-        return response()->json($taskResponse);
+        // Pick the most relevant record if duplicates exist.
+        $taskResponse = $query
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$taskResponse) {
+            return response()->json(null);
+        }
+
+        // Normalize date serialization so frontend can reliably parse deadlines.
+        return response()->json([
+            'id' => $taskResponse->id,
+            'order_id' => $taskResponse->order_id,
+            'tahap' => $taskResponse->tahap,
+            'status' => $taskResponse->status,
+            'deadline' => $taskResponse->deadline ? $taskResponse->deadline->toIso8601String() : null,
+            'extend_time' => (int) ($taskResponse->extend_time ?? 0),
+            'is_marketing' => (int) ($taskResponse->is_marketing ?? 0),
+        ]);
     }
 
 }

@@ -30,7 +30,7 @@ interface TaskResponse {
     user: { id: number; name: string; role: { nama_role: string } | null } | null;
     tahap: string;
     status: string;
-    deadline: string;
+    deadline: string | null;
     extend_time: number;
     start_time: string;
     response_time: string | null;

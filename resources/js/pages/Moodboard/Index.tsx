@@ -62,7 +62,7 @@ interface TaskResponse {
     order_id: number;
     tahap: string;
     status: string;
-    deadline: string;
+    deadline: string | null;
     extend_time: number;
     is_marketing?: number;
 }
@@ -121,6 +121,7 @@ export default function Index({ orders }: Props) {
 
     // State untuk dua jenis TaskResponse
     const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: TaskResponse; marketing?: TaskResponse }>>({});
+        const [approvalDesignTaskResponses, setApprovalDesignTaskResponses] = useState<Record<number, { regular?: TaskResponse; marketing?: TaskResponse }>>({});
     const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: TaskResponse } | null>(null);
 
     useEffect(() => {
@@ -171,6 +172,46 @@ export default function Index({ orders }: Props) {
                 .catch(err => {
                     if (err.response?.status !== 404) {
                         console.error('Error fetching marketing task response:', err);
+                    }
+                });
+
+            // approval_design - Regular
+            axios.get(`/task-response/${order.id}/approval_design`)
+                .then(res => {
+                    const task = Array.isArray(res.data) ? res.data[0] : res.data;
+                    if (task) {
+                        setApprovalDesignTaskResponses(prev => ({
+                            ...prev,
+                            [order.id]: {
+                                ...prev[order.id],
+                                regular: task,
+                            },
+                        }));
+                    }
+                })
+                .catch(err => {
+                    if (err.response?.status !== 404) {
+                        console.error('Error fetching regular approval_design task response:', err);
+                    }
+                });
+
+            // approval_design - Marketing
+            axios.get(`/task-response/${order.id}/approval_design?is_marketing=1`)
+                .then(res => {
+                    const task = Array.isArray(res.data) ? res.data[0] : res.data;
+                    if (task) {
+                        setApprovalDesignTaskResponses(prev => ({
+                            ...prev,
+                            [order.id]: {
+                                ...prev[order.id],
+                                marketing: task,
+                            },
+                        }));
+                    }
+                })
+                .catch(err => {
+                    if (err.response?.status !== 404) {
+                        console.error('Error fetching marketing approval_design task response:', err);
                     }
                 });
         });
@@ -358,6 +399,11 @@ export default function Index({ orders }: Props) {
     };
 
 
+    const tahapLabels: Record<string, string> = {
+        moodboard: 'Moodboard',
+        approval_design: 'Approval Design',
+    };
+
     // Helper untuk render info deadline/extend dan tombol perpanjangan
     const renderDeadlineSection = (task: TaskResponse | undefined, orderId: number, tahap: string, isMarketing: boolean) => {
         if (!task || task.status === 'selesai') return null;
@@ -366,7 +412,7 @@ export default function Index({ orders }: Props) {
                 <div className="flex justify-between items-center">
                     <div>
                         <p className={isMarketing ? 'text-purple-700' : 'text-yellow-700'}>
-                            Deadline: {formatDeadline(task.deadline)}
+                            {tahapLabels[tahap] ? `${tahapLabels[tahap]} - ` : ''}Deadline: {formatDeadline(task.deadline)}
                         </p>
                         {task.extend_time > 0 && (
                             <p className={isMarketing ? 'text-purple-600' : 'text-orange-600'}>
@@ -485,7 +531,6 @@ export default function Index({ orders }: Props) {
                             const status = getMoodboardStatus(moodboard);
                             const statusColor = status ? statusColors[status] : null;
                             const isExpanded = expandedCards.has(order.id);
-                            const taskResponse = taskResponses[order.id]?.regular;
 
                             return (
                                 <div
@@ -532,6 +577,23 @@ export default function Index({ orders }: Props) {
                                         {renderDeadlineSection(taskResponses[order.id]?.regular, order.id, 'moodboard', false)}
                                         {/* DEADLINE & Minta Perpanjangan - marketing (khusus Kepala Marketing) */}
                                         {isKepalaMarketing && renderDeadlineSection(taskResponses[order.id]?.marketing, order.id, 'moodboard', true)}
+
+                                        {/* DEADLINE & Minta Perpanjangan - approval_design (muncul setelah commitment fee completed) */}
+                                        {moodboard?.has_commitment_fee_completed &&
+                                            renderDeadlineSection(
+                                                approvalDesignTaskResponses[order.id]?.regular,
+                                                order.id,
+                                                'approval_design',
+                                                false,
+                                            )}
+                                        {moodboard?.has_commitment_fee_completed &&
+                                            isKepalaMarketing &&
+                                            renderDeadlineSection(
+                                                approvalDesignTaskResponses[order.id]?.marketing,
+                                                order.id,
+                                                'approval_design',
+                                                true,
+                                            )}
 
                                         {/* Expanded Details */}
                                         {isExpanded && (
@@ -639,32 +701,6 @@ export default function Index({ orders }: Props) {
                                                                                     )}
                                                                                     
                                                                                     {/* DEADLINE & Minta Perpanjangan - hanya setelah response */}
-                                                                                    {moodboard.status === 'pending' &&
-                                                                                        moodboard.has_estimasi &&
-                                                                                        !!taskResponses[order.id]?.regular &&
-                                                                                        taskResponses[order.id]!.regular!.status !== 'selesai' && (
-                                                                                            <div className="col-span-2 mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
-                                                                                                <div className="flex justify-between items-center">
-                                                                                                    <div>
-                                                                                                        <p className="text-[11px] text-yellow-700">
-                                                                                                            Deadline: {formatDeadline(taskResponses[order.id]!.regular!.deadline)}
-                                                                                                        </p>
-                                                                                                        {taskResponses[order.id]!.regular!.extend_time > 0 && (
-                                                                                                            <p className="text-[11px] text-orange-600">
-                                                                                                                Perpanjangan: {taskResponses[order.id]!.regular!.extend_time}x
-                                                                                                            </p>
-                                                                                                        )}
-                                                                                                    </div>
-                                                                                                    <button
-                                                                                                        onClick={() => setShowExtendModal({ orderId: order.id, tahap: 'moodboard', isMarketing: false, taskResponse: taskResponses[order.id]!.regular! })}
-                                                                                                        className="px-2 py-1 bg-orange-500 text-white rounded text-[11px] hover:bg-orange-600"
-                                                                                                    >
-                                                                                                        Perpanjang
-                                                                                                    </button>
-                                                                                                </div>
-                                                                                            </div>
-                                                                                        )}
-
                                                                                     {moodboard.status === 'pending' && moodboard.has_estimasi && (
                                                                                         <button
                                                                                             onClick={() => {

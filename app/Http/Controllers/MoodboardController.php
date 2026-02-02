@@ -128,6 +128,9 @@ class MoodboardController extends Controller
 
             $taskResponse = TaskResponse::where('order_id', $order->id)
                 ->where('tahap', 'moodboard')
+                ->orderByDesc('extend_time')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
                 ->first();
 
             if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -213,6 +216,9 @@ class MoodboardController extends Controller
 
             $taskResponse = TaskResponse::where('order_id', $moodboard->order->id)
                 ->where('tahap', 'moodboard')
+                ->orderByDesc('extend_time')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
                 ->first();
 
             if ($taskResponse) {
@@ -643,6 +649,9 @@ class MoodboardController extends Controller
 
             $taskResponse = TaskResponse::where('order_id', $moodboard->order->id)
                 ->where('tahap', 'approval_design')
+                ->orderByDesc('extend_time')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
                 ->first();
 
             if ($taskResponse) {

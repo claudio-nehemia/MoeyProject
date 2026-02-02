@@ -14,6 +14,7 @@ interface Notification {
     is_read: boolean;
     read_at: string | null;
     created_at: string;
+    can_marketing_response?: boolean;
     order: {
         id: number;
         nama_project: string;
@@ -25,32 +26,56 @@ interface Notification {
         survey_results?: {
             response_time: string | null;
             response_by: string | null;
+            pm_response_time?: string | null;
+            pm_response_by?: string | null;
         };
         survey_ulang?: {
             response_time: string | null;
             response_by: string | null;
+            pm_response_time?: string | null;
+            pm_response_by?: string | null;
         };
         moodboard?: {
             response_time: string | null;
             response_by: string | null;
             response_final_time: string | null;
             response_final_by: string | null;
+            pm_response_time?: string | null;
+            pm_response_by?: string | null;
             item_pekerjaans?: Array<{
                 produks?: Array<{
                     workplan_items?: Array<{
                         response_time: string | null;
                         response_by: string | null;
+                        pm_response_time?: string | null;
+                        pm_response_by?: string | null;
                     }>;
                 }>;
             }>;
+            commitment_fee?: {
+                response_time?: string | null;
+                response_by?: string | null;
+                pm_response_time?: string | null;
+                pm_response_by?: string | null;
+            };
+            estimasi?: {
+                response_time?: string | null;
+                response_by?: string | null;
+                pm_response_time?: string | null;
+                pm_response_by?: string | null;
+            };
         };
         estimasi?: {
             response_time: string | null;
             response_by: string | null;
+            pm_response_time?: string | null;
+            pm_response_by?: string | null;
         };
         item_pekerjaans?: Array<{
             response_time: string | null;
             response_by: string | null;
+            pm_response_time?: string | null;
+            pm_response_by?: string | null;
             rab_internal?: {
                 response_time: string | null;
                 response_by: string | null;
@@ -58,11 +83,15 @@ interface Notification {
             kontrak?: {
                 response_time: string | null;
                 response_by: string | null;
+                pm_response_time?: string | null;
+                pm_response_by?: string | null;
             };
         }>;
         gambar_kerja?: {
             response_time: string | null;
             response_by: string | null;
+            pm_response_time?: string | null;
+            pm_response_by?: string | null;
         };
     };
 }
@@ -245,6 +274,155 @@ export default function Index({ notifications, unreadCount }: Props) {
                     responseTime: null,
                     responseBy: null,
                 };
+        }
+    };
+
+    const isMarketingResponded = (
+        notification: Notification,
+    ): {
+        responded: boolean;
+        responseTime: string | null;
+        responseBy: string | null;
+    } => {
+        const order = notification.order;
+
+        switch (notification.type) {
+            case 'survey_request':
+                return {
+                    responded: !!order.survey_results?.pm_response_time,
+                    responseTime: order.survey_results?.pm_response_time || null,
+                    responseBy: order.survey_results?.pm_response_by || null,
+                };
+
+            case 'survey_schedule_request':
+                return {
+                    responded: !!order.pm_survey_response_time,
+                    responseTime: order.pm_survey_response_time || null,
+                    responseBy: order.pm_survey_response_by || null,
+                };
+
+            case 'moodboard_request':
+            case 'final_design_request':
+                return {
+                    responded: !!order.moodboard?.pm_response_time,
+                    responseTime: order.moodboard?.pm_response_time || null,
+                    responseBy: order.moodboard?.pm_response_by || null,
+                };
+
+            case 'estimasi_request':
+                return {
+                    responded: !!(order.estimasi as any)?.pm_response_time,
+                    responseTime: (order.estimasi as any)?.pm_response_time || null,
+                    responseBy: (order.estimasi as any)?.pm_response_by || null,
+                };
+
+            case 'commitment_fee_request':
+                return {
+                    responded: !!(order.moodboard as any)?.commitment_fee?.pm_response_time,
+                    responseTime: (order.moodboard as any)?.commitment_fee?.pm_response_time || null,
+                    responseBy: (order.moodboard as any)?.commitment_fee?.pm_response_by || null,
+                };
+
+            case 'survey_ulang_request':
+                return {
+                    responded: !!order.survey_ulang?.pm_response_time,
+                    responseTime: order.survey_ulang?.pm_response_time || null,
+                    responseBy: order.survey_ulang?.pm_response_by || null,
+                };
+
+            case 'gambar_kerja_request':
+                return {
+                    responded: !!order.gambar_kerja?.pm_response_time,
+                    responseTime: order.gambar_kerja?.pm_response_time || null,
+                    responseBy: order.gambar_kerja?.pm_response_by || null,
+                };
+
+            case 'item_pekerjaan_request': {
+                const itemPekerjaan = order.item_pekerjaans?.[0];
+                return {
+                    responded: !!itemPekerjaan?.pm_response_time,
+                    responseTime: itemPekerjaan?.pm_response_time || null,
+                    responseBy: itemPekerjaan?.pm_response_by || null,
+                };
+            }
+
+            case 'kontrak_request': {
+                const kontrak = order.item_pekerjaans?.[0]?.kontrak;
+                return {
+                    responded: !!kontrak?.pm_response_time,
+                    responseTime: kontrak?.pm_response_time || null,
+                    responseBy: kontrak?.pm_response_by || null,
+                };
+            }
+
+            case 'workplan_request': {
+                const hasAnyPmWorkplanResponse =
+                    order.moodboard?.item_pekerjaans?.some((ip) =>
+                        ip.produks?.some((produk) =>
+                            produk.workplan_items?.some(
+                                (workplan) => workplan.pm_response_time,
+                            ),
+                        ),
+                    ) || false;
+
+                let pmWorkplanResponseTime = null;
+                let pmWorkplanResponseBy = null;
+                if (hasAnyPmWorkplanResponse) {
+                    for (const ip of order.moodboard?.item_pekerjaans || []) {
+                        for (const produk of ip.produks || []) {
+                            const respondedWorkplan =
+                                produk.workplan_items?.find(
+                                    (w) => w.pm_response_time,
+                                );
+                            if (respondedWorkplan) {
+                                pmWorkplanResponseTime =
+                                    respondedWorkplan.pm_response_time || null;
+                                pmWorkplanResponseBy =
+                                    respondedWorkplan.pm_response_by || null;
+                                break;
+                            }
+                        }
+                        if (pmWorkplanResponseTime) break;
+                    }
+                }
+
+                return {
+                    responded: hasAnyPmWorkplanResponse,
+                    responseTime: pmWorkplanResponseTime,
+                    responseBy: pmWorkplanResponseBy,
+                };
+            }
+
+            default:
+                return {
+                    responded: false,
+                    responseTime: null,
+                    responseBy: null,
+                };
+        }
+    };
+
+    const handleMarketingResponse = async (
+        notificationId: number,
+        e?: React.MouseEvent,
+    ) => {
+        if (e) {
+            e.stopPropagation();
+        }
+
+        try {
+            router.post(
+                `/notifications/${notificationId}/response`,
+                { is_marketing: 1 },
+                {
+                    preserveScroll: false,
+                    onError: (errors) => {
+                        console.error('Error handling marketing response:', errors);
+                    },
+                },
+            );
+        } catch (error) {
+            console.error('Error handling marketing response:', error);
         }
     };
 
@@ -620,27 +798,82 @@ export default function Index({ notifications, unreadCount }: Props) {
                                                     </div>
                                                 )}
 
+                                                {/* Marketing Response Info (Kepala Marketing only) */}
+                                                {notification.can_marketing_response && (() => {
+                                                    const marketingStatus = isMarketingResponded(notification);
+                                                    if (!marketingStatus.responded) return null;
+
+                                                    return (
+                                                        <div className="mb-3 rounded-lg border border-purple-200 bg-purple-50 p-3">
+                                                            <div className="mb-1 flex items-center gap-2">
+                                                                <CheckCircle2 className="h-4 w-4 text-purple-600" />
+                                                                <span className="text-sm font-semibold text-purple-800">
+                                                                    Marketing sudah response
+                                                                </span>
+                                                            </div>
+                                                            <div className="ml-6 space-y-0.5 text-xs text-purple-700">
+                                                                {marketingStatus.responseBy && (
+                                                                    <div>
+                                                                        <strong>Oleh:</strong>{' '}
+                                                                        {marketingStatus.responseBy}
+                                                                    </div>
+                                                                )}
+                                                                {marketingStatus.responseTime && (
+                                                                    <div>
+                                                                        <strong>Waktu:</strong>{' '}
+                                                                        {formatDate(marketingStatus.responseTime)}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()}
+
                                                 {/* Conditional Action Buttons */}
                                                 {!responseStatus.responded && (
                                                     <>
                                                         {requiresResponse(
                                                             notification.type,
                                                         ) && (
-                                                            <button
-                                                                onClick={(e) =>
-                                                                    handleResponse(
-                                                                        notification.id,
-                                                                        e,
-                                                                    )
-                                                                }
-                                                                className="mt-2 mb-3 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2.5 font-medium text-white shadow-md transition-all hover:from-amber-600 hover:to-amber-700 hover:shadow-lg"
-                                                            >
-                                                                <span>
-                                                                    Response &
-                                                                    Buat Record
-                                                                </span>
-                                                                <span>→</span>
-                                                            </button>
+                                                            notification.can_marketing_response ? (
+                                                                (() => {
+                                                                    const marketingStatus = isMarketingResponded(notification);
+                                                                    if (marketingStatus.responded) return null;
+
+                                                                    return (
+                                                                        <button
+                                                                            onClick={(e) =>
+                                                                                handleMarketingResponse(
+                                                                                    notification.id,
+                                                                                    e,
+                                                                                )
+                                                                            }
+                                                                            className="mt-2 mb-3 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-4 py-2.5 font-medium text-white shadow-md transition-all hover:from-purple-600 hover:to-purple-700 hover:shadow-lg"
+                                                                        >
+                                                                            <span>
+                                                                                Marketing Response
+                                                                            </span>
+                                                                            <span>→</span>
+                                                                        </button>
+                                                                    );
+                                                                })()
+                                                            ) : (
+                                                                <button
+                                                                    onClick={(e) =>
+                                                                        handleResponse(
+                                                                            notification.id,
+                                                                            e,
+                                                                        )
+                                                                    }
+                                                                    className="mt-2 mb-3 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2.5 font-medium text-white shadow-md transition-all hover:from-amber-600 hover:to-amber-700 hover:shadow-lg"
+                                                                >
+                                                                    <span>
+                                                                        Response &
+                                                                        Buat Record
+                                                                    </span>
+                                                                    <span>→</span>
+                                                                </button>
+                                                            )
                                                         )}
 
                                                         {needsDirectAccess(
@@ -681,6 +914,26 @@ export default function Index({ notifications, unreadCount }: Props) {
                                                         <span>→</span>
                                                     </button>
                                                 )}
+
+                                                {/* View Details Button (marketing responded but regular not responded) */}
+                                                {!responseStatus.responded &&
+                                                    notification.can_marketing_response &&
+                                                    isMarketingResponded(notification).responded && (
+                                                        <button
+                                                            onClick={(e) =>
+                                                                handleDirectAccess(
+                                                                    notification,
+                                                                    e,
+                                                                )
+                                                            }
+                                                            className="mt-2 mb-3 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-4 py-2.5 font-medium text-white shadow-md transition-all hover:from-purple-600 hover:to-purple-700 hover:shadow-lg"
+                                                        >
+                                                            <span>
+                                                                Lihat Detail
+                                                            </span>
+                                                            <span>→</span>
+                                                        </button>
+                                                    )}
 
                                                 {/* Footer */}
                                                 <div className="flex items-center justify-between gap-3 border-t border-stone-200 pt-2">

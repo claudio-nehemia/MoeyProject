@@ -87,6 +87,9 @@ class DesainFinalController extends Controller
             $taskResponse = TaskResponse::where('order_id', $moodboard->order->id)
                 ->where('tahap', 'desain_final')
                 ->where('is_marketing', false)
+                ->orderByDesc('extend_time')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
                 ->first();
 
             if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -178,6 +181,9 @@ class DesainFinalController extends Controller
             $taskResponse = TaskResponse::where('order_id', $moodboard->order->id)
                 ->where('tahap', 'desain_final')
                 ->where('is_marketing', false)
+                ->orderByDesc('extend_time')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
                 ->first();
 
             if ($taskResponse) {

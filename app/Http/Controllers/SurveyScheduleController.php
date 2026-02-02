@@ -75,6 +75,9 @@ class SurveyScheduleController extends Controller
         // TaskResponse: survey schedule sudah diisi (bukan moodboard)
         $taskResponse = \App\Models\TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'survey_schedule')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->first();
 
         if ($taskResponse) {
@@ -140,6 +143,9 @@ class SurveyScheduleController extends Controller
 
         $taskResponse = \App\Models\TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'survey_schedule')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->first();
 
         if ($taskResponse && $taskResponse->status === 'menunggu_response') {

@@ -8,6 +8,8 @@ use App\Models\Estimasi;
 use App\Models\GambarKerja;
 use App\Models\RabInternal;
 use App\Models\Notification;
+use App\Models\Order;
+use App\Models\TaskResponse;
 use Illuminate\Http\Request;
 use App\Models\CommitmentFee;
 use App\Models\ItemPekerjaan;
@@ -27,6 +29,9 @@ class NotificationController extends Controller
      */
     public function index(Request $request)
     {
+        $user = auth()->user();
+        $isKepalaMarketing = $user && $user->role && $user->role->nama_role === 'Kepala Marketing';
+
         $notifications = Notification::where('user_id', auth()->id())
             ->with([
                 'order.surveyResults',
@@ -38,9 +43,28 @@ class NotificationController extends Controller
                 'order.itemPekerjaans.rabInternal',
                 'order.itemPekerjaans.kontrak',
                 'order.gambarKerja',
+                'order.users.role',
             ])
             ->orderBy('created_at', 'desc')
             ->paginate(20);
+
+        // Add flag for frontend: only the original Kepala Marketing (added earliest) can do marketing response
+        $notifications->getCollection()->transform(function ($notification) use ($isKepalaMarketing, $user) {
+            $canMarketingResponse = false;
+
+            if ($isKepalaMarketing && $notification->order) {
+                $originalKepalaMarketing = $notification->order
+                    ->users()
+                    ->whereHas('role', fn($q) => $q->where('nama_role', 'Kepala Marketing'))
+                    ->orderBy('order_teams.created_at', 'asc')
+                    ->first();
+
+                $canMarketingResponse = $originalKepalaMarketing && $user && ((int) $originalKepalaMarketing->id === (int) $user->id);
+            }
+
+            $notification->can_marketing_response = $canMarketingResponse;
+            return $notification;
+        });
 
         return Inertia::render('Notification/Index', [
             'notifications' => $notifications,
@@ -101,6 +125,20 @@ class NotificationController extends Controller
         $this->notificationService->markAsRead($id, auth()->id());
 
         $order = $notification->order;
+
+        // Marketing response (Kepala Marketing assigned from start only)
+        if ($request->boolean('is_marketing')) {
+            if (!$order) {
+                return redirect()->route('notifications.index')
+                    ->with('error', 'Order not found for this notification.');
+            }
+
+            if ($authError = $this->ensureOriginalKepalaMarketing($order)) {
+                return $authError;
+            }
+
+            return $this->handleMarketingResponse($notification, $order);
+        }
 
         // Handle different notification types
         switch ($notification->type) {
@@ -166,6 +204,12 @@ class NotificationController extends Controller
     {
         // Check if survey already exists
         if ($order->surveyResults) {
+            if (!$order->surveyResults->response_time) {
+                $order->surveyResults->update([
+                    'response_time' => now(),
+                    'response_by' => auth()->user()->name ?? 'Admin',
+                ]);
+            }
             return redirect()->route('survey-results.edit', $order->surveyResults->id);
         }
 
@@ -193,6 +237,12 @@ class NotificationController extends Controller
     {
         // Check if moodboard already exists
         if ($order->moodboard) {
+            if (!$order->moodboard->response_time) {
+                $order->moodboard->update([
+                    'response_time' => now(),
+                    'response_by' => auth()->user()->name ?? 'Admin',
+                ]);
+            }
             return redirect()->route('moodboard.edit', $order->moodboard->id);
         }
 
@@ -219,6 +269,12 @@ class NotificationController extends Controller
     {
         // Check if estimasi already exists
         if ($order->estimasi) {
+            if (!$order->estimasi->response_time) {
+                $order->estimasi->update([
+                    'response_by' => auth()->user()->name,
+                    'response_time' => now(),
+                ]);
+            }
             return redirect()->route('estimasi.index');
         }
 
@@ -266,6 +322,12 @@ class NotificationController extends Controller
 
         // Check if commitment fee already exists
         if ($order->moodboard->commitmentFee) {
+            if (!$order->moodboard->commitmentFee->response_time) {
+                $order->moodboard->commitmentFee->update([
+                    'response_by' => auth()->user()->name,
+                    'response_time' => now(),
+                ]);
+            }
             return redirect()->route('commitment-fee.index')
                 ->with('info', 'Commitment fee sudah ada untuk project ini.');
         }
@@ -325,7 +387,20 @@ class NotificationController extends Controller
      */
     private function handleItemPekerjaanRequest($order)
     {
-        $itemPekerjaan = ItemPekerjaan::create([
+        $existingItem = $order->itemPekerjaans->first();
+        if ($existingItem) {
+            if (!$existingItem->response_time) {
+                $existingItem->update([
+                    'response_by' => auth()->user()->name,
+                    'response_time' => now(),
+                ]);
+            }
+
+            return redirect()->route('item-pekerjaan.index', ['order_id' => $order->id])
+                ->with('info', 'Item pekerjaan sudah ada untuk project ini.');
+        }
+
+        ItemPekerjaan::create([
             'moodboard_id' => $order->moodboard->id,
             'response_by' => auth()->user()->name,
             'response_time' => now(),
@@ -342,7 +417,25 @@ class NotificationController extends Controller
      */
     private function handleRabInternalRequest($order)
     {
-        $rabInternal = RabInternal::create([
+        if (!$order->itemPekerjaans || $order->itemPekerjaans->isEmpty()) {
+            return redirect()->route('item-pekerjaan.index', ['order_id' => $order->id])
+                ->with('error', 'Item pekerjaan belum ada untuk order ini. Silakan buat item pekerjaan terlebih dahulu.');
+        }
+
+        $existingRab = $order->itemPekerjaans->first()?->rabInternal;
+        if ($existingRab) {
+            if (!$existingRab->response_time) {
+                $existingRab->update([
+                    'response_by' => auth()->user()->name,
+                    'response_time' => now(),
+                ]);
+            }
+
+            return redirect()->route('rab-internal.index', ['order_id' => $order->id])
+                ->with('info', 'RAB Internal sudah ada untuk project ini.');
+        }
+
+        RabInternal::create([
             'item_pekerjaan_id' => $order->itemPekerjaans->first()->id,
             'response_by' => auth()->user()->name,
             'response_time' => now(),
@@ -365,7 +458,18 @@ class NotificationController extends Controller
     {
         // Check if kontrak already exists
         $itemPekerjaan = $order->itemPekerjaans->first();
+        if (!$itemPekerjaan) {
+            return redirect()->route('item-pekerjaan.index', ['order_id' => $order->id])
+                ->with('error', 'Item pekerjaan belum ada untuk order ini. Silakan buat item pekerjaan terlebih dahulu.');
+        }
+
         if ($itemPekerjaan && $itemPekerjaan->kontrak) {
+            if (!$itemPekerjaan->kontrak->response_time) {
+                $itemPekerjaan->kontrak->update([
+                    'response_time' => now(),
+                    'response_by' => auth()->user()->name,
+                ]);
+            }
             return redirect()->route('kontrak.index')
                 ->with('info', 'Kontrak sudah ada untuk project ini.');
         }
@@ -428,6 +532,12 @@ class NotificationController extends Controller
     {
         // Check if survey ulang already exists
         if ($order->surveyUlang) {
+            if (!$order->surveyUlang->response_time) {
+                $order->surveyUlang->update([
+                    'response_time' => now(),
+                    'response_by' => auth()->user()->name ?? 'Admin',
+                ]);
+            }
             return redirect()->route('survey-ulang.index', ['order_id' => $order->id])
                 ->with('info', 'Survey ulang sudah ada untuk project ini.');
         }
@@ -553,5 +663,259 @@ class NotificationController extends Controller
         // Redirect to Project Management page
         return redirect()->route('project-management.index', ['order_id' => $order->id])
             ->with('info', 'Please manage the Project Management for this order.');
+    }
+
+    /**
+     * Authorization: only original Kepala Marketing (earliest attached) can respond marketing.
+     */
+    private function ensureOriginalKepalaMarketing(Order $order)
+    {
+        $user = auth()->user();
+        if (!$user || !$user->role || $user->role->nama_role !== 'Kepala Marketing') {
+            return redirect()->back()->with('error', 'Unauthorized. Only Kepala Marketing can perform marketing response.');
+        }
+
+        $originalKepalaMarketing = $order->users()
+            ->whereHas('role', fn($q) => $q->where('nama_role', 'Kepala Marketing'))
+            ->orderBy('order_teams.created_at', 'asc')
+            ->first();
+
+        if (!$originalKepalaMarketing || ((int) $originalKepalaMarketing->id !== (int) $user->id)) {
+            return redirect()->back()->with('error', 'Unauthorized. Only Kepala Marketing assigned from the beginning can respond.');
+        }
+
+        return null;
+    }
+
+    private function markMarketingTaskResponseDone(Order $order, string $tahap): void
+    {
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', $tahap)
+            ->where('is_marketing', true)
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($taskResponse) {
+            $taskResponse->update([
+                'response_time' => now(),
+                'status' => 'selesai',
+                'user_id' => auth()->id(),
+            ]);
+        }
+    }
+
+    /**
+     * Handle marketing response based on notification type.
+     */
+    private function handleMarketingResponse(Notification $notification, Order $order)
+    {
+        switch ($notification->type) {
+            case Notification::TYPE_SURVEY_REQUEST: {
+                $survey = $order->surveyResults;
+                if (!$survey) {
+                    $survey = \App\Models\SurveyResults::create([
+                        'order_id' => $order->id,
+                        'pm_response_time' => now(),
+                        'pm_response_by' => auth()->user()->name ?? 'Admin',
+                        'is_draft' => true,
+                    ]);
+                } else {
+                    $survey->update([
+                        'pm_response_time' => now(),
+                        'pm_response_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                }
+
+                $this->markMarketingTaskResponseDone($order, 'survey');
+                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Survey).');
+            }
+
+            case Notification::TYPE_SURVEY_SCHEDULE_REQUEST: {
+                $order->update([
+                    'pm_survey_response_time' => now(),
+                    'pm_survey_response_by' => auth()->user()->name ?? 'Admin',
+                ]);
+
+                // Marketing task for early stage uses tahap 'survey'
+                $this->markMarketingTaskResponseDone($order, 'survey');
+                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Survey Schedule).');
+            }
+
+            case Notification::TYPE_MOODBOARD_REQUEST: {
+                $moodboard = $order->moodboard;
+                if (!$moodboard) {
+                    $moodboard = \App\Models\Moodboard::create([
+                        'order_id' => $order->id,
+                        'status' => 'pending',
+                        'pm_response_time' => now(),
+                        'pm_response_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                } else {
+                    $moodboard->update([
+                        'pm_response_time' => now(),
+                        'pm_response_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                }
+
+                $this->markMarketingTaskResponseDone($order, 'moodboard');
+                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Moodboard).');
+            }
+
+            case Notification::TYPE_ESTIMASI_REQUEST: {
+                if (!$order->moodboard) {
+                    return redirect()->route('notifications.index')->with('error', 'Moodboard belum ada untuk order ini.');
+                }
+
+                // Create placeholder estimasi if not exists.
+                $estimasi = $order->estimasi;
+                if (!$estimasi) {
+                    Estimasi::create([
+                        'moodboard_id' => $order->moodboard->id,
+                        'pm_response_time' => now(),
+                        'pm_response_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                } else {
+                    $estimasi->update([
+                        'pm_response_time' => now(),
+                        'pm_response_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                }
+
+                $this->markMarketingTaskResponseDone($order, 'estimasi');
+                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Estimasi).');
+            }
+
+            case Notification::TYPE_COMMITMENT_FEE_REQUEST: {
+                if (!$order->moodboard) {
+                    return redirect()->route('notifications.index')->with('error', 'Moodboard belum ada untuk order ini.');
+                }
+
+                $commitmentFee = $order->moodboard->commitmentFee;
+                if (!$commitmentFee) {
+                    CommitmentFee::create([
+                        'moodboard_id' => $order->moodboard->id,
+                        'payment_status' => 'pending',
+                        'pm_response_time' => now(),
+                        'pm_response_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                } else {
+                    $commitmentFee->update([
+                        'pm_response_time' => now(),
+                        'pm_response_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                }
+
+                $this->markMarketingTaskResponseDone($order, 'cm_fee');
+                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Commitment Fee).');
+            }
+
+            case Notification::TYPE_FINAL_DESIGN_REQUEST: {
+                if ($order->moodboard) {
+                    $order->moodboard->update([
+                        'pm_response_time' => now(),
+                        'pm_response_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                }
+
+                $this->markMarketingTaskResponseDone($order, 'desain_final');
+                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Desain Final).');
+            }
+
+            case Notification::TYPE_SURVEY_ULANG_REQUEST: {
+                $surveyUlang = $order->surveyUlang;
+                if (!$surveyUlang) {
+                    \App\Models\SurveyUlang::create([
+                        'order_id' => $order->id,
+                        'pm_response_time' => now(),
+                        'pm_response_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                } else {
+                    $surveyUlang->update([
+                        'pm_response_time' => now(),
+                        'pm_response_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                }
+
+                $this->markMarketingTaskResponseDone($order, 'survey_ulang');
+                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Survey Ulang).');
+            }
+
+            case Notification::TYPE_GAMBAR_KERJA_REQUEST: {
+                $gambarKerja = $order->gambarKerja;
+                if ($gambarKerja) {
+                    $gambarKerja->update([
+                        'pm_response_time' => now(),
+                        'pm_response_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                }
+
+                $this->markMarketingTaskResponseDone($order, 'gambar_kerja');
+                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Gambar Kerja).');
+            }
+
+            case Notification::TYPE_ITEM_PEKERJAAN_REQUEST: {
+                if (!$order->moodboard) {
+                    return redirect()->route('notifications.index')->with('error', 'Moodboard belum ada untuk order ini.');
+                }
+
+                $existingItem = $order->itemPekerjaans->first();
+                if (!$existingItem) {
+                    ItemPekerjaan::create([
+                        'moodboard_id' => $order->moodboard->id,
+                        'pm_response_time' => now(),
+                        'pm_response_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                } else {
+                    $existingItem->update([
+                        'pm_response_time' => now(),
+                        'pm_response_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                }
+
+                $this->markMarketingTaskResponseDone($order, 'item_pekerjaan');
+                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Item Pekerjaan).');
+            }
+
+            case Notification::TYPE_KONTRAK_REQUEST: {
+                $itemPekerjaan = $order->itemPekerjaans->first();
+                if (!$itemPekerjaan) {
+                    return redirect()->route('notifications.index')->with('error', 'Item pekerjaan belum ada untuk order ini.');
+                }
+
+                if ($itemPekerjaan->kontrak) {
+                    $itemPekerjaan->kontrak->update([
+                        'pm_response_time' => now(),
+                        'pm_response_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                }
+
+                $this->markMarketingTaskResponseDone($order, 'kontrak');
+                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Kontrak).');
+            }
+
+            case Notification::TYPE_WORKPLAN_REQUEST: {
+                if ($order->moodboard) {
+                    $workplanItems = $order->moodboard
+                        ->itemPekerjaans
+                        ->flatMap(fn($ip) => $ip->produks)
+                        ->flatMap(fn($produk) => $produk->workplanItems);
+
+                    foreach ($workplanItems as $item) {
+                        $item->update([
+                            'pm_response_time' => now(),
+                            'pm_response_by' => auth()->user()->name ?? 'Admin',
+                        ]);
+                    }
+                }
+
+                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Workplan).');
+            }
+
+            default:
+                return redirect()->route('notifications.index')
+                    ->with('error', 'Notification type tidak mendukung marketing response.');
+        }
     }
 }
