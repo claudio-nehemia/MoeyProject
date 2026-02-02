@@ -9,6 +9,7 @@ use App\Models\GambarKerja;
 use App\Models\RabInternal;
 use App\Models\SurveyUlang;
 use App\Models\Notification;
+use App\Models\TaskResponse;
 use App\Models\WorkplanItem;
 use Illuminate\Http\Request;
 use App\Models\CommitmentFee;
@@ -26,6 +27,36 @@ class NotificationApiController extends Controller
     public function __construct(NotificationService $notificationService)
     {
         $this->notificationService = $notificationService;
+    }
+
+    /**
+     * Update TaskResponse when user responds to notification
+     */
+    private function updateTaskResponse($orderId, $tahap, $deadlineDays = 6, $isMarketing = false)
+    {
+        $taskResponse = TaskResponse::where('order_id', $orderId)
+            ->where('tahap', $tahap)
+            ->where('is_marketing', $isMarketing)
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays($deadlineDays),
+                'duration' => $deadlineDays,
+                'duration_actual' => $taskResponse->duration_actual,
+                'status' => 'menunggu_input',
+            ]);
+        } elseif ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+            ]);
+        }
     }
 
     /**
@@ -263,7 +294,7 @@ class NotificationApiController extends Controller
             ];
         }
 
-        \App\Models\SurveyResults::create([
+        SurveyResults::create([
             'order_id' => $order->id,
             'response_time' => now(),
             'response_by' => auth()->user()->name ?? 'Admin',
@@ -273,6 +304,9 @@ class NotificationApiController extends Controller
             'tahapan_proyek' => 'survey',
             'project_status' => 'in_progress',
         ]);
+
+        // Update TaskResponse
+        $this->updateTaskResponse($order->id, 'survey', 6);
 
         return [
             'success' => true,
@@ -293,13 +327,16 @@ class NotificationApiController extends Controller
             ];
         }
 
-        \App\Models\Moodboard::create([
+        Moodboard::create([
             'order_id' => $order->id,
             'response_time' => now(),
             'response_by' => auth()->user()->name ?? 'Admin',
         ]);
 
         $order->update(['tahapan_proyek' => 'moodboard']);
+
+        // Update TaskResponse
+        $this->updateTaskResponse($order->id, 'moodboard', 6);
 
         return [
             'success' => true,
@@ -334,6 +371,9 @@ class NotificationApiController extends Controller
         ]);
 
         $order->update(['tahapan_proyek' => 'estimasi']);
+
+        // Update TaskResponse
+        $this->updateTaskResponse($order->id, 'estimasi', 6);
 
         return [
             'success' => true,
@@ -380,6 +420,9 @@ class NotificationApiController extends Controller
 
         $order->update(['tahapan_proyek' => 'cm_fee']);
 
+        // Update TaskResponse
+        $this->updateTaskResponse($order->id, 'cm_fee', 6);
+
         return [
             'success' => true,
             'message' => 'Response recorded. Please create commitment fee.',
@@ -413,6 +456,9 @@ class NotificationApiController extends Controller
 
         $order->update(['tahapan_proyek' => 'desain_final']);
 
+        // Update TaskResponse
+        $this->updateTaskResponse($order->id, 'desain_final', 6);
+
         return [
             'success' => true,
             'message' => 'Response recorded. Please upload final design.',
@@ -428,6 +474,9 @@ class NotificationApiController extends Controller
             'response_by' => auth()->user()->name,
             'response_time' => now(),
         ]);
+
+        // Update TaskResponse
+        $this->updateTaskResponse($order->id, 'item_pekerjaan', 6);
 
         return [
             'success' => true,
@@ -455,6 +504,8 @@ class NotificationApiController extends Controller
         ]);
 
         $order->update(['tahapan_proyek' => 'rab']);
+
+        $this->updateTaskResponse($order->id, 'rab_internal', 6);
 
         return [
             'success' => true,
@@ -492,6 +543,8 @@ class NotificationApiController extends Controller
 
         $order->update(['tahapan_proyek' => 'kontrak']);
 
+        $this->updateTaskResponse($order->id, 'kontrak', 6);
+
         return [
             'success' => true,
             'message' => 'Response recorded. Please manage Kontrak.',
@@ -528,6 +581,8 @@ class NotificationApiController extends Controller
             'survey_response_by' => auth()->user()->name,
         ]);
 
+        $this->updateTaskResponse($order->id, 'survey_schedule', 6);
+
         return [
             'success' => true,
             'message' => 'Response recorded. Please schedule survey via web.',
@@ -549,13 +604,15 @@ class NotificationApiController extends Controller
 
         // Create empty survey ulang record with response info
         // User will fill in details (catatan, foto, temuan) later via store
-        \App\Models\SurveyUlang::create([
+        SurveyUlang::create([
             'order_id' => $order->id,
             'response_time' => now(),
             'response_by' => auth()->user()->name ?? 'Admin',
         ]);
 
         $order->update(['tahapan_proyek' => 'survey_ulang']);
+
+        $this->updateTaskResponse($order->id, 'survey_ulang', 6);
 
         return [
             'success' => true,
@@ -593,6 +650,8 @@ class NotificationApiController extends Controller
         ]);
 
         $order->update(['tahapan_proyek' => 'gambar_kerja']);
+
+        $this->updateTaskResponse($order->id, 'gambar_kerja', 8);
 
         return [
             'success' => true,
@@ -658,6 +717,9 @@ class NotificationApiController extends Controller
                     }
                 }
             }
+
+
+            $this->updateTaskResponse($order->id, 'workplan', 6);
 
             DB::commit();
 

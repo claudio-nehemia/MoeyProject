@@ -344,7 +344,7 @@ export default function Index({ orders }: Props) {
                         onClick={() => openUploadKasarModal(order)}
                         className="rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-all hover:from-blue-600 hover:to-blue-700 sm:px-3.5 sm:py-2"
                     >
-                        Upload Kasar
+                        Upload Moodboard
                     </button>
                 )}
 
@@ -627,11 +627,14 @@ export default function Index({ orders }: Props) {
                                                         {moodboard.kasar_files.length > 0 && (
                                                             <div className="mb-2">
                                                                 <p className="text-xs font-semibold text-stone-700 mb-2">
-                                                                    File Kasar ({moodboard.kasar_files.length}):
+                                                                    File Moodboard ({moodboard.kasar_files.length}):
                                                                 </p>
                                                                 <div className="space-y-2">
                                                                     {moodboard.kasar_files.map((file, idx) => {
-                                                                        const isAcceptedFile = moodboard.moodboard_kasar === file.file_path;
+                                                                        // Only show 'DESAIN TERPILIH' after the design has been accepted (approved)
+                                                                        const isAcceptedFile =
+                                                                            moodboard.status === 'approved' &&
+                                                                            moodboard.moodboard_kasar === file.file_path;
                                                                         return (
                                                                             <div 
                                                                                 key={file.id} 
@@ -704,7 +707,7 @@ export default function Index({ orders }: Props) {
                                                                                     {moodboard.status === 'pending' && moodboard.has_estimasi && (
                                                                                         <button
                                                                                             onClick={() => {
-                                                                                                if (window.confirm(`Pilih desain "${file.original_name}" sebagai moodboard kasar?`)) {
+                                                                                                if (window.confirm(`Pilih desain "${file.original_name}" sebagai moodboard?`)) {
                                                                                                     router.post(`/moodboard/accept/${moodboard.id}`, {
                                                                                                         moodboard_file_id: file.id,
                                                                                                     });

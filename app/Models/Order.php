@@ -18,6 +18,7 @@ class Order extends Model
         'priority_level',
         'jenis_interior_id',
         'mom_file',
+        'mom_files',
         'tanggal_survey',
         'payment_status',
         'tahapan_proyek',
@@ -26,6 +27,10 @@ class Order extends Model
         'survey_response_by',
         'pm_suruey_response_by',
         'pm_survey_response_time',
+    ];
+
+    protected $casts = [
+        'mom_files' => 'array',
     ];
 
     public function jenisInterior()

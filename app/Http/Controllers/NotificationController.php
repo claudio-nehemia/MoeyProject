@@ -3,16 +3,21 @@
 namespace App\Http\Controllers;
 
 use Inertia\Inertia;
+use App\Models\Order;
 use App\Models\Kontrak;
 use App\Models\Estimasi;
+use App\Models\Moodboard;
 use App\Models\GambarKerja;
 use App\Models\RabInternal;
+use App\Models\SurveyUlang;
 use App\Models\Notification;
-use App\Models\Order;
 use App\Models\TaskResponse;
+use App\Models\WorkplanItem;
 use Illuminate\Http\Request;
 use App\Models\CommitmentFee;
 use App\Models\ItemPekerjaan;
+use App\Models\SurveyResults;
+use Illuminate\Support\Facades\DB;
 use App\Services\NotificationService;
 
 class NotificationController extends Controller
@@ -37,6 +42,7 @@ class NotificationController extends Controller
                 'order.surveyResults',
                 'order.surveyUlang',
                 'order.surveyUsers', // TAMBAH INI untuk Survey Schedule
+                'order.estimasi', // TAMBAH INI untuk direct estimasi access
                 'order.moodboard.commitmentFee',
                 'order.moodboard.estimasi',
                 'order.moodboard.itemPekerjaans.produks.workplanItems',
@@ -214,7 +220,7 @@ class NotificationController extends Controller
         }
 
         // Create empty survey with response info
-        \App\Models\SurveyResults::create([
+        SurveyResults::create([
             'order_id' => $order->id,
             'response_time' => now(),
             'response_by' => auth()->user()->name ?? 'Admin',
@@ -224,6 +230,29 @@ class NotificationController extends Controller
             'tahapan_proyek' => 'survey',
             'project_status' => 'in_progress',
         ]);
+
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'survey')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays(6),
+                'duration' => 6,
+                'duration_actual' => $taskResponse->duration_actual,
+                'status' => 'menunggu_input',
+            ]);
+        } else if ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+            ]);
+        }
 
         return redirect()->route('survey-results.index')
             ->with('success', 'Response recorded. You can now create the survey.');
@@ -247,7 +276,7 @@ class NotificationController extends Controller
         }
 
         // Create empty moodboard with response info
-        \App\Models\Moodboard::create([
+        Moodboard::create([
             'order_id' => $order->id,
             'response_time' => now(),
             'response_by' => auth()->user()->name ?? 'Admin',
@@ -256,6 +285,29 @@ class NotificationController extends Controller
         $order->update([
             'tahapan_proyek' => 'moodboard',
         ]);
+
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'moodboard')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays(6), // Tambah 3 hari (total 8 hari)
+                'duration' => 6,
+                'duration_actual' => $taskResponse->duration_actual,
+                'status' => 'menunggu_input',
+            ]);
+        } elseif ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+            ]);
+        }
 
         return redirect()->route('moodboard.index')
             ->with('success', 'Response recorded. You can now create the moodboard.');
@@ -285,9 +337,28 @@ class NotificationController extends Controller
             'response_time' => now(),
         ]);
 
-        // $order->update([
-        //     'tahapan_proyek' => 'estimasi',
-        // ]);
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'estimasi')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays(6), // Tambah 3 hari (total 8 hari)
+                'duration' => 6,
+                'duration_actual' => $taskResponse->duration_actual,
+                'status' => 'menunggu_input',
+            ]);
+        } elseif ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+            ]);
+        }
 
         return redirect()->route('estimasi.index')
             ->with('success', 'Response recorded. You can now create the estimasi.');
@@ -343,6 +414,29 @@ class NotificationController extends Controller
             'tahapan_proyek' => 'cm_fee',
         ]);
 
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'cm_fee')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays(6), // Tambah 3 hari (total 8 hari)
+                'duration' => 6,
+                'duration_actual' => $taskResponse->duration_actual,
+                'status' => 'menunggu_input',
+            ]);
+        } elseif ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+            ]);
+        }
+
         // Redirect to commitment fee index to respond
         return redirect()->route('commitment-fee.index')
             ->with('success', 'Silakan respond dan isi commitment fee untuk project ini.');
@@ -376,6 +470,29 @@ class NotificationController extends Controller
             'tahapan_proyek' => 'desain_final',
         ]);
 
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'desain_final')
+            ->where('is_marketing', false)
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays(6),
+                'duration' => 6,
+                'status' => 'menunggu_input',
+            ]);
+        } elseif ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+            ]);
+        }
+
         // Redirect to moodboard index to upload final design
         return redirect()->route('moodboard.index')
             ->with('success', 'Silakan upload final design untuk project ini.');
@@ -405,6 +522,29 @@ class NotificationController extends Controller
             'response_by' => auth()->user()->name,
             'response_time' => now(),
         ]);
+
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'item_pekerjaan')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays(6), // Tambah 3 hari (total 8 hari)
+                'duration' => 6,
+                'duration_actual' => $taskResponse->duration_actual,
+                'status' => 'menunggu_input',
+            ]);
+        } elseif ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+            ]);
+        }
 
         // Redirect to item pekerjaan page
         return redirect()->route('item-pekerjaan.index', ['order_id' => $order->id])
@@ -445,6 +585,29 @@ class NotificationController extends Controller
             'tahapan_proyek' => 'rab',
         ]);
 
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'rab_internal')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays(6), // Tambah 3 hari (total 8 hari)
+                'duration' => 6,
+                'duration_actual' => $taskResponse->duration_actual,
+                'status' => 'menunggu_input',
+            ]);
+        } elseif ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+            ]);
+        }
+
         // Redirect to RAB Internal page
         return redirect()->route('rab-internal.index', ['order_id' => $order->id])
             ->with('success', 'Response recorded. Please manage the RAB Internal for this order.');
@@ -484,6 +647,29 @@ class NotificationController extends Controller
             'tahapan_proyek' => 'kontrak',
         ]);
 
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'kontrak')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays(6), // Tambah 3 hari (total 8 hari)
+                'duration' => 6,
+                'duration_actual' => $taskResponse->duration_actual,
+                'status' => 'menunggu_input',
+            ]);
+        } elseif ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+            ]);
+        }
+
         // Redirect to Kontrak page
         return redirect()->route('kontrak.index', ['order_id' => $order->id])
             ->with('success', 'Response recorded. Please manage the Kontrak for this order.');
@@ -518,6 +704,29 @@ class NotificationController extends Controller
             'survey_response_by' => auth()->user()->name,
         ]);
 
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'survey_schedule')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays(6),
+                'duration' => 6,
+                'duration_actual' => $taskResponse->duration_actual,
+                'status' => 'menunggu_input',
+            ]);
+        } elseif ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+            ]);
+        }
+
         // Redirect to Survey Schedule page to fill details
         return redirect()->route('survey-schedule.index')
             ->with('success', 'Response recorded. Silakan jadwalkan survey untuk project ini.');
@@ -544,13 +753,36 @@ class NotificationController extends Controller
 
         // Create empty survey ulang record with response info
         // User will fill in details (catatan, foto, temuan) later
-        \App\Models\SurveyUlang::create([
+        SurveyUlang::create([
             'order_id' => $order->id,
             'response_time' => now(),
             'response_by' => auth()->user()->name ?? 'Admin',
         ]);
 
         $order->update(['tahapan_proyek' => 'survey_ulang']);
+
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'survey_ulang')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays(6), // Tambah 3 hari (total 8 hari)
+                'duration' => 6,
+                'duration_actual' => $taskResponse->duration_actual,
+                'status' => 'menunggu_input',
+            ]);
+        } elseif ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+            ]);
+        }
 
         // Redirect to create page to fill in details
         return redirect()->route('survey-ulang.create', $order->id)
@@ -586,6 +818,29 @@ class NotificationController extends Controller
             'tahapan_proyek' => 'gambar_kerja',
         ]);
 
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'gambar_kerja')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays(8), // Tambah 3 hari (total 8 hari)
+                'duration' => 8,
+                'duration_actual' => $taskResponse->duration_actual,
+                'status' => 'menunggu_input',
+            ]);
+        } elseif ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+            ]);
+        }
+
         // Redirect to Gambar Kerja page
         return redirect()->route('gambar-kerja.index', ['order_id' => $order->id])
             ->with('success', 'Response berhasil. Silakan upload gambar kerja.');
@@ -615,14 +870,14 @@ class NotificationController extends Controller
             ->flatMap(fn($produk) => $produk->workplanItems);
 
         // If workplan already exists and responded
-        if ($workplanItems->isNotEmpty() && \App\Models\WorkplanItem::hasAnyResponded($workplanItems)) {
+        if ($workplanItems->isNotEmpty() && WorkplanItem::hasAnyResponded($workplanItems)) {
             return redirect()->route('workplan.index')
                 ->with('info', 'Permintaan workplan sudah diterima sebelumnya.');
         }
 
         // CREATE empty workplan items with response tracking
         // This marks the response and prepares the structure for filling
-        \Illuminate\Support\Facades\DB::transaction(function () use ($order) {
+        DB::transaction(function () use ($order) {
             foreach ($order->moodboard->itemPekerjaans as $itemPekerjaan) {
                 foreach ($itemPekerjaan->produks as $produk) {
                     // Skip if already has workplan items
@@ -631,9 +886,9 @@ class NotificationController extends Controller
                     }
 
                     // Create empty workplan items based on default breakdown
-                    $defaultBreakdown = \App\Http\Controllers\WorkplanItemController::defaultBreakdown();
+                    $defaultBreakdown = WorkplanItemController::defaultBreakdown();
                     foreach ($defaultBreakdown as $index => $stage) {
-                        \App\Models\WorkplanItem::create([
+                        WorkplanItem::create([
                             'item_pekerjaan_produk_id' => $produk->id,
                             'nama_tahapan' => $stage['nama_tahapan'],
                             'start_date' => null,
@@ -649,6 +904,29 @@ class NotificationController extends Controller
                 }
             }
         });
+
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'workplan')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays(6), // Standard 6 hari untuk workplan
+                'duration' => 6,
+                'duration_actual' => $taskResponse->duration_actual,
+                'status' => 'menunggu_input',
+            ]);
+        } elseif ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+            ]);
+        }
 
         return redirect()->route('workplan.index')
             ->with('success', 'Permintaan workplan berhasil diterima. Silakan lengkapi detail workplan.');

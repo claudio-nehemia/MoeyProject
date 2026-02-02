@@ -26,6 +26,7 @@ interface Order {
     jenis_interior: JenisInterior;
     users: User[];
     mom_file: string | null;
+    mom_files?: string[] | null;
 }
 
 interface JenisPengukuran {
@@ -352,21 +353,37 @@ export default function Show({ survey }: Props) {
                                     </svg>
                                     <p className="font-semibold text-amber-900 text-sm sm:text-base">MOM File</p>
                                 </div>
-                                {survey.order.mom_file ? (
-                                    <a
-                                        href={`/storage/${survey.order.mom_file}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center px-3 sm:px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors w-full justify-center"
-                                    >
-                                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                        </svg>
-                                        Download
-                                    </a>
-                                ) : (
-                                    <p className="text-amber-700 text-xs sm:text-sm">No MOM file</p>
-                                )}
+                                {(() => {
+                                    const momFiles: string[] = [
+                                        ...((survey.order.mom_files || []) as string[]),
+                                        ...(survey.order.mom_file ? [survey.order.mom_file] : []),
+                                    ];
+                                    const deduped = momFiles.filter((p, i) => momFiles.indexOf(p) === i);
+
+                                    if (deduped.length === 0) {
+                                        return <p className="text-amber-700 text-xs sm:text-sm">No MOM file</p>;
+                                    }
+
+                                    return (
+                                        <div className="space-y-2">
+                                            <div className="text-center">
+                                                <p className="text-3xl font-bold text-amber-600">{deduped.length}</p>
+                                                <p className="text-amber-700 text-xs mt-1">{deduped.length === 1 ? 'file' : 'files'} uploaded</p>
+                                            </div>
+                                            <a
+                                                href={`/storage/${deduped[0]}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center px-3 sm:px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors w-full justify-center"
+                                            >
+                                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                </svg>
+                                                Download latest
+                                            </a>
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </div>
@@ -563,7 +580,16 @@ export default function Show({ survey }: Props) {
                     )}
 
                     {/* MOM File Section */}
-                    {survey.order.mom_file && (
+                    {(() => {
+                        const momFiles: string[] = [
+                            ...((survey.order.mom_files || []) as string[]),
+                            ...(survey.order.mom_file ? [survey.order.mom_file] : []),
+                        ];
+                        const deduped = momFiles.filter((p, i) => momFiles.indexOf(p) === i);
+
+                        if (deduped.length === 0) return null;
+
+                        return (
                         <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-stone-200 p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8">
                             <h2 className="text-lg sm:text-xl font-semibold text-stone-900 mb-4 sm:mb-6 flex items-center gap-2">
                                 <svg className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -572,28 +598,33 @@ export default function Show({ survey }: Props) {
                                 <span className="text-sm sm:text-base lg:text-xl">Minutes of Meeting</span>
                             </h2>
                             <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 border-2 border-amber-200">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                        <p className="font-semibold text-amber-900">{survey.order.mom_file.split('/').pop()}</p>
-                                    </div>
-                                    <a
-                                        href={`/storage/${survey.order.mom_file}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg transition-colors shadow-lg"
-                                    >
-                                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                        </svg>
-                                        Download
-                                    </a>
+                                <div className="space-y-3">
+                                    {deduped.map((path, index) => (
+                                        <div key={`${path}-${index}`} className="flex items-center justify-between gap-3 bg-white/70 rounded-lg px-4 py-3">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <svg className="w-7 h-7 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                                <p className="font-semibold text-amber-900 truncate">{path.split('/').pop()}</p>
+                                            </div>
+                                            <a
+                                                href={`/storage/${path}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg transition-colors shadow-lg"
+                                            >
+                                                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                </svg>
+                                                Download
+                                            </a>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
-                    )}
+                        );
+                    })()}
 
                     {/* Jenis Pengukuran Section */}
                     {survey.jenis_pengukuran && survey.jenis_pengukuran.length > 0 && (

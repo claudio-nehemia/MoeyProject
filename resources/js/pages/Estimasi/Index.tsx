@@ -100,6 +100,8 @@ export default function EstimasiIndex({ moodboards }: Props) {
     const [uploadFile, setUploadFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [showPreviewModal, setShowPreviewModal] = useState(false);
+    const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type: string } | null>(null);
     const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
     // Dual task response state: { [orderId]: { regular?: TaskResponse, marketing?: TaskResponse } }
     const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: TaskResponse; marketing?: TaskResponse }>>({});
@@ -226,6 +228,37 @@ export default function EstimasiIndex({ moodboards }: Props) {
         setSelectedMoodboard(moodboard);
         setSelectedKasarFile(kasarFile);
         setShowUploadModal(true);
+    };
+
+    // Function to open preview modal
+    const openPreviewModal = (url: string, fileName: string, type: 'kasar' | 'estimasi') => {
+        setPreviewFile({
+            url: url,
+            name: fileName,
+            type: type
+        });
+        setShowPreviewModal(true);
+    };
+
+    // Function to download file
+    const downloadFile = (url: string, fileName: string) => {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    // Function to detect if file is an image
+    const isImageFile = (fileName: string): boolean => {
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
+        return imageExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
+    };
+
+    // Function to detect if file is a PDF
+    const isPdfFile = (fileName: string): boolean => {
+        return fileName.toLowerCase().endsWith('.pdf');
     };
 
     const formatDeadline = (value: string | null | undefined) => {
@@ -496,20 +529,49 @@ export default function EstimasiIndex({ moodboards }: Props) {
                                                     {moodboard.kasar_files.map((kasarFile, idx) => (
                                                         <div key={kasarFile.id} className="border border-stone-200 rounded-lg p-3 bg-stone-50">
                                                             <div className="flex items-start gap-3">
-                                                                {/* Preview Image */}
-                                                                <div className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-stone-200">
+                                                                {/* Preview Image with Click to Enlarge */}
+                                                                <div 
+                                                                    className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-stone-200 cursor-pointer hover:ring-2 hover:ring-blue-300 transition-all"
+                                                                    onClick={() => openPreviewModal(kasarFile.url, kasarFile.original_name, 'kasar')}
+                                                                >
                                                                     <img
                                                                         src={kasarFile.url}
                                                                         alt={kasarFile.original_name}
-                                                                        className="w-full h-full object-cover"
+                                                                        className="w-full h-full object-cover hover:scale-105 transition-transform"
                                                                     />
                                                                 </div>
 
                                                                 {/* File Info & Actions */}
                                                                 <div className="flex-1 min-w-0">
-                                                                    <p className="text-sm font-semibold text-stone-900 truncate mb-1">
-                                                                        File #{idx + 1}: {kasarFile.original_name}
-                                                                    </p>
+                                                                    <div className="flex items-start justify-between gap-2 mb-2">
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <p className="text-sm font-semibold text-stone-900 truncate mb-1">
+                                                                                File #{idx + 1}: {kasarFile.original_name}
+                                                                            </p>
+                                                                        </div>
+                                                                        {/* Kasar File Actions */}
+                                                                        <div className="flex gap-1">
+                                                                            <button
+                                                                                onClick={() => openPreviewModal(kasarFile.url, kasarFile.original_name, 'kasar')}
+                                                                                className="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded transition-all"
+                                                                                title="Preview Desain Kasar"
+                                                                            >
+                                                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                                                </svg>
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => downloadFile(kasarFile.url, kasarFile.original_name)}
+                                                                                className="px-2 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 hover:bg-green-100 rounded transition-all"
+                                                                                title="Download Desain Kasar"
+                                                                            >
+                                                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                                                </svg>
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
                                                                     
                                                                     {kasarFile.estimasi_file ? (
                                                                         <div className="space-y-2">
@@ -521,18 +583,33 @@ export default function EstimasiIndex({ moodboards }: Props) {
                                                                                     ✓ Estimasi sudah diupload
                                                                                 </span>
                                                                             </div>
-                                                                            <div className="flex gap-2">
-                                                                                <a
-                                                                                    href={kasarFile.estimasi_file.url}
-                                                                                    target="_blank"
-                                                                                    rel="noopener noreferrer"
-                                                                                    className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded transition-all"
+                                                                            <div className="flex flex-wrap gap-1">
+                                                                                {/* Estimasi File Actions */}
+                                                                                <button
+                                                                                    onClick={() => openPreviewModal(kasarFile.estimasi_file!.url, kasarFile.estimasi_file!.original_name, 'estimasi')}
+                                                                                    className="px-2 py-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100 rounded transition-all"
+                                                                                    title="Preview Estimasi"
                                                                                 >
-                                                                                    Download Estimasi
-                                                                                </a>
+                                                                                    <svg className="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                                                    </svg>
+                                                                                    Preview
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => downloadFile(kasarFile.estimasi_file!.url, kasarFile.estimasi_file!.original_name)}
+                                                                                    className="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded transition-all"
+                                                                                    title="Download Estimasi"
+                                                                                >
+                                                                                    <svg className="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                                                    </svg>
+                                                                                    Download
+                                                                                </button>
                                                                                 <button
                                                                                     onClick={() => openUploadModal(moodboard, kasarFile)}
-                                                                                    className="px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded transition-all"
+                                                                                    className="px-2 py-1 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded transition-all"
+                                                                                    title="Update Estimasi"
                                                                                 >
                                                                                     Update
                                                                                 </button>
@@ -672,6 +749,133 @@ export default function EstimasiIndex({ moodboards }: Props) {
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Preview Modal */}
+                {showPreviewModal && previewFile && (
+                    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/75 backdrop-blur-sm p-2 sm:p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden">
+                            {/* Header */}
+                            <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                        previewFile.type === 'kasar' 
+                                            ? 'bg-blue-500/20' 
+                                            : 'bg-purple-500/20'
+                                    }`}>
+                                        {previewFile.type === 'kasar' ? (
+                                            <svg className="w-4 h-4 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                        ) : (
+                                            <svg className="w-4 h-4 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <h2 className="text-base sm:text-lg font-bold text-white">
+                                            Preview {previewFile.type === 'kasar' ? 'Desain Kasar' : 'File Estimasi'}
+                                        </h2>
+                                        <p className="text-xs text-slate-200 mt-0.5 truncate max-w-60 sm:max-w-96">
+                                            {previewFile.name}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {/* Download Button in Header */}
+                                    <button
+                                        onClick={() => downloadFile(previewFile.url, previewFile.name)}
+                                        className="p-2 text-slate-200 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                                        title="Download File"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                    </button>
+                                    {/* Close Button */}
+                                    <button
+                                        onClick={() => {
+                                            setShowPreviewModal(false);
+                                            setPreviewFile(null);
+                                        }}
+                                        className="p-2 text-slate-200 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-4 sm:p-6 max-h-[calc(95vh-120px)] overflow-auto">
+                                {isImageFile(previewFile.name) ? (
+                                    <div className="flex justify-center">
+                                        <img
+                                            src={previewFile.url}
+                                            alt={previewFile.name}
+                                            className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
+                                        />
+                                    </div>
+                                ) : isPdfFile(previewFile.name) ? (
+                                    <div className="w-full" style={{ height: '70vh' }}>
+                                        <iframe
+                                            src={previewFile.url}
+                                            className="w-full h-full border rounded-lg"
+                                            title={previewFile.name}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-12">
+                                        <div className="max-w-md mx-auto">
+                                            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                                                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                            </div>
+                                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                                Preview Tidak Tersedia
+                                            </h3>
+                                            <p className="text-sm text-gray-600 mb-4">
+                                                File ini tidak dapat dipratinjau di browser. Silakan unduh untuk melihat konten.
+                                            </p>
+                                            <button
+                                                onClick={() => downloadFile(previewFile.url, previewFile.name)}
+                                                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                                            >
+                                                Download File
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer Actions */}
+                            <div className="px-4 sm:px-6 py-4 bg-gray-50 border-t flex justify-between items-center">
+                                <div className="text-xs text-gray-500">
+                                    {previewFile.type === 'kasar' ? 'File Desain Kasar' : 'File Estimasi'}
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => downloadFile(previewFile.url, previewFile.name)}
+                                        className="px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded-lg transition-colors"
+                                    >
+                                        Download
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setShowPreviewModal(false);
+                                            setPreviewFile(null);
+                                        }}
+                                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors"
+                                    >
+                                        Tutup
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}

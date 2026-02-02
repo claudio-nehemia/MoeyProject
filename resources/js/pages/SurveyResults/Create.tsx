@@ -1,5 +1,5 @@
-import { useState, FormEventHandler } from 'react';
-import { Head, useForm, router, Link } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
+import { Head, useForm, Link } from '@inertiajs/react';
 import JenisPengukuranModal from '@/components/JenisPengukuranModal';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
@@ -24,6 +24,7 @@ interface Order {
     phone_number: string;
     jenis_interior: JenisInterior;
     mom_file: string | null;
+    mom_files?: string[] | null;
     users: User[];
 }
 
@@ -56,12 +57,12 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
 
     const initialSelectedPengukuran = selectedPengukuranIds || [];
 
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, progress, transform } = useForm({
         survey_id: survey.id,
         feedback: '',
         layout_files: [] as File[],
         foto_lokasi_files: [] as File[],
-        mom_file: null as File | null,
+        mom_files: [] as File[],
         jenis_pengukuran_ids: initialSelectedPengukuran as number[],
         action: 'publish' as 'save_draft' | 'publish',
     });
@@ -105,26 +106,36 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
         });
     };
 
-    const handleSubmit = (action: 'save_draft' | 'publish') => {
-        console.log('=== DEBUG CREATE SURVEY ===');
-        console.log('Survey ID:', data.survey_id);
-        console.log('Feedback:', data.feedback);
-        console.log('Layout files count:', data.layout_files.length);
-        console.log('Foto lokasi files count:', data.foto_lokasi_files.length);
-        console.log('Has mom_file:', data.mom_file ? 'Yes' : 'No');
-        console.log('Action:', action);
+    const [submitAction, setSubmitAction] = useState<'save_draft' | 'publish' | null>(null);
 
-        router.post('/survey-results', {
-            ...data,
-            action: action,
-        }, {
+    const totalUploadBytes = useMemo(() => {
+        const files = [
+            ...(data.layout_files || []),
+            ...(data.foto_lokasi_files || []),
+            ...(data.mom_files || []),
+        ];
+        return files.reduce((sum, f) => sum + (f?.size || 0), 0);
+    }, [data.layout_files, data.foto_lokasi_files, data.mom_files]);
+
+    const handleSubmit = (action: 'save_draft' | 'publish') => {
+        if (processing) return;
+
+        setSubmitAction(action);
+
+        // Ensure action is sent in the request payload
+        transform((form) => ({ ...form, action }));
+
+        post('/survey-results', {
             preserveScroll: true,
-            onError: (errors) => {
-                console.log('Validation errors:', errors);
+            forceFormData: true,
+            onError: (errs) => {
+                console.log('Validation errors:', errs);
             },
-            onSuccess: () => {
-                console.log('Survey created successfully!');
-            }
+            onFinish: () => {
+                // Reset transform to identity for subsequent submits
+                transform((form) => ({ ...form }));
+                setSubmitAction(null);
+            },
         });
     };
 
@@ -306,7 +317,7 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                         className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-cyan-100 file:text-cyan-700 hover:file:bg-cyan-200"
                                     />
                                     <p className="text-xs text-stone-500 mt-2">
-                                        Upload multiple layout files. Supported: PDF, Images, CAD (Max 10MB each)
+                                        Upload multiple layout files. Supported: PDF, Images, CAD
                                     </p>
                                     {data.layout_files.length > 0 && (
                                         <div className="mt-3 space-y-2">
@@ -344,7 +355,7 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                         className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200"
                                     />
                                     <p className="text-xs text-stone-500 mt-2">
-                                        Upload multiple photos. Supported: JPG, PNG (Max 5MB each)
+                                        Upload multiple photos. Supported: JPG, PNG
                                     </p>
                                     {data.foto_lokasi_files.length > 0 && (
                                         <div className="mt-3 space-y-2">
@@ -406,44 +417,79 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                     <label className="block text-sm font-semibold text-stone-700 mb-2">
                                         MOM File (Minutes of Meeting) - Optional
                                     </label>
-                                    
-                                    {order.mom_file && !data.mom_file && (
-                                        <div className="mb-3 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                </svg>
-                                                <div>
-                                                    <p className="text-sm font-semibold text-blue-900">Current File</p>
-                                                    <p className="text-xs text-blue-700">{order.mom_file.split('/').pop()}</p>
+
+                                    {(() => {
+                                        const existingMomFiles: string[] = [
+                                            ...((order.mom_files || []) as string[]),
+                                            ...(order.mom_file ? [order.mom_file] : []),
+                                        ];
+
+                                        if (existingMomFiles.length === 0 || data.mom_files.length > 0) return null;
+
+                                        // de-dupe
+                                        const deduped = existingMomFiles.filter((p, i) => existingMomFiles.indexOf(p) === i);
+
+                                        return (
+                                            <div className="mb-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                                <p className="text-sm font-semibold text-blue-900 mb-2">
+                                                    Existing MOM files ({deduped.length})
+                                                </p>
+                                                <div className="space-y-2">
+                                                    {deduped.map((path, idx) => (
+                                                        <div
+                                                            key={`${path}-${idx}`}
+                                                            className="flex items-center justify-between gap-3 bg-white/70 rounded-lg px-3 py-2"
+                                                        >
+                                                            <div className="min-w-0">
+                                                                <p className="text-xs font-semibold text-blue-800 truncate">{path.split('/').pop()}</p>
+                                                                <p className="text-[11px] text-blue-600 truncate">{path}</p>
+                                                            </div>
+                                                            <a
+                                                                href={`/storage/${path}`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="inline-flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                                                            >
+                                                                Download
+                                                            </a>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             </div>
-                                            <a
-                                                href={`/storage/${order.mom_file}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
-                                            >
-                                                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                                </svg>
-                                                Download
-                                            </a>
-                                        </div>
-                                    )}
+                                        );
+                                    })()}
 
                                     <input
                                         type="file"
+                                        multiple
                                         accept=".pdf,.doc,.docx"
-                                        onChange={(e) => setData('mom_file', e.target.files?.[0] || null)}
+                                        onChange={(e) => {
+                                            const files = Array.from(e.target.files || []);
+                                            setData('mom_files', files);
+                                        }}
                                         className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-amber-100 file:text-amber-700 hover:file:bg-amber-200"
                                     />
                                     <p className="text-xs text-stone-500 mt-2">
-                                        {order.mom_file && !data.mom_file
-                                            ? 'Upload a new file to replace the existing one in Order'
-                                            : 'Supported formats: PDF, DOC, DOCX (Max 2MB) - Will be saved to Order'}
+                                        Supported formats: PDF, DOC, DOCX - Will be appended to Order MOM files
                                     </p>
-                                    {errors.mom_file && <p className="text-red-500 text-xs mt-1">{errors.mom_file}</p>}
+                                    {data.mom_files.length > 0 && (
+                                        <div className="mt-3 space-y-2">
+                                            <p className="text-xs font-semibold text-stone-700">New MOM files to upload ({data.mom_files.length}):</p>
+                                            {data.mom_files.map((file, index) => (
+                                                <div key={index} className="flex items-center gap-2 text-xs text-stone-600 bg-amber-50 px-3 py-2 rounded-lg">
+                                                    <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                    <span className="flex-1 truncate">{file.name}</span>
+                                                    <span className="text-stone-500">({(file.size / 1024).toFixed(1)} KB)</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {(errors as any).mom_files && <p className="text-red-500 text-xs mt-1">{(errors as any).mom_files}</p>}
+                                    {(errors as any)['mom_files.0'] && <p className="text-red-500 text-xs mt-1">{(errors as any)['mom_files.0']}</p>}
+                                    {(errors as any).mom_file && <p className="text-red-500 text-xs mt-1">{(errors as any).mom_file}</p>}
                                 </div>
                             </div>
 
@@ -455,6 +501,41 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                 >
                                     Cancel
                                 </Link>
+
+                                {/* Upload progress (large files can take time) */}
+                                {processing && totalUploadBytes > 0 && (
+                                    <div className="mx-4 hidden flex-1 flex-col justify-center gap-1 md:flex">
+                                        <div className="flex items-center justify-between text-xs text-stone-600">
+                                            <span>
+                                                {submitAction === 'publish'
+                                                    ? 'Uploading & processing (Publish)'
+                                                    : 'Uploading & processing (Draft)'}
+                                            </span>
+                                            <span>
+                                                {progress?.percentage != null
+                                                    ? `${Math.round(progress.percentage)}%`
+                                                    : 'Processing...'}
+                                            </span>
+                                        </div>
+                                        <div className="h-2 w-full overflow-hidden rounded-full bg-stone-200">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-cyan-600 to-blue-600 transition-all"
+                                                style={{
+                                                    width:
+                                                        progress?.percentage != null
+                                                            ? `${progress.percentage}%`
+                                                            : '100%',
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="text-[11px] text-stone-500">
+                                            {progress?.percentage != null
+                                                ? 'Uploading files...'
+                                                : 'Server is processing images & thumbnails...'}
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="flex items-center gap-3">
                                     <button
                                         type="button"

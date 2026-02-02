@@ -74,6 +74,53 @@ class ImageService
     }
 
     /**
+     * Resize, save main image, and generate thumbnail efficiently.
+     *
+     * Performance note: thumbnail is generated from the already-encoded main JPEG
+     * to avoid decoding the original file twice (which is slow for large images).
+     */
+    public function saveImageWithThumbnail(
+        UploadedFile $file,
+        string $directory,
+        int $maxWidth = 1600,
+        int $quality = 80,
+        int $thumbnailWidth = 400,
+        int $thumbnailQuality = 70
+    ): array {
+        $image = $this->manager->read($file);
+
+        if ($image->width() > $maxWidth) {
+            $image->scale(width: $maxWidth);
+        }
+
+        $encodedMain = $image->toJpeg(quality: $quality);
+        $mainBinary = (string) $encodedMain;
+
+        $mainFilename = uniqid() . '.jpg';
+        $mainPath = "{$directory}/{$mainFilename}";
+        Storage::disk('public')->put($mainPath, $mainBinary);
+
+        // Generate thumbnail from the already-scaled main image bytes
+        $thumbImage = $this->manager->read($mainBinary);
+        if ($thumbImage->width() > $thumbnailWidth) {
+            $thumbImage->scale(width: $thumbnailWidth);
+        }
+
+        $encodedThumb = $thumbImage->toJpeg(quality: $thumbnailQuality);
+        $thumbFilename = uniqid('thumb_') . '.jpg';
+        $thumbPath = "{$directory}/thumbnails/{$thumbFilename}";
+        Storage::disk('public')->put($thumbPath, (string) $encodedThumb);
+
+        return [
+            'path' => $mainPath,
+            'original_name' => $file->getClientOriginalName(),
+            'mime_type' => 'image/jpeg',
+            'size' => Storage::disk('public')->size($mainPath),
+            'thumbnail' => $thumbPath,
+        ];
+    }
+
+    /**
      * Save non-image file (PDF, DWG, DXF)
      */
     public function saveRawFile(UploadedFile $file, string $directory): array

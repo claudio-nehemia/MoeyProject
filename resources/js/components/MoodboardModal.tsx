@@ -149,7 +149,7 @@ export default function MoodboardModal({
                 };
             case 'upload-kasar':
                 return {
-                    title: 'Upload Desain Kasar',
+                    title: 'Upload Moodboard',
                     description: order.moodboard?.kasar_files && order.moodboard.kasar_files.length > 0 
                         ? `Tambah file baru ke ${order.moodboard.kasar_files.length} file yang sudah ada`
                         : 'Unggah file desain kasar untuk review',
@@ -251,7 +251,7 @@ export default function MoodboardModal({
                     {mode === 'create' && (
                         <div className="bg-violet-50 border border-violet-200 rounded-lg p-3 sm:p-4">
                             <p className="text-xs sm:text-sm text-violet-900">
-                                Moodboard akan dibuat dan siap untuk menerima upload desain kasar.
+                                Moodboard akan dibuat dan siap untuk menerima upload.
                             </p>
                         </div>
                     )}
@@ -260,7 +260,7 @@ export default function MoodboardModal({
                     {mode === 'upload-kasar' && (
                         <div>
                             <label className="block text-xs sm:text-sm font-semibold text-stone-700 mb-2">
-                                Tambah File Desain Kasar
+                                Tambah File Moodboard
                             </label>
                             
                             <div className="relative border-2 border-dashed border-violet-300 rounded-lg p-4 sm:p-6 text-center hover:border-violet-400 transition-colors">

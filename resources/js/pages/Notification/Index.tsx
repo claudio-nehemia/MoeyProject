@@ -700,8 +700,13 @@ export default function Index({ notifications, unreadCount }: Props) {
                             </div>
                         ) : (
                             notifications.data.map((notification) => {
-                                const responseStatus =
-                                    isResponded(notification);
+                                const responseStatus = isResponded(notification);
+                                const marketingStatus = notification.can_marketing_response
+                                    ? isMarketingResponded(notification)
+                                    : null;
+                                const anyResponded =
+                                    responseStatus.responded ||
+                                    (marketingStatus?.responded ?? false);
                                 const hasResponse = requiresResponse(
                                     notification.type,
                                 );
@@ -714,7 +719,7 @@ export default function Index({ notifications, unreadCount }: Props) {
                                                 notification,
                                             )
                                         }
-                                        className={`rounded-xl border-2 bg-white ${getNotificationColor(notification.type, notification.is_read, responseStatus.responded)} cursor-pointer p-5 transition-all hover:scale-[1.01] hover:shadow-md`}
+                                        className={`rounded-xl border-2 bg-white ${getNotificationColor(notification.type, notification.is_read, anyResponded)} cursor-pointer p-5 transition-all hover:scale-[1.01] hover:shadow-md`}
                                     >
                                         <div className="flex gap-4">
                                             {/* Icon */}
@@ -739,10 +744,15 @@ export default function Index({ notifications, unreadCount }: Props) {
                                                                 Responded
                                                             </span>
                                                         )}
-                                                        {!notification.is_read &&
-                                                            !responseStatus.responded && (
-                                                                <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-red-500"></span>
-                                                            )}
+                                                        {marketingStatus?.responded && (
+                                                            <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-purple-100 px-2 py-1 text-xs font-medium text-purple-700">
+                                                                <CheckCircle2 className="h-3 w-3" />
+                                                                Marketing Responded
+                                                            </span>
+                                                        )}
+                                                        {!notification.is_read && (
+                                                            <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-red-500"></span>
+                                                        )}
                                                     </div>
                                                 </div>
 
@@ -800,8 +810,7 @@ export default function Index({ notifications, unreadCount }: Props) {
 
                                                 {/* Marketing Response Info (Kepala Marketing only) */}
                                                 {notification.can_marketing_response && (() => {
-                                                    const marketingStatus = isMarketingResponded(notification);
-                                                    if (!marketingStatus.responded) return null;
+                                                    if (!marketingStatus?.responded) return null;
 
                                                     return (
                                                         <div className="mb-3 rounded-lg border border-purple-200 bg-purple-50 p-3">
@@ -830,55 +839,9 @@ export default function Index({ notifications, unreadCount }: Props) {
                                                 })()}
 
                                                 {/* Conditional Action Buttons */}
-                                                {!responseStatus.responded && (
-                                                    <>
-                                                        {requiresResponse(
-                                                            notification.type,
-                                                        ) && (
-                                                            notification.can_marketing_response ? (
-                                                                (() => {
-                                                                    const marketingStatus = isMarketingResponded(notification);
-                                                                    if (marketingStatus.responded) return null;
-
-                                                                    return (
-                                                                        <button
-                                                                            onClick={(e) =>
-                                                                                handleMarketingResponse(
-                                                                                    notification.id,
-                                                                                    e,
-                                                                                )
-                                                                            }
-                                                                            className="mt-2 mb-3 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-4 py-2.5 font-medium text-white shadow-md transition-all hover:from-purple-600 hover:to-purple-700 hover:shadow-lg"
-                                                                        >
-                                                                            <span>
-                                                                                Marketing Response
-                                                                            </span>
-                                                                            <span>→</span>
-                                                                        </button>
-                                                                    );
-                                                                })()
-                                                            ) : (
-                                                                <button
-                                                                    onClick={(e) =>
-                                                                        handleResponse(
-                                                                            notification.id,
-                                                                            e,
-                                                                        )
-                                                                    }
-                                                                    className="mt-2 mb-3 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2.5 font-medium text-white shadow-md transition-all hover:from-amber-600 hover:to-amber-700 hover:shadow-lg"
-                                                                >
-                                                                    <span>
-                                                                        Response &
-                                                                        Buat Record
-                                                                    </span>
-                                                                    <span>→</span>
-                                                                </button>
-                                                            )
-                                                        )}
-
-                                                        {needsDirectAccess(
-                                                            notification.type,
-                                                        ) && (
+                                                {(() => {
+                                                    if (needsDirectAccess(notification.type)) {
+                                                        return (
                                                             <button
                                                                 onClick={(e) =>
                                                                     handleDirectAccess(
@@ -893,9 +856,53 @@ export default function Index({ notifications, unreadCount }: Props) {
                                                                 </span>
                                                                 <span>→</span>
                                                             </button>
-                                                        )}
-                                                    </>
-                                                )}
+                                                        );
+                                                    }
+
+                                                    if (!requiresResponse(notification.type)) return null;
+
+                                                    // Marketing response and regular response must be independent
+                                                    if (notification.can_marketing_response) {
+                                                        if (marketingStatus?.responded) return null;
+
+                                                        return (
+                                                            <button
+                                                                onClick={(e) =>
+                                                                    handleMarketingResponse(
+                                                                        notification.id,
+                                                                        e,
+                                                                    )
+                                                                }
+                                                                className="mt-2 mb-3 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-4 py-2.5 font-medium text-white shadow-md transition-all hover:from-purple-600 hover:to-purple-700 hover:shadow-lg"
+                                                            >
+                                                                <span>
+                                                                    Marketing Response
+                                                                </span>
+                                                                <span>→</span>
+                                                            </button>
+                                                        );
+                                                    }
+
+                                                    if (responseStatus.responded) return null;
+
+                                                    return (
+                                                        <button
+                                                            onClick={(e) =>
+                                                                handleResponse(
+                                                                    notification.id,
+                                                                    e,
+                                                                )
+                                                            }
+                                                            className="mt-2 mb-3 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2.5 font-medium text-white shadow-md transition-all hover:from-amber-600 hover:to-amber-700 hover:shadow-lg"
+                                                        >
+                                                            <span>
+                                                                Response &
+                                                                Buat Record
+                                                            </span>
+                                                            <span>→</span>
+                                                        </button>
+                                                    );
+                                                })()}
 
                                                 {/* View Details Button (if already responded) */}
                                                 {responseStatus.responded && (

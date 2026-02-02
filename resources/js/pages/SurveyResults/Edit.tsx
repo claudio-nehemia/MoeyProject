@@ -1,4 +1,4 @@
-import { useState, FormEventHandler, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Head, useForm, router, Link } from '@inertiajs/react';
 import JenisPengukuranModal from '@/components/JenisPengukuranModal';
 import Navbar from '@/components/Navbar';
@@ -24,6 +24,7 @@ interface Order {
     phone_number: string;
     jenis_interior: JenisInterior;
     mom_file: string | null;
+    mom_files?: string[] | null;
     users: User[];
 }
 
@@ -69,14 +70,25 @@ export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }:
         return true;
     });
 
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, progress, transform } = useForm({
         feedback: survey.feedback || '',
         layout_files: [] as File[],
         foto_lokasi_files: [] as File[],
-        mom_file: null as File | null,
+        mom_files: [] as File[],
         jenis_pengukuran_ids: selectedPengukuran,
         action: 'publish' as 'save_draft' | 'publish',
     });
+
+    const [submitAction, setSubmitAction] = useState<'save_draft' | 'publish' | null>(null);
+
+    const totalUploadBytes = useMemo(() => {
+        const files = [
+            ...(data.layout_files || []),
+            ...(data.foto_lokasi_files || []),
+            ...(data.mom_files || []),
+        ];
+        return files.reduce((sum, f) => sum + (f?.size || 0), 0);
+    }, [data.layout_files, data.foto_lokasi_files, data.mom_files]);
 
     const [showJenisModal, setShowJenisModal] = useState(false);
 
@@ -125,23 +137,26 @@ export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }:
         });
     };
     const handleSubmit = (action: 'save_draft' | 'publish') => {
-        console.log('=== DEBUG UPDATE SURVEY ===');
-        console.log('Survey ID:', survey.id);
-        console.log('Feedback:', data.feedback);
-        console.log('New layout files count:', data.layout_files.length);
-        console.log('New foto lokasi files count:', data.foto_lokasi_files.length);
-        console.log('Has new mom_file:', data.mom_file ? 'Yes' : 'No');
-        console.log('Action:', action);
+        if (processing) return;
 
-        router.post(`/survey-results/${survey.id}`, {
-            ...data,
+        setSubmitAction(action);
+
+        transform((form) => ({
+            ...form,
             jenis_pengukuran_ids: selectedPengukuran,
-            action: action,
-            _method: 'PUT'
-        }, {
+            action,
+            _method: 'PUT',
+        }));
+
+        post(`/survey-results/${survey.id}`, {
             preserveScroll: true,
-            onError: (errors) => console.log('Validation errors:', errors),
+            forceFormData: true,
+            onError: (errs) => console.log('Validation errors:', errs),
             onSuccess: () => console.log('Survey berhasil diupdate!'),
+            onFinish: () => {
+                transform((form) => ({ ...form }));
+                setSubmitAction(null);
+            },
         });
     };
 
@@ -368,7 +383,7 @@ export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }:
                                         className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-cyan-100 file:text-cyan-700 hover:file:bg-cyan-200"
                                     />
                                     <p className="text-xs text-stone-500 mt-2">
-                                        Upload new layout files (will be added to existing). Supported: PDF, Images, CAD (Max 10MB each)
+                                        Upload new layout files (will be added to existing). Supported: PDF, Images, CAD
                                     </p>
                                     {data.layout_files.length > 0 && (
                                         <div className="mt-3 space-y-2">
@@ -450,7 +465,7 @@ export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }:
                                         className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200"
                                     />
                                     <p className="text-xs text-stone-500 mt-2">
-                                        Upload new photos (will be added to existing). Supported: JPG, PNG (Max 5MB each)
+                                        Upload new photos (will be added to existing). Supported: JPG, PNG
                                     </p>
                                     {data.foto_lokasi_files.length > 0 && (
                                         <div className="mt-3 space-y-2">
@@ -501,44 +516,90 @@ export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }:
                                     <label className="block text-sm font-semibold text-stone-700 mb-2">
                                         MOM File (Minutes of Meeting) - Optional
                                     </label>
-                                    
-                                    {survey.order.mom_file && !data.mom_file && (
-                                        <div className="mb-3 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                                </svg>
-                                                <div>
-                                                    <p className="text-sm font-semibold text-amber-900">Current MOM File</p>
-                                                    <p className="text-xs text-amber-700">{survey.order.mom_file.split('/').pop()}</p>
-                                                </div>
+
+                                    {/* Existing MOM Files */}
+                                    {(() => {
+                                        const existingMomFiles: string[] = [
+                                            ...((survey.order.mom_files || []) as string[]),
+                                            ...(survey.order.mom_file ? [survey.order.mom_file] : []),
+                                        ];
+
+                                        if (existingMomFiles.length === 0) return null;
+
+                                        const deduped = existingMomFiles.filter((p, i) => existingMomFiles.indexOf(p) === i);
+
+                                        return (
+                                            <div className="mb-4 space-y-2">
+                                                <p className="text-xs font-semibold text-stone-700">Existing MOM files ({deduped.length}):</p>
+                                                {deduped.map((path, index) => (
+                                                    <div key={`${path}-${index}`} className="flex items-center gap-2 text-xs text-stone-600 bg-amber-50 px-3 py-2 rounded-lg">
+                                                        <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                                        </svg>
+                                                        <span className="flex-1 truncate">{path.split('/').pop()}</span>
+                                                        <a
+                                                            href={`/storage/${path}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-amber-700 hover:text-amber-800"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                            </svg>
+                                                        </a>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                if (confirm('Delete this MOM file?')) {
+                                                                    router.delete(`/survey-results/${survey.id}/file/${index}?type=mom`, {
+                                                                        preserveScroll: true,
+                                                                    });
+                                                                }
+                                                            }}
+                                                            className="text-red-600 hover:text-red-700"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                ))}
                                             </div>
-                                            <a
-                                                href={`/storage/${survey.order.mom_file}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg transition-colors"
-                                            >
-                                                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                                </svg>
-                                                Download
-                                            </a>
-                                        </div>
-                                    )}
+                                        );
+                                    })()}
 
                                     <input
                                         type="file"
+                                        multiple
                                         accept=".pdf,.doc,.docx"
-                                        onChange={(e) => setData('mom_file', e.target.files?.[0] || null)}
+                                        onChange={(e) => {
+                                            const files = Array.from(e.target.files || []);
+                                            setData('mom_files', files);
+                                        }}
                                         className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-amber-100 file:text-amber-700 hover:file:bg-amber-200"
                                     />
                                     <p className="text-xs text-stone-500 mt-2">
-                                        {survey.order.mom_file && !data.mom_file
-                                            ? 'Upload a new file to replace the existing MOM in Order'
-                                            : 'Supported formats: PDF, DOC, DOCX (Max 2MB) - Will be saved to Order'}
+                                        Upload new MOM files (will be added to existing). Supported: PDF, DOC, DOCX
                                     </p>
-                                    {errors.mom_file && <p className="text-red-500 text-xs mt-1">{errors.mom_file}</p>}
+
+                                    {data.mom_files.length > 0 && (
+                                        <div className="mt-3 space-y-2">
+                                            <p className="text-xs font-semibold text-stone-700">New MOM files to upload ({data.mom_files.length}):</p>
+                                            {data.mom_files.map((file, index) => (
+                                                <div key={index} className="flex items-center gap-2 text-xs text-stone-600 bg-green-50 px-3 py-2 rounded-lg">
+                                                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                    <span className="flex-1 truncate">{file.name}</span>
+                                                    <span className="text-stone-500">({(file.size / 1024).toFixed(1)} KB)</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {(errors as any).mom_files && <p className="text-red-500 text-xs mt-1">{(errors as any).mom_files}</p>}
+                                    {(errors as any)['mom_files.0'] && <p className="text-red-500 text-xs mt-1">{(errors as any)['mom_files.0']}</p>}
+                                    {(errors as any).mom_file && <p className="text-red-500 text-xs mt-1">{(errors as any).mom_file}</p>}
                                 </div>
                             </div>
 
@@ -550,6 +611,40 @@ export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }:
                                 >
                                     Cancel
                                 </Link>
+
+                                {processing && totalUploadBytes > 0 && (
+                                    <div className="mx-4 hidden flex-1 flex-col justify-center gap-1 md:flex">
+                                        <div className="flex items-center justify-between text-xs text-stone-600">
+                                            <span>
+                                                {submitAction === 'publish'
+                                                    ? 'Uploading & processing (Publish)'
+                                                    : 'Uploading & processing (Draft)'}
+                                            </span>
+                                            <span>
+                                                {progress?.percentage != null
+                                                    ? `${Math.round(progress.percentage)}%`
+                                                    : 'Processing...'}
+                                            </span>
+                                        </div>
+                                        <div className="h-2 w-full overflow-hidden rounded-full bg-stone-200">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-amber-600 to-orange-600 transition-all"
+                                                style={{
+                                                    width:
+                                                        progress?.percentage != null
+                                                            ? `${progress.percentage}%`
+                                                            : '100%',
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="text-[11px] text-stone-500">
+                                            {progress?.percentage != null
+                                                ? 'Uploading files...'
+                                                : 'Server is processing images & thumbnails...'}
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="flex items-center gap-3">
                                     <button
                                         type="button"

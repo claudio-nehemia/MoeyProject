@@ -141,7 +141,7 @@ class SurveyScheduleController extends Controller
             'survey_response_by' => auth()->user()->name,
         ]);
 
-        $taskResponse = \App\Models\TaskResponse::where('order_id', $order->id)
+        $taskResponse = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'survey_schedule')
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')

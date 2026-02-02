@@ -251,6 +251,19 @@ class MoodboardController extends Controller
                         'extend_time' => 0,
                         'status' => 'menunggu_response',
                     ]);
+
+                    TaskResponse::create([
+                        'order_id' => $moodboard->order->id,
+                        'user_id' => null,
+                        'tahap' => 'estimasi',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3), // Deadline untuk survey_ulang
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                        'is_marketing' => true,
+                    ]);
                 }
             }
 
@@ -637,7 +650,7 @@ class MoodboardController extends Controller
             $moodboard->status = 'approved';
 
             $moodboard->save();
-            $moodboard->estimasi->save();   
+            $moodboard->estimasi->save();
 
             Log::info('Moodboard approved with selected file');
             Log::info('Moodboard kasar: ' . $moodboard->moodboard_kasar);

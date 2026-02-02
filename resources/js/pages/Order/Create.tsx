@@ -1,5 +1,6 @@
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import Modal from '@/components/Modal';
 import { Head, router, useForm } from '@inertiajs/react';
 import { FormEventHandler, useEffect, useState } from 'react';
 
@@ -37,6 +38,9 @@ export default function Create({
     const [selectedMarketings, setSelectedMarketings] = useState<number[]>([]);
     const [selectedDrafters, setSelectedDrafters] = useState<number[]>([]);
     const [selectedDesainers, setSelectedDesainers] = useState<number[]>([]);
+
+    const [showMissingFieldsModal, setShowMissingFieldsModal] = useState(false);
+    const [missingFields, setMissingFields] = useState<string[]>([]);
 
     const { data, setData, post, processing, errors } = useForm({
         nama_project: '',
@@ -129,8 +133,45 @@ export default function Create({
         console.log('Updated user_ids in form data:', allUserIds);
     };
 
+    const getMissingRequiredFields = (): string[] => {
+        const required: Array<{ key: keyof typeof data; label: string }> = [
+            { key: 'nama_project', label: 'Project Name' },
+            { key: 'jenis_interior_id', label: 'Interior Type' },
+            { key: 'company_name', label: 'Company Name' },
+            { key: 'customer_name', label: 'Customer Name' },
+            { key: 'phone_number', label: 'Phone Number' },
+            { key: 'alamat', label: 'Alamat' },
+            { key: 'tanggal_masuk_customer', label: 'Entry Date' },
+        ];
+
+        const missing: string[] = [];
+        for (const field of required) {
+            const value = data[field.key] as unknown;
+
+            if (typeof value === 'string') {
+                if (!value.trim()) missing.push(field.label);
+                continue;
+            }
+
+            if (value === null || value === undefined) {
+                missing.push(field.label);
+            }
+        }
+
+        return missing;
+    };
+
     const handleSubmit: FormEventHandler = (e) => {
         e.preventDefault();
+
+        if (processing) return;
+
+        const missing = getMissingRequiredFields();
+        if (missing.length > 0) {
+            setMissingFields(missing);
+            setShowMissingFieldsModal(true);
+            return;
+        }
 
         // DEBUG: Log semua data yang akan dikirim
         console.log('=== DEBUG CREATE ORDER ===');
@@ -166,6 +207,56 @@ export default function Create({
     return (
         <>
             <Head title="Create Order" />
+
+            <Modal
+                show={showMissingFieldsModal}
+                maxWidth="md"
+                onClose={() => setShowMissingFieldsModal(false)}
+            >
+                <div className="p-6">
+                    <div className="mb-4 flex items-start gap-3">
+                        <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 text-red-700">
+                            !
+                        </div>
+                        <div className="min-w-0">
+                            <h2 className="text-lg font-semibold text-stone-900">
+                                Kolom wajib belum diisi
+                            </h2>
+                            <p className="mt-1 text-sm text-stone-600">
+                                Lengkapi dulu kolom berikut sebelum submit.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+                        <ul className="list-disc space-y-1 pl-5 text-sm text-stone-800">
+                            {missingFields.map((label) => (
+                                <li key={label}>{label}</li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    <div className="mt-6 flex gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setShowMissingFieldsModal(false)}
+                            className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+                        >
+                            Oke, saya lengkapi
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setShowMissingFieldsModal(false);
+                                setMissingFields([]);
+                            }}
+                            className="flex-1 rounded-lg bg-stone-200 px-4 py-2.5 text-sm font-semibold text-stone-800 shadow-sm transition-colors hover:bg-stone-300"
+                        >
+                            Tutup
+                        </button>
+                    </div>
+                </div>
+            </Modal>
 
             <style>{`
                 @keyframes fadeInUp {
@@ -290,6 +381,7 @@ export default function Create({
                                         </label>
                                         <input
                                             type="text"
+                                            name="nama_project"
                                             value={data.nama_project}
                                             onChange={(e) =>
                                                 setData(
@@ -313,6 +405,7 @@ export default function Create({
                                             Interior Type *
                                         </label>
                                         <select
+                                            name="jenis_interior_id"
                                             value={data.jenis_interior_id}
                                             onChange={(e) =>
                                                 setData(
@@ -348,6 +441,7 @@ export default function Create({
                                         </label>
                                         <input
                                             type="text"
+                                            name="company_name"
                                             value={data.company_name}
                                             onChange={(e) =>
                                                 setData(
@@ -372,6 +466,7 @@ export default function Create({
                                         </label>
                                         <input
                                             type="text"
+                                            name="customer_name"
                                             value={data.customer_name}
                                             onChange={(e) =>
                                                 setData(
@@ -415,6 +510,7 @@ export default function Create({
                                         </label>
                                         <input
                                             type="tel"
+                                            name="phone_number"
                                             value={data.phone_number}
                                             onChange={(e) =>
                                                 setData(
@@ -439,6 +535,7 @@ export default function Create({
                                         </label>
                                         <input
                                             type="date"
+                                            name="tanggal_masuk_customer"
                                             value={data.tanggal_masuk_customer}
                                             readOnly
                                             className="w-full cursor-not-allowed rounded-lg border border-stone-300 bg-stone-100 px-4 py-2.5"
@@ -530,6 +627,7 @@ export default function Create({
                                         <span className="text-red-500">*</span> Alamat
                                     </label>
                                     <textarea
+                                        name="alamat"
                                         value={data.alamat}
                                         onChange={(e) =>
                                             setData('alamat', e.target.value)

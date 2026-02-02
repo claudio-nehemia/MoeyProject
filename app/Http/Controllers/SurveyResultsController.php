@@ -40,7 +40,7 @@ class SurveyResultsController extends Controller
                 $hasJenisPengukuran = $surveyResult && $surveyResult->relationLoaded('jenisPengukuran')
                     ? $surveyResult->jenisPengukuran->isNotEmpty()
                     : ($surveyResult ? $surveyResult->jenisPengukuran()->exists() : false);
-                $hasMomFile = !empty($order->mom_file);
+                $hasMomFile = !empty($order->mom_file) || !empty($order->mom_files);
 
                 $hasAnyDraftData = $hasFeedback || $hasLayoutFiles || $hasFotoFiles || $hasJenisPengukuran || $hasMomFile;
 
@@ -57,7 +57,7 @@ class SurveyResultsController extends Controller
                     'has_survey' => $surveyResult !== null
                         && $surveyResult->response_time !== null
                         && $surveyResult->is_draft == false
-                        && ($surveyResult->feedback || $surveyResult->layout_files || $surveyResult->foto_lokasi_files),
+                        && ($surveyResult->feedback || $surveyResult->layout_files || $surveyResult->foto_lokasi_files || $hasMomFile),
 
                     'is_draft' => $surveyResult ? $surveyResult->is_draft : false,
                     // A draft should be treated as "has draft" even if only partial fields are filled
@@ -181,7 +181,13 @@ class SurveyResultsController extends Controller
         // Check if published survey already exists
         if (
             !$order->surveyResults->is_draft &&
-            ($order->surveyResults->feedback || $order->surveyResults->layout_files || $order->surveyResults->foto_lokasi_files)
+            (
+                $order->surveyResults->feedback
+                || $order->surveyResults->layout_files
+                || $order->surveyResults->foto_lokasi_files
+                || $order->mom_file
+                || $order->mom_files
+            )
         ) {
             return redirect()->route('survey-results.edit', $order->surveyResults->id)
                 ->with('info', 'Survey data already exists. You can edit it.');
@@ -207,7 +213,11 @@ class SurveyResultsController extends Controller
             'layout_files.*' => 'file|mimes:pdf,jpg,jpeg,png,dwg,dxf|max:10240',
             'foto_lokasi_files' => 'nullable|array',
             'foto_lokasi_files.*' => 'file|mimes:jpg,jpeg,png|max:5120',
+            // Backwards compatible single-file key
             'mom_file' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
+            // New multi-file key
+            'mom_files' => 'nullable|array',
+            'mom_files.*' => 'file|mimes:pdf,doc,docx|max:2048',
             'jenis_pengukuran_ids' => 'nullable|array',
             'jenis_pengukuran_ids.*' => 'exists:jenis_pengukuran,id',
             'action' => 'required|in:save_draft,publish',
@@ -226,6 +236,7 @@ class SurveyResultsController extends Controller
                 $validated['jenis_pengukuran_ids'],
                 $validated['layout_files'],
                 $validated['foto_lokasi_files'],
+                $validated['mom_files'],
                 $validated['action']
             );
 
@@ -237,9 +248,7 @@ class SurveyResultsController extends Controller
             if ($request->hasFile('layout_files')) {
                 foreach ($request->file('layout_files') as $file) {
                     if (in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png'])) {
-                        $imageData = image_service()->saveImage($file, 'survey_layouts', 2000, 85);
-                        $thumbnail = image_service()->saveThumbnail($file, 'survey_layouts', 500, 70);
-                        $layoutFilesPaths[] = array_merge($imageData, ['thumbnail' => $thumbnail]);
+                        $layoutFilesPaths[] = image_service()->saveImageWithThumbnail($file, 'survey_layouts', 2000, 85, 500, 70);
                     } else {
                         $layoutFilesPaths[] = image_service()->saveRawFile($file, 'survey_layouts');
                     }
@@ -255,9 +264,7 @@ class SurveyResultsController extends Controller
 
             if ($request->hasFile('foto_lokasi_files')) {
                 foreach ($request->file('foto_lokasi_files') as $file) {
-                    $imageData = image_service()->saveImage($file, 'survey_photos', 1600, 80);
-                    $thumbnail = image_service()->saveThumbnail($file, 'survey_photos', 400, 70);
-                    $fotoLokasiFilesPaths[] = array_merge($imageData, ['thumbnail' => $thumbnail]);
+                    $fotoLokasiFilesPaths[] = image_service()->saveImageWithThumbnail($file, 'survey_photos', 1600, 80, 400, 70);
                 }
             }
 
@@ -275,17 +282,41 @@ class SurveyResultsController extends Controller
             $survey->jenisPengukuran()->sync($jenisPengukuranIds);
 
             /* ===============================
-             * UPLOAD MOM FILE (ORDER)
+             * UPLOAD MOM FILES (ORDER)
              * =============================== */
+            $momUploads = [];
+            if ($request->hasFile('mom_files')) {
+                $momUploads = array_merge($momUploads, $request->file('mom_files'));
+            }
             if ($request->hasFile('mom_file')) {
-                $order = $survey->order;
+                $momUploads[] = $request->file('mom_file');
+            }
 
-                if ($order->mom_file && Storage::disk('public')->exists($order->mom_file)) {
-                    Storage::disk('public')->delete($order->mom_file);
+            if (!empty($momUploads)) {
+                $order = $survey->order;
+                $existingMomFiles = $order->mom_files ?? [];
+
+                // Migrate legacy single file into the array to keep behavior consistent
+                if (!empty($order->mom_file)) {
+                    $existingMomFiles[] = $order->mom_file;
                 }
 
-                $momFilePath = $request->file('mom_file')->store('mom_files', 'public');
-                $order->update(['mom_file' => $momFilePath]);
+                foreach ($momUploads as $file) {
+                    $existingMomFiles[] = $file->store('mom_files', 'public');
+                }
+
+                // Remove duplicates while preserving order
+                $deduped = [];
+                foreach ($existingMomFiles as $path) {
+                    if (!in_array($path, $deduped, true)) {
+                        $deduped[] = $path;
+                    }
+                }
+
+                $order->update([
+                    'mom_files' => !empty($deduped) ? array_values($deduped) : null,
+                    'mom_file' => null,
+                ]);
             }
 
             /* ===============================
@@ -416,7 +447,11 @@ class SurveyResultsController extends Controller
             'layout_files.*' => 'file|mimes:pdf,jpg,jpeg,png,dwg,dxf|max:10240',
             'foto_lokasi_files' => 'nullable|array',
             'foto_lokasi_files.*' => 'file|mimes:jpg,jpeg,png|max:5120',
+            // Backwards compatible single-file key
             'mom_file' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
+            // New multi-file key
+            'mom_files' => 'nullable|array',
+            'mom_files.*' => 'file|mimes:pdf,doc,docx|max:2048',
             'jenis_pengukuran_ids' => 'nullable|array',
             'jenis_pengukuran_ids.*' => 'exists:jenis_pengukuran,id',
             'action' => 'required|in:save_draft,publish',
@@ -434,6 +469,7 @@ class SurveyResultsController extends Controller
                 $validated['layout_files'],
                 $validated['foto_lokasi_files'],
                 $validated['jenis_pengukuran_ids'],
+                $validated['mom_files'],
                 $validated['action']
             );
 
@@ -445,9 +481,7 @@ class SurveyResultsController extends Controller
             if ($request->hasFile('layout_files')) {
                 foreach ($request->file('layout_files') as $file) {
                     if (in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png'])) {
-                        $imageData = image_service()->saveImage($file, 'survey_layouts', 2000, 85);
-                        $thumbnail = image_service()->saveThumbnail($file, 'survey_layouts', 500, 70);
-                        $existingLayoutFiles[] = array_merge($imageData, ['thumbnail' => $thumbnail]);
+                        $existingLayoutFiles[] = image_service()->saveImageWithThumbnail($file, 'survey_layouts', 2000, 85, 500, 70);
                     } else {
                         $existingLayoutFiles[] = image_service()->saveRawFile($file, 'survey_layouts');
                     }
@@ -463,9 +497,7 @@ class SurveyResultsController extends Controller
 
             if ($request->hasFile('foto_lokasi_files')) {
                 foreach ($request->file('foto_lokasi_files') as $file) {
-                    $imageData = image_service()->saveImage($file, 'survey_photos', 1600, 80);
-                    $thumbnail = image_service()->saveThumbnail($file, 'survey_photos', 400, 70);
-                    $existingFotoFiles[] = array_merge($imageData, ['thumbnail' => $thumbnail]);
+                    $existingFotoFiles[] = image_service()->saveImageWithThumbnail($file, 'survey_photos', 1600, 80, 400, 70);
                 }
             }
 
@@ -483,23 +515,47 @@ class SurveyResultsController extends Controller
             $survey->jenisPengukuran()->sync($jenisPengukuranIds);
 
             /* ===============================
-             * UPLOAD MOM FILE (ORDER)
+             * UPLOAD MOM FILES (ORDER)
              * =============================== */
+            $momUploads = [];
+            if ($request->hasFile('mom_files')) {
+                $momUploads = array_merge($momUploads, $request->file('mom_files'));
+            }
             if ($request->hasFile('mom_file')) {
-                $order = $survey->order;
+                $momUploads[] = $request->file('mom_file');
+            }
 
-                if ($order->mom_file && Storage::disk('public')->exists($order->mom_file)) {
-                    Storage::disk('public')->delete($order->mom_file);
+            if (!empty($momUploads)) {
+                $order = $survey->order;
+                $existingMomFiles = $order->mom_files ?? [];
+
+                // Migrate legacy single file into the array to keep behavior consistent
+                if (!empty($order->mom_file)) {
+                    $existingMomFiles[] = $order->mom_file;
                 }
 
-                $momFilePath = $request->file('mom_file')->store('mom_files', 'public');
-                $order->update(['mom_file' => $momFilePath]);
+                foreach ($momUploads as $file) {
+                    $existingMomFiles[] = $file->store('mom_files', 'public');
+                }
+
+                // Remove duplicates while preserving order
+                $deduped = [];
+                foreach ($existingMomFiles as $path) {
+                    if (!in_array($path, $deduped, true)) {
+                        $deduped[] = $path;
+                    }
+                }
+
+                $order->update([
+                    'mom_files' => !empty($deduped) ? array_values($deduped) : null,
+                    'mom_file' => null,
+                ]);
             }
 
             /* ===============================
              * NOTIFICATION (only if published from draft)
              * =============================== */
-            if (!$isDraft && $wasDraft) {
+            if (!$isDraft) {
                 $notificationService = new NotificationService();
                 $notificationService->sendMoodboardRequestNotification($survey->order);
                 $order = $survey->order;
@@ -672,6 +728,31 @@ class SurveyResultsController extends Controller
 
                     DB::commit();
                     return back()->with('success', 'Photo file deleted successfully.');
+                }
+            } elseif ($fileType === 'mom') {
+                $order = $survey->order;
+
+                // Ensure legacy single file is migrated to array for consistent indexing
+                $momFiles = $order->mom_files ?? [];
+                if (empty($momFiles) && !empty($order->mom_file)) {
+                    $momFiles = [$order->mom_file];
+                    $order->update([
+                        'mom_files' => $momFiles,
+                        'mom_file' => null,
+                    ]);
+                }
+
+                if (isset($momFiles[$fileIndex])) {
+                    $path = $momFiles[$fileIndex];
+                    if ($path && Storage::disk('public')->exists($path)) {
+                        Storage::disk('public')->delete($path);
+                    }
+
+                    array_splice($momFiles, $fileIndex, 1);
+                    $order->update(['mom_files' => !empty($momFiles) ? array_values($momFiles) : null]);
+
+                    DB::commit();
+                    return back()->with('success', 'MOM file deleted successfully.');
                 }
             }
 
