@@ -101,6 +101,7 @@ const statusLabels = {
 export default function Index({ orders }: Props) {
     const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
+    const isNotKepalaMarketing = !isKepalaMarketing;
     
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
@@ -244,10 +245,29 @@ export default function Index({ orders }: Props) {
         });
     };
 
+    const formatDateTime = (value: string | null | undefined) => {
+        if (!value) return '-';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '-';
+        return d.toLocaleString('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    };
+
     const openCreateMoodboard = (order: Order) => {
-        setSelectedOrder(order);
-        setModalMode('create');
-        setShowModal(true);
+        router.post(`/moodboard/response/${order.id}`, {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                router.visit(window.location.pathname, {
+                    preserveScroll: true,
+                    preserveState: false,
+                });
+            },
+        });
     };
 
     const openUploadKasarModal = (order: Order) => {
@@ -327,14 +347,14 @@ export default function Index({ orders }: Props) {
         const moodboard = order.moodboard;
 
         if (!moodboard) {
-            return (
+            return isNotKepalaMarketing ? (
                 <button
                     onClick={() => openCreateMoodboard(order)}
                     className="w-full rounded-lg bg-gradient-to-r from-violet-500 to-violet-600 px-3 py-2 text-xs font-semibold text-white transition-all hover:from-violet-600 hover:to-violet-700 sm:w-auto sm:px-4 sm:text-sm"
                 >
                     Response
                 </button>
-            );
+            ) : null;
         }
 
         return (
@@ -574,7 +594,7 @@ export default function Index({ orders }: Props) {
                                         </div>
 
                                         {/* DEADLINE & Minta Perpanjangan - regular */}
-                                        {renderDeadlineSection(taskResponses[order.id]?.regular, order.id, 'moodboard', false)}
+                                        {!isKepalaMarketing && renderDeadlineSection(taskResponses[order.id]?.regular, order.id, 'moodboard', false)}
                                         {/* DEADLINE & Minta Perpanjangan - marketing (khusus Kepala Marketing) */}
                                         {isKepalaMarketing && renderDeadlineSection(taskResponses[order.id]?.marketing, order.id, 'moodboard', true)}
 
@@ -779,6 +799,20 @@ export default function Index({ orders }: Props) {
                                             </>
                                         )}
 
+                                        {/* Response Info */}
+                                        {order.moodboard?.response_time && (
+                                            <div className="pt-2 border-t border-stone-200">
+                                                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                                                    <p className="text-xs font-medium text-emerald-700">
+                                                        ✓ Response oleh: {order.moodboard.response_by}
+                                                    </p>
+                                                    <p className="text-[11px] text-emerald-600">
+                                                        {formatDateTime(order.moodboard.response_time)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {/* Actions - Always Visible */}
                                         <div className="pt-2 border-t border-stone-200">
                                             {getActionButtons(order)}
@@ -800,7 +834,7 @@ export default function Index({ orders }: Props) {
                                             {order.moodboard?.pm_response_time && (
                                                 <div className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-2">
                                                     <p className="text-xs font-medium text-purple-700">
-                                                        ✓ PM: {order.moodboard.pm_response_by}
+                                                        ✓ Marketing: {order.moodboard.pm_response_by}
                                                     </p>
                                                 </div>
                                             )}

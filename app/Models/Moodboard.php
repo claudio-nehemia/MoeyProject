@@ -19,12 +19,15 @@ class Moodboard extends Model
         'revisi_final',
         'pm_response_time',
         'pm_response_by',
+        'pm_response_final_time',
+        'pm_response_final_by',
     ];
 
     protected $casts = [
         'response_time' => 'datetime',
         'response_final_time' => 'datetime',
         'pm_response_time' => 'datetime',
+        'pm_response_final_time' => 'datetime',
     ];
 
     public function order()

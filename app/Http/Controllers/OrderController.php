@@ -144,30 +144,35 @@ class OrderController extends Controller
             \Log::warning('No user_ids to attach - skipping team assignment');
         }
 
-        TaskResponse::create([
-            'order_id' => $order->id,
-            'user_id' => null, // Akan diisi saat user klik Response
-            'tahap' => 'survey',
-            'start_time' => now(),
-            'deadline' => now()->addDays(3), // Deadline 3 hari
-            'duration' => 3, // Durasi awal 3 hari
-            'duration_actual' => 3, // Durasi actual 3 hari
-            'extend_time' => 0,
-            'status' => 'menunggu_response',
-        ]);
+        $nextTaskExist = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'survey')
+            ->exists();
+        if (!$nextTaskExist) {
+            TaskResponse::create([
+                'order_id' => $order->id,
+                'user_id' => null, // Akan diisi saat user klik Response
+                'tahap' => 'survey',
+                'start_time' => now(),
+                'deadline' => now()->addDays(3), // Deadline 3 hari
+                'duration' => 3, // Durasi awal 3 hari
+                'duration_actual' => 3, // Durasi actual 3 hari
+                'extend_time' => 0,
+                'status' => 'menunggu_response',
+            ]);
 
-        TaskResponse::create([
-            'order_id' => $order->id,
-            'user_id' => null, // Akan diisi saat user klik Response
-            'tahap' => 'survey',
-            'start_time' => now(),
-            'deadline' => now()->addDays(3), // Deadline 3 hari
-            'duration' => 3, // Durasi awal 3 hari
-            'duration_actual' => 3, // Durasi actual 3 hari
-            'extend_time' => 0,
-            'status' => 'menunggu_response',
-            'is_marketing' => true,
-        ]);
+            TaskResponse::create([
+                'order_id' => $order->id,
+                'user_id' => null, // Akan diisi saat user klik Response
+                'tahap' => 'survey',
+                'start_time' => now(),
+                'deadline' => now()->addDays(3), // Deadline 3 hari
+                'duration' => 3, // Durasi awal 3 hari
+                'duration_actual' => 3, // Durasi actual 3 hari
+                'extend_time' => 0,
+                'status' => 'menunggu_response',
+                'is_marketing' => true,
+            ]);
+        }
 
         return redirect('/order')->with('success', 'Order created successfully.');
     }
@@ -287,6 +292,39 @@ class OrderController extends Controller
             \Log::info('Users synced successfully');
         } else {
             \Log::info('Skipping team sync - user_ids not provided in request');
+        }
+
+        $nextTaskExist = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'survey')
+            ->exists();
+        if (!$nextTaskExist) {
+            TaskResponse::create([
+                'order_id' => $order->id,
+                'user_id' => null, // Akan diisi saat user klik Response
+                'tahap' => 'survey',
+                'start_time' => now(),
+                'deadline' => now()->addDays(3), // Deadline 3 hari
+                'duration' => 3, // Durasi awal 3 hari
+                'duration_actual' => 3, // Durasi actual 3 hari
+                'extend_time' => 0,
+                'status' => 'menunggu_response',
+            ]);
+
+            TaskResponse::create([
+                'order_id' => $order->id,
+                'user_id' => null, // Akan diisi saat user klik Response
+                'tahap' => 'survey',
+                'start_time' => now(),
+                'deadline' => now()->addDays(3), // Deadline 3 hari
+                'duration' => 3, // Durasi awal 3 hari
+                'duration_actual' => 3, // Durasi actual 3 hari
+                'extend_time' => 0,
+                'status' => 'menunggu_response',
+                'is_marketing' => true,
+            ]);
+
+            $notificationService = new NotificationService();
+            $notificationService->sendSurveyRequestNotification($order);
         }
 
         return redirect()->route('order.index')->with('success', 'Order updated successfully.');

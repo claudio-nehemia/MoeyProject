@@ -35,13 +35,13 @@ class PmResponseController extends Controller
             return redirect()->back()->with('error', 'Unauthorized. Only Kepala Marketing can perform this action.');
         }
 
-        $originalKepalaMarketing = $order->users()
+        $isAssignedKepalaMarketing = $order->users()
             ->whereHas('role', fn($q) => $q->where('nama_role', 'Kepala Marketing'))
-            ->orderBy('order_teams.created_at', 'asc')
-            ->first();
+            ->where('users.id', $user->id)
+            ->exists();
 
-        if (!$originalKepalaMarketing || ((int) $originalKepalaMarketing->id !== (int) $user->id)) {
-            return redirect()->back()->with('error', 'Unauthorized. Only Kepala Marketing assigned from the beginning can respond.');
+        if (!$isAssignedKepalaMarketing) {
+            return redirect()->back()->with('error', 'Unauthorized. Only Kepala Marketing assigned to this order can respond.');
         }
 
         return null;
@@ -100,7 +100,7 @@ class PmResponseController extends Controller
                 'user_id' => auth()->user()->id,
             ]);
             \Log::info('Associated TaskResponse ID: ' . $taskResponse->id . ' response_time updated.');
-        } else {    
+        } else {
             \Log::info('No associated TaskResponse found for Order ID: ' . $order->id);
         }
 
@@ -184,14 +184,18 @@ class PmResponseController extends Controller
             return $check;
         \Log::info('Moodboard found, ID: ' . $moodboard->id);
 
-        // Check if already has pm_response for desain final
-        if ($moodboard->pm_response_time) {
-            \Log::info('PM Response already exists for desain final');
+        // Check if already has pm_response_final for desain final
+        if ($moodboard->pm_response_final_time) {
+            \Log::info('PM Response Final already exists for desain final');
             return back()->with('info', 'PM Response sudah pernah dicatat untuk Desain Final.');
         }
 
-        $this->recordResponse($moodboard);
-        
+        // Update moodboard dengan pm_response_final
+        $moodboard->update([
+            'pm_response_final_time' => now(),
+            'pm_response_final_by' => auth()->user()->name,
+        ]);
+
         // Update task response marketing untuk desain_final
         $taskresponse = TaskResponse::where('order_id', $moodboard->order->id)
             ->where('tahap', 'desain_final')
@@ -200,7 +204,7 @@ class PmResponseController extends Controller
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->first();
-            
+
         if ($taskresponse) {
             $taskresponse->update([
                 'response_time' => now(),
@@ -211,7 +215,7 @@ class PmResponseController extends Controller
         } else {
             \Log::info('No associated TaskResponse found for Order ID: ' . $moodboard->order->id);
         }
-        
+
         \Log::info('=== PM RESPONSE DESAIN FINAL END ===');
         return back()->with('success', 'PM Response berhasil dicatat untuk Desain Final.');
     }
@@ -224,7 +228,16 @@ class PmResponseController extends Controller
         $estimasi = Estimasi::findOrFail($id);
         if ($check = $this->checkOriginalKepalaMarketing($estimasi->moodboard->order))
             return $check;
-        $this->recordResponse($estimasi);
+        if (!$estimasi) {
+            Estimasi::create([
+                'moodboard_id' => $estimasi->moodboard_id,
+                'response_by' => auth()->user()->name,
+                'response_time' => now(),
+            ]);
+        } else {
+            $this->recordResponse($estimasi);
+
+        }
         $taskresponse = TaskResponse::where('order_id', Estimasi::findOrFail($id)->moodboard->order->id)
             ->where('tahap', 'estimasi')
             ->where('is_marketing', true)
@@ -250,11 +263,34 @@ class PmResponseController extends Controller
     {
         if ($check = $this->checkPm())
             return $check;
-        $commitmentFee = CommitmentFee::findOrFail($id);
-        if ($check = $this->checkOriginalKepalaMarketing($commitmentFee->moodboard->order))
+        $commitmentFee = CommitmentFee::find($id);
+        $moodboard = null;
+
+        if ($commitmentFee) {
+            $moodboard = $commitmentFee->moodboard;
+        } else {
+            $moodboard = Moodboard::find($id);
+        }
+
+        if (!$moodboard) {
+            return redirect()->back()->with('error', 'Moodboard tidak ditemukan untuk commitment fee.');
+        }
+
+        if ($check = $this->checkOriginalKepalaMarketing($moodboard->order))
             return $check;
-        $this->recordResponse($commitmentFee);
-        $taskresponse = TaskResponse::where('order_id', CommitmentFee::findOrFail($id)->moodboard->order->id)
+
+        if (!$commitmentFee) {
+            $commitmentFee = CommitmentFee::create([
+                'moodboard_id' => $moodboard->id,
+                'pm_response_time' => now(),
+                'pm_response_by' => auth()->user()->name,
+                'payment_status' => 'pending',
+            ]);
+        } else {
+            $this->recordResponse($commitmentFee);
+        }
+
+        $taskresponse = TaskResponse::where('order_id', $moodboard->order->id)
             ->where('tahap', 'cm_fee')
             ->where('is_marketing', true)
             ->orderByDesc('extend_time')
@@ -269,7 +305,7 @@ class PmResponseController extends Controller
             ]);
             \Log::info('Associated TaskResponse ID: ' . $taskresponse->id . ' response_time updated.');
         } else {
-            \Log::info('No associated TaskResponse found for Order ID: ' . CommitmentFee::findOrFail($id)->moodboard->order->id);
+            \Log::info('No associated TaskResponse found for Order ID: ' . $moodboard->order->id);
         }
         return back()->with('success', 'PM Response berhasil dicatat untuk Commitment Fee.');
     }
@@ -423,11 +459,11 @@ class PmResponseController extends Controller
                 'pm_response_by' => auth()->user()->name,
             ]);
             \Log::info('Survey Result created with ID: ' . $surveyResult->id);
-            return back()->with('success', 'Survey Result dibuat dan Marketing Response berhasil dicatat.');
+        } else {
+            $this->recordResponse($surveyResult);
         }
 
         \Log::info('Survey Result found, ID: ' . $surveyResult->id . ', updating Marketing response');
-        $this->recordResponse($surveyResult);
         \Log::info('=== PM RESPONSE SURVEY RESULT END ===');
         $taskResponse = TaskResponse::where('order_id', $surveyResult->order->id)
             ->where('tahap', 'survey')
@@ -448,7 +484,7 @@ class PmResponseController extends Controller
         }
         return back()->with('success', 'Marketing Response berhasil dicatat untuk Survey Result.');
     }
-    
+
     // Workplan
     public function workplan($orderId)
     {
@@ -470,6 +506,21 @@ class PmResponseController extends Controller
             $item->update([
                 'pm_response_time' => now(),
                 'pm_response_by' => auth()->user()->name,
+            ]);
+        }
+
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'workplan')
+            ->where('is_marketing', true)
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+        if ($taskResponse) {
+            $taskResponse->update([
+                'response_time' => now(),
+                'status' => 'selesai',
+                'user_id' => auth()->user()->id,
             ]);
         }
 

@@ -37,6 +37,7 @@ class DesainFinalController extends Controller
                     return $file;
                 });
                 $moodboard->has_response_final = !empty($moodboard->response_final_time);
+                $moodboard->has_pm_response_final = !empty($moodboard->pm_response_final_time);
                 return $moodboard;
             });
 
@@ -198,39 +199,6 @@ class DesainFinalController extends Controller
                         'status' => 'selesai',
                     ]);
                 }
-
-                // Create task response untuk tahap selanjutnya (item_pekerjaan)
-                $nextTaskExists = TaskResponse::where('order_id', $moodboard->order->id)
-                    ->where('tahap', 'item_pekerjaan')
-                    ->exists();
-
-                if (!$nextTaskExists) {
-                    TaskResponse::create([
-                        'order_id' => $moodboard->order->id,
-                        'user_id' => null,
-                        'tahap' => 'item_pekerjaan',
-                        'start_time' => now(),
-                        'deadline' => now()->addDays(3),
-                        'duration' => 3,
-                        'duration_actual' => 3,
-                        'extend_time' => 0,
-                        'status' => 'menunggu_response',
-                        'is_marketing' => false,
-                    ]);
-
-                    TaskResponse::create([
-                        'order_id' => $moodboard->order->id,
-                        'user_id' => null,
-                        'tahap' => 'item_pekerjaan',
-                        'start_time' => now(),
-                        'deadline' => now()->addDays(3),
-                        'duration' => 3,
-                        'duration_actual' => 3,
-                        'extend_time' => 0,
-                        'status' => 'menunggu_response',
-                        'is_marketing' => true,
-                    ]);
-                }
             }
 
             Log::info('Desain final uploaded successfully');
@@ -277,6 +245,61 @@ class DesainFinalController extends Controller
 
             $notificationService = new NotificationService();
             $notificationService->sendItemPekerjaanRequestNotification($moodboard->order);
+
+            $taskResponse = TaskResponse::where('order_id', $moodboard->order->id)
+                ->where('tahap', 'desain_final')
+                ->where('is_marketing', false)
+                ->orderByDesc('extend_time')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
+                ->first();
+
+            if ($taskResponse) {
+                if ($taskResponse->isOverdue()) {
+                    $taskResponse->update([
+                        'status' => 'telat_submit',
+                        'update_data_time' => now(),
+                    ]);
+                } else {
+                    $taskResponse->update([
+                        'update_data_time' => now(),
+                        'status' => 'selesai',
+                    ]);
+                }
+
+                // Create task response untuk tahap selanjutnya (item_pekerjaan)
+                $nextTaskExists = TaskResponse::where('order_id', $moodboard->order->id)
+                    ->where('tahap', 'item_pekerjaan')
+                    ->exists();
+
+                if (!$nextTaskExists) {
+                    TaskResponse::create([
+                        'order_id' => $moodboard->order->id,
+                        'user_id' => null,
+                        'tahap' => 'item_pekerjaan',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3),
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                        'is_marketing' => false,
+                    ]);
+
+                    TaskResponse::create([
+                        'order_id' => $moodboard->order->id,
+                        'user_id' => null,
+                        'tahap' => 'item_pekerjaan',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3),
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                        'is_marketing' => true,
+                    ]);
+                }
+            }
 
             return back()->with('success', 'Desain final diterima.');
         } catch (\Illuminate\Validation\ValidationException $e) {

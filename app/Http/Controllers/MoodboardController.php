@@ -131,6 +131,7 @@ class MoodboardController extends Controller
                 ->orderByDesc('extend_time')
                 ->orderByDesc('updated_at')
                 ->orderByDesc('id')
+                ->where('is_marketing', false)
                 ->first();
 
             if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -219,6 +220,7 @@ class MoodboardController extends Controller
                 ->orderByDesc('extend_time')
                 ->orderByDesc('updated_at')
                 ->orderByDesc('id')
+                ->where('is_marketing', false)
                 ->first();
 
             if ($taskResponse) {
@@ -665,6 +667,7 @@ class MoodboardController extends Controller
                 ->orderByDesc('extend_time')
                 ->orderByDesc('updated_at')
                 ->orderByDesc('id')
+                ->where('is_marketing', false)
                 ->first();
 
             $lastMarketingTask = TaskResponse::where('order_id', $moodboard->order->id)
@@ -678,8 +681,10 @@ class MoodboardController extends Controller
             if ($taskResponse) {
                 if ($taskResponse->isOverdue()) {
                     $taskResponse->update([
+                        'user_id' => auth()->user()->id,
                         'status' => 'telat_submit',
                         'update_data_time' => now(),
+                        'response_time' => now(),
                     ]);
                 } else {
                     $taskResponse->update([
@@ -706,7 +711,7 @@ class MoodboardController extends Controller
                         'status' => 'menunggu_response',
                     ]);
 
-                    
+
                 }
             }
 
@@ -722,27 +727,27 @@ class MoodboardController extends Controller
                         'status' => 'selesai',
                     ]);
                 }
-
-                $nextMarketingTaskExists = TaskResponse::where('order_id', $moodboard->order->id)
-                    ->where('tahap', 'cm_fee')
-                    ->where('is_marketing', true)
-                    ->exists();
-
-                if (!$nextMarketingTaskExists) {
-                    TaskResponse::create([
-                        'order_id' => $moodboard->order->id,
-                        'user_id' => null,
-                        'tahap' => 'cm_fee',
-                        'start_time' => now(),
-                        'deadline' => now()->addDays(3), // Deadline untuk cm_fee
-                        'duration' => 3,
-                        'duration_actual' => 3,
-                        'extend_time' => 0,
-                        'status' => 'menunggu_response',
-                        'is_marketing' => true,
-                    ]);
-                }
             }
+            $nextMarketingTaskExists = TaskResponse::where('order_id', $moodboard->order->id)
+                ->where('tahap', 'cm_fee')
+                ->where('is_marketing', true)
+                ->exists();
+
+            if (!$nextMarketingTaskExists) {
+                TaskResponse::create([
+                    'order_id' => $moodboard->order->id,
+                    'user_id' => null,
+                    'tahap' => 'cm_fee',
+                    'start_time' => now(),
+                    'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                    'duration' => 3,
+                    'duration_actual' => 3,
+                    'extend_time' => 0,
+                    'status' => 'menunggu_response',
+                    'is_marketing' => true,
+                ]);
+            }
+
 
             return back()->with('success', 'Desain kasar diterima. Menunggu commitment fee.');
         } catch (\Illuminate\Validation\ValidationException $e) {

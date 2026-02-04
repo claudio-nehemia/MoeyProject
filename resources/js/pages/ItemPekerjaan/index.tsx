@@ -90,6 +90,7 @@ function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: Props) {
 
     const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
+    const isNotKepalaMarketing = !isKepalaMarketing;
 
     useEffect(() => {
         const handleResize = () => {
@@ -331,13 +332,15 @@ function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: Props) {
                                                 </div>
                                                 
                                                 {!moodboard.itemPekerjaan ? (
-                                                    <button
-                                                        onClick={() => handleResponseItemPekerjaan(moodboard.id)}
-                                                        disabled={loading}
-                                                        className="rounded-lg bg-purple-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-purple-700 disabled:bg-stone-300"
-                                                    >
-                                                        Response Input Item Pekerjaan
-                                                    </button>
+                                                    isNotKepalaMarketing ? (
+                                                        <button
+                                                            onClick={() => handleResponseItemPekerjaan(moodboard.id)}
+                                                            disabled={loading}
+                                                            className="rounded-lg bg-purple-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-purple-700 disabled:bg-stone-300"
+                                                        >
+                                                            Response Input Item Pekerjaan
+                                                        </button>
+                                                    ) : null
                                                 ) : (
                                                     <div className="flex items-center gap-2">
                                                         {/* Status Badge */}

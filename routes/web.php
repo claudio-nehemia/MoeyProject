@@ -594,7 +594,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/moodboard/{id}', [PmResponseController::class, 'moodboard'])->name('moodboard');
         Route::post('/estimasi/{id}', [PmResponseController::class, 'estimasi'])->name('estimasi');
         Route::post('/commitment-fee/{id}', [PmResponseController::class, 'commitmentFee'])->name('commitment-fee');
-        Route::post('/pm-response/desain-final/{id}', [PmResponseController::class, 'desainFinal'])->name('pm-response.desain-final');
+        Route::post('/desain-final/{id}', [PmResponseController::class, 'desainFinal'])->name('desain-final');
         Route::post('/item-pekerjaan/{id}', [PmResponseController::class, 'itemPekerjaan'])->name('item-pekerjaan');
         Route::post('/survey-ulang/{id}', [PmResponseController::class, 'surveyUlang'])->name('survey-ulang');
         Route::post('/survey-schedule/{id}', [PmResponseController::class, 'surveySchedule'])->name('pm-response.survey-schedule');

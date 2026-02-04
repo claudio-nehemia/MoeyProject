@@ -54,18 +54,18 @@ class NotificationController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        // Add flag for frontend: only the original Kepala Marketing (added earliest) can do marketing response
+        // Add flag for frontend: any Kepala Marketing assigned to the order can do marketing response
         $notifications->getCollection()->transform(function ($notification) use ($isKepalaMarketing, $user) {
             $canMarketingResponse = false;
 
             if ($isKepalaMarketing && $notification->order) {
-                $originalKepalaMarketing = $notification->order
+                $assignedKepalaMarketing = $notification->order
                     ->users()
                     ->whereHas('role', fn($q) => $q->where('nama_role', 'Kepala Marketing'))
-                    ->orderBy('order_teams.created_at', 'asc')
-                    ->first();
+                    ->where('users.id', $user?->id)
+                    ->exists();
 
-                $canMarketingResponse = $originalKepalaMarketing && $user && ((int) $originalKepalaMarketing->id === (int) $user->id);
+                $canMarketingResponse = $assignedKepalaMarketing;
             }
 
             $notification->can_marketing_response = $canMarketingResponse;
@@ -216,7 +216,6 @@ class NotificationController extends Controller
                     'response_by' => auth()->user()->name ?? 'Admin',
                 ]);
             }
-            return redirect()->route('survey-results.edit', $order->surveyResults->id);
         }
 
         // Create empty survey with response info
@@ -233,6 +232,7 @@ class NotificationController extends Controller
 
         $taskResponse = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'survey')
+            ->where('is_marketing', false)
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
@@ -272,7 +272,7 @@ class NotificationController extends Controller
                     'response_by' => auth()->user()->name ?? 'Admin',
                 ]);
             }
-            return redirect()->route('moodboard.edit', $order->moodboard->id);
+            return redirect()->route('moodboard.index', $order->moodboard->id);
         }
 
         // Create empty moodboard with response info
@@ -291,6 +291,7 @@ class NotificationController extends Controller
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
+            ->where('is_marketing', false)
             ->first();
 
         if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -327,21 +328,20 @@ class NotificationController extends Controller
                     'response_time' => now(),
                 ]);
             }
-            return redirect()->route('estimasi.index');
+        } else {
+            $estimasi = Estimasi::create([
+                'moodboard_id' => $order->moodboard->id,
+                'response_by' => auth()->user()->name,
+                'response_time' => now(),
+            ]);
         }
-
-        // Create empty estimasi with response info
-        $estimasi = Estimasi::create([
-            'moodboard_id' => $order->moodboard->id,
-            'response_by' => auth()->user()->name,
-            'response_time' => now(),
-        ]);
 
         $taskResponse = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'estimasi')
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
+            ->where('is_marketing', false)
             ->first();
 
         if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -370,13 +370,8 @@ class NotificationController extends Controller
      */
     private function handleDesignApproval($order)
     {
-        // Redirect to design approval page
-        if ($order->moodboard) {
-            return redirect()->route('moodboard.show', $order->moodboard->id);
-        }
-
-        return redirect()->route('orders.show', $order->id)
-            ->with('info', 'Check the design for approval.');
+        return redirect()->route('moodboard.index')
+            ->with('info', 'Silakan cek desain untuk approval di Moodboard.');
     }
 
     /**
@@ -399,16 +394,14 @@ class NotificationController extends Controller
                     'response_time' => now(),
                 ]);
             }
-            return redirect()->route('commitment-fee.index')
-                ->with('info', 'Commitment fee sudah ada untuk project ini.');
+        } else {
+            $commitmentFee = CommitmentFee::create([
+                'moodboard_id' => $order->moodboard->id,
+                'response_by' => auth()->user()->name,
+                'response_time' => now(),
+                'payment_status' => 'pending',
+            ]);
         }
-
-        $commitmentFee = CommitmentFee::create([
-            'moodboard_id' => $order->moodboard->id,
-            'response_by' => auth()->user()->name,
-            'response_time' => now(),
-            'payment_status' => 'pending',
-        ]);
 
         $order->update([
             'tahapan_proyek' => 'cm_fee',
@@ -419,6 +412,7 @@ class NotificationController extends Controller
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
+            ->where('is_marketing', false)
             ->first();
 
         if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -494,7 +488,7 @@ class NotificationController extends Controller
         }
 
         // Redirect to moodboard index to upload final design
-        return redirect()->route('moodboard.index')
+        return redirect()->route('desain-final.index')
             ->with('success', 'Silakan upload final design untuk project ini.');
     }
 
@@ -944,7 +938,7 @@ class NotificationController extends Controller
     }
 
     /**
-     * Authorization: only original Kepala Marketing (earliest attached) can respond marketing.
+     * Authorization: any Kepala Marketing assigned to the order can respond marketing.
      */
     private function ensureOriginalKepalaMarketing(Order $order)
     {
@@ -953,13 +947,13 @@ class NotificationController extends Controller
             return redirect()->back()->with('error', 'Unauthorized. Only Kepala Marketing can perform marketing response.');
         }
 
-        $originalKepalaMarketing = $order->users()
+        $isAssignedKepalaMarketing = $order->users()
             ->whereHas('role', fn($q) => $q->where('nama_role', 'Kepala Marketing'))
-            ->orderBy('order_teams.created_at', 'asc')
-            ->first();
+            ->where('users.id', $user->id)
+            ->exists();
 
-        if (!$originalKepalaMarketing || ((int) $originalKepalaMarketing->id !== (int) $user->id)) {
-            return redirect()->back()->with('error', 'Unauthorized. Only Kepala Marketing assigned from the beginning can respond.');
+        if (!$isAssignedKepalaMarketing) {
+            return redirect()->back()->with('error', 'Unauthorized. Only Kepala Marketing assigned to this order can respond.');
         }
 
         return null;
@@ -1021,10 +1015,20 @@ class NotificationController extends Controller
                 return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Survey Schedule).');
             }
 
+            case Notification::TYPE_FINAL_DESIGN_REQUEST: {
+                // No record creation, just mark task as done
+                $order->moodboard->update([
+                    'pm_response_final_time' => now(),
+                    'pm_response_final_by' => auth()->user()->name ?? 'Admin',
+                ]);
+                $this->markMarketingTaskResponseDone($order, 'desain_final');
+                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Design Approval).');
+            }
+
             case Notification::TYPE_MOODBOARD_REQUEST: {
                 $moodboard = $order->moodboard;
                 if (!$moodboard) {
-                    $moodboard = \App\Models\Moodboard::create([
+                    $moodboard = Moodboard::create([
                         'order_id' => $order->id,
                         'status' => 'pending',
                         'pm_response_time' => now(),
@@ -1092,8 +1096,8 @@ class NotificationController extends Controller
             case Notification::TYPE_FINAL_DESIGN_REQUEST: {
                 if ($order->moodboard) {
                     $order->moodboard->update([
-                        'pm_response_time' => now(),
-                        'pm_response_by' => auth()->user()->name ?? 'Admin',
+                        'pm_response_final_time' => now(),
+                        'pm_response_final_by' => auth()->user()->name ?? 'Admin',
                     ]);
                 }
 

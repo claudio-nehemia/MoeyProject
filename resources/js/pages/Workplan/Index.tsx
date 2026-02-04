@@ -45,6 +45,7 @@ interface Props {
 export default function Index({ orders }: Props) {
     const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
+    const isNotKepalaMarketing = !isKepalaMarketing;
     
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [searchQuery, setSearchQuery] = useState('');
@@ -469,7 +470,7 @@ export default function Index({ orders }: Props) {
                                         )}
                                         
                                         {/* Show Response button only if NOT responded yet */}
-                                        {!order.has_responded && (
+                                        {isNotKepalaMarketing && !order.has_responded && (
                                             <button
                                                 onClick={() => router.post(`/workplan/${order.id}/response`)}
                                                 className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-emerald-600 hover:to-green-700 hover:shadow-lg"

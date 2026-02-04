@@ -33,13 +33,14 @@ interface Props {
 
 /* ================= COMPONENT ================= */
 export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props) {
+  const isNotKepalaMarketing = !isKepalaMarketing;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [tanggalSurvey, setTanggalSurvey] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
-  const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+  const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: any } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -251,7 +252,7 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props)
                             )}
                           </div>
                           <button
-                            onClick={() => setShowExtendModal({ orderId: order.id, tahap: 'survey_schedule' })}
+                            onClick={() => setShowExtendModal({ orderId: order.id, tahap: 'survey_schedule', isMarketing: false, taskResponse })}
                             className="px-3 py-1.5 bg-orange-500 text-white rounded-md text-xs font-medium hover:bg-orange-600 transition-colors"
                           >
                             Minta Perpanjangan
@@ -263,7 +264,7 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props)
                     {/* ACTION BUTTONS */}
                     <div className="flex gap-2 flex-wrap">
                       {/* Response Button - Always show if not yet responded */}
-                      {!hasResponse && (
+                      {isNotKepalaMarketing && !hasResponse && (
                         <button
                           onClick={() => handleResponse(order.id)}
                           className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700"
@@ -371,6 +372,8 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props)
         <ExtendModal
           orderId={showExtendModal.orderId}
           tahap={showExtendModal.tahap}
+          taskResponse={showExtendModal.taskResponse}
+          isMarketing={showExtendModal.isMarketing}
           onClose={() => setShowExtendModal(null)}
         />
       )}

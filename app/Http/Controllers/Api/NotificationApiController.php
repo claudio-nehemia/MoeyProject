@@ -16,6 +16,7 @@ use App\Models\CommitmentFee;
 use App\Models\ItemPekerjaan;
 use App\Models\SurveyResults;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use App\Services\NotificationService;
 use App\Http\Controllers\WorkplanItemController;
@@ -55,6 +56,28 @@ class NotificationApiController extends Controller
             $taskResponse->update([
                 'user_id' => auth()->user()->id,
                 'response_time' => now(),
+            ]);
+        }
+    }
+
+    /**
+     * Mark marketing task response as done
+     */
+    private function markMarketingTaskResponseDone($orderId, $tahap)
+    {
+        $taskResponse = TaskResponse::where('order_id', $orderId)
+            ->where('tahap', $tahap)
+            ->where('is_marketing', true)
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($taskResponse) {
+            $taskResponse->update([
+                'response_time' => now(),
+                'status' => 'selesai',
+                'user_id' => auth()->user()->id,
             ]);
         }
     }
@@ -306,7 +329,7 @@ class NotificationApiController extends Controller
         ]);
 
         // Update TaskResponse
-        $this->updateTaskResponse($order->id, 'survey', 6);
+        $this->updateTaskResponse($order->id, 'survey', 6, false);
 
         return [
             'success' => true,
@@ -336,7 +359,7 @@ class NotificationApiController extends Controller
         $order->update(['tahapan_proyek' => 'moodboard']);
 
         // Update TaskResponse
-        $this->updateTaskResponse($order->id, 'moodboard', 6);
+        $this->updateTaskResponse($order->id, 'moodboard', 6, false);
 
         return [
             'success' => true,
@@ -373,7 +396,7 @@ class NotificationApiController extends Controller
         $order->update(['tahapan_proyek' => 'estimasi']);
 
         // Update TaskResponse
-        $this->updateTaskResponse($order->id, 'estimasi', 6);
+        $this->updateTaskResponse($order->id, 'estimasi', 6, false);
 
         return [
             'success' => true,
@@ -421,7 +444,7 @@ class NotificationApiController extends Controller
         $order->update(['tahapan_proyek' => 'cm_fee']);
 
         // Update TaskResponse
-        $this->updateTaskResponse($order->id, 'cm_fee', 6);
+        $this->updateTaskResponse($order->id, 'cm_fee', 6, false);
 
         return [
             'success' => true,
@@ -457,7 +480,7 @@ class NotificationApiController extends Controller
         $order->update(['tahapan_proyek' => 'desain_final']);
 
         // Update TaskResponse
-        $this->updateTaskResponse($order->id, 'desain_final', 6);
+        $this->updateTaskResponse($order->id, 'desain_final', 6, false);
 
         return [
             'success' => true,
@@ -476,7 +499,7 @@ class NotificationApiController extends Controller
         ]);
 
         // Update TaskResponse
-        $this->updateTaskResponse($order->id, 'item_pekerjaan', 6);
+        $this->updateTaskResponse($order->id, 'item_pekerjaan', 6, false);
 
         return [
             'success' => true,
@@ -505,7 +528,7 @@ class NotificationApiController extends Controller
 
         $order->update(['tahapan_proyek' => 'rab']);
 
-        $this->updateTaskResponse($order->id, 'rab_internal', 6);
+        $this->updateTaskResponse($order->id, 'rab_internal', 6, false);
 
         return [
             'success' => true,
@@ -543,7 +566,7 @@ class NotificationApiController extends Controller
 
         $order->update(['tahapan_proyek' => 'kontrak']);
 
-        $this->updateTaskResponse($order->id, 'kontrak', 6);
+        $this->updateTaskResponse($order->id, 'kontrak', 6, false);
 
         return [
             'success' => true,
@@ -581,7 +604,7 @@ class NotificationApiController extends Controller
             'survey_response_by' => auth()->user()->name,
         ]);
 
-        $this->updateTaskResponse($order->id, 'survey_schedule', 6);
+        $this->updateTaskResponse($order->id, 'survey_schedule', 6, false);
 
         return [
             'success' => true,
@@ -612,7 +635,7 @@ class NotificationApiController extends Controller
 
         $order->update(['tahapan_proyek' => 'survey_ulang']);
 
-        $this->updateTaskResponse($order->id, 'survey_ulang', 6);
+        $this->updateTaskResponse($order->id, 'survey_ulang', 6, false);
 
         return [
             'success' => true,
@@ -651,7 +674,7 @@ class NotificationApiController extends Controller
 
         $order->update(['tahapan_proyek' => 'gambar_kerja']);
 
-        $this->updateTaskResponse($order->id, 'gambar_kerja', 8);
+        $this->updateTaskResponse($order->id, 'gambar_kerja', 8, false);
 
         return [
             'success' => true,
@@ -719,7 +742,7 @@ class NotificationApiController extends Controller
             }
 
 
-            $this->updateTaskResponse($order->id, 'workplan', 6);
+            $this->updateTaskResponse($order->id, 'workplan', 6, false);
 
             DB::commit();
 
@@ -810,25 +833,34 @@ class NotificationApiController extends Controller
             case Notification::TYPE_MOODBOARD_REQUEST:
             case Notification::TYPE_ESTIMASI_REQUEST:
             case Notification::TYPE_COMMITMENT_FEE_REQUEST:
-            case Notification::TYPE_FINAL_DESIGN_REQUEST:
             case Notification::TYPE_ITEM_PEKERJAAN_REQUEST:
-                \Log::info("Checking moodboard: " . ($order->moodboard ? 'exists' : 'not found'));
+                Log::info("Checking moodboard: " . ($order->moodboard ? 'exists' : 'not found'));
 
                 // Create or update moodboard (PM response only)
                 if (!$order->moodboard) {
-                    \Log::info("Creating new moodboard with PM response ONLY");
-                    \App\Models\Moodboard::create([
+                    Log::info("Creating new moodboard with PM response ONLY");
+                    Moodboard::create([
                         'order_id' => $order->id,
                         'pm_response_time' => $pmTime,
                         'pm_response_by' => $pmName,
                         // DON'T set response_time or response_by - that's for staff!
                     ]);
                 } else {
-                    \Log::info("Updating existing moodboard with PM response");
+                    Log::info("Updating existing moodboard with PM response");
                     $order->moodboard->update([
                         'pm_response_time' => $pmTime,
                         'pm_response_by' => $pmName,
                     ]);
+                }
+
+                $tahapMap = [
+                    Notification::TYPE_MOODBOARD_REQUEST => 'moodboard',
+                    Notification::TYPE_ESTIMASI_REQUEST => 'estimasi',
+                    Notification::TYPE_COMMITMENT_FEE_REQUEST => 'cm_fee',
+                    Notification::TYPE_ITEM_PEKERJAAN_REQUEST => 'item_pekerjaan',
+                ];
+                if (isset($tahapMap[$type])) {
+                    $this->markMarketingTaskResponseDone($order->id, $tahapMap[$type]);
                 }
 
                 return [
@@ -837,25 +869,53 @@ class NotificationApiController extends Controller
                 ];
                 break;
 
+            case Notification::TYPE_FINAL_DESIGN_REQUEST:
+                Log::info("Checking moodboard for final design: " . ($order->moodboard ? 'exists' : 'not found'));
+
+                // Update moodboard with PM response for final design
+                if ($order->moodboard) {
+                    Log::info("Updating existing moodboard with PM response FINAL");
+                    $order->moodboard->update([
+                        'pm_response_final_time' => $pmTime,
+                        'pm_response_final_by' => $pmName,
+                    ]);
+
+                    $this->markMarketingTaskResponseDone($order->id, 'desain_final');
+
+                    return [
+                        'success' => true,
+                        'message' => 'PM Response recorded successfully for Final Design.',
+                    ];
+                } else {
+                    \Log::error("Moodboard not found for final design response");
+                    return [
+                        'success' => false,
+                        'message' => 'Moodboard tidak ditemukan.',
+                    ];
+                }
+                break;
+
             case Notification::TYPE_SURVEY_ULANG_REQUEST:
-                \Log::info("Checking surveyUlang: " . ($order->surveyUlang ? 'exists' : 'not found'));
+                Log::info("Checking surveyUlang: " . ($order->surveyUlang ? 'exists' : 'not found'));
 
                 // Create or update surveyUlang (PM response only)
                 if (!$order->surveyUlang) {
-                    \Log::info("Creating new surveyUlang with PM response ONLY");
-                    \App\Models\SurveyUlang::create([
+                    Log::info("Creating new surveyUlang with PM response ONLY");
+                    SurveyUlang::create([
                         'order_id' => $order->id,
                         'pm_response_time' => $pmTime,
                         'pm_response_by' => $pmName,
                         // DON'T set response_time or response_by - that's for staff!
                     ]);
                 } else {
-                    \Log::info("Updating existing surveyUlang with PM response");
+                    Log::info("Updating existing surveyUlang with PM response");
                     $order->surveyUlang->update([
                         'pm_response_time' => $pmTime,
                         'pm_response_by' => $pmName,
                     ]);
                 }
+
+                $this->markMarketingTaskResponseDone($order->id, 'survey_ulang');
 
                 return [
                     'success' => true,
@@ -864,7 +924,7 @@ class NotificationApiController extends Controller
                 break;
 
             case Notification::TYPE_SURVEY_SCHEDULE_REQUEST:
-                \Log::info("Processing Survey Schedule PM Response");
+                Log::info("Processing Survey Schedule PM Response");
 
                 // Update order with PM response (tidak mengganggu staff response)
                 $order->update([
@@ -872,7 +932,9 @@ class NotificationApiController extends Controller
                     'pm_survey_response_by' => $pmName,
                 ]);
 
-                \Log::info("Survey Schedule PM Response recorded");
+                $this->markMarketingTaskResponseDone($order->id, 'survey');
+
+                Log::info("Survey Schedule PM Response recorded");
                 return [
                     'success' => true,
                     'message' => 'PM Response recorded successfully. Staff can now schedule the survey.',
@@ -880,12 +942,12 @@ class NotificationApiController extends Controller
                 break;
 
             case Notification::TYPE_GAMBAR_KERJA_REQUEST:
-                \Log::info("Checking gambarKerja: " . ($order->gambarKerja ? 'exists' : 'not found'));
+                Log::info("Checking gambarKerja: " . ($order->gambarKerja ? 'exists' : 'not found'));
 
                 // Create or update gambarKerja (PM response only)
                 if (!$order->gambarKerja) {
-                    \Log::info("Creating new gambarKerja with PM response ONLY");
-                    \App\Models\GambarKerja::create([
+                    Log::info("Creating new gambarKerja with PM response ONLY");
+                    GambarKerja::create([
                         'order_id' => $order->id,
                         'pm_response_time' => $pmTime,
                         'pm_response_by' => $pmName,
@@ -893,12 +955,14 @@ class NotificationApiController extends Controller
                         // DON'T set response_time or response_by - that's for staff!
                     ]);
                 } else {
-                    \Log::info("Updating existing gambarKerja with PM response");
+                    Log::info("Updating existing gambarKerja with PM response");
                     $order->gambarKerja->update([
                         'pm_response_time' => $pmTime,
                         'pm_response_by' => $pmName,
                     ]);
                 }
+
+                $this->markMarketingTaskResponseDone($order->id, 'gambar_kerja');
 
                 return [
                     'success' => true,
@@ -907,13 +971,13 @@ class NotificationApiController extends Controller
                 break;
 
             case Notification::TYPE_WORKPLAN_REQUEST:
-                \Log::info("Checking workplan - has moodboard: " . ($order->moodboard ? 'yes' : 'no'));
+                Log::info("Checking workplan - has moodboard: " . ($order->moodboard ? 'yes' : 'no'));
                 if ($order->moodboard && $order->moodboard->itemPekerjaans) {
                     $workplanItems = $order->moodboard->itemPekerjaans
                         ->flatMap(fn($ip) => $ip->produks ?? collect())
                         ->flatMap(fn($produk) => $produk->workplanItems ?? collect());
 
-                    \Log::info("Workplan items count: " . $workplanItems->count());
+                    Log::info("Workplan items count: " . $workplanItems->count());
 
                     if ($workplanItems->count() > 0) {
                         foreach ($workplanItems as $item) {
@@ -922,6 +986,7 @@ class NotificationApiController extends Controller
                                 'pm_response_by' => $pmName,
                             ]);
                         }
+                        $this->markMarketingTaskResponseDone($order->id, 'workplan');
                         return [
                             'success' => true,
                             'message' => 'PM Response recorded successfully for Workplan.',
@@ -940,6 +1005,7 @@ class NotificationApiController extends Controller
                             'pm_response_time' => $pmTime,
                             'pm_response_by' => $pmName,
                         ]);
+                        $this->markMarketingTaskResponseDone($order->id, 'kontrak');
                         return [
                             'success' => true,
                             'message' => 'PM Response recorded successfully for Kontrak.',
@@ -949,24 +1015,26 @@ class NotificationApiController extends Controller
                 break;
 
             case Notification::TYPE_SURVEY_REQUEST:
-                \Log::info("Checking surveyResults: " . ($order->surveyResults ? 'exists' : 'not found'));
+                Log::info("Checking surveyResults: " . ($order->surveyResults ? 'exists' : 'not found'));
 
                 // Create or update surveyResults (PM response only, don't touch staff response)
                 if (!$order->surveyResults) {
                     \Log::info("Creating new surveyResults with PM response ONLY");
-                    \App\Models\SurveyResults::create([
+                    SurveyResults::create([
                         'order_id' => $order->id,
                         'pm_response_time' => $pmTime,
                         'pm_response_by' => $pmName,
                         // DON'T set response_time or response_by - that's for staff!
                     ]);
                 } else {
-                    \Log::info("Updating existing surveyResults with PM response");
+                    Log::info("Updating existing surveyResults with PM response");
                     $order->surveyResults->update([
                         'pm_response_time' => $pmTime,
                         'pm_response_by' => $pmName,
                     ]);
                 }
+
+                $this->markMarketingTaskResponseDone($order->id, 'survey');
 
                 return [
                     'success' => true,
@@ -975,7 +1043,7 @@ class NotificationApiController extends Controller
                 break;
         }
 
-        \Log::warning("PM Response failed - No related record found for type: {$type}");
+        Log::warning("PM Response failed - No related record found for type: {$type}");
         return [
             'success' => false,
             'message' => 'Unable to record PM response. Related record not found.',

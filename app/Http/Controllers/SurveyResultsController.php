@@ -31,8 +31,16 @@ class SurveyResultsController extends Controller
             ->visibleToUser($user)
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(function ($order) {
+            ->map(function ($order) use ($user) {
                 $surveyResult = $order->surveyResults;
+
+                $canMarketingResponse = false;
+                if ($user && $user->role && $user->role->nama_role === 'Kepala Marketing') {
+                    $canMarketingResponse = $order->users()
+                        ->whereHas('role', fn($q) => $q->where('nama_role', 'Kepala Marketing'))
+                        ->where('users.id', $user->id)
+                        ->exists();
+                }
 
                 $hasFeedback = $surveyResult && is_string($surveyResult->feedback) && trim($surveyResult->feedback) !== '';
                 $hasLayoutFiles = $surveyResult && !empty($surveyResult->layout_files);
@@ -73,6 +81,7 @@ class SurveyResultsController extends Controller
                     'pm_response_time' => $surveyResult->pm_response_time ?? null,
                     'pm_response_by' => $surveyResult->pm_response_by ?? null,
                     'feedback' => $surveyResult->feedback ?? null,
+                    'can_marketing_response' => $canMarketingResponse,
 
                     // Order data
                     'tanggal_survey' => $order->tanggal_survey,
@@ -133,6 +142,7 @@ class SurveyResultsController extends Controller
 
             $taskResponse = TaskResponse::where('order_id', $order->id)
                 ->where('tahap', 'survey')
+                ->where('is_marketing', false)
                 ->orderByDesc('extend_time')
                 ->orderByDesc('updated_at')
                 ->orderByDesc('id')
@@ -336,6 +346,7 @@ class SurveyResultsController extends Controller
                     ->orderByDesc('extend_time')
                     ->orderByDesc('updated_at')
                     ->orderByDesc('id')
+                    ->where('is_marketing', false)
                     ->first();
 
                 if ($taskResponse) {
@@ -444,14 +455,14 @@ class SurveyResultsController extends Controller
         $validated = $request->validate([
             'feedback' => 'nullable|string',
             'layout_files' => 'nullable|array',
-            'layout_files.*' => 'file|mimes:pdf,jpg,jpeg,png,dwg,dxf|max:10240',
+            'layout_files.*' => 'file|mimes:pdf,jpg,jpeg,png,dwg,dxf',
             'foto_lokasi_files' => 'nullable|array',
-            'foto_lokasi_files.*' => 'file|mimes:jpg,jpeg,png|max:5120',
+            'foto_lokasi_files.*' => 'file|mimes:jpg,jpeg,png',
             // Backwards compatible single-file key
-            'mom_file' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
+            'mom_file' => 'nullable|file|mimes:pdf,doc,docx',
             // New multi-file key
             'mom_files' => 'nullable|array',
-            'mom_files.*' => 'file|mimes:pdf,doc,docx|max:2048',
+            'mom_files.*' => 'file|mimes:pdf,doc,docx',
             'jenis_pengukuran_ids' => 'nullable|array',
             'jenis_pengukuran_ids.*' => 'exists:jenis_pengukuran,id',
             'action' => 'required|in:save_draft,publish',
@@ -569,6 +580,7 @@ class SurveyResultsController extends Controller
                     ->orderByDesc('extend_time')
                     ->orderByDesc('updated_at')
                     ->orderByDesc('id')
+                    ->where('is_marketing', false)
                     ->first();
 
                 if ($taskResponse) {

@@ -329,6 +329,18 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                                     </svg>
                                                     <span className="flex-1 truncate">{file.name}</span>
                                                     <span className="text-stone-500">({(file.size / 1024).toFixed(1)} KB)</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const next = data.layout_files.filter((_, i) => i !== index);
+                                                            setData('layout_files', next);
+                                                        }}
+                                                        className="text-red-600 hover:text-red-700"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
                                                 </div>
                                             ))}
                                         </div>
@@ -367,6 +379,18 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                                     </svg>
                                                     <span className="flex-1 truncate">{file.name}</span>
                                                     <span className="text-stone-500">({(file.size / 1024).toFixed(1)} KB)</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const next = data.foto_lokasi_files.filter((_, i) => i !== index);
+                                                            setData('foto_lokasi_files', next);
+                                                        }}
+                                                        className="text-red-600 hover:text-red-700"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
                                                 </div>
                                             ))}
                                         </div>
@@ -482,6 +506,18 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                                     </svg>
                                                     <span className="flex-1 truncate">{file.name}</span>
                                                     <span className="text-stone-500">({(file.size / 1024).toFixed(1)} KB)</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const next = data.mom_files.filter((_, i) => i !== index);
+                                                            setData('mom_files', next);
+                                                        }}
+                                                        className="text-red-600 hover:text-red-700"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
                                                 </div>
                                             ))}
                                         </div>

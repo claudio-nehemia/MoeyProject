@@ -47,6 +47,7 @@ function Index({ itemPekerjaans }: Props) {
     const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: TaskResponse } | null>(null);
     const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
+    const isNotKepalaMarketing = !isKepalaMarketing;
 
     useEffect(() => {
         const handleResize = () => {
@@ -366,12 +367,14 @@ function Index({ itemPekerjaans }: Props) {
                                                                     </Link>
                                                                 </div>
                                                             ) : itemPekerjaan.status === 'published' ? (
-                                                                <button
-                                                                    onClick={() => handleResponse(itemPekerjaan.id)}
-                                                                    className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
-                                                                >
-                                                                    Response RAB
-                                                                </button>
+                                                                isNotKepalaMarketing ? (
+                                                                    <button
+                                                                        onClick={() => handleResponse(itemPekerjaan.id)}
+                                                                        className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                                                                    >
+                                                                        Response RAB
+                                                                    </button>
+                                                                ) : null
                                                             ) : (
                                                                 <span className="text-gray-400 text-xs italic">
                                                                     Submit Item Pekerjaan dahulu

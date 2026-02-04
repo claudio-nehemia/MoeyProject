@@ -213,7 +213,7 @@ export default function Sidebar({
             name: 'Jenis Pengukuran',
             href: '/jenis-pengukuran',
             page: 'jenis-pengukuran',
-            permission: null,
+            permission: 'jenis-pengukuran.index',
             icon: (
                 <svg
                     className="h-3.5 w-3.5 text-white"

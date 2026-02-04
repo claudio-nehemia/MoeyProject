@@ -24,6 +24,7 @@ interface Survey {
     response_by: string | null;
     pm_response_time: string | null;
     pm_response_by: string | null;
+    can_marketing_response?: boolean;
     feedback: string | null;
     is_responded: boolean;
     team: {
@@ -63,6 +64,7 @@ export default function Index({ surveys }: Props) {
 
     const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
+    const isNotKepalaMarketing = !isKepalaMarketing;
 
     useEffect(() => {
         setMounted(true);
@@ -96,8 +98,10 @@ export default function Index({ surveys }: Props) {
             : `/task-response/${orderId}/survey`;
 
         try {
+            console.debug('[SurveyResults] fetchTaskResponse:start', { orderId, isMarketing, url });
             const res = await axios.get(url);
             const task = Array.isArray(res.data) ? res.data[0] : res.data;
+            console.debug('[SurveyResults] fetchTaskResponse:response', { orderId, isMarketing, task, raw: res.data });
             if (!task) return;
 
             setTaskResponses((prev) => ({
@@ -108,6 +112,7 @@ export default function Index({ surveys }: Props) {
                 },
             }));
         } catch (err: any) {
+            console.debug('[SurveyResults] fetchTaskResponse:error', { orderId, isMarketing, url, err });
             if (err?.response?.status !== 404) {
                 console.error('Error fetching task response (survey):', err);
             }
@@ -121,10 +126,10 @@ export default function Index({ surveys }: Props) {
         }
     };
 
-    // Fetch task responses (only for draft surveys; do not show deadlines for published)
+    // Fetch task responses for survey stage
     useEffect(() => {
         surveys
-            .filter((s) => s.response_time && s.is_draft)
+            .filter((s) => s.tahapan_proyek === 'survey')
             .forEach((s) => {
                 fetchTaskResponse(s.id, false);
                 if (isKepalaMarketing) {
@@ -260,7 +265,14 @@ export default function Index({ surveys }: Props) {
     if (!mounted) return null;
 
     const renderDeadlineSection = (task: TaskResponse | undefined, orderId: number, tahap: string, isMarketing: boolean) => {
-        if (!task || task.status === 'selesai') return null;
+        if (!task) {
+            console.debug('[SurveyResults] renderDeadlineSection:skip', { orderId, tahap, isMarketing, reason: 'no-task' });
+            return null;
+        }
+        if (task.status === 'selesai') {
+            console.debug('[SurveyResults] renderDeadlineSection:skip', { orderId, tahap, isMarketing, reason: 'status-selesai', task });
+            return null;
+        }
         return (
             <div className={`mt-3 rounded-lg border p-3 ${isMarketing ? 'border-purple-200 bg-purple-50' : 'border-yellow-200 bg-yellow-50'}`}>
                 <div className="flex items-center justify-between gap-3">
@@ -730,21 +742,22 @@ export default function Index({ surveys }: Props) {
                                                             </div>
                                                         )}
 
-                                                        {/* Deadline & Perpanjangan (draft only; hide if published) */}
-                                                        {survey.is_draft && (
-                                                            <>
-                                                                {renderDeadlineSection(taskResponses[survey.id]?.regular, survey.id, 'survey', false)}
-                                                                {isKepalaMarketing && renderDeadlineSection(taskResponses[survey.id]?.marketing, survey.id, 'survey', true)}
-                                                            </>
-                                                        )}
                                                     </div>
+                                                )}
+
+                                                {/* Deadline & Perpanjangan (tahapan survey) */}
+                                                {survey.tahapan_proyek === "survey" && (
+                                                    <>
+                                                        {!isKepalaMarketing && renderDeadlineSection(taskResponses[survey.id]?.regular, survey.id, 'survey', false)}
+                                                        {(survey.can_marketing_response ?? isKepalaMarketing) && renderDeadlineSection(taskResponses[survey.id]?.marketing, survey.id, 'survey', true)}
+                                                    </>
                                                 )}
                                             </div>
 
                                             {/* Right Section - Actions */}
                                             <div className="flex flex-row justify-end gap-2 lg:flex-col lg:justify-start">
                                                 {/* Marketing Response Button - INDEPENDENT dari general response */}
-                                                {isKepalaMarketing && !survey.pm_response_time && (
+                                                {(survey.can_marketing_response ?? isKepalaMarketing) && !survey.pm_response_time && (
                                                     <button
                                                         onClick={() => handlePmResponse(survey.survey_id || survey.id)}
                                                         className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-purple-600 hover:to-purple-700 sm:px-4 sm:text-sm"
@@ -755,35 +768,37 @@ export default function Index({ surveys }: Props) {
 
                                                 {/* General Response - Trigger dari response_time NULL */}
                                                 {!survey.response_time ? (
-                                                    // Belum response - Tampilkan tombol Response
-                                                    <button
-                                                        onClick={() =>
-                                                            handleMarkResponse(
-                                                                survey.id,
-                                                            )
-                                                        }
-                                                        className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-emerald-600 hover:to-emerald-700 sm:px-4 sm:text-sm"
-                                                    >
-                                                        <svg
-                                                            className="mr-1 h-4 w-4 sm:mr-2"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
+                                                    isNotKepalaMarketing ? (
+                                                        // Belum response - Tampilkan tombol Response
+                                                        <button
+                                                            onClick={() =>
+                                                                handleMarkResponse(
+                                                                    survey.id,
+                                                                )
+                                                            }
+                                                            className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-emerald-600 hover:to-emerald-700 sm:px-4 sm:text-sm"
                                                         >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth={2}
-                                                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                            />
-                                                        </svg>
-                                                        <span className="hidden sm:inline">
-                                                            Response
-                                                        </span>
-                                                        <span className="sm:hidden">
-                                                            Respond
-                                                        </span>
-                                                    </button>
+                                                            <svg
+                                                                className="mr-1 h-4 w-4 sm:mr-2"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                                />
+                                                            </svg>
+                                                            <span className="hidden sm:inline">
+                                                                Response
+                                                            </span>
+                                                            <span className="sm:hidden">
+                                                                Respond
+                                                            </span>
+                                                        </button>
+                                                    ) : null
                                                 ) : survey.is_draft ? (
                                                     // Draft - Tampilkan tombol Create atau Edit Draft
                                                     <>

@@ -55,6 +55,7 @@ export default function GambarKerjaIndex({ items }: Props) {
 
     const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
+    const isNotKepalaMarketing = !isKepalaMarketing;
 
     useEffect(() => {
         const handleResize = () => setSidebarOpen(window.innerWidth >= 1024);
@@ -344,7 +345,7 @@ export default function GambarKerjaIndex({ items }: Props) {
                                 </div>
 
                                 {/* RESPONSE */}
-                                {!item.response_time && (
+                                {isNotKepalaMarketing && !item.response_time && (
                                     <div className="mb-4 text-center">
                                         <button
                                             onClick={() => handleResponse(item)}

@@ -50,6 +50,7 @@ export default function Index({ surveys }: Props) {
 
     const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
+    const isNotKepalaMarketing = !isKepalaMarketing;
 
     useEffect(() => {
         setMounted(true);
@@ -393,7 +394,7 @@ export default function Index({ surveys }: Props) {
                                                 </button>
                                             )}
 
-                                            {s.status_survey_ulang === "pending" && (
+                                            {isNotKepalaMarketing && s.status_survey_ulang === "pending" && (
                                                 <button
                                                     onClick={() =>
                                                         router.post(`/survey-ulang/${s.id}/response`)

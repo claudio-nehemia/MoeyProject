@@ -66,18 +66,21 @@ class CommitmentFeeController extends Controller
             Log::info('Moodboard ID: ' . $moodboardId);
 
             $moodboard = Moodboard::findOrFail($moodboardId);
+            $commitmentFee = CommitmentFee::where('moodboard_id', $moodboardId)->first();
 
             if ($moodboard->commitmentFee) {
-                Log::warning('Commitment Fee already exists for moodboard: ' . $moodboardId);
-                return back()->with('error', 'Commitment Fee response sudah ada untuk moodboard ini.');
+                $commitmentFee->update([
+                    'response_by' => auth()->user()->name,
+                    'response_time' => now(),
+                ]);
+            } else {
+                $commitmentFee = CommitmentFee::create([
+                    'moodboard_id' => $moodboard->id,
+                    'response_by' => auth()->user()->name,
+                    'response_time' => now(),
+                    'payment_status' => 'pending',
+                ]);
             }
-
-            $commitmentFee = CommitmentFee::create([
-                'moodboard_id' => $moodboardId,
-                'response_by' => auth()->user()->name,
-                'response_time' => now(),
-                'payment_status' => 'pending',
-            ]);
 
             $moodboard->order->update([
                 'tahapan_proyek' => 'cm_fee',
@@ -88,6 +91,7 @@ class CommitmentFeeController extends Controller
                 ->orderByDesc('extend_time')
                 ->orderByDesc('updated_at')
                 ->orderByDesc('id')
+                ->where('is_marketing', false)
                 ->first();
 
             if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -189,6 +193,7 @@ class CommitmentFeeController extends Controller
                 ->orderByDesc('extend_time')
                 ->orderByDesc('updated_at')
                 ->orderByDesc('id')
+                ->where('is_marketing', false)
                 ->first();
 
             if ($taskResponse) {

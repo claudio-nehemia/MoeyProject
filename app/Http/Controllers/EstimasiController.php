@@ -155,6 +155,7 @@ class EstimasiController extends Controller
                     ->orderByDesc('extend_time')
                     ->orderByDesc('updated_at')
                     ->orderByDesc('id')
+                    ->where('is_marketing', false)
                     ->first();
 
                 if ($taskResponse) {
@@ -280,6 +281,7 @@ class EstimasiController extends Controller
                 ->orderByDesc('extend_time')
                 ->orderByDesc('updated_at')
                 ->orderByDesc('id')
+                ->where('is_marketing', false)
                 ->first();
 
             if ($taskResponse && $taskResponse->status === 'menunggu_response') {

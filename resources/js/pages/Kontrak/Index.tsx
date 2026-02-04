@@ -86,6 +86,7 @@ export default function Index({ itemPekerjaans, termins }: Props) {
 
     const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
+    const isNotKepalaMarketing = !isKepalaMarketing;
 
     // Fetch dual task responses (regular & marketing)
     useEffect(() => {
@@ -503,31 +504,33 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                             </td>
                                                             <td className="px-6 py-4">
                                                                 {!item.kontrak ? (
-                                                                    <button
-                                                                        onClick={() =>
-                                                                            handleResponse(
-                                                                                item.id,
-                                                                            )
-                                                                        }
-                                                                        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:bg-green-700 hover:shadow-lg"
-                                                                    >
-                                                                        <svg
-                                                                            className="h-5 w-5"
-                                                                            fill="none"
-                                                                            stroke="currentColor"
-                                                                            viewBox="0 0 24 24"
+                                                                    isNotKepalaMarketing ? (
+                                                                        <button
+                                                                            onClick={() =>
+                                                                                handleResponse(
+                                                                                    item.id,
+                                                                                )
+                                                                            }
+                                                                            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:bg-green-700 hover:shadow-lg"
                                                                         >
-                                                                            <path
-                                                                                strokeLinecap="round"
-                                                                                strokeLinejoin="round"
-                                                                                strokeWidth={
-                                                                                    2
-                                                                                }
-                                                                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                                            />
-                                                                        </svg>
-                                                                        Mark as Response
-                                                                    </button>
+                                                                            <svg
+                                                                                className="h-5 w-5"
+                                                                                fill="none"
+                                                                                stroke="currentColor"
+                                                                                viewBox="0 0 24 24"
+                                                                            >
+                                                                                <path
+                                                                                    strokeLinecap="round"
+                                                                                    strokeLinejoin="round"
+                                                                                    strokeWidth={
+                                                                                        2
+                                                                                    }
+                                                                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                                                />
+                                                                            </svg>
+                                                                            Mark as Response
+                                                                        </button>
+                                                                    ) : null
                                                                 ) : !item.kontrak.durasi_kontrak ? (
                                                                     <button
                                                                         onClick={() =>

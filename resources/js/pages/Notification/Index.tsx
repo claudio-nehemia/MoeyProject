@@ -1,6 +1,6 @@
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { Bell, CheckCheck, CheckCircle2, Clock, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -42,6 +42,8 @@ interface Notification {
             response_final_by: string | null;
             pm_response_time?: string | null;
             pm_response_by?: string | null;
+            pm_response_final_time?: string | null;
+            pm_response_final_by?: string | null;
             item_pekerjaans?: Array<{
                 produks?: Array<{
                     workplan_items?: Array<{
@@ -110,6 +112,9 @@ interface Props {
 }
 
 export default function Index({ notifications, unreadCount }: Props) {
+    const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
+    const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
+    const isNotKepalaMarketing = !isKepalaMarketing;
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 1024;
@@ -302,11 +307,17 @@ export default function Index({ notifications, unreadCount }: Props) {
                 };
 
             case 'moodboard_request':
-            case 'final_design_request':
                 return {
                     responded: !!order.moodboard?.pm_response_time,
                     responseTime: order.moodboard?.pm_response_time || null,
                     responseBy: order.moodboard?.pm_response_by || null,
+                };
+
+            case 'final_design_request':
+                return {
+                    responded: !!order.moodboard?.pm_response_final_time,
+                    responseTime: order.moodboard?.pm_response_final_time || null,
+                    responseBy: order.moodboard?.pm_response_final_by || null,
                 };
 
             case 'estimasi_request':
@@ -884,6 +895,7 @@ export default function Index({ notifications, unreadCount }: Props) {
                                                     }
 
                                                     if (responseStatus.responded) return null;
+                                                    if (!isNotKepalaMarketing) return null;
 
                                                     return (
                                                         <button

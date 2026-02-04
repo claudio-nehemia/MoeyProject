@@ -109,6 +109,7 @@ export default function EstimasiIndex({ moodboards }: Props) {
 
     const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
+    const isNotKepalaMarketing = !isKepalaMarketing;
 
     // Fetch dual task responses (regular & marketing) untuk semua moodboard
     useEffect(() => {
@@ -375,7 +376,7 @@ export default function EstimasiIndex({ moodboards }: Props) {
                                         </div>
 
                                         {/* Task Response Deadline - REGULAR */}
-                                        {taskResponseRegular && taskResponseRegular.status !== 'selesai' && (
+                                        {!isKepalaMarketing && taskResponseRegular && taskResponseRegular.status !== 'selesai' && (
                                             <div className="mb-4">
                                                 <div className={`p-3 rounded-lg border ${
                                                     daysLeftRegular !== null && daysLeftRegular < 0 
@@ -461,7 +462,7 @@ export default function EstimasiIndex({ moodboards }: Props) {
                                         )}
 
                                         {/* Estimasi Response Info */}
-                                        {!moodboard.estimasi && (
+                                        {isNotKepalaMarketing && !moodboard.estimasi && (
                                             <div className="mb-4">
                                                 <button
                                                     onClick={() => handleResponseEstimasi(moodboard)}
