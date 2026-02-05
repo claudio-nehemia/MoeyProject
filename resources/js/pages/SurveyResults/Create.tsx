@@ -312,7 +312,8 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                         accept=".pdf,.jpg,.jpeg,.png,.dwg,.dxf"
                                         onChange={(e) => {
                                             const files = Array.from(e.target.files || []);
-                                            setData('layout_files', files);
+                                            setData('layout_files', [...data.layout_files, ...files]);
+                                            e.target.value = ''; // Reset input agar bisa pilih file yang sama lagi
                                         }}
                                         className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-cyan-100 file:text-cyan-700 hover:file:bg-cyan-200"
                                     />
@@ -362,7 +363,8 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                         accept=".jpg,.jpeg,.png"
                                         onChange={(e) => {
                                             const files = Array.from(e.target.files || []);
-                                            setData('foto_lokasi_files', files);
+                                            setData('foto_lokasi_files', [...data.foto_lokasi_files, ...files]);
+                                            e.target.value = ''; // Reset input agar bisa pilih file yang sama lagi
                                         }}
                                         className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200"
                                     />
@@ -489,7 +491,8 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                         accept=".pdf,.doc,.docx"
                                         onChange={(e) => {
                                             const files = Array.from(e.target.files || []);
-                                            setData('mom_files', files);
+                                            setData('mom_files', [...data.mom_files, ...files]);
+                                            e.target.value = ''; // Reset input agar bisa pilih file yang sama lagi
                                         }}
                                         className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-amber-100 file:text-amber-700 hover:file:bg-amber-200"
                                     />

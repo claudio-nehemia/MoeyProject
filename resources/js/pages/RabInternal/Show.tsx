@@ -202,17 +202,15 @@ interface Produk {
                                             Harga Satuan
                                         </div>
                                         <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-lg border-l-4 border-indigo-500">
-                                            <div className="font-mono text-sm text-gray-800">
-                                                <span className="font-bold text-emerald-600">(Harga BB</span>
-                                                <span className="mx-2">+</span>
-                                                <span className="font-bold text-blue-600">Finishing)</span>
-                                                <span className="mx-2">×</span>
-                                                <span className="font-bold text-gray-600">Dimensi × Qty</span>
+                                            <div className="font-mono text-sm text-gray-800 dark:text-gray-200">
+                                                <span className="font-bold text-emerald-600 dark:text-emerald-400">(BB + Finishing)</span>
                                                 <span className="mx-2">÷</span>
-                                                <span className="font-bold text-amber-600">(1 - Markup/100)</span>
+                                                <span className="font-bold text-amber-600 dark:text-amber-400">(1 - Markup/100)</span>
+                                                <span className="mx-2">×</span>
+                                                <span className="font-bold text-gray-600 dark:text-gray-400">Dimensi × Qty</span>
                                             </div>
-                                            <div className="mt-2 text-xs text-amber-600 font-semibold">
-                                                💡 Contoh: (BB + Finishing) × Dimensi = X, lalu X ÷ (1-0.2) = X ÷ 0.8
+                                            <div className="mt-2 text-xs text-amber-600 dark:text-amber-400 font-semibold">
+                                                💡 Contoh: Markup 20% → (BB+Fin) ÷ 0.8 × Dim × Qty
                                             </div>
                                         </div>
                                         
@@ -250,8 +248,8 @@ interface Produk {
                                             <div className="flex items-start gap-2">
                                                 <div className="w-4 h-4 rounded bg-amber-500 mt-0.5 flex-shrink-0"></div>
                                                 <div>
-                                                    <span className="font-semibold text-amber-700">Markup:</span>
-                                                    <span className="text-gray-600"> Persentase dikurangi dari 1 jadi divider (20% → 1-0.2 = 0.8)</span>
+                                                <span className="font-bold text-amber-700 dark:text-amber-400">Markup:</span>
+                                                    <span className="text-gray-600 dark:text-gray-400"> Divider: 1 - (Markup/100). Contoh 20% → 1-0.2 = 0.8</span>
                                                 </div>
                                             </div>
                                             <div className="flex items-start gap-2">
@@ -315,11 +313,14 @@ interface Produk {
                                         <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20">
                                             Harga Dasar
                                         </th>
+                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20">
+                                            Total BB + Finishing
+                                        </th>
                                         <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Markup
                                         </th>
-                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20">
-                                            Total BB + Finishing
+                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20">
+                                            Harga Satuan
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Aksesoris
@@ -348,7 +349,7 @@ interface Produk {
                                         <>
                                             {/* Ruangan Header Row */}
                                             <tr key={`ruangan-header-${ruanganIndex}`} className="bg-gradient-to-r from-cyan-500 to-cyan-600">
-                                                <td colSpan={16} className="px-4 py-3">
+                                                <td colSpan={17} className="px-4 py-3">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-2">
                                                             <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -394,8 +395,8 @@ interface Produk {
                                             }
                                         });
 
-                                        // Total BB + Finishing adalah harga_satuan (sudah include markup & dimensi)
-                                        const totalBBPlusFinishing = Number(produk.harga_satuan) || 0;
+                                        // Total BB + Finishing = Harga Dasar + Finishing Dalam + Finishing Luar
+                                        const totalBBPlusFinishing = (Number(produk.harga_dasar) || 0) + finishingDalamTotal + finishingLuarTotal;
 
                                         // Calculate total aksesoris (use Number() to handle null/undefined)
                                         const totalAksesoris = produk.aksesoris.reduce((sum, aks) => sum + (Number(aks.harga_total) || 0), 0);
@@ -476,17 +477,24 @@ interface Produk {
                                                             </td>
                                                         )}
                                                         
+                                                        {/* Total BB + Finishing Column */}
+                                                        {rowIndex === 0 && (
+                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-bold text-purple-700 dark:text-purple-400 bg-purple-50/50 dark:bg-purple-900/10 border-r border-gray-200 dark:border-gray-700">
+                                                                {formatCurrency(totalBBPlusFinishing)}
+                                                            </td>
+                                                        )}
+                                                        
                                                         {/* Markup Column */}
                                                         {rowIndex === 0 && (
-                                                            <td rowSpan={maxRows} className="px-4 py-3 text-center align-top text-sm font-medium text-amber-600 dark:text-amber-400 border-r border-gray-200 dark:border-gray-700">
+                                                            <td rowSpan={maxRows} className="px-4 py-3 text-center align-top text-sm font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-700">
                                                                 {produk.markup_satuan}%
                                                             </td>
                                                         )}
                                                         
-{/* Total BB + Finishing Column */}
-                                        {rowIndex === 0 && (
-                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-bold text-purple-700 bg-purple-50/50 border-r border-gray-200">
-                                                {formatCurrency(totalBBPlusFinishing)}
+                                                        {/* Harga Satuan Column */}
+                                                        {rowIndex === 0 && (
+                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-bold text-indigo-700 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/10 border-r border-gray-200 dark:border-gray-700">
+                                                                {formatCurrency(produk.harga_satuan || 0)}
                                                             </td>
                                                         )}
                                                         

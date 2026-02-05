@@ -27,6 +27,8 @@ class RabInternalController extends Controller
             'rabInternal.rabProduks'
         ])
             ->whereHas('produks') // Only show if has produks
+            ->orderBy('created_at', 'desc')
+
             ->get()
             ->map(function ($itemPekerjaan) {
                 return [

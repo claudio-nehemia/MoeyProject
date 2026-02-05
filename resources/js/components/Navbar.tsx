@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { router } from '@inertiajs/react';
 import { useState } from 'react';
 import NotificationBell from '@/components/NotificationBell';
@@ -7,11 +7,42 @@ interface NavbarProps {
     onToggleSidebar?: () => void;
 }
 
+interface User {
+    name: string;
+    email: string;
+}
+
 export default function Navbar({ onToggleSidebar }: NavbarProps) {
     const [showUserMenu, setShowUserMenu] = useState(false);
+    const { auth } = usePage<{ auth: { user: User } }>().props;
+    const user = auth?.user;
 
     const handleLogout = () => {
         router.post('/logout');
+    };
+
+    // Get initials from name
+    const getInitials = (name: string): string => {
+        return name
+            .split(' ')
+            .map(word => word[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2);
+    };
+
+    // Get gradient color based on name
+    const getGradientFromName = (name: string): string => {
+        const gradients = [
+            'from-violet-400 to-violet-600',
+            'from-blue-400 to-blue-600',
+            'from-indigo-400 to-indigo-600',
+            'from-purple-400 to-purple-600',
+            'from-pink-400 to-pink-600',
+            'from-amber-400 to-amber-600',
+        ];
+        const index = name.charCodeAt(0) % gradients.length;
+        return gradients[index];
     };
 
     return (
@@ -41,32 +72,72 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
                     </div>
                     <div className="flex items-center gap-3">
                         <NotificationBell />
+                        
+                        {/* User Info with Avatar */}
                         <div className="relative flex items-center">
                             <button 
                                 onClick={() => setShowUserMenu(!showUserMenu)}
-                                className="flex text-sm rounded-full focus:ring-4 focus:ring-amber-200 transition-all hover:scale-105"
+                                className="flex items-center gap-2 text-sm rounded-full focus:ring-4 focus:ring-amber-200 transition-all hover:bg-stone-50 px-2 py-1.5 rounded-lg"
                             >
                                 <span className="sr-only">Open user menu</span>
-                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg">
-                                    <span className="text-xs font-semibold text-white">A</span>
+                                
+                                {/* User Name - Hidden on small screens */}
+                                <span className="hidden sm:block text-sm font-medium text-stone-700 max-w-[150px] truncate">
+                                    {user?.name || 'User'}
+                                </span>
+                                
+                                {/* Avatar with Dynamic Initials */}
+                                <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${getGradientFromName(user?.name || 'User')} flex items-center justify-center shadow-lg flex-shrink-0`}>
+                                    <span className="text-xs font-bold text-white">
+                                        {getInitials(user?.name || 'User')}
+                                    </span>
                                 </div>
+                                
+                                {/* Dropdown Arrow */}
+                                <svg 
+                                    className={`hidden sm:block w-4 h-4 text-stone-500 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} 
+                                    fill="none" 
+                                    stroke="currentColor" 
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
                             </button>
                             
                             {/* User Dropdown Menu */}
                             {showUserMenu && (
-                                <div className="absolute right-0 top-12 z-50 w-48 bg-white rounded-lg shadow-xl border border-stone-200 overflow-hidden">
-                                    <div className="py-1">
-                                        <button
-                                            onClick={handleLogout}
-                                            className="w-full text-left px-4 py-2 text-sm text-stone-700 hover:bg-gradient-to-r hover:from-amber-50 hover:to-amber-100 flex items-center transition-all"
-                                        >
-                                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                            </svg>
-                                            Logout
-                                        </button>
+                                <>
+                                    {/* Backdrop overlay */}
+                                    <div 
+                                        className="fixed inset-0 z-40"
+                                        onClick={() => setShowUserMenu(false)}
+                                    ></div>
+                                    
+                                    <div className="absolute right-0 top-12 z-50 w-56 bg-white rounded-lg shadow-xl border border-stone-200 overflow-hidden">
+                                        {/* User Info Header */}
+                                        <div className="px-4 py-3 border-b border-stone-200 bg-stone-50">
+                                            <p className="text-sm font-semibold text-stone-900 truncate">
+                                                {user?.name || 'User'}
+                                            </p>
+                                            <p className="text-xs text-stone-500 truncate">
+                                                {user?.email || 'user@example.com'}
+                                            </p>
+                                        </div>
+                                        
+                                        {/* Menu Items */}
+                                        <div className="py-1">
+                                            <button
+                                                onClick={handleLogout}
+                                                className="w-full text-left px-4 py-2.5 text-sm text-stone-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 flex items-center transition-all group"
+                                            >
+                                                <svg className="w-4 h-4 mr-3 text-stone-400 group-hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                                </svg>
+                                                <span className="group-hover:text-red-700">Logout</span>
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
+                                </>
                             )}
                         </div>
                     </div>

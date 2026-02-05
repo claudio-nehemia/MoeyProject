@@ -580,10 +580,13 @@ export default function Index({ orders }: Props) {
                                                     e.stopPropagation();
                                                     toggleExpand(order.id);
                                                 }}
-                                                className="flex-shrink-0 p-1.5 rounded-lg hover:bg-stone-200/50 transition-colors"
+                                                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-stone-100 hover:bg-stone-200 transition-all border border-stone-200"
                                             >
+                                                <span className="text-xs font-medium text-stone-700">
+                                                    {isExpanded ? 'Sembunyikan' : 'Lihat Detail'}
+                                                </span>
                                                 <svg
-                                                    className={`w-4 h-4 text-stone-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                                    className={`w-5 h-5 text-stone-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                                                     fill="none"
                                                     stroke="currentColor"
                                                     viewBox="0 0 24 24"

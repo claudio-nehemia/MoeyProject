@@ -30,12 +30,20 @@ interface Order {
     updated_at: string;
 }
 
+interface CurrentUser {
+    name: string;
+    email: string;
+    role: string | null;
+    divisi: string | null;
+}
+
 interface DashboardProps {
     totalOrders: number;
     activeOrders: number;
     completeProjects: number;
     recentOrders: Order[];
     completePercentage: number;
+    currentUser: CurrentUser;
 }
 
 export default function Dashboard({ 
@@ -43,12 +51,12 @@ export default function Dashboard({
     activeOrders, 
     completeProjects, 
     recentOrders, 
-    completePercentage 
+    completePercentage,
+    currentUser
 }: DashboardProps) {
-    // Set sidebar terbuka di desktop, tertutup di mobile
     const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
         if (typeof window !== 'undefined') {
-            return window.innerWidth >= 1024; // lg breakpoint
+            return window.innerWidth >= 1024;
         }
         return true;
     });
@@ -57,12 +65,11 @@ export default function Dashboard({
     useEffect(() => {
         setMounted(true);
         
-        // Handle window resize
         const handleResize = () => {
             if (window.innerWidth >= 1024) {
-                setSidebarOpen(true); // Auto buka di desktop
+                setSidebarOpen(true);
             } else {
-                setSidebarOpen(false); // Auto tutup di mobile
+                setSidebarOpen(false);
             }
         };
         
@@ -70,7 +77,30 @@ export default function Dashboard({
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // Format waktu relatif
+    // Get initials from name
+    const getInitials = (name: string): string => {
+        return name
+            .split(' ')
+            .map(word => word[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2);
+    };
+
+    // Get gradient color based on name
+    const getGradientFromName = (name: string): string => {
+        const gradients = [
+            'from-violet-400 to-violet-600',
+            'from-blue-400 to-blue-600',
+            'from-indigo-400 to-indigo-600',
+            'from-purple-400 to-purple-600',
+            'from-pink-400 to-pink-600',
+        ];
+        const index = name.charCodeAt(0) % gradients.length;
+        return gradients[index];
+    };
+
+    // ... rest of your existing functions (getRelativeTime, getEmojiForInterior, etc.)
     const getRelativeTime = (date: string): string => {
         const now = new Date();
         const created = new Date(date);
@@ -84,7 +114,6 @@ export default function Dashboard({
         return `${diffInDays} days ago`;
     };
 
-    // Emoji berdasarkan jenis interior
     const getEmojiForInterior = (jenisInterior?: string): string => {
         const emojiMap: Record<string, string> = {
             'Living Room': '🏠',
@@ -101,7 +130,6 @@ export default function Dashboard({
         return jenisInterior ? (emojiMap[jenisInterior] || '🏠') : '🏠';
     };
 
-    // Warna gradient berdasarkan index
     const getColorGradient = (index: number): string => {
         const colors = [
             'from-pink-400 to-pink-600',
@@ -112,7 +140,6 @@ export default function Dashboard({
         return colors[index % colors.length];
     };
 
-    // Priority badge color
     const getPriorityColor = (priority: string): string => {
         const priorityMap: Record<string, string> = {
             'low': 'bg-gray-100 text-gray-700',
@@ -123,7 +150,6 @@ export default function Dashboard({
         return priorityMap[priority] || 'bg-gray-100 text-gray-700';
     };
 
-    // Status label yang lebih user-friendly
     const getStatusLabel = (order: Order): string => {
         if (order.tahapan_proyek === 'selesai') return 'Project completed successfully';
         if (order.project_status === 'deal') return 'Contract signed and active';
@@ -133,7 +159,6 @@ export default function Dashboard({
         return 'Status being updated';
     };
 
-    // Status display text
     const getStatusDisplay = (status: string): string => {
         const statusMap: Record<string, string> = {
             'pending': 'Pending',
@@ -144,7 +169,6 @@ export default function Dashboard({
         return statusMap[status] || status;
     };
 
-    // Status color
     const getStatusColor = (order: Order): string => {
         if (order.tahapan_proyek === 'selesai') return 'bg-green-100 text-green-700';
         if (order.project_status === 'deal') return 'bg-blue-100 text-blue-700';
@@ -262,38 +286,106 @@ export default function Dashboard({
                 }
             `}</style>
             
-            {/* Navbar */}
             <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-
-            {/* Sidebar */}
             <Sidebar 
                 isOpen={sidebarOpen} 
                 currentPage="dashboard" 
                 onClose={() => setSidebarOpen(false)}
             />
 
-            {/* Main Content */}
             <div className="p-3 lg:ml-60 bg-gradient-to-br from-stone-50 via-amber-50/20 to-stone-50 min-h-screen">
                 <div className="p-3 mt-12">
-                    {/* Header */}
-                    <div className={`mb-5 ${mounted ? 'animate-fadeInUp' : 'opacity-0'}`}>
-                        <div className="flex items-center space-x-2 mb-1.5">
-                            <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
-                            <span className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Welcome Back</span>
+                    {/* Header with User Info */}
+                    <div className={`mb-6 ${mounted ? 'animate-fadeInUp' : 'opacity-0'}`}>
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-2">
+                                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                                    <span className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Welcome Back</span>
+                                </div>
+                                <h1 className="text-3xl font-light tracking-tight text-stone-800 mb-1.5 bg-gradient-to-r from-stone-800 to-stone-600 bg-clip-text text-transparent" style={{ fontFamily: "'Playfair Display', serif" }}>
+                                    Dashboard Overview
+                                </h1>
+                                <p className="text-xs text-stone-600 flex items-center space-x-1.5">
+                                    <svg className="w-3.5 h-3.5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"></path>
+                                    </svg>
+                                    <span>Here's what's happening with your projects today</span>
+                                </p>
+                            </div>
+
+                            {/* User Profile Card */}
+                            <div className="hidden lg:block">
+                                <div className="card-hover bg-white rounded-xl border border-stone-200 p-4 shadow-sm">
+                                    <div className="flex items-center gap-3">
+                                        {/* Avatar */}
+                                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getGradientFromName(currentUser.name)} flex items-center justify-center shadow-lg`}>
+                                            <span className="text-white font-bold text-sm">
+                                                {getInitials(currentUser.name)}
+                                            </span>
+                                        </div>
+                                        
+                                        {/* User Info */}
+                                        <div className="flex-1">
+                                            <h3 className="text-sm font-bold text-stone-900">
+                                                {currentUser.name}
+                                            </h3>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                {currentUser.role && (
+                                                    <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">
+                                                        {currentUser.role}
+                                                    </span>
+                                                )}
+                                                {currentUser.divisi && (
+                                                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+                                                        {currentUser.divisi}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <h1 className="text-3xl font-light tracking-tight text-stone-800 mb-1.5 bg-gradient-to-r from-stone-800 to-stone-600 bg-clip-text text-transparent" style={{ fontFamily: "'Playfair Display', serif" }}>
-                            Dashboard Overview
-                        </h1>
-                        <p className="text-xs text-stone-600 flex items-center space-x-1.5">
-                            <svg className="w-3.5 h-3.5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"></path>
-                            </svg>
-                            <span>Here's what's happening with your projects today</span>
-                        </p>
+
+                        {/* Mobile User Card */}
+                        <div className="lg:hidden mb-4">
+                            <div className="card-hover bg-white rounded-xl border border-stone-200 p-4 shadow-sm">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${getGradientFromName(currentUser.name)} flex items-center justify-center shadow-lg flex-shrink-0`}>
+                                        <span className="text-white font-bold text-base">
+                                            {getInitials(currentUser.name)}
+                                        </span>
+                                    </div>
+                                    
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="text-base font-bold text-stone-900 truncate">
+                                            {currentUser.name}
+                                        </h3>
+                                        <p className="text-xs text-stone-500 truncate mb-1">
+                                            {currentUser.email}
+                                        </p>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            {currentUser.role && (
+                                                <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">
+                                                    {currentUser.role}
+                                                </span>
+                                            )}
+                                            {currentUser.divisi && (
+                                                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+                                                    {currentUser.divisi}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Stats Cards */}
                     <div className="grid grid-cols-1 gap-3.5 mb-5 md:grid-cols-3">
+                        {/* ... existing stats cards ... */}
                         {/* Total Orders */}
                         <div className={`card-hover gradient-border bg-white rounded-xl border border-stone-200 p-5 shadow-sm overflow-hidden relative ${mounted ? 'animate-fadeInUp' : 'opacity-0'}`} style={{ animationDelay: '0.1s' }}>
                             <div className="absolute top-0 right-0 w-28 h-28 bg-gradient-to-br from-amber-100 to-transparent rounded-full -mr-14 -mt-14 opacity-50"></div>
@@ -353,7 +445,7 @@ export default function Dashboard({
                         </div>
                     </div>
 
-                    {/* Recent Activity */}
+                    {/* Recent Activity - rest of your code... */}
                     <div className={`card-hover bg-white rounded-xl border border-stone-200 p-6 shadow-sm ${mounted ? 'animate-fadeInUp' : 'opacity-0'}`} style={{ animationDelay: '0.4s' }}>
                         <div className="flex items-center justify-between mb-6">
                             <div>
@@ -389,12 +481,10 @@ export default function Dashboard({
                                             </div>
                                         </div>
                                         
-                                        {/* Project Name */}
                                         <h4 className="text-sm font-semibold text-stone-800 mb-1 group-hover:text-amber-700 transition-colors truncate">
                                             {order.nama_project || 'Untitled Project'}
                                         </h4>
                                         
-                                        {/* Customer & Company Info */}
                                         <div className="mb-2 space-y-0.5">
                                             <p className="text-xs text-stone-600 flex items-center">
                                                 <svg className="w-3 h-3 mr-1 text-stone-400" fill="currentColor" viewBox="0 0 20 20">
@@ -415,7 +505,6 @@ export default function Dashboard({
                                             </p>
                                         </div>
                                         
-                                        {/* Status & Priority Badges */}
                                         <div className="flex items-center justify-between gap-2 flex-wrap">
                                             <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(order)}`}>
                                                 {order.tahapan_proyek === 'selesai' 

@@ -24,6 +24,7 @@ class RabJasaController extends Controller
         ])
             ->whereHas('produks')
             ->whereHas('rabInternal')
+            ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($itemPekerjaan) {
                 return [
@@ -77,19 +78,19 @@ class RabJasaController extends Controller
                 // Reload itemPekerjaanProduk with bahanBakus to ensure we get fresh data
                 $itemPekerjaanProduk = ItemPekerjaanProduk::with('bahanBakus')
                     ->find($rabProduk->item_pekerjaan_produk_id);
-                
+
                 // DEBUG: Log the bahan baku data
                 Log::info('RAB Jasa Generate - ItemPekerjaanProduk ID: ' . $rabProduk->item_pekerjaan_produk_id);
                 Log::info('RAB Jasa Generate - BahanBakus count: ' . $itemPekerjaanProduk->bahanBakus->count());
                 Log::info('RAB Jasa Generate - BahanBakus data: ' . json_encode($itemPekerjaanProduk->bahanBakus->toArray()));
-                
+
                 // ✅ RAB JASA: Pakai HARGA_JASA bukan harga, TANPA aksesoris
                 // Karakteristik: Khusus untuk biaya jasa/labour, tanpa markup & aksesoris
                 // Get harga_jasa from selected bahan baku (sum of all selected bahan baku harga_jasa)
                 $hargaJasa = $itemPekerjaanProduk->bahanBakus->sum('harga_jasa') ?: 0;
-                
+
                 Log::info('RAB Jasa Generate - Harga Jasa Sum: ' . $hargaJasa);
-                
+
                 // Keep harga_items_non_aksesoris from RAB Internal
                 $hargaItemsOriginal = $rabProduk->harga_items_non_aksesoris;
 
@@ -207,8 +208,10 @@ class RabJasaController extends Controller
             $jenisItemsList = [];
             foreach ($rabProduk->itemPekerjaanProduk->jenisItems as $jenisItem) {
                 // NO AKSESORIS and NO BAHAN BAKU - Skip aksesoris and bahan baku items
-                if ($jenisItem->jenis_item_id !== $aksesorisJenisItem->id &&
-                    ($bahanBakuJenisItem === null || $jenisItem->jenis_item_id !== $bahanBakuJenisItem->id)) {
+                if (
+                    $jenisItem->jenis_item_id !== $aksesorisJenisItem->id &&
+                    ($bahanBakuJenisItem === null || $jenisItem->jenis_item_id !== $bahanBakuJenisItem->id)
+                ) {
                     $itemsList = [];
                     foreach ($jenisItem->items as $item) {
                         $itemsList[] = [
@@ -291,14 +294,14 @@ class RabJasaController extends Controller
                     // Reload itemPekerjaanProduk with bahanBakus to ensure we get fresh data
                     $itemPekerjaanProduk = ItemPekerjaanProduk::with('bahanBakus')
                         ->find($rabProduk->item_pekerjaan_produk_id);
-                    
+
                     // ✅ RAB JASA: Pakai HARGA_JASA bukan harga, TANPA aksesoris
                     // Get harga_jasa from selected bahan baku (sum of all selected bahan baku harga_jasa)
                     $hargaJasa = $itemPekerjaanProduk->bahanBakus->sum('harga_jasa') ?: 0;
-                    
+
                     // Keep harga_items_non_aksesoris from RAB Internal
                     $hargaItemsOriginal = $rabProduk->harga_items_non_aksesoris;
-                    
+
                     // Calculate harga_satuan using harga_jasa instead of harga
                     // Formula RAB JASA: (Harga Jasa Bahan Baku + Harga Finishing) × Dimensi × Qty (no markup, no aksesoris)
                     $hargaSatuanJasa = ($hargaJasa + $hargaItemsOriginal) * $rabProduk->harga_dimensi;

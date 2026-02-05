@@ -93,6 +93,7 @@ export default function Edit({ rabInternal }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [formData, setFormData] = useState<FormProduk[]>([]);
     const [markupGeneral, setMarkupGeneral] = useState<string>(''); // 🔹 Markup General
+    const [diskonGeneral, setDiskonGeneral] = useState<string>(''); // 🔹 Diskon General
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -151,6 +152,23 @@ export default function Edit({ rabInternal }: Props) {
                     ...aks,
                     markup_aksesoris: value,
                 })),
+            })),
+        );
+    };
+
+    // 🔹 Handler Diskon General: apply ke semua produk
+    const handleDiskonGeneralChange = (value: string) => {
+        setDiskonGeneral(value);
+
+        const num = parseFloat(value);
+        if (isNaN(num)) {
+            return;
+        }
+
+        setFormData((prev) =>
+            prev.map((prod) => ({
+                ...prod,
+                diskon_per_produk: value,
             })),
         );
     };
@@ -401,12 +419,12 @@ export default function Edit({ rabInternal }: Props) {
             <div className="p-3 lg:ml-60">
                 <div className="mt-12 p-3">
                     {/* Header Project */}
-                    <div className="mb-6 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
-                        <div className="p-6">
-                            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    <div className="mb-2 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
+                        <div className="p-2">
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                                 Edit RAB Internal
                             </h2>
-                            <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                            <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
                                 <p>
                                     <strong>Project:</strong>{' '}
                                     {
@@ -433,92 +451,80 @@ export default function Edit({ rabInternal }: Props) {
                     </div>
 
                     {/* 🔹 Formula RAB Internal */}
-                    <div className="mb-6 overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 shadow-sm sm:rounded-lg dark:from-indigo-950 dark:via-purple-950 dark:to-pink-950">
-                        <div className="p-6">
-                            <div className="flex items-center gap-2 mb-3">
-                                <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="mb-2 overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 shadow-sm sm:rounded-lg dark:from-indigo-950 dark:via-purple-950 dark:to-pink-950">
+                        <div className="p-2">
+                            <div className="flex items-center gap-2 mb-1">
+                                <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                 </svg>
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
                                     Formula Perhitungan RAB Internal
                                 </h3>
                             </div>
                             
-                            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border-l-4 border-indigo-500">
-                                <div className="space-y-3">
+                            <div className="bg-white dark:bg-gray-800 rounded-lg p-2 border-l-4 border-indigo-500">
+                                <div className="space-y-1.5">
                                     <div>
-                                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">📦 Harga Satuan Produk:</p>
-                                        <code className="text-sm bg-gray-100 dark:bg-gray-900 px-3 py-2 rounded block">
-                                            (Harga BB + Finishing) ÷ (Markup / 100) × Dimensi × Qty
-                                        </code>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            💡 Contoh: Markup <strong>150%</strong> → 150/100 = 1.5, lalu harga <strong>dibagi</strong> 1.5
-                                        </p>
-                                    </div>
-                                    
-                                    <div>
-                                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">🎨 Harga Aksesoris:</p>
-                                        <code className="text-sm bg-gray-100 dark:bg-gray-900 px-3 py-2 rounded block">
-                                            (Harga Satuan Aks ÷ (Markup / 100)) × Qty
+                                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-0.5">📦 Harga Satuan Produk:</p>
+                                        <code className="text-xs bg-gray-100 dark:bg-gray-900 px-2 py-1 rounded block">
+                                            (BB + Finishing) ÷ (1 - Markup/100) × Dimensi × Qty
                                         </code>
                                     </div>
                                     
-                                    <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">🏷️ Komponen:</p>
-                                        <div className="grid grid-cols-2 gap-2 text-xs">
-                                            <div className="flex items-center gap-2">
-                                                <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-                                                <span className="text-gray-600 dark:text-gray-400">Harga BB (Bahan Baku)</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                                                <span className="text-gray-600 dark:text-gray-400">Finishing (Dalam + Luar)</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="w-3 h-3 rounded-full bg-amber-500"></span>
-                                                <span className="text-gray-600 dark:text-gray-400">Markup (dibagi)</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="w-3 h-3 rounded-full bg-purple-500"></span>
-                                                <span className="text-gray-600 dark:text-gray-400">Dimensi (P × L × T)</span>
-                                            </div>
-                                        </div>
+                                    <div>
+                                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-0.5">🎨 Harga Aksesoris:</p>
+                                        <code className="text-xs bg-gray-100 dark:bg-gray-900 px-2 py-1 rounded block">
+                                            Harga Aks ÷ (1 - Markup/100) × Qty
+                                        </code>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* 🔹 Markup General (GLOBAL) */}
-                    <div className="mb-6 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
-                        <div className="p-6">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                                Markup General
-                            </h3>
-                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                Jika diisi, nilai ini akan di-copy ke{' '}
-                                <b>Markup Satuan</b> semua produk dan{' '}
-                                <b>Markup Aksesoris</b> semua aksesoris. Setelah
-                                itu Anda tetap bisa edit manual per produk /
-                                aksesoris.
-                            </p>
-                            <div className="mt-3 max-w-xs">
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Markup General (%)
-                                </label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    value={markupGeneral}
-                                    onChange={(e) =>
-                                        handleMarkupGeneralChange(
-                                            e.target.value,
-                                        )
-                                    }
-                                    placeholder="Contoh: 5"
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                                />
+                    {/* 🔹 Markup & Diskon General (GLOBAL) */}
+                    <div className="mb-2 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
+                        <div className="p-2">
+                            <div className="grid grid-cols-2 gap-2">
+                                {/* Markup General */}
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Markup General (%)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        value={markupGeneral}
+                                        onChange={(e) =>
+                                            handleMarkupGeneralChange(
+                                                e.target.value,
+                                            )
+                                        }
+                                        placeholder="5"
+                                        className="block w-full rounded border-gray-300 text-xs shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                    />
+                                </div>
+
+                                {/* Diskon General */}
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Diskon General (%)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        value={diskonGeneral}
+                                        onChange={(e) =>
+                                            handleDiskonGeneralChange(
+                                                e.target.value,
+                                            )
+                                        }
+                                        placeholder="10"
+                                        className="block w-full rounded border-gray-300 text-xs shadow-sm focus:border-emerald-500 focus:ring-emerald-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -526,12 +532,12 @@ export default function Edit({ rabInternal }: Props) {
                     {/* FORM PRODUK */}
                     <form onSubmit={handleSubmit}>
                         {groupedByRuangan.map((ruangan, ruanganIndex) => (
-                            <div key={ruanganIndex} className="mb-8">
+                            <div key={ruanganIndex} className="mb-2">
                                 {/* Ruangan Header */}
-                                <div className="mb-4 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 p-4">
+                                <div className="mb-2 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 p-2">
                                     <div className="flex items-center gap-2">
                                         <svg
-                                            className="h-6 w-6 text-white"
+                                            className="h-4 w-4 text-white"
                                             fill="none"
                                             stroke="currentColor"
                                             viewBox="0 0 24 24"
@@ -543,10 +549,10 @@ export default function Edit({ rabInternal }: Props) {
                                                 d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
                                             />
                                         </svg>
-                                        <h2 className="text-xl font-bold text-white">
+                                        <h2 className="text-sm font-bold text-white">
                                             {ruangan.nama_ruangan}
                                         </h2>
-                                        <span className="rounded-full bg-white/20 px-3 py-1 text-sm text-white">
+                                        <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-xs text-white">
                                             {ruangan.items.length} produk
                                         </span>
                                     </div>
@@ -596,13 +602,13 @@ export default function Edit({ rabInternal }: Props) {
                                                 key={
                                                     produk.item_pekerjaan_produk_id
                                                 }
-                                                className="mb-6 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800"
+                                                className="mb-2 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800"
                                             >
-                                                <div className="bg-gradient-to-r from-amber-500 to-amber-600 p-4">
-                                                    <h3 className="text-lg font-bold text-white">
+                                                <div className="bg-gradient-to-r from-amber-500 to-amber-600 p-2">
+                                                    <h3 className="text-sm font-bold text-white">
                                                         {produk.nama_produk}
                                                     </h3>
-                                                    <p className="text-sm text-amber-100">
+                                                    <p className="text-xs text-amber-100">
                                                         Qty: {produk.qty_produk}{' '}
                                                         |{' '}
                                                         {produk.panjang &&
@@ -612,26 +618,28 @@ export default function Edit({ rabInternal }: Props) {
                                                     </p>
                                                 </div>
 
-                                                <div className="p-6">
-                                                    {/* Bahan Baku - Display Only (names) */}
-                                                    {produk.bahan_baku_names &&
-                                                        produk.bahan_baku_names
-                                                            .length > 0 && (
-                                                            <div className="mb-6">
-                                                                <h4 className="mb-3 font-semibold text-gray-900 dark:text-gray-100">
-                                                                    Bahan Baku
-                                                                </h4>
-                                                                <div className="flex flex-wrap gap-2">
-                                                                    {produk.bahan_baku_names.map(
-                                                                        (
-                                                                            name,
-                                                                            idx,
-                                                                        ) => (
+                                                <div className="p-3">
+                                                    {/* BAHAN BAKU & BREAKDOWN - 2 KOLOM */}
+                                                    <div className="mb-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                        {/* Bahan Baku */}
+                                                        {produk.bahan_baku_names &&
+                                                            produk.bahan_baku_names
+                                                                .length > 0 && (
+                                                                <div className="rounded-lg bg-slate-50 p-2 dark:bg-slate-800">
+                                                                    <h4 className="mb-1 text-xs font-semibold text-gray-900 dark:text-gray-100">
+                                                                        Bahan Baku
+                                                                    </h4>
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {produk.bahan_baku_names.map(
+                                                                            (
+                                                                                name,
+                                                                                idx,
+                                                                            ) => (
                                                                             <span
                                                                                 key={
                                                                                     idx
                                                                                 }
-                                                                                className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+                                                                                className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200"
                                                                             >
                                                                                 {
                                                                                     name
@@ -643,12 +651,47 @@ export default function Edit({ rabInternal }: Props) {
                                                             </div>
                                                         )}
 
-                                                    {/* Items Non-Aksesoris - Editable */}
-                                                    <div className="mb-6">
-                                                        <div className="mb-3 flex items-center justify-between">
-                                                            <h4 className="font-semibold text-gray-900 dark:text-gray-100">
-                                                                Items
-                                                                Non-Aksesoris
+                                                        {/* BREAKDOWN */}
+                                                        <div className="rounded-lg bg-gray-50 p-2 dark:bg-gray-700">
+                                                            <h4 className="mb-1 text-xs font-semibold text-gray-900 dark:text-gray-100">
+                                                                Breakdown Harga
+                                                            </h4>
+                                                            <div className="space-y-1 text-xs">
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-gray-600 dark:text-gray-400">Harga Dasar:</span>
+                                                                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                                                                        {formatCurrency(produk.harga_dasar)}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-gray-600 dark:text-gray-400">Items Non-Aks:</span>
+                                                                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                                                                        {formatCurrency(
+                                                                            formProduk.non_aksesoris_items.reduce(
+                                                                                (sum, item) => sum + (Number(item.harga_satuan) || 0),
+                                                                                0
+                                                                            )
+                                                                        )}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-gray-600 dark:text-gray-400">Dimensi:</span>
+                                                                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                                                                        {(produk.panjang || 0) *
+                                                                            (produk.lebar || 0) *
+                                                                            (produk.tinggi || 0) *
+                                                                            produk.qty_produk}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Items Non-Aksesoris */}
+                                                    <div className="mb-2">
+                                                        <div className="mb-1 flex items-center justify-between">
+                                                            <h4 className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                                                                Items Non-Aksesoris
                                                             </h4>
                                                             <button
                                                                 type="button"
@@ -657,9 +700,9 @@ export default function Edit({ rabInternal }: Props) {
                                                                         produkIndex,
                                                                     )
                                                                 }
-                                                                className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                                                                className="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700"
                                                             >
-                                                                + Tambah Item
+                                                                + Item
                                                             </button>
                                                         </div>
                                                         {formProduk
@@ -669,15 +712,13 @@ export default function Edit({ rabInternal }: Props) {
                                                                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                                                     <thead className="bg-gray-50 dark:bg-gray-700">
                                                                         <tr>
-                                                                            <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-300">
+                                                                            <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 dark:text-gray-300">
                                                                                 Nama
-                                                                                Item
                                                                             </th>
-                                                                            <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-300">
+                                                                            <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 dark:text-gray-300">
                                                                                 Harga
-                                                                                Satuan
                                                                             </th>
-                                                                            <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-300">
+                                                                            <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 dark:text-gray-300">
                                                                                 Aksi
                                                                             </th>
                                                                         </tr>
@@ -693,7 +734,7 @@ export default function Edit({ rabInternal }: Props) {
                                                                                         itemIndex
                                                                                     }
                                                                                 >
-                                                                                    <td className="px-4 py-3 text-sm">
+                                                                                    <td className="px-2 py-1.5 text-xs">
                                                                                         <input
                                                                                             type="text"
                                                                                             value={
@@ -711,12 +752,12 @@ export default function Edit({ rabInternal }: Props) {
                                                                                                         .value,
                                                                                                 )
                                                                                             }
-                                                                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                                                                                            placeholder="Nama item"
+                                                                                            className="w-full rounded border-gray-300 text-xs shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                                                                            placeholder="Nama"
                                                                                             required
                                                                                         />
                                                                                     </td>
-                                                                                    <td className="px-4 py-3 text-sm">
+                                                                                    <td className="px-2 py-1.5 text-xs">
                                                                                         <input
                                                                                             type="text"
                                                                                             value={
@@ -739,12 +780,12 @@ export default function Edit({ rabInternal }: Props) {
                                                                                                     formatted,
                                                                                                 );
                                                                                             }}
-                                                                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                                                                            className="w-full rounded border-gray-300 text-xs shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                                                                             placeholder="0"
                                                                                             required
                                                                                         />
                                                                                     </td>
-                                                                                    <td className="px-4 py-3 text-sm">
+                                                                                    <td className="px-2 py-1.5 text-xs">
                                                                                         <button
                                                                                             type="button"
                                                                                             onClick={() =>
@@ -753,24 +794,23 @@ export default function Edit({ rabInternal }: Props) {
                                                                                                     itemIndex,
                                                                                                 )
                                                                                             }
-                                                                                            className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
+                                                                                            className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700"
                                                                                         >
                                                                                             🗑️
-                                                                                            Hapus
                                                                                         </button>
                                                                                     </td>
                                                                                 </tr>
                                                                             ),
                                                                         )}
                                                                         <tr className="bg-blue-50 dark:bg-blue-900/20">
-                                                                            <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                                                            <td className="px-2 py-1.5 text-right text-xs font-semibold text-gray-900 dark:text-gray-100">
                                                                                 Total:
                                                                             </td>
                                                                             <td
                                                                                 colSpan={
                                                                                     2
                                                                                 }
-                                                                                className="px-4 py-3 text-sm font-bold text-blue-600 dark:text-blue-400"
+                                                                                className="px-2 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400"
                                                                             >
                                                                                 {formatCurrency(
                                                                                     formProduk.non_aksesoris_items.reduce(
@@ -799,127 +839,63 @@ export default function Edit({ rabInternal }: Props) {
                                                         )}
                                                     </div>
 
-                                                    {/* Harga Breakdown */}
-                                                    <div className="mb-6 rounded-lg bg-gray-50 p-4 dark:bg-gray-700">
-                                                        <h4 className="mb-3 font-semibold text-gray-900 dark:text-gray-100">
-                                                            Breakdown Harga
-                                                        </h4>
-                                                        <div className="space-y-2 text-sm">
-                                                            <div className="flex justify-between">
-                                                                <span className="text-gray-600 dark:text-gray-400">
-                                                                    Harga Dasar:
-                                                                </span>
-                                                                <span className="font-medium text-gray-900 dark:text-gray-100">
-                                                                    {formatCurrency(
-                                                                        produk.harga_dasar,
-                                                                    )}
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex justify-between">
-                                                                <span className="text-gray-600 dark:text-gray-400">
-                                                                    Harga Items
-                                                                    (Non-Aksesoris):
-                                                                </span>
-                                                                <span className="font-medium text-gray-900 dark:text-gray-100">
-                                                                    {formatCurrency(
-                                                                        formProduk.non_aksesoris_items.reduce(
-                                                                            (
-                                                                                sum,
-                                                                                item,
-                                                                            ) =>
-                                                                                sum +
-                                                                                (Number(
-                                                                                    item.harga_satuan,
-                                                                                ) ||
-                                                                                    0),
-                                                                            0,
-                                                                        ),
-                                                                    )}
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex justify-between">
-                                                                <span className="text-gray-600 dark:text-gray-400">
-                                                                    Dimensi
-                                                                    (P×L×T×Qty):
-                                                                </span>
-                                                                <span className="font-medium text-gray-900 dark:text-gray-100">
-                                                                    {(produk.panjang ||
-                                                                        0) *
-                                                                        (produk.lebar ||
-                                                                            0) *
-                                                                        (produk.tinggi ||
-                                                                            0) *
-                                                                        produk.qty_produk}
-                                                                </span>
-                                                            </div>
+                                                    {/* MARKUP & DISKON - 2 KOLOM */}
+                                                    <div className="mb-2 grid grid-cols-2 gap-2">
+                                                        {/* MARKUP SATUAN */}
+                                                        <div>
+                                                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                Markup (%)
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                max="100"
+                                                                value={
+                                                                    formProduk.markup_satuan
+                                                                }
+                                                                onChange={(e) =>
+                                                                    handleMarkupChange(
+                                                                        produkIndex,
+                                                                        e.target
+                                                                            .value,
+                                                                    )
+                                                                }
+                                                                placeholder="0"
+                                                                className="block w-full rounded border-gray-300 text-xs shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                                                required
+                                                            />
+                                                            <p className="mt-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                                                                = {formatCurrency(
+                                                                    hargaSatuan,
+                                                                )}
+                                                            </p>
+                                                        </div>
+
+                                                        {/* DISKON */}
+                                                        <div>
+                                                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                Diskon (%)
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                max="100"
+                                                                value={formProduk.diskon_per_produk}
+                                                                onChange={(e) => {
+                                                                    const newData = [...formData];
+                                                                    newData[produkIndex].diskon_per_produk = e.target.value;
+                                                                    setFormData(newData);
+                                                                }}
+                                                                placeholder="0"
+                                                                className="block w-full rounded border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                                            />
                                                         </div>
                                                     </div>
 
-                                                    {/* Markup Satuan Input */}
-                                                    <div className="mb-6">
-                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                            Markup Satuan (%)
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            max="100"
-                                                            value={
-                                                                formProduk.markup_satuan
-                                                            }
-                                                            onChange={(e) =>
-                                                                handleMarkupChange(
-                                                                    produkIndex,
-                                                                    e.target
-                                                                        .value,
-                                                                )
-                                                            }
-                                                            placeholder="0"
-                                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                                                            required
-                                                        />
-                                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                                            Harga Satuan =
-                                                            (Harga Dasar + Items
-                                                            Non-Aksesoris) × (1
-                                                            + Markup%) × Harga
-                                                            Dimensi
-                                                        </p>
-                                                        <p className="mt-1 text-sm font-semibold text-amber-600 dark:text-amber-400">
-                                                            Harga Satuan:{' '}
-                                                            {formatCurrency(
-                                                                hargaSatuan,
-                                                            )}
-                                                        </p>
-                                                    </div>
-
-                                                    {/* Diskon Per Produk */}
-                                                    <div className="mb-6">
-                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                            Diskon Per Produk (%)
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            max="100"
-                                                            value={formProduk.diskon_per_produk}
-                                                            onChange={(e) => {
-                                                                const newData = [...formData];
-                                                                newData[produkIndex].diskon_per_produk = e.target.value;
-                                                                setFormData(newData);
-                                                            }}
-                                                            placeholder="0"
-                                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                                                        />
-                                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                                            Diskon diterapkan setelah harga satuan + aksesoris
-                                                        </p>
-                                                    </div>
-
                                                     {/* Aksesoris */}
-                                                    <div className="mb-6">
-                                                        <div className="mb-3 flex items-center justify-between">
-                                                            <h4 className="font-semibold text-gray-900 dark:text-gray-100">
+                                                    <div className="mb-2">
+                                                        <div className="mb-1 flex items-center justify-between">
+                                                            <h4 className="text-xs font-semibold text-gray-900 dark:text-gray-100">
                                                                 Aksesoris
                                                             </h4>
                                                             <button
@@ -929,10 +905,9 @@ export default function Edit({ rabInternal }: Props) {
                                                                         produkIndex,
                                                                     )
                                                                 }
-                                                                className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                                                                className="rounded bg-green-600 px-2 py-1 text-xs font-medium text-white hover:bg-green-700"
                                                             >
-                                                                + Tambah
-                                                                Aksesoris
+                                                                + Aksesoris
                                                             </button>
                                                         </div>
                                                         {formProduk.aksesoris
@@ -941,26 +916,22 @@ export default function Edit({ rabInternal }: Props) {
                                                                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                                                     <thead className="bg-gray-50 dark:bg-gray-700">
                                                                         <tr>
-                                                                            <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-300">
+                                                                            <th className="px-2 py-1 text-xs text-gray-500 dark:text-gray-300">
                                                                                 Nama
-                                                                                Aksesoris
                                                                             </th>
-                                                                            <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-300">
+                                                                            <th className="px-2 py-1 text-xs text-gray-500 dark:text-gray-300">
                                                                                 Harga
-                                                                                Satuan
                                                                             </th>
-                                                                            <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-300">
+                                                                            <th className="px-2 py-1 text-xs text-gray-500 dark:text-gray-300">
                                                                                 Qty
                                                                             </th>
-                                                                            <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-300">
+                                                                            <th className="px-2 py-1 text-xs text-gray-500 dark:text-gray-300">
                                                                                 Markup
-                                                                                (%)
                                                                             </th>
-                                                                            <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-300">
-                                                                                Harga
+                                                                            <th className="px-2 py-1 text-xs text-gray-500 dark:text-gray-300">
                                                                                 Total
                                                                             </th>
-                                                                            <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-300">
+                                                                            <th className="px-2 py-1 text-xs text-gray-500 dark:text-gray-300">
                                                                                 Aksi
                                                                             </th>
                                                                         </tr>
@@ -974,7 +945,7 @@ export default function Edit({ rabInternal }: Props) {
                                                                                 <tr
                                                                                     key={`${produkIndex}-${aksesorisIndex}`}
                                                                                 >
-                                                                                    <td className="px-4 py-3 text-sm">
+                                                                                    <td className="px-2 py-1.5 text-xs">
                                                                                         <input
                                                                                             type="text"
                                                                                             value={
@@ -992,12 +963,12 @@ export default function Edit({ rabInternal }: Props) {
                                                                                                         .value,
                                                                                                 )
                                                                                             }
-                                                                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                                                                                            placeholder="Nama aksesoris"
+                                                                                            className="w-full rounded border-gray-300 text-xs shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                                                                            placeholder="Nama"
                                                                                             required
                                                                                         />
                                                                                     </td>
-                                                                                    <td className="px-4 py-3 text-sm">
+                                                                                    <td className="px-2 py-1.5 text-xs">
                                                                                         <input
                                                                                             type="text"
                                                                                             value={
@@ -1020,12 +991,12 @@ export default function Edit({ rabInternal }: Props) {
                                                                                                     formatted,
                                                                                                 );
                                                                                             }}
-                                                                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                                                                            className="w-full rounded border-gray-300 text-xs shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                                                                             placeholder="0"
                                                                                             required
                                                                                         />
                                                                                     </td>
-                                                                                    <td className="px-4 py-3 text-sm">
+                                                                                    <td className="px-2 py-1.5 text-xs">
                                                                                         <input
                                                                                             type="number"
                                                                                             min="1"
@@ -1043,11 +1014,11 @@ export default function Edit({ rabInternal }: Props) {
                                                                                                         .value,
                                                                                                 )
                                                                                             }
-                                                                                            className="w-20 rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                                                                            className="w-16 rounded border-gray-300 text-xs shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                                                                             required
                                                                                         />
                                                                                     </td>
-                                                                                    <td className="px-4 py-3 text-sm">
+                                                                                    <td className="px-2 py-1.5 text-xs">
                                                                                         <input
                                                                                             type="number"
                                                                                             min="0"
@@ -1066,18 +1037,18 @@ export default function Edit({ rabInternal }: Props) {
                                                                                                         .value,
                                                                                                 )
                                                                                             }
-                                                                                            className="w-24 rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                                                                            className="w-16 rounded border-gray-300 text-xs shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                                                                             required
                                                                                         />
                                                                                     </td>
-                                                                                    <td className="px-4 py-3 text-sm font-medium whitespace-nowrap text-gray-900 dark:text-gray-100">
+                                                                                    <td className="px-2 py-1.5 text-xs font-medium">
                                                                                         {formatCurrency(
                                                                                             calculateHargaAksesoris(
                                                                                                 aksesoris,
                                                                                             ),
                                                                                         )}
                                                                                     </td>
-                                                                                    <td className="px-4 py-3 text-sm">
+                                                                                    <td className="px-2 py-1.5 text-xs">
                                                                                         <button
                                                                                             type="button"
                                                                                             onClick={() =>
@@ -1086,10 +1057,9 @@ export default function Edit({ rabInternal }: Props) {
                                                                                                     aksesorisIndex,
                                                                                                 )
                                                                                             }
-                                                                                            className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
+                                                                                            className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700"
                                                                                         >
                                                                                             🗑️
-                                                                                            Hapus
                                                                                         </button>
                                                                                     </td>
                                                                                 </tr>
@@ -1100,16 +1070,15 @@ export default function Edit({ rabInternal }: Props) {
                                                                                 colSpan={
                                                                                     4
                                                                                 }
-                                                                                className="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-gray-100"
+                                                                                className="px-2 py-1.5 text-right text-xs font-semibold text-gray-900 dark:text-gray-100"
                                                                             >
-                                                                                Total
-                                                                                Aksesoris:
+                                                                                Total Aksesoris:
                                                                             </td>
                                                                             <td
                                                                                 colSpan={
                                                                                     2
                                                                                 }
-                                                                                className="px-4 py-3 text-sm font-bold whitespace-nowrap text-amber-600 dark:text-amber-400"
+                                                                                className="px-2 py-1.5 text-xs font-bold text-amber-600 dark:text-amber-400"
                                                                             >
                                                                                 {formatCurrency(
                                                                                     totalAksesoris,
@@ -1120,7 +1089,7 @@ export default function Edit({ rabInternal }: Props) {
                                                                 </table>
                                                             </div>
                                                         ) : (
-                                                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400">
                                                                 Belum ada
                                                                 aksesoris
                                                             </p>
@@ -1128,20 +1097,17 @@ export default function Edit({ rabInternal }: Props) {
                                                     </div>
 
                                                     {/* Harga Akhir */}
-                                                    <div className="rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 p-4 dark:from-green-900/20 dark:to-emerald-900/20">
+                                                    <div className="rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 p-2 dark:from-green-900/20 dark:to-emerald-900/20">
                                                         <div className="flex items-center justify-between">
-                                                            <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                                                            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
                                                                 Harga Akhir:
                                                             </span>
-                                                            <span className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                                            <span className="text-lg font-bold text-green-600 dark:text-green-400">
                                                                 {formatCurrency(
                                                                     hargaAkhir,
                                                                 )}
                                                             </span>
                                                         </div>
-                                                        <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                                                            Harga Akhir = (Harga Satuan + Total Aksesoris) × (1 - Diskon%)
-                                                        </p>
                                                     </div>
                                                 </div>
                                             </div>

@@ -28,6 +28,8 @@ class ProjectManagementController extends Controller
             ->whereHas('moodboard.itemPekerjaans.invoice', function ($q) {
                 $q->whereNotNull('bukti_bayar');
             })
+            
+            ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($order) {
                 // Get deadline status from kontrak

@@ -254,13 +254,40 @@ class SurveyResultsController extends Controller
              * UPLOAD LAYOUT FILES
              * =============================== */
             $layoutFilesPaths = [];
+            $layoutUploadErrors = [];
 
             if ($request->hasFile('layout_files')) {
-                foreach ($request->file('layout_files') as $file) {
-                    if (in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png'])) {
-                        $layoutFilesPaths[] = image_service()->saveImageWithThumbnail($file, 'survey_layouts', 2000, 85, 500, 70);
-                    } else {
-                        $layoutFilesPaths[] = image_service()->saveRawFile($file, 'survey_layouts');
+                foreach ($request->file('layout_files') as $index => $file) {
+                    try {
+                        $fileName = $file->getClientOriginalName();
+                        \Log::info("[Survey Store] Uploading layout file #{$index}: {$fileName}");
+                        
+                        if (in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png'])) {
+                            $result = image_service()->saveImageWithThumbnail($file, 'survey_layouts', 2000, 85, 500, 70);
+                        } else {
+                            $result = image_service()->saveRawFile($file, 'survey_layouts');
+                        }
+                        
+                        $layoutFilesPaths[] = $result;
+                        \Log::info("[Survey Store] Layout file #{$index} uploaded successfully: {$result['path']}");
+                    } catch (\Exception $fileError) {
+                        // Cleanup previously uploaded files
+                        foreach ($layoutFilesPaths as $uploadedFile) {
+                            try {
+                                if (isset($uploadedFile['path']) && Storage::disk('public')->exists($uploadedFile['path'])) {
+                                    Storage::disk('public')->delete($uploadedFile['path']);
+                                }
+                                if (isset($uploadedFile['thumbnail']) && Storage::disk('public')->exists($uploadedFile['thumbnail'])) {
+                                    Storage::disk('public')->delete($uploadedFile['thumbnail']);
+                                }
+                            } catch (\Exception $cleanupError) {
+                                \Log::error("[Survey Store] Cleanup error: " . $cleanupError->getMessage());
+                            }
+                        }
+                        
+                        $layoutUploadErrors[] = "File #{$index} ({$fileName}): " . $fileError->getMessage();
+                        \Log::error("[Survey Store] Layout file #{$index} upload failed: " . $fileError->getMessage());
+                        throw new \Exception("Failed to upload layout file: {$fileName}. " . $fileError->getMessage());
                     }
                 }
             }
@@ -271,10 +298,37 @@ class SurveyResultsController extends Controller
              * UPLOAD FOTO LOKASI
              * =============================== */
             $fotoLokasiFilesPaths = [];
+            $fotoUploadErrors = [];
 
             if ($request->hasFile('foto_lokasi_files')) {
-                foreach ($request->file('foto_lokasi_files') as $file) {
-                    $fotoLokasiFilesPaths[] = image_service()->saveImageWithThumbnail($file, 'survey_photos', 1600, 80, 400, 70);
+                foreach ($request->file('foto_lokasi_files') as $index => $file) {
+                    try {
+                        $fileName = $file->getClientOriginalName();
+                        \Log::info("[Survey Store] Uploading photo #{$index}: {$fileName}");
+                        
+                        $result = image_service()->saveImageWithThumbnail($file, 'survey_photos', 1600, 80, 400, 70);
+                        $fotoLokasiFilesPaths[] = $result;
+                        
+                        \Log::info("[Survey Store] Photo #{$index} uploaded successfully: {$result['path']}");
+                    } catch (\Exception $fileError) {
+                        // Cleanup uploaded layout files and photos
+                        foreach (array_merge($layoutFilesPaths, $fotoLokasiFilesPaths) as $uploadedFile) {
+                            try {
+                                if (isset($uploadedFile['path']) && Storage::disk('public')->exists($uploadedFile['path'])) {
+                                    Storage::disk('public')->delete($uploadedFile['path']);
+                                }
+                                if (isset($uploadedFile['thumbnail']) && Storage::disk('public')->exists($uploadedFile['thumbnail'])) {
+                                    Storage::disk('public')->delete($uploadedFile['thumbnail']);
+                                }
+                            } catch (\Exception $cleanupError) {
+                                \Log::error("[Survey Store] Cleanup error: " . $cleanupError->getMessage());
+                            }
+                        }
+                        
+                        $fotoUploadErrors[] = "Photo #{$index} ({$fileName}): " . $fileError->getMessage();
+                        \Log::error("[Survey Store] Photo #{$index} upload failed: " . $fileError->getMessage());
+                        throw new \Exception("Failed to upload photo: {$fileName}. " . $fileError->getMessage());
+                    }
                 }
             }
 
@@ -305,14 +359,52 @@ class SurveyResultsController extends Controller
             if (!empty($momUploads)) {
                 $order = $survey->order;
                 $existingMomFiles = $order->mom_files ?? [];
+                $uploadedMomFiles = [];
 
                 // Migrate legacy single file into the array to keep behavior consistent
                 if (!empty($order->mom_file)) {
                     $existingMomFiles[] = $order->mom_file;
                 }
 
-                foreach ($momUploads as $file) {
-                    $existingMomFiles[] = $file->store('mom_files', 'public');
+                foreach ($momUploads as $index => $file) {
+                    try {
+                        $fileName = $file->getClientOriginalName();
+                        \Log::info("[Survey Store] Uploading MOM file #{$index}: {$fileName}");
+                        
+                        $path = $file->store('mom_files', 'public');
+                        $uploadedMomFiles[] = $path;
+                        $existingMomFiles[] = $path;
+                        
+                        \Log::info("[Survey Store] MOM file #{$index} uploaded successfully: {$path}");
+                    } catch (\Exception $fileError) {
+                        // Cleanup uploaded MOM files
+                        foreach ($uploadedMomFiles as $uploadedPath) {
+                            try {
+                                if (Storage::disk('public')->exists($uploadedPath)) {
+                                    Storage::disk('public')->delete($uploadedPath);
+                                }
+                            } catch (\Exception $cleanupError) {
+                                \Log::error("[Survey Store] MOM cleanup error: " . $cleanupError->getMessage());
+                            }
+                        }
+                        
+                        // Also cleanup layout and foto files
+                        foreach (array_merge($layoutFilesPaths, $fotoLokasiFilesPaths) as $uploadedFile) {
+                            try {
+                                if (isset($uploadedFile['path']) && Storage::disk('public')->exists($uploadedFile['path'])) {
+                                    Storage::disk('public')->delete($uploadedFile['path']);
+                                }
+                                if (isset($uploadedFile['thumbnail']) && Storage::disk('public')->exists($uploadedFile['thumbnail'])) {
+                                    Storage::disk('public')->delete($uploadedFile['thumbnail']);
+                                }
+                            } catch (\Exception $cleanupError) {
+                                \Log::error("[Survey Store] Cleanup error: " . $cleanupError->getMessage());
+                            }
+                        }
+                        
+                        \Log::error("[Survey Store] MOM file #{$index} upload failed: " . $fileError->getMessage());
+                        throw new \Exception("Failed to upload MOM file: {$fileName}. " . $fileError->getMessage());
+                    }
                 }
 
                 // Remove duplicates while preserving order
@@ -330,11 +422,9 @@ class SurveyResultsController extends Controller
             }
 
             /* ===============================
-             * NOTIFICATION (only if published)
+             * UPDATE STATUS (only if published)
              * =============================== */
             if (!$isDraft) {
-                $notificationService = new NotificationService();
-                $notificationService->sendMoodboardRequestNotification($survey->order);
                 $order = $survey->order;
                 $order->update([
                     'tahapan_proyek' => 'moodboard',
@@ -395,7 +485,26 @@ class SurveyResultsController extends Controller
                 }
             }
 
+            \Log::info("[Survey Store] Survey ID {$survey->id} saved successfully. Files uploaded - Layout: " . count($layoutFilesPaths) . ", Photos: " . count($fotoLokasiFilesPaths));
+            
             DB::commit();
+
+            /* ===============================
+             * NOTIFICATION (OUTSIDE TRANSACTION)
+             * Dipindahkan ke luar transaction agar error notification tidak rollback data
+             * =============================== */
+            if (!$isDraft) {
+                try {
+                    \Log::info("[Survey Store] Sending moodboard notification for Order ID: {$survey->order->id}");
+                    $notificationService = new NotificationService();
+                    $notificationService->sendMoodboardRequestNotification($survey->order);
+                    \Log::info("[Survey Store] Moodboard notification sent successfully");
+                } catch (\Exception $notifError) {
+                    // Log error tapi JANGAN rollback data yang sudah tersimpan
+                    \Log::error("[Survey Store] Notification failed but survey data saved: " . $notifError->getMessage());
+                    // User tetap dapat success message, admin bisa cek log untuk notification issue
+                }
+            }
 
             $message = $isDraft
                 ? 'Survey Results saved as draft successfully.'
@@ -488,13 +597,40 @@ class SurveyResultsController extends Controller
              * HANDLE LAYOUT FILES (APPEND)
              * =============================== */
             $existingLayoutFiles = $survey->layout_files ?? [];
+            $newLayoutFiles = [];
 
             if ($request->hasFile('layout_files')) {
-                foreach ($request->file('layout_files') as $file) {
-                    if (in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png'])) {
-                        $existingLayoutFiles[] = image_service()->saveImageWithThumbnail($file, 'survey_layouts', 2000, 85, 500, 70);
-                    } else {
-                        $existingLayoutFiles[] = image_service()->saveRawFile($file, 'survey_layouts');
+                foreach ($request->file('layout_files') as $index => $file) {
+                    try {
+                        $fileName = $file->getClientOriginalName();
+                        \Log::info("[Survey Update] Uploading layout file #{$index}: {$fileName}");
+                        
+                        if (in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png'])) {
+                            $result = image_service()->saveImageWithThumbnail($file, 'survey_layouts', 2000, 85, 500, 70);
+                        } else {
+                            $result = image_service()->saveRawFile($file, 'survey_layouts');
+                        }
+                        
+                        $newLayoutFiles[] = $result;
+                        $existingLayoutFiles[] = $result;
+                        \Log::info("[Survey Update] Layout file #{$index} uploaded successfully: {$result['path']}");
+                    } catch (\Exception $fileError) {
+                        // Cleanup newly uploaded files from this request
+                        foreach ($newLayoutFiles as $uploadedFile) {
+                            try {
+                                if (isset($uploadedFile['path']) && Storage::disk('public')->exists($uploadedFile['path'])) {
+                                    Storage::disk('public')->delete($uploadedFile['path']);
+                                }
+                                if (isset($uploadedFile['thumbnail']) && Storage::disk('public')->exists($uploadedFile['thumbnail'])) {
+                                    Storage::disk('public')->delete($uploadedFile['thumbnail']);
+                                }
+                            } catch (\Exception $cleanupError) {
+                                \Log::error("[Survey Update] Cleanup error: " . $cleanupError->getMessage());
+                            }
+                        }
+                        
+                        \Log::error("[Survey Update] Layout file #{$index} upload failed: " . $fileError->getMessage());
+                        throw new \Exception("Failed to upload layout file: {$fileName}. " . $fileError->getMessage());
                     }
                 }
             }
@@ -505,10 +641,37 @@ class SurveyResultsController extends Controller
              * HANDLE FOTO LOKASI (APPEND)
              * =============================== */
             $existingFotoFiles = $survey->foto_lokasi_files ?? [];
+            $newFotoFiles = [];
 
             if ($request->hasFile('foto_lokasi_files')) {
-                foreach ($request->file('foto_lokasi_files') as $file) {
-                    $existingFotoFiles[] = image_service()->saveImageWithThumbnail($file, 'survey_photos', 1600, 80, 400, 70);
+                foreach ($request->file('foto_lokasi_files') as $index => $file) {
+                    try {
+                        $fileName = $file->getClientOriginalName();
+                        \Log::info("[Survey Update] Uploading photo #{$index}: {$fileName}");
+                        
+                        $result = image_service()->saveImageWithThumbnail($file, 'survey_photos', 1600, 80, 400, 70);
+                        $newFotoFiles[] = $result;
+                        $existingFotoFiles[] = $result;
+                        
+                        \Log::info("[Survey Update] Photo #{$index} uploaded successfully: {$result['path']}");
+                    } catch (\Exception $fileError) {
+                        // Cleanup newly uploaded files from this request
+                        foreach (array_merge($newLayoutFiles, $newFotoFiles) as $uploadedFile) {
+                            try {
+                                if (isset($uploadedFile['path']) && Storage::disk('public')->exists($uploadedFile['path'])) {
+                                    Storage::disk('public')->delete($uploadedFile['path']);
+                                }
+                                if (isset($uploadedFile['thumbnail']) && Storage::disk('public')->exists($uploadedFile['thumbnail'])) {
+                                    Storage::disk('public')->delete($uploadedFile['thumbnail']);
+                                }
+                            } catch (\Exception $cleanupError) {
+                                \Log::error("[Survey Update] Cleanup error: " . $cleanupError->getMessage());
+                            }
+                        }
+                        
+                        \Log::error("[Survey Update] Photo #{$index} upload failed: " . $fileError->getMessage());
+                        throw new \Exception("Failed to upload photo: {$fileName}. " . $fileError->getMessage());
+                    }
                 }
             }
 
@@ -539,14 +702,52 @@ class SurveyResultsController extends Controller
             if (!empty($momUploads)) {
                 $order = $survey->order;
                 $existingMomFiles = $order->mom_files ?? [];
+                $uploadedMomFiles = [];
 
                 // Migrate legacy single file into the array to keep behavior consistent
                 if (!empty($order->mom_file)) {
                     $existingMomFiles[] = $order->mom_file;
                 }
 
-                foreach ($momUploads as $file) {
-                    $existingMomFiles[] = $file->store('mom_files', 'public');
+                foreach ($momUploads as $index => $file) {
+                    try {
+                        $fileName = $file->getClientOriginalName();
+                        \Log::info("[Survey Update] Uploading MOM file #{$index}: {$fileName}");
+                        
+                        $path = $file->store('mom_files', 'public');
+                        $uploadedMomFiles[] = $path;
+                        $existingMomFiles[] = $path;
+                        
+                        \Log::info("[Survey Update] MOM file #{$index} uploaded successfully: {$path}");
+                    } catch (\Exception $fileError) {
+                        // Cleanup uploaded MOM files from this request
+                        foreach ($uploadedMomFiles as $uploadedPath) {
+                            try {
+                                if (Storage::disk('public')->exists($uploadedPath)) {
+                                    Storage::disk('public')->delete($uploadedPath);
+                                }
+                            } catch (\Exception $cleanupError) {
+                                \Log::error("[Survey Update] MOM cleanup error: " . $cleanupError->getMessage());
+                            }
+                        }
+                        
+                        // Also cleanup layout and foto files uploaded in this request
+                        foreach (array_merge($newLayoutFiles ?? [], $newFotoFiles ?? []) as $uploadedFile) {
+                            try {
+                                if (isset($uploadedFile['path']) && Storage::disk('public')->exists($uploadedFile['path'])) {
+                                    Storage::disk('public')->delete($uploadedFile['path']);
+                                }
+                                if (isset($uploadedFile['thumbnail']) && Storage::disk('public')->exists($uploadedFile['thumbnail'])) {
+                                    Storage::disk('public')->delete($uploadedFile['thumbnail']);
+                                }
+                            } catch (\Exception $cleanupError) {
+                                \Log::error("[Survey Update] Cleanup error: " . $cleanupError->getMessage());
+                            }
+                        }
+                        
+                        \Log::error("[Survey Update] MOM file #{$index} upload failed: " . $fileError->getMessage());
+                        throw new \Exception("Failed to upload MOM file: {$fileName}. " . $fileError->getMessage());
+                    }
                 }
 
                 // Remove duplicates while preserving order
@@ -564,11 +765,9 @@ class SurveyResultsController extends Controller
             }
 
             /* ===============================
-             * NOTIFICATION (only if published from draft)
+             * UPDATE STATUS (only if published from draft)
              * =============================== */
             if (!$isDraft) {
-                $notificationService = new NotificationService();
-                $notificationService->sendMoodboardRequestNotification($survey->order);
                 $order = $survey->order;
                 $order->update([
                     'tahapan_proyek' => 'moodboard',
@@ -629,7 +828,26 @@ class SurveyResultsController extends Controller
                 }
             }
 
+            \Log::info("[Survey Update] Survey ID {$survey->id} updated successfully. New files - Layout: " . count($newLayoutFiles ?? []) . ", Photos: " . count($newFotoFiles ?? []));
+            
             DB::commit();
+
+            /* ===============================
+             * NOTIFICATION (OUTSIDE TRANSACTION)
+             * Dipindahkan ke luar transaction agar error notification tidak rollback data
+             * =============================== */
+            if (!$isDraft) {
+                try {
+                    \Log::info("[Survey Update] Sending moodboard notification for Order ID: {$survey->order->id}");
+                    $notificationService = new NotificationService();
+                    $notificationService->sendMoodboardRequestNotification($survey->order);
+                    \Log::info("[Survey Update] Moodboard notification sent successfully");
+                } catch (\Exception $notifError) {
+                    // Log error tapi JANGAN rollback data yang sudah tersimpan
+                    \Log::error("[Survey Update] Notification failed but survey data saved: " . $notifError->getMessage());
+                    // User tetap dapat success message, admin bisa cek log untuk notification issue
+                }
+            }
 
             $message = $isDraft
                 ? 'Survey Results saved as draft successfully.'

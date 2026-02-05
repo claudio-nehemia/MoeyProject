@@ -205,15 +205,15 @@ export default function Show({ rabKontrak }: Props) {
                                                 <div>
                                                     <span className="font-bold text-emerald-600 dark:text-emerald-400">Harga BB (Kontrak)</span>
                                                     <span className="mx-2">=</span>
-                                                    <span className="text-gray-600 dark:text-gray-400">Harga BB ÷ (Markup / 100)</span>
+                                                    <span className="text-gray-600 dark:text-gray-400">Harga BB × (1 + Markup/100)</span>
                                                 </div>
                                                 <div>
                                                     <span className="font-bold text-blue-600 dark:text-blue-400">Finishing (Kontrak)</span>
                                                     <span className="mx-2">=</span>
-                                                    <span className="text-gray-600 dark:text-gray-400">Finishing ÷ (Markup / 100)</span>
+                                                    <span className="text-gray-600 dark:text-gray-400">Finishing × (1 + Markup/100)</span>
                                                 </div>
                                                 <div className="mt-2 text-xs text-amber-600 dark:text-amber-400 font-semibold">
-                                                    💡 Markup 150% → 150/100 = 1.5, lalu harga dibagi 1.5
+                                                    💡 Markup 20% → 1 + 20/100 = 1.2, lalu harga dikali 1.2
                                                 </div>
                                             </div>
                                         </div>
@@ -256,10 +256,10 @@ export default function Show({ rabKontrak }: Props) {
                                         <div className="mt-4 p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg border border-purple-200 dark:border-purple-700">
                                             <div className="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-1">✅ Karakteristik RAB Kontrak:</div>
                                             <ul className="text-xs text-purple-600 dark:text-purple-400 space-y-1">
-                                                <li>• Markup sebagai PEMBAGI (150% = 1.5, harga ÷ 1.5)</li>
-                                                <li>• Breakdown harga BB & finishing dengan pembagian markup</li>
-                                                <li>• Harga akhir = dari RAB Internal</li>
-                                                <li>• Include aksesoris dengan markup</li>
+                                                <li>• Markup sebagai PENGALI (20% → 1.2, harga × 1.2)</li>
+                                                <li>• Breakdown harga BB & finishing dengan perkalian markup</li>
+                                                <li>• Harga akhir dari RAB Internal sudah include margin</li>
+                                                <li>• Include aksesoris dengan markup tambahan</li>
                                             </ul>
                                         </div>
                                     </div>

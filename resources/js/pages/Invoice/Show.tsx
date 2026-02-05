@@ -780,44 +780,7 @@ export default function Show({ invoice }: Props) {
                             </div>
                         )}
 
-                        {/* Response Section (Termin 1 Only) */}
-                        {invoice.status === 'pending' && invoice.termin_step === 1 && !invoice.response_time && (
-                            <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-                                <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-8 py-4">
-                                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        Persetujuan Invoice
-                                    </h3>
-                                </div>
-                                <div className="p-8">
-                                    <div className="bg-blue-50 rounded-xl p-6 border border-blue-200 mb-6">
-                                        <div className="flex items-start gap-3">
-                                            <svg className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                            <div>
-                                                <p className="font-semibold text-blue-800">Menunggu Response</p>
-                                                <p className="text-sm text-blue-700 mt-1">
-                                                    Mohon konfirmasi bahwa Anda telah menerima dan menyetujui invoice ini sebelum melanjutkan ke proses pembayaran.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={handleResponse}
-                                        className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 border border-transparent rounded-xl font-bold text-base text-white uppercase tracking-wider shadow-xl hover:shadow-2xl hover:from-blue-700 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105 active:scale-95"
-                                    >
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                        </svg>
-                                        Setujui Invoice
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
+                
                         {/* Invoice Info Cards - PM Response Status */}
                         {invoice.termin_step === 1 && (
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -853,7 +816,7 @@ export default function Show({ invoice }: Props) {
                                             </svg>
                                         </div>
                                         <div>
-                                            <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Client Response</p>
+                                            <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Response</p>
                                             <p className={`text-lg font-bold ${invoice.response_time ? 'text-blue-600' : 'text-gray-500'}`}>
                                                 {invoice.response_time ? 'Accepted' : 'Waiting Response'}
                                             </p>

@@ -26,7 +26,7 @@ class SurveyUlangController extends Controller
             ->where(function ($q) {
                 $q->whereRaw("LOWER(tahapan_proyek) = 'survey_ulang'");
             })
-            ->orderBy('id', 'desc')
+            ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($o) {
 

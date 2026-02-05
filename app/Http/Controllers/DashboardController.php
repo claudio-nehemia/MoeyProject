@@ -19,12 +19,21 @@ class DashboardController extends Controller
             ->take(4)
             ->get();
 
+        // Get current user with role and divisi
+        $user = auth()->user()->load('role.divisi');
+
         return Inertia::render('dashboard', [
             'totalOrders' => $totalOrders,
             'activeOrders' => $activeOrders,
             'completeProjects' => $completeProjects,
             'recentOrders' => $recentOrders,
             'completePercentage' => round($completePercentage, 2),
+            'currentUser' => [
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role?->nama_role,
+                'divisi' => $user->role?->divisi?->nama_divisi,
+            ],
         ]);
     }
 }

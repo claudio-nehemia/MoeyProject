@@ -31,7 +31,8 @@ class SurveyScheduleController extends Controller
         $orders = Order::with(['surveyUsers:id,name'])
             ->whereNotNull('payment_status')
             ->whereRaw("LOWER(payment_status) LIKE '%dp%'")
-            ->orderBy('id', 'desc')
+            ->orderBy('created_at', 'desc')
+
             ->get()
             ->map(fn($o) => [
                 'id' => $o->id,

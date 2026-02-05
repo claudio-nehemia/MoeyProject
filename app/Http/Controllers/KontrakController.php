@@ -29,6 +29,8 @@ class KontrakController extends Controller
                 $query->where('is_submitted', true);
             })
             ->whereHas('rabKontrak') // Must have RAB Kontrak
+            ->orderBy('created_at', 'desc')
+
             ->get()
             ->map(function ($itemPekerjaan) {
                 // Calculate grand total from RAB Kontrak

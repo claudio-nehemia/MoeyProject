@@ -157,11 +157,19 @@ export default function Create({
         );
     };
 
-    const removeProdukFromRuangan = (ruanganTempId: number, produkTempId: number) => {
+    const removeProdukFromRuangan = (
+        ruanganTempId: number,
+        produkTempId: number,
+    ) => {
         setRuangans(
             ruangans.map((r) =>
                 r.temp_id === ruanganTempId
-                    ? { ...r, produks: r.produks.filter((p) => p.temp_id !== produkTempId) }
+                    ? {
+                          ...r,
+                          produks: r.produks.filter(
+                              (p) => p.temp_id !== produkTempId,
+                          ),
+                      }
                     : r,
             ),
         );
@@ -179,7 +187,9 @@ export default function Create({
                     ? {
                           ...r,
                           produks: r.produks.map((p) =>
-                              p.temp_id === produkTempId ? { ...p, [field]: value } : p,
+                              p.temp_id === produkTempId
+                                  ? { ...p, [field]: value }
+                                  : p,
                           ),
                       }
                     : r,
@@ -200,11 +210,14 @@ export default function Create({
                           produks: r.produks.map((p) => {
                               if (p.temp_id === produkTempId) {
                                   const selected = p.selected_bahan_bakus || [];
-                                  const isSelected = selected.includes(bahanBakuId);
+                                  const isSelected =
+                                      selected.includes(bahanBakuId);
                                   return {
                                       ...p,
                                       selected_bahan_bakus: isSelected
-                                          ? selected.filter((id) => id !== bahanBakuId)
+                                          ? selected.filter(
+                                                (id) => id !== bahanBakuId,
+                                            )
                                           : [...selected, bahanBakuId],
                                   };
                               }
@@ -237,7 +250,10 @@ export default function Create({
         );
     };
 
-    const clearAllBahanBakuInRuangan = (ruanganTempId: number, produkTempId: number) => {
+    const clearAllBahanBakuInRuangan = (
+        ruanganTempId: number,
+        produkTempId: number,
+    ) => {
         setRuangans(
             ruangans.map((r) =>
                 r.temp_id === ruanganTempId
@@ -254,7 +270,10 @@ export default function Create({
         );
     };
 
-    const addJenisItemInRuangan = (ruanganTempId: number, produkTempId: number) => {
+    const addJenisItemInRuangan = (
+        ruanganTempId: number,
+        produkTempId: number,
+    ) => {
         setRuangans(
             ruangans.map((r) =>
                 r.temp_id === ruanganTempId
@@ -326,7 +345,11 @@ export default function Create({
                                       ...p,
                                       jenisItems: p.jenisItems.map((j) =>
                                           j.temp_id === jenisTempId
-                                              ? { ...j, jenis_item_id: value, items: [] }
+                                              ? {
+                                                    ...j,
+                                                    jenis_item_id: value,
+                                                    items: [],
+                                                }
                                               : j,
                                       ),
                                   };
@@ -400,7 +423,9 @@ export default function Create({
                                               return {
                                                   ...j,
                                                   items: j.items.filter(
-                                                      (i) => i.temp_id !== itemTempId,
+                                                      (i) =>
+                                                          i.temp_id !==
+                                                          itemTempId,
                                                   ),
                                               };
                                           }
@@ -439,7 +464,10 @@ export default function Create({
                                                   ...j,
                                                   items: j.items.map((i) =>
                                                       i.temp_id === itemTempId
-                                                          ? { ...i, [field]: value }
+                                                          ? {
+                                                                ...i,
+                                                                [field]: value,
+                                                            }
                                                           : i,
                                                   ),
                                               };
@@ -480,7 +508,10 @@ export default function Create({
         }).format(value);
     };
 
-    const handleSubmit = (e: React.FormEvent, status: 'draft' | 'published') => {
+    const handleSubmit = (
+        e: React.FormEvent,
+        status: 'draft' | 'published',
+    ) => {
         e.preventDefault();
 
         const allProduks: any[] = [];
@@ -496,7 +527,8 @@ export default function Create({
                     bahan_bakus: p.selected_bahan_bakus || [],
                     jenisItems: p.jenisItems.map((j) => {
                         const selectedJenisItem = jenisItems.find(
-                            (ji) => ji.id.toString() === j.jenis_item_id.toString(),
+                            (ji) =>
+                                ji.id.toString() === j.jenis_item_id.toString(),
                         );
                         const isAksesoris =
                             selectedJenisItem?.nama_jenis_item?.toLowerCase() ===
@@ -731,7 +763,9 @@ export default function Create({
                                             <button
                                                 type="button"
                                                 onClick={() =>
-                                                    removeRuangan(ruangan.temp_id)
+                                                    removeRuangan(
+                                                        ruangan.temp_id,
+                                                    )
                                                 }
                                                 className="flex items-center gap-2 rounded-lg bg-red-500/20 px-4 py-2 text-sm font-medium text-red-200 transition-colors hover:bg-red-500/30"
                                             >
@@ -756,12 +790,16 @@ export default function Create({
                                             {/* Add Produk Button - Top */}
                                             <div className="mb-4 flex items-center justify-between">
                                                 <h4 className="text-md font-semibold text-slate-700">
-                                                    Produk di {ruangan.nama_ruangan || 'Ruangan ini'}
+                                                    Produk di{' '}
+                                                    {ruangan.nama_ruangan ||
+                                                        'Ruangan ini'}
                                                 </h4>
                                                 <button
                                                     type="button"
                                                     onClick={() =>
-                                                        addProdukToRuangan(ruangan.temp_id)
+                                                        addProdukToRuangan(
+                                                            ruangan.temp_id,
+                                                        )
                                                     }
                                                     className="flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-600"
                                                 >
@@ -785,356 +823,532 @@ export default function Create({
                                             {ruangan.produks.length === 0 ? (
                                                 <div className="rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-8 text-center">
                                                     <p className="text-sm text-slate-500">
-                                                        Belum ada produk di ruangan ini
+                                                        Belum ada produk di
+                                                        ruangan ini
                                                     </p>
                                                 </div>
                                             ) : (
                                                 <>
                                                     <div className="space-y-4">
-                                                        {ruangan.produks.map((produk, produkIndex) => {
-                                                            const selectedProdukData =
-                                                                getSelectedProduk(produk.produk_id);
+                                                        {ruangan.produks.map(
+                                                            (
+                                                                produk,
+                                                                produkIndex,
+                                                            ) => {
+                                                                const selectedProdukData =
+                                                                    getSelectedProduk(
+                                                                        produk.produk_id,
+                                                                    );
 
-                                                            return (
-                                                                <div
-                                                                    key={produk.temp_id}
-                                                                    className="rounded-xl border border-slate-200 bg-slate-50"
-                                                                >
-                                                                    {/* Produk Header */}
-                                                                    <div className="flex items-center justify-between bg-slate-700 px-4 py-3 rounded-t-xl">
-                                                                        <h5 className="flex items-center gap-2 font-medium text-white">
-                                                                            <span className="flex h-6 w-6 items-center justify-center rounded bg-white/20 text-xs">
-                                                                                {produkIndex + 1}
-                                                                            </span>
-                                                                            Produk #{produkIndex + 1}
-                                                                        </h5>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() =>
-                                                                                removeProdukFromRuangan(
-                                                                                    ruangan.temp_id,
-                                                                                    produk.temp_id,
-                                                                                )
-                                                                            }
-                                                                            className="text-red-300 hover:text-red-200"
-                                                                        >
-                                                                            <svg
-                                                                                className="h-5 w-5"
-                                                                                fill="none"
-                                                                                stroke="currentColor"
-                                                                                viewBox="0 0 24 24"
+                                                                return (
+                                                                    <div
+                                                                        key={
+                                                                            produk.temp_id
+                                                                        }
+                                                                        className="rounded-xl border border-slate-200 bg-slate-50"
+                                                                    >
+                                                                        {/* Produk Header */}
+                                                                        <div className="flex items-center justify-between rounded-t-xl bg-slate-700 px-4 py-3">
+                                                                            <h5 className="flex items-center gap-2 font-medium text-white">
+                                                                                <span className="flex h-6 w-6 items-center justify-center rounded bg-white/20 text-xs">
+                                                                                    {produkIndex +
+                                                                                        1}
+                                                                                </span>
+                                                                                Produk
+                                                                                #
+                                                                                {produkIndex +
+                                                                                    1}
+                                                                            </h5>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() =>
+                                                                                    removeProdukFromRuangan(
+                                                                                        ruangan.temp_id,
+                                                                                        produk.temp_id,
+                                                                                    )
+                                                                                }
+                                                                                className="text-red-300 hover:text-red-200"
                                                                             >
-                                                                                <path
-                                                                                    strokeLinecap="round"
-                                                                                    strokeLinejoin="round"
-                                                                                    strokeWidth={2}
-                                                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                                                                />
-                                                                            </svg>
-                                                                        </button>
-                                                                    </div>
-
-                                                                    <div className="p-4">
-                                                                        {/* Produk Selection & Quantity */}
-                                                                        <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-                                                                            <div>
-                                                                                <label className="mb-1 block text-sm font-medium text-slate-700">
-                                                                                    Pilih Produk <span className="text-red-500">*</span>
-                                                                                </label>
-                                                                                <select
-                                                                                    value={produk.produk_id}
-                                                                                    onChange={(e) =>
-                                                                                        updateProdukInRuangan(
-                                                                                            ruangan.temp_id,
-                                                                                            produk.temp_id,
-                                                                                            'produk_id',
-                                                                                            e.target.value,
-                                                                                        )
-                                                                                    }
-                                                                                    className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
-                                                                                    required
+                                                                                <svg
+                                                                                    className="h-5 w-5"
+                                                                                    fill="none"
+                                                                                    stroke="currentColor"
+                                                                                    viewBox="0 0 24 24"
                                                                                 >
-                                                                                    <option value="">-- Pilih Produk --</option>
-                                                                                    {produks.map((p) => (
-                                                                                        <option key={p.id} value={p.id}>
-                                                                                            {p.nama_produk}
-                                                                                        </option>
-                                                                                    ))}
-                                                                                </select>
-                                                                            </div>
-                                                                            <div>
-                                                                                <label className="mb-1 block text-sm font-medium text-slate-700">
-                                                                                    Quantity <span className="text-red-500">*</span>
-                                                                                </label>
-                                                                                <input
-                                                                                    type="number"
-                                                                                    value={produk.quantity}
-                                                                                    onChange={(e) =>
-                                                                                        updateProdukInRuangan(
-                                                                                            ruangan.temp_id,
-                                                                                            produk.temp_id,
-                                                                                            'quantity',
-                                                                                            e.target.value,
-                                                                                        )
-                                                                                    }
-                                                                                    className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
-                                                                                    min="1"
-                                                                                    required
-                                                                                />
-                                                                            </div>
+                                                                                    <path
+                                                                                        strokeLinecap="round"
+                                                                                        strokeLinejoin="round"
+                                                                                        strokeWidth={
+                                                                                            2
+                                                                                        }
+                                                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                                                    />
+                                                                                </svg>
+                                                                            </button>
                                                                         </div>
 
-                                                                        {/* Dimensions */}
-                                                                        <div className="mb-4">
-                                                                            <label className="mb-1 block text-sm font-medium text-slate-700">
-                                                                                Dimensi (m)
-                                                                            </label>
-                                                                            <div className="grid grid-cols-3 gap-3">
-                                                                                <input
-                                                                                    type="number"
-                                                                                    value={produk.panjang}
-                                                                                    onChange={(e) =>
-                                                                                        updateProdukInRuangan(
-                                                                                            ruangan.temp_id,
-                                                                                            produk.temp_id,
-                                                                                            'panjang',
-                                                                                            e.target.value,
-                                                                                        )
-                                                                                    }
-                                                                                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
-                                                                                    placeholder="Panjang"
-                                                                                    step="0.01"
-                                                                                    min="0"
-                                                                                />
-                                                                                <input
-                                                                                    type="number"
-                                                                                    value={produk.lebar}
-                                                                                    onChange={(e) =>
-                                                                                        updateProdukInRuangan(
-                                                                                            ruangan.temp_id,
-                                                                                            produk.temp_id,
-                                                                                            'lebar',
-                                                                                            e.target.value,
-                                                                                        )
-                                                                                    }
-                                                                                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
-                                                                                    placeholder="Lebar"
-                                                                                    step="0.01"
-                                                                                    min="0"
-                                                                                />
-                                                                                <input
-                                                                                    type="number"
-                                                                                    value={produk.tinggi}
-                                                                                    onChange={(e) =>
-                                                                                        updateProdukInRuangan(
-                                                                                            ruangan.temp_id,
-                                                                                            produk.temp_id,
-                                                                                            'tinggi',
-                                                                                            e.target.value,
-                                                                                        )
-                                                                                    }
-                                                                                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
-                                                                                    placeholder="Tinggi"
-                                                                                    step="0.01"
-                                                                                    min="0"
-                                                                                />
-                                                                            </div>
-                                                                        </div>
-
-                                                                        {/* Bahan Baku Selection */}
-                                                                        {selectedProdukData && selectedProdukData.bahan_bakus && selectedProdukData.bahan_bakus.length > 0 && (
-                                                                            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                                                                                <div className="mb-2 flex items-center justify-between">
-                                                                                    <label className="text-sm font-medium text-amber-800">
-                                                                                        Pilih Bahan Baku
-                                                                                    </label>
-                                                                                    <div className="flex gap-2">
-                                                                                        <button
-                                                                                            type="button"
-                                                                                            onClick={() =>
-                                                                                                selectAllBahanBakuInRuangan(
-                                                                                                    ruangan.temp_id,
-                                                                                                    produk.temp_id,
-                                                                                                    selectedProdukData.bahan_bakus.map((b) => b.id),
-                                                                                                )
-                                                                                            }
-                                                                                            className="text-xs text-amber-700 hover:text-amber-900"
-                                                                                        >
-                                                                                            Pilih Semua
-                                                                                        </button>
-                                                                                        <span className="text-amber-400">|</span>
-                                                                                        <button
-                                                                                            type="button"
-                                                                                            onClick={() =>
-                                                                                                clearAllBahanBakuInRuangan(
-                                                                                                    ruangan.temp_id,
-                                                                                                    produk.temp_id,
-                                                                                                )
-                                                                                            }
-                                                                                            className="text-xs text-amber-700 hover:text-amber-900"
-                                                                                        >
-                                                                                            Hapus Semua
-                                                                                        </button>
-                                                                                    </div>
-                                                                                </div>
-                                                                                <div className="flex flex-wrap gap-2">
-                                                                                    {selectedProdukData.bahan_bakus.map((bb) => (
-                                                                                        <label
-                                                                                            key={bb.id}
-                                                                                            className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors ${
-                                                                                                produk.selected_bahan_bakus?.includes(bb.id)
-                                                                                                    ? 'border-amber-500 bg-amber-100 text-amber-800'
-                                                                                                    : 'border-slate-200 bg-white text-slate-600 hover:border-amber-300'
-                                                                                            }`}
-                                                                                        >
-                                                                                            <input
-                                                                                                type="checkbox"
-                                                                                                checked={produk.selected_bahan_bakus?.includes(bb.id) || false}
-                                                                                                onChange={() =>
-                                                                                                    toggleBahanBakuInRuangan(
-                                                                                                        ruangan.temp_id,
-                                                                                                        produk.temp_id,
-                                                                                                        bb.id,
-                                                                                                    )
-                                                                                                }
-                                                                                                className="sr-only"
-                                                                                            />
-                                                                                            {bb.nama_item}
-                                                                                            {bb.pivot && (
-                                                                                                <span className="text-xs text-amber-600">
-                                                                                                    ({formatCurrency(bb.pivot.harga_dasar)})
-                                                                                                </span>
-                                                                                            )}
-                                                                                        </label>
-                                                                                    ))}
-                                                                                </div>
-                                                                            </div>
-                                                                        )}
-
-                                                                        {/* Jenis Items */}
-                                                                        {produk.jenisItems.map((jenisItem, jiIndex) => {
-                                                                            const jenisItemName = getJenisItemName(jenisItem.jenis_item_id);
-                                                                            const availableItems = getAvailableItems(jenisItem.jenis_item_id);
-                                                                            const isAksesoris = jenisItemName.toLowerCase() === 'aksesoris';
-
-                                                                            return (
-                                                                                <div
-                                                                                    key={jenisItem.temp_id}
-                                                                                    className="mb-3 rounded-lg border border-slate-200 bg-white p-3"
-                                                                                >
-                                                                                    <div className="mb-2 flex items-center justify-between">
-                                                                                        <span className="text-sm font-medium text-slate-700">
-                                                                                            {jenisItemName || `Jenis Item ${jiIndex + 1}`}
+                                                                        <div className="p-4">
+                                                                            {/* Produk Selection & Quantity */}
+                                                                            <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                                                                                <div>
+                                                                                    <label className="mb-1 block text-sm font-medium text-slate-700">
+                                                                                        Pilih
+                                                                                        Produk{' '}
+                                                                                        <span className="text-red-500">
+                                                                                            *
                                                                                         </span>
-                                                                                        <button
-                                                                                            type="button"
-                                                                                            onClick={() =>
-                                                                                                addItemInRuangan(
-                                                                                                    ruangan.temp_id,
-                                                                                                    produk.temp_id,
-                                                                                                    jenisItem.temp_id,
-                                                                                                )
-                                                                                            }
-                                                                                            className="text-xs text-indigo-600 hover:text-indigo-800"
-                                                                                        >
-                                                                                            + Tambah Item
-                                                                                        </button>
-                                                                                    </div>
-
-                                                                                    {jenisItem.items.length === 0 ? (
-                                                                                        <p className="text-xs text-slate-400">Belum ada item</p>
-                                                                                    ) : (
-                                                                                        <div className="space-y-2">
-                                                                                            {jenisItem.items.map((item) => (
-                                                                                                <div
-                                                                                                    key={item.temp_id}
-                                                                                                    className="flex items-center gap-2"
+                                                                                    </label>
+                                                                                    <select
+                                                                                        value={
+                                                                                            produk.produk_id
+                                                                                        }
+                                                                                        onChange={(
+                                                                                            e,
+                                                                                        ) =>
+                                                                                            updateProdukInRuangan(
+                                                                                                ruangan.temp_id,
+                                                                                                produk.temp_id,
+                                                                                                'produk_id',
+                                                                                                e
+                                                                                                    .target
+                                                                                                    .value,
+                                                                                            )
+                                                                                        }
+                                                                                        className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                                                                                        required
+                                                                                    >
+                                                                                        <option value="">
+                                                                                            --
+                                                                                            Pilih
+                                                                                            Produk
+                                                                                            --
+                                                                                        </option>
+                                                                                        {produks.map(
+                                                                                            (
+                                                                                                p,
+                                                                                            ) => (
+                                                                                                <option
+                                                                                                    key={
+                                                                                                        p.id
+                                                                                                    }
+                                                                                                    value={
+                                                                                                        p.id
+                                                                                                    }
                                                                                                 >
-                                                                                                    <select
-                                                                                                        value={item.item_id}
-                                                                                                        onChange={(e) =>
-                                                                                                            updateItemInRuangan(
-                                                                                                                ruangan.temp_id,
-                                                                                                                produk.temp_id,
-                                                                                                                jenisItem.temp_id,
-                                                                                                                item.temp_id,
-                                                                                                                'item_id',
-                                                                                                                e.target.value,
-                                                                                                            )
+                                                                                                    {
+                                                                                                        p.nama_produk
+                                                                                                    }
+                                                                                                </option>
+                                                                                            ),
+                                                                                        )}
+                                                                                    </select>
+                                                                                </div>
+                                                                                <div>
+                                                                                    <label className="mb-1 block text-sm font-medium text-slate-700">
+                                                                                        Quantity{' '}
+                                                                                        <span className="text-red-500">
+                                                                                            *
+                                                                                        </span>
+                                                                                    </label>
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        value={
+                                                                                            produk.quantity
+                                                                                        }
+                                                                                        onChange={(
+                                                                                            e,
+                                                                                        ) =>
+                                                                                            updateProdukInRuangan(
+                                                                                                ruangan.temp_id,
+                                                                                                produk.temp_id,
+                                                                                                'quantity',
+                                                                                                e
+                                                                                                    .target
+                                                                                                    .value,
+                                                                                            )
+                                                                                        }
+                                                                                        className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                                                                                        min="1"
+                                                                                        required
+                                                                                    />
+                                                                                </div>
+                                                                            </div>
+
+                                                                            {/* Dimensions */}
+                                                                            <div className="mb-4">
+                                                                                <label className="mb-1 block text-sm font-medium text-slate-700">
+                                                                                    Dimensi
+                                                                                    (m)
+                                                                                </label>
+                                                                                <div className="grid grid-cols-3 gap-3">
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        value={
+                                                                                            produk.panjang
+                                                                                        }
+                                                                                        onChange={(
+                                                                                            e,
+                                                                                        ) =>
+                                                                                            updateProdukInRuangan(
+                                                                                                ruangan.temp_id,
+                                                                                                produk.temp_id,
+                                                                                                'panjang',
+                                                                                                e
+                                                                                                    .target
+                                                                                                    .value,
+                                                                                            )
+                                                                                        }
+                                                                                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                                                                                        placeholder="Panjang"
+                                                                                        step="0.01"
+                                                                                        min="0"
+                                                                                    />
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        value={
+                                                                                            produk.lebar
+                                                                                        }
+                                                                                        onChange={(
+                                                                                            e,
+                                                                                        ) =>
+                                                                                            updateProdukInRuangan(
+                                                                                                ruangan.temp_id,
+                                                                                                produk.temp_id,
+                                                                                                'lebar',
+                                                                                                e
+                                                                                                    .target
+                                                                                                    .value,
+                                                                                            )
+                                                                                        }
+                                                                                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                                                                                        placeholder="Lebar"
+                                                                                        step="0.01"
+                                                                                        min="0"
+                                                                                    />
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        value={
+                                                                                            produk.tinggi
+                                                                                        }
+                                                                                        onChange={(
+                                                                                            e,
+                                                                                        ) =>
+                                                                                            updateProdukInRuangan(
+                                                                                                ruangan.temp_id,
+                                                                                                produk.temp_id,
+                                                                                                'tinggi',
+                                                                                                e
+                                                                                                    .target
+                                                                                                    .value,
+                                                                                            )
+                                                                                        }
+                                                                                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                                                                                        placeholder="Tinggi"
+                                                                                        step="0.01"
+                                                                                        min="0"
+                                                                                    />
+                                                                                </div>
+                                                                            </div>
+
+                                                                            {/* Bahan Baku Selection */}
+                                                                            {selectedProdukData &&
+                                                                                selectedProdukData.bahan_bakus &&
+                                                                                selectedProdukData
+                                                                                    .bahan_bakus
+                                                                                    .length >
+                                                                                    0 && (
+                                                                                    <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                                                                                        <div className="mb-2 flex items-center justify-between">
+                                                                                            <label className="text-sm font-medium text-amber-800">
+                                                                                                Pilih
+                                                                                                Bahan
+                                                                                                Baku
+                                                                                            </label>
+                                                                                            <div className="flex gap-2">
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    onClick={() =>
+                                                                                                        selectAllBahanBakuInRuangan(
+                                                                                                            ruangan.temp_id,
+                                                                                                            produk.temp_id,
+                                                                                                            selectedProdukData.bahan_bakus.map(
+                                                                                                                (
+                                                                                                                    b,
+                                                                                                                ) =>
+                                                                                                                    b.id,
+                                                                                                            ),
+                                                                                                        )
+                                                                                                    }
+                                                                                                    className="text-xs text-amber-700 hover:text-amber-900"
+                                                                                                >
+                                                                                                    Pilih
+                                                                                                    Semua
+                                                                                                </button>
+                                                                                                <span className="text-amber-400">
+                                                                                                    |
+                                                                                                </span>
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    onClick={() =>
+                                                                                                        clearAllBahanBakuInRuangan(
+                                                                                                            ruangan.temp_id,
+                                                                                                            produk.temp_id,
+                                                                                                        )
+                                                                                                    }
+                                                                                                    className="text-xs text-amber-700 hover:text-amber-900"
+                                                                                                >
+                                                                                                    Hapus
+                                                                                                    Semua
+                                                                                                </button>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div className="flex flex-wrap gap-2">
+                                                                                            {selectedProdukData.bahan_bakus.map(
+                                                                                                (
+                                                                                                    bb,
+                                                                                                ) => (
+                                                                                                    <label
+                                                                                                        key={
+                                                                                                            bb.id
                                                                                                         }
-                                                                                                        className="flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
+                                                                                                        className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                                                                                                            produk.selected_bahan_bakus?.includes(
+                                                                                                                bb.id,
+                                                                                                            )
+                                                                                                                ? 'border-amber-500 bg-amber-100 text-amber-800'
+                                                                                                                : 'border-slate-200 bg-white text-slate-600 hover:border-amber-300'
+                                                                                                        }`}
                                                                                                     >
-                                                                                                        <option value="">-- Pilih --</option>
-                                                                                                        {availableItems.map((ai) => (
-                                                                                                            <option key={ai.id} value={ai.id}>
-                                                                                                                {ai.nama_item}
-                                                                                                            </option>
-                                                                                                        ))}
-                                                                                                    </select>
-                                                                                                    {isAksesoris && (
                                                                                                         <input
-                                                                                                            type="number"
-                                                                                                            value={item.quantity}
-                                                                                                            onChange={(e) =>
-                                                                                                                updateItemInRuangan(
+                                                                                                            type="checkbox"
+                                                                                                            checked={
+                                                                                                                produk.selected_bahan_bakus?.includes(
+                                                                                                                    bb.id,
+                                                                                                                ) ||
+                                                                                                                false
+                                                                                                            }
+                                                                                                            onChange={() =>
+                                                                                                                toggleBahanBakuInRuangan(
                                                                                                                     ruangan.temp_id,
                                                                                                                     produk.temp_id,
-                                                                                                                    jenisItem.temp_id,
-                                                                                                                    item.temp_id,
-                                                                                                                    'quantity',
-                                                                                                                    parseInt(e.target.value) || 1,
+                                                                                                                    bb.id,
                                                                                                                 )
                                                                                                             }
-                                                                                                            className="w-20 rounded border border-slate-300 px-2 py-1 text-sm"
-                                                                                                            min="1"
-                                                                                                            placeholder="Qty"
+                                                                                                            className="sr-only"
                                                                                                         />
-                                                                                                    )}
-                                                                                                    <button
-                                                                                                        type="button"
-                                                                                                        onClick={() =>
-                                                                                                            removeItemInRuangan(
-                                                                                                                ruangan.temp_id,
-                                                                                                                produk.temp_id,
-                                                                                                                jenisItem.temp_id,
-                                                                                                                item.temp_id,
-                                                                                                            )
+                                                                                                        {
+                                                                                                            bb.nama_item
                                                                                                         }
-                                                                                                        className="text-red-500 hover:text-red-700"
-                                                                                                    >
-                                                                                                        <svg
-                                                                                                            className="h-4 w-4"
-                                                                                                            fill="none"
-                                                                                                            stroke="currentColor"
-                                                                                                            viewBox="0 0 24 24"
-                                                                                                        >
-                                                                                                            <path
-                                                                                                                strokeLinecap="round"
-                                                                                                                strokeLinejoin="round"
-                                                                                                                strokeWidth={2}
-                                                                                                                d="M6 18L18 6M6 6l12 12"
-                                                                                                            />
-                                                                                                        </svg>
-                                                                                                    </button>
-                                                                                                </div>
-                                                                                            ))}
+                                                                                                        {bb.pivot && (
+                                                                                                            <span className="text-xs text-amber-600">
+                                                                                                                (
+                                                                                                                {formatCurrency(
+                                                                                                                    bb
+                                                                                                                        .pivot
+                                                                                                                        .harga_dasar,
+                                                                                                                )}
+                                                                                                                )
+                                                                                                            </span>
+                                                                                                        )}
+                                                                                                    </label>
+                                                                                                ),
+                                                                                            )}
                                                                                         </div>
-                                                                                    )}
-                                                                                </div>
-                                                                            );
-                                                                        })}
+                                                                                    </div>
+                                                                                )}
+
+                                                                            {/* Jenis Items */}
+                                                                            {produk.jenisItems.map(
+                                                                                (
+                                                                                    jenisItem,
+                                                                                    jiIndex,
+                                                                                ) => {
+                                                                                    const jenisItemName =
+                                                                                        getJenisItemName(
+                                                                                            jenisItem.jenis_item_id,
+                                                                                        );
+                                                                                    const availableItems =
+                                                                                        getAvailableItems(
+                                                                                            jenisItem.jenis_item_id,
+                                                                                        );
+                                                                                    const isAksesoris =
+                                                                                        jenisItemName.toLowerCase() ===
+                                                                                        'aksesoris';
+
+                                                                                    return (
+                                                                                        <div
+                                                                                            key={
+                                                                                                jenisItem.temp_id
+                                                                                            }
+                                                                                            className="mb-3 rounded-lg border border-slate-200 bg-white p-3"
+                                                                                        >
+                                                                                            <div className="mb-2 flex items-center justify-between">
+                                                                                                <span className="text-sm font-medium text-slate-700">
+                                                                                                    {jenisItemName ||
+                                                                                                        `Jenis Item ${jiIndex + 1}`}
+                                                                                                </span>
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    onClick={() =>
+                                                                                                        addItemInRuangan(
+                                                                                                            ruangan.temp_id,
+                                                                                                            produk.temp_id,
+                                                                                                            jenisItem.temp_id,
+                                                                                                        )
+                                                                                                    }
+                                                                                                    className="text-xs text-indigo-600 hover:text-indigo-800"
+                                                                                                >
+                                                                                                    +
+                                                                                                    Tambah
+                                                                                                    Item
+                                                                                                </button>
+                                                                                            </div>
+
+                                                                                            {jenisItem
+                                                                                                .items
+                                                                                                .length ===
+                                                                                            0 ? (
+                                                                                                <p className="text-xs text-slate-400">
+                                                                                                    Belum
+                                                                                                    ada
+                                                                                                    item
+                                                                                                </p>
+                                                                                            ) : (
+                                                                                                <div className="space-y-2">
+                                                                                                    {jenisItem.items.map(
+                                                                                                        (
+                                                                                                            item,
+                                                                                                        ) => (
+                                                                                                            <div
+                                                                                                                key={
+                                                                                                                    item.temp_id
+                                                                                                                }
+                                                                                                                className="flex items-center gap-2"
+                                                                                                            >
+                                                                                                                <select
+                                                                                                                    value={
+                                                                                                                        item.item_id
+                                                                                                                    }
+                                                                                                                    onChange={(
+                                                                                                                        e,
+                                                                                                                    ) =>
+                                                                                                                        updateItemInRuangan(
+                                                                                                                            ruangan.temp_id,
+                                                                                                                            produk.temp_id,
+                                                                                                                            jenisItem.temp_id,
+                                                                                                                            item.temp_id,
+                                                                                                                            'item_id',
+                                                                                                                            e
+                                                                                                                                .target
+                                                                                                                                .value,
+                                                                                                                        )
+                                                                                                                    }
+                                                                                                                    className="flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
+                                                                                                                >
+                                                                                                                    <option value="">
+                                                                                                                        --
+                                                                                                                        Pilih
+                                                                                                                        --
+                                                                                                                    </option>
+                                                                                                                    {availableItems.map(
+                                                                                                                        (
+                                                                                                                            ai,
+                                                                                                                        ) => (
+                                                                                                                            <option
+                                                                                                                                key={
+                                                                                                                                    ai.id
+                                                                                                                                }
+                                                                                                                                value={
+                                                                                                                                    ai.id
+                                                                                                                                }
+                                                                                                                            >
+                                                                                                                                {
+                                                                                                                                    ai.nama_item
+                                                                                                                                }
+                                                                                                                            </option>
+                                                                                                                        ),
+                                                                                                                    )}
+                                                                                                                </select>
+                                                                                                                {isAksesoris && (
+                                                                                                                    <input
+                                                                                                                        type="number"
+                                                                                                                        value={
+                                                                                                                            item.quantity
+                                                                                                                        }
+                                                                                                                        onChange={(
+                                                                                                                            e,
+                                                                                                                        ) =>
+                                                                                                                            updateItemInRuangan(
+                                                                                                                                ruangan.temp_id,
+                                                                                                                                produk.temp_id,
+                                                                                                                                jenisItem.temp_id,
+                                                                                                                                item.temp_id,
+                                                                                                                                'quantity',
+                                                                                                                                parseInt(
+                                                                                                                                    e
+                                                                                                                                        .target
+                                                                                                                                        .value,
+                                                                                                                                ) ||
+                                                                                                                                    1,
+                                                                                                                            )
+                                                                                                                        }
+                                                                                                                        className="w-20 rounded border border-slate-300 px-2 py-1 text-sm"
+                                                                                                                        min="1"
+                                                                                                                        placeholder="Qty"
+                                                                                                                    />
+                                                                                                                )}
+                                                                                                                <button
+                                                                                                                    type="button"
+                                                                                                                    onClick={() =>
+                                                                                                                        removeItemInRuangan(
+                                                                                                                            ruangan.temp_id,
+                                                                                                                            produk.temp_id,
+                                                                                                                            jenisItem.temp_id,
+                                                                                                                            item.temp_id,
+                                                                                                                        )
+                                                                                                                    }
+                                                                                                                    className="text-red-500 hover:text-red-700"
+                                                                                                                >
+                                                                                                                    <svg
+                                                                                                                        className="h-4 w-4"
+                                                                                                                        fill="none"
+                                                                                                                        stroke="currentColor"
+                                                                                                                        viewBox="0 0 24 24"
+                                                                                                                    >
+                                                                                                                        <path
+                                                                                                                            strokeLinecap="round"
+                                                                                                                            strokeLinejoin="round"
+                                                                                                                            strokeWidth={
+                                                                                                                                2
+                                                                                                                            }
+                                                                                                                            d="M6 18L18 6M6 6l12 12"
+                                                                                                                        />
+                                                                                                                    </svg>
+                                                                                                                </button>
+                                                                                                            </div>
+                                                                                                        ),
+                                                                                                    )}
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    );
+                                                                                },
+                                                                            )}
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                            );
-                                                        })}
+                                                                );
+                                                            },
+                                                        )}
                                                     </div>
-                                                    
+
                                                     {/* Add Produk Button - Bottom */}
                                                     <div className="mt-4 flex justify-center">
                                                         <button
                                                             type="button"
                                                             onClick={() =>
-                                                                addProdukToRuangan(ruangan.temp_id)
+                                                                addProdukToRuangan(
+                                                                    ruangan.temp_id,
+                                                                )
                                                             }
                                                             className="flex items-center gap-2 rounded-lg border-2 border-dashed border-emerald-300 bg-emerald-50 px-6 py-3 text-sm font-medium text-emerald-600 transition-all hover:border-emerald-400 hover:bg-emerald-100"
                                                         >
@@ -1147,7 +1361,9 @@ export default function Create({
                                                                 <path
                                                                     strokeLinecap="round"
                                                                     strokeLinejoin="round"
-                                                                    strokeWidth={2}
+                                                                    strokeWidth={
+                                                                        2
+                                                                    }
                                                                     d="M12 4v16m8-8H4"
                                                                 />
                                                             </svg>
@@ -1162,6 +1378,32 @@ export default function Create({
                             </div>
                         )}
 
+                        {/* Add Ruangan Button - Bottom */}
+                        {ruangans.length > 0 && (
+                            <div className="mt-6 flex justify-center">
+                                <button
+                                    type="button"
+                                    onClick={addRuangan}
+                                    className="flex items-center gap-2 rounded-lg border-2 border-dashed border-indigo-300 bg-indigo-50 px-6 py-3 text-sm font-medium text-indigo-600 transition-all hover:border-indigo-400 hover:bg-indigo-100"
+                                >
+                                    <svg
+                                        className="h-5 w-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M12 4v16m8-8H4"
+                                        />
+                                    </svg>
+                                    Tambah Ruangan Lagi
+                                </button>
+                            </div>
+                        )}
+
                         {/* Submit Buttons */}
                         <div className="mt-8 flex justify-end gap-4">
                             <button
@@ -1170,7 +1412,9 @@ export default function Create({
                                 disabled={processing || ruangans.length === 0}
                                 className="rounded-xl border border-slate-300 bg-white px-8 py-3 font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
                             >
-                                {processing ? 'Menyimpan...' : 'Simpan sebagai Draft'}
+                                {processing
+                                    ? 'Menyimpan...'
+                                    : 'Simpan sebagai Draft'}
                             </button>
                             <button
                                 type="button"

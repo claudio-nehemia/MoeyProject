@@ -52,6 +52,8 @@ class WorkplanItemController extends Controller
                 // Sudah ada pembayaran termin (bukan commitment fee, tahap >= 1)
                 $q->whereNotNull('paid_at')->where('termin_step', '>=', 1);
             })
+            ->orderBy('created_at', 'desc')
+
             //menampilkan yang sudah isi itempekerjaan kolom keterangan material
             ->get()
             ->map(function ($order) {

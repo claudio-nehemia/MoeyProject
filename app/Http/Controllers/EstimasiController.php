@@ -28,6 +28,7 @@ class EstimasiController extends Controller
                 $query->visibleToUser($user);
             })
             ->whereHas('kasarFiles')
+            ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($moodboard) {
                 return [

@@ -825,6 +825,32 @@ export default function Edit({
                         </div>
                     )}
 
+                    {/* Add Ruangan Button - Bottom */}
+                    {ruangans.length > 0 && (
+                        <div className="mt-6 flex justify-center">
+                            <button
+                                type="button"
+                                onClick={addRuangan}
+                                className="flex items-center gap-2 rounded-lg border-2 border-dashed border-blue-300 bg-blue-50 px-6 py-3 text-sm font-medium text-blue-600 transition-all hover:border-blue-400 hover:bg-blue-100"
+                            >
+                                <svg
+                                    className="h-5 w-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 4v16m8-8H4"
+                                    />
+                                </svg>
+                                Tambah Ruangan Lagi
+                            </button>
+                        </div>
+                    )}
+
                     {/* Submit Buttons */}
                     <div className="mt-8 flex justify-end gap-4">
                         <button

@@ -28,6 +28,8 @@ class InvoiceController extends Controller
         ])
             ->whereHas('rabKontrak')
             ->whereHas('kontrak') // Must have kontrak to generate invoices
+            ->orderBy('created_at', 'desc')
+
             ->get()
             ->map(function ($itemPekerjaan) {
                 // Get harga kontrak from Kontrak (this is the agreed contract price)

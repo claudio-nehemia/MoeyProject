@@ -30,6 +30,8 @@ class ItemPekerjaanController extends Controller
             'itemPekerjaan.produks.jenisItems.items.item'
         ])
             ->whereNotNull('moodboard_final')
+            ->orderBy('created_at', 'desc')
+
             ->get()
             ->map(function ($moodboard) {
                 return [

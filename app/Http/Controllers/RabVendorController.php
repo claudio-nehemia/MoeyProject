@@ -24,6 +24,8 @@ class RabVendorController extends Controller
         ])
             ->whereHas('produks')
             ->whereHas('rabInternal')
+            ->orderBy('created_at', 'desc')
+
             ->get()
             ->map(function ($itemPekerjaan) {
                 return [
@@ -156,12 +158,12 @@ class RabVendorController extends Controller
                     // Collect jenis items (Finishing only, exclude Aksesoris & Bahan Baku)
                     $jenisItemsList = [];
                     $jenisItems = $rabProduk->itemPekerjaanProduk->jenisItems ?? collect([]);
-                    
+
                     foreach ($jenisItems as $jenisItem) {
                         if ($jenisItem->jenis_item_id !== $aksesorisJenisItem?->id && $jenisItem->jenis_item_id !== $bahanBakuJenisItem?->id) {
                             $itemsList = [];
                             $items = $jenisItem->items ?? collect([]);
-                            
+
                             foreach ($items as $item) {
                                 $itemsList[] = [
                                     'nama_item' => $item->item->nama_item,
@@ -234,15 +236,17 @@ class RabVendorController extends Controller
             // NON AKSESORIS - Exclude Bahan Baku jenis
             $jenisItemsList = [];
             $jenisItems = $rabProduk->itemPekerjaanProduk->jenisItems ?? collect([]);
-            
+
             foreach ($jenisItems as $jenisItem) {
                 // Exclude Aksesoris and Bahan Baku jenis
-                if ($jenisItem->jenis_item_id !== $aksesorisJenisItem->id &&
-                    ($bahanBakuJenisItem === null || $jenisItem->jenis_item_id !== $bahanBakuJenisItem->id)) {
+                if (
+                    $jenisItem->jenis_item_id !== $aksesorisJenisItem->id &&
+                    ($bahanBakuJenisItem === null || $jenisItem->jenis_item_id !== $bahanBakuJenisItem->id)
+                ) {
 
                     $itemsList = [];
                     $items = $jenisItem->items ?? collect([]);
-                    
+
                     foreach ($items as $item) {
                         $itemsList[] = [
                             'nama_item' => $item->item->nama_item,
@@ -293,7 +297,7 @@ class RabVendorController extends Controller
 
         // FINAL PDF DATA
         $data = [
-            'rabVendor' => $rabVendor, 
+            'rabVendor' => $rabVendor,
             'id' => $rabVendor->id,
             'response_by' => $rabVendor->response_by,
             'response_time' => $rabVendor->response_time,
@@ -308,7 +312,7 @@ class RabVendorController extends Controller
 
         $pdf = Pdf::loadView('pdf.rab-vendor', $data)->setPaper('a4', 'landscape');
 
-        $filename = 'RAB-Vendor-'. $rabVendor->itemPekerjaan->moodboard->order->nama_project. '-' . date('YmdHis') . '.pdf';
+        $filename = 'RAB-Vendor-' . $rabVendor->itemPekerjaan->moodboard->order->nama_project . '-' . date('YmdHis') . '.pdf';
 
         return $pdf->download($filename);
 

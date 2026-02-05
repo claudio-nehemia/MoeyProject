@@ -21,6 +21,7 @@ class CommitmentFeeController extends Controller
     {
         $moodboards = Moodboard::with('commitmentFee', 'order')
             ->where('status', 'approved')
+            ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($moodboard) {
                 return [

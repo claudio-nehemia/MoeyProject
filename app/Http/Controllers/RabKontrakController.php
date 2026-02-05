@@ -24,6 +24,8 @@ class RabKontrakController extends Controller
         ])
             ->whereHas('produks')
             ->whereHas('rabInternal')
+            ->orderBy('created_at', 'desc')
+
             ->get()
             ->map(function ($itemPekerjaan) {
                 return [
@@ -236,8 +238,10 @@ class RabKontrakController extends Controller
             $jenisItemsList = [];
             foreach ($rabProduk->itemPekerjaanProduk->jenisItems as $jenisItem) {
                 // Exclude Aksesoris and Bahan Baku jenis
-                if ($jenisItem->jenis_item_id !== $aksesorisJenisItem->id && 
-                    ($bahanBakuJenisItem === null || $jenisItem->jenis_item_id !== $bahanBakuJenisItem->id)) {
+                if (
+                    $jenisItem->jenis_item_id !== $aksesorisJenisItem->id &&
+                    ($bahanBakuJenisItem === null || $jenisItem->jenis_item_id !== $bahanBakuJenisItem->id)
+                ) {
                     $itemsList = [];
                     foreach ($jenisItem->items as $item) {
                         $hargaSatuanWithMarkup = $item->item->harga * $markupMultiplier;
