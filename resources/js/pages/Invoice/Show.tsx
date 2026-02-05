@@ -1,7 +1,24 @@
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { FormEventHandler, useState, Fragment } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+
+interface User {
+    id: number;
+    name: string;
+    email: string;
+    role: {
+        nama_role: string;
+    };
+}
+
+interface PageProps {
+    auth: {
+        user: User;
+    };
+    invoice: Invoice;
+    [key: string]: any;
+}
 
 interface Order {
     nama_project: string;
@@ -60,8 +77,12 @@ interface Invoice {
     total_steps: number;
     total_amount: number;
     status: 'pending' | 'paid' | 'cancelled';
+    pm_response_time: string | null;
+    pm_response_by: string | null;
     bukti_bayar: string | null;
     paid_at: string | null;
+    response_time: string | null;
+    response_by: string | null;
     notes: string | null;
     created_at: string;
     order: Order;
@@ -99,6 +120,10 @@ export default function Show({ invoice }: Props) {
     const { data: bastData, setData: setBastData, post: postBast, processing: processingBast } = useForm({
         bast_foto_klien: null as File | null,
     });
+    
+    // Auth info
+    const { auth } = usePage<PageProps>().props;
+    const isKepalaMarketing = auth.user.role.nama_role === 'Kepala Marketing';
 
     const formatRupiah = (amount: number) => {
         return new Intl.NumberFormat('id-ID', {
@@ -217,6 +242,18 @@ export default function Show({ invoice }: Props) {
         const file = e.dataTransfer.files[0];
         if (file) {
             setBastData('bast_foto_klien', file);
+        }
+    };
+
+    const handleResponse = () => {
+        if (confirm('Apakah Anda yakin ingin menyetujui invoice ini?')) {
+            router.post(route('invoice.response', invoice.id));
+        }
+    };
+
+    const handlePmResponse = () => {
+        if (confirm('Apakah Anda yakin ingin mengirim invoice ini (PM Response)?')) {
+            router.post(route('pm.response.invoice', invoice.item_pekerjaan_id));
         }
     };
 
@@ -700,8 +737,142 @@ export default function Show({ invoice }: Props) {
                             </div>
                         )}
 
+                        {/* PM Response Section (Termin 1 Only, visible to KepMark) */}
+                        {!invoice.pm_response_time && isKepalaMarketing && (
+                            <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 mb-6 transition-all duration-300 hover:shadow-2xl">
+                                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-5">
+                                    <h3 className="text-xl font-bold text-white flex items-center gap-3">
+                                        <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        PM Response (Marketing)
+                                    </h3>
+                                </div>
+                                <div className="p-8">
+                                    <div className="bg-indigo-50 rounded-xl p-6 border border-indigo-200 mb-8 flex items-start gap-4">
+                                        <div className="p-2 bg-indigo-100 rounded-lg flex-shrink-0">
+                                            <svg className="w-6 h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-indigo-900 text-lg mb-1">Menunggu Konfirmasi Marketing</p>
+                                            <p className="text-indigo-700 leading-relaxed">
+                                                Sebagai Kepala Marketing, mohon konfirmasi bahwa invoice ini sudah valid dan siap dikirim/dilihat oleh klien.
+                                                Tindakan ini akan menyelesaikan task marketing untuk tahap Invoice.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handlePmResponse}
+                                        className="group w-full inline-flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 border border-transparent rounded-xl font-bold text-base text-white uppercase tracking-wider shadow-lg hover:shadow-xl hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/30 transition-all duration-200 hover:-translate-y-1 active:translate-y-0"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <svg className="w-5 h-5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            Konfirmasi & Kirim Invoice
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Response Section (Termin 1 Only) */}
+                        {invoice.status === 'pending' && invoice.termin_step === 1 && !invoice.response_time && (
+                            <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+                                <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-8 py-4">
+                                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Persetujuan Invoice
+                                    </h3>
+                                </div>
+                                <div className="p-8">
+                                    <div className="bg-blue-50 rounded-xl p-6 border border-blue-200 mb-6">
+                                        <div className="flex items-start gap-3">
+                                            <svg className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            <div>
+                                                <p className="font-semibold text-blue-800">Menunggu Response</p>
+                                                <p className="text-sm text-blue-700 mt-1">
+                                                    Mohon konfirmasi bahwa Anda telah menerima dan menyetujui invoice ini sebelum melanjutkan ke proses pembayaran.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handleResponse}
+                                        className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 border border-transparent rounded-xl font-bold text-base text-white uppercase tracking-wider shadow-xl hover:shadow-2xl hover:from-blue-700 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105 active:scale-95"
+                                    >
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        Setujui Invoice
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Invoice Info Cards - PM Response Status */}
+                        {invoice.termin_step === 1 && (
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                                    <div className="flex items-center gap-4 mb-4">
+                                        <div className={`p-3 rounded-xl ${invoice.pm_response_time ? 'bg-green-100/50 text-green-600' : 'bg-orange-100/50 text-orange-600'}`}>
+                                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">PM Response</p>
+                                            <p className={`text-lg font-bold ${invoice.pm_response_time ? 'text-green-600' : 'text-orange-500'}`}>
+                                                {invoice.pm_response_time ? 'Confirmed' : 'Pending'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {invoice.pm_response_time && (
+                                        <div className="pt-4 border-t border-gray-100">
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-gray-500">By {invoice.pm_response_by}</span>
+                                                <span className="font-medium text-gray-700">{formatDate(invoice.pm_response_time)}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                                    <div className="flex items-center gap-4 mb-4">
+                                        <div className={`p-3 rounded-xl ${invoice.response_time ? 'bg-blue-100/50 text-blue-600' : 'bg-gray-100/50 text-gray-600'}`}>
+                                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Client Response</p>
+                                            <p className={`text-lg font-bold ${invoice.response_time ? 'text-blue-600' : 'text-gray-500'}`}>
+                                                {invoice.response_time ? 'Accepted' : 'Waiting Response'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {invoice.response_time && (
+                                        <div className="pt-4 border-t border-gray-100">
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-gray-500">By {invoice.response_by}</span>
+                                                <span className="font-medium text-gray-700">{formatDate(invoice.response_time)}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Payment Proof Upload */}
-                        {invoice.status === 'pending' && (
+                        {invoice.status === 'pending' && (invoice.termin_step !== 1 || invoice.response_time) && (
                             <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
                                 <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-8 py-4">
                                     <h3 className="text-xl font-bold text-white flex items-center gap-2">

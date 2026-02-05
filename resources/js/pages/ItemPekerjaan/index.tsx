@@ -74,6 +74,8 @@ interface Props {
 interface TaskResponse {
     status: string;
     deadline: string | null;
+    response_time?: string | null;
+    response_by?: string | null;
     order_id: number;
     tahap: string;
     extend_time?: number;
@@ -166,8 +168,8 @@ function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: Props) {
     };
 
     const handlePmResponse = (moodboardId: number) => {
-        if (confirm('Apakah Anda yakin ingin memberikan PM response untuk moodboard ini?')) {
-            router.post(`/pm-response/moodboard/${moodboardId}`, {}, {
+        if (confirm('Apakah Anda yakin ingin memberikan PM response untuk item pekerjaan ini?')) {
+            router.post(`/pm-response/item-pekerjaan-by-moodboard/${moodboardId}`, {}, {
                 preserveScroll: true,
             });
         }
@@ -366,10 +368,32 @@ function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: Props) {
                                                     </div>
                                                 )}
                                             </div>
+
+                                            {/* Marketing Response Button/Badge - available even if item pekerjaan belum ada */}
+                                            {isKepalaMarketing && !taskResponseMarketing?.response_time && (
+                                                <div className="mt-3">
+                                                    <button
+                                                        onClick={() => handlePmResponse(moodboard.id)}
+                                                        className="w-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg transition-all"
+                                                    >
+                                                        Marketing Response
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {taskResponseMarketing?.response_time && (
+                                                <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-2">
+                                                    <p className="text-xs font-semibold text-purple-900">✓ Marketing Response</p>
+                                                    <p className="text-xs text-purple-700">By: {taskResponseMarketing.response_by || '-'}</p>
+                                                    <p className="text-xs text-purple-700">
+                                                        {formatDateTime(taskResponseMarketing.response_time)}
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Task Response Deadline - REGULAR */}
-                                        {taskResponseRegular && taskResponseRegular.status !== 'selesai' && (
+                                        {!isKepalaMarketing && taskResponseRegular && taskResponseRegular.status !== 'selesai' && (
                                             <div className="px-6 pt-4">
                                                 <div className={`p-3 rounded-lg border ${
                                                     daysLeftRegular !== null && daysLeftRegular < 0 
@@ -475,27 +499,6 @@ function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: Props) {
                                                             <strong>Response by:</strong> {moodboard.itemPekerjaan.response_by} • {formatDateTime(moodboard.itemPekerjaan.response_time)}
                                                         </span>
                                                     </div>
-
-                                                    {/* Marketing Response Button - INDEPENDENT */}
-                                                    {isKepalaMarketing && !moodboard.pm_response_time && (
-                                                        <div className="mt-3">
-                                                            <button
-                                                                onClick={() => handlePmResponse(moodboard.id)}
-                                                                className="w-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg transition-all"
-                                                            >
-                                                                Marketing Response
-                                                            </button>
-                                                        </div>
-                                                    )}
-
-                                                    {/* PM Response Badge */}
-                                                    {moodboard.pm_response_time && (
-                                                        <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-2">
-                                                            <p className="text-xs font-semibold text-purple-900">✓ PM Response</p>
-                                                            <p className="text-xs text-purple-700">By: {moodboard.pm_response_by}</p>
-                                                            <p className="text-xs text-purple-700">{formatDateTime(moodboard.pm_response_time!)}</p>
-                                                        </div>
-                                                    )}
 
                                                     <div className={`mt-3 text-sm ${
                                                         moodboard.itemPekerjaan.status === 'published' 

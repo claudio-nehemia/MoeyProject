@@ -303,6 +303,14 @@ class InvoiceController extends Controller
             ]);
         }
 
+        $marketingTaskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'invoice')
+            ->where('is_marketing', true)
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
         $invoice = Invoice::create([
             'item_pekerjaan_id' => $itemPekerjaan->id,
             'rab_kontrak_id' => $itemPekerjaan->rabKontrak->id,
@@ -311,6 +319,8 @@ class InvoiceController extends Controller
             'termin_text' => $terminText,
             'termin_persentase' => $persentase,
             'total_amount' => $totalAmount,
+            'pm_response_time' => $marketingTaskResponse?->response_time,
+            'pm_response_by' => $marketingTaskResponse?->user?->name,
             'status' => 'pending',
         ]);
 
@@ -387,6 +397,10 @@ class InvoiceController extends Controller
                 'status' => $invoice->status,
                 'bukti_bayar' => $invoice->bukti_bayar ? Storage::url($invoice->bukti_bayar) : null,
                 'paid_at' => $invoice->paid_at,
+                'response_time' => $invoice->response_time,
+                'response_by' => $invoice->response_by,
+                'pm_response_time' => $invoice->pm_response_time,
+                'pm_response_by' => $invoice->pm_response_by,
                 'notes' => $invoice->notes,
                 'created_at' => $invoice->created_at,
                 'order' => [
@@ -797,6 +811,56 @@ class InvoiceController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Gagal regenerate invoice: ' . $e->getMessage());
+        }
+    }
+
+    public function response(Request $request, $id)
+    {
+        try {
+            $invoice = Invoice::findOrFail($id);
+
+            // Response only for termin 1
+            if ($invoice->termin_step != 1) {
+                return back()->with('error', 'Response hanya diperlukan untuk invoice tahap pertama.');
+            }
+
+            // prevent duplicate response
+            if ($invoice->response_time) {
+                return back()->with('info', 'Invoice sudah di-response.');
+            }
+
+            DB::transaction(function () use ($invoice) {
+                $invoice->update([
+                    'response_time' => now(),
+                    'response_by' => auth()->user()->name,
+                ]);
+
+                // Update TaskResponse if exists
+                $itemPekerjaan = $invoice->itemPekerjaan;
+                if ($itemPekerjaan && $itemPekerjaan->moodboard && $itemPekerjaan->moodboard->order) {
+                    $order = $itemPekerjaan->moodboard->order;
+                    $taskResponse = TaskResponse::where('order_id', $order->id)
+                        ->where('tahap', 'invoice')
+                        ->first();
+
+                    if ($taskResponse && !$taskResponse->response_time) {
+                        $responseTime = now();
+                        // Assuming duration_actual is days difference from start_time
+                        $durationActual = $taskResponse->start_time ? $taskResponse->start_time->diffInDays($responseTime) : 0;
+
+                        $taskResponse->update([
+                            'response_time' => $responseTime,
+                            'duration_actual' => $durationActual,
+                            'status' => 'menunggu_input', // After response, waiting for payment input
+                        ]);
+                    }
+                }
+            });
+
+            return back()->with('success', 'Response invoice berhasil.');
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal update response: ' . $e->getMessage());
         }
     }
 }

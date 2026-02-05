@@ -370,6 +370,26 @@ class KontrakController extends Controller
                     'status' => 'menunggu_input',
                 ]);
 
+
+            $nextMarketingTaskExists = TaskResponse::where('order_id', $moodboard->order->id)
+                ->where('tahap', 'invoice')
+                ->where('is_marketing', true)
+                ->exists();
+
+            if (!$nextMarketingTaskExists) {
+                TaskResponse::create([
+                    'order_id' => $moodboard->order->id,
+                    'user_id' => null,
+                    'tahap' => 'invoice',
+                    'start_time' => now(),
+                    'deadline' => now()->addDays(3),
+                    'duration' => 3,
+                    'duration_actual' => 3,
+                    'extend_time' => 0,
+                    'status' => 'menunggu_response',
+                    'is_marketing' => true,
+                ]);
+            }
                 TaskResponse::create([
                     'order_id' => $moodboard->order->id,
                     'user_id' => null,

@@ -81,6 +81,8 @@ interface Notification {
             rab_internal?: {
                 response_time: string | null;
                 response_by: string | null;
+                pm_response_time?: string | null;
+                pm_response_by?: string | null;
             };
             kontrak?: {
                 response_time: string | null;
@@ -354,6 +356,15 @@ export default function Index({ notifications, unreadCount }: Props) {
                     responded: !!itemPekerjaan?.pm_response_time,
                     responseTime: itemPekerjaan?.pm_response_time || null,
                     responseBy: itemPekerjaan?.pm_response_by || null,
+                };
+            }
+
+            case 'rab_internal_request': {
+                const rabInternal = order.item_pekerjaans?.[0]?.rab_internal;
+                return {
+                    responded: !!rabInternal?.pm_response_time,
+                    responseTime: rabInternal?.pm_response_time || null,
+                    responseBy: rabInternal?.pm_response_by || null,
                 };
             }
 

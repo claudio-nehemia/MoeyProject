@@ -28,9 +28,21 @@ class TaskResponseController extends Controller
             // PENTING: Filter berdasarkan is_marketing
             // NOTE: In some environments there may be multiple rows for the same (order_id, tahap, is_marketing)
             // due to legacy logic. Always target the "active" one (highest extend_time, then most recently updated).
-            $taskResponse = TaskResponse::where('order_id', $orderId)
-                ->where('tahap', $tahap)
-                ->where('is_marketing', (bool) ($validated['is_marketing'] ?? false))
+            $isMarketing = (bool) ($validated['is_marketing'] ?? false);
+
+            $taskResponseQuery = TaskResponse::where('order_id', $orderId)
+                ->where('tahap', $tahap);
+
+            if ($isMarketing) {
+                $taskResponseQuery->where('is_marketing', true);
+            } else {
+                $taskResponseQuery->where(function ($q) {
+                    $q->where('is_marketing', false)->orWhereNull('is_marketing');
+                });
+            }
+
+            $taskResponse = $taskResponseQuery
+                ->orderByRaw("CASE WHEN status = 'selesai' THEN 1 ELSE 0 END")
                 ->orderByDesc('extend_time')
                 ->orderByDesc('updated_at')
                 ->orderByDesc('id')
@@ -75,10 +87,17 @@ class TaskResponseController extends Controller
         $query = TaskResponse::where('order_id', $orderId)
             ->where('tahap', $tahap);
         if (!is_null($isMarketing)) {
-            $query->where('is_marketing', (int)$isMarketing);
+            if ((int) $isMarketing === 1) {
+                $query->where('is_marketing', true);
+            } else {
+                $query->where(function ($q) {
+                    $q->where('is_marketing', false)->orWhereNull('is_marketing');
+                });
+            }
         }
         // Pick the most relevant record if duplicates exist.
         $taskResponse = $query
+            ->orderByRaw("CASE WHEN status = 'selesai' THEN 1 ELSE 0 END")
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
@@ -94,6 +113,8 @@ class TaskResponseController extends Controller
             'order_id' => $taskResponse->order_id,
             'tahap' => $taskResponse->tahap,
             'status' => $taskResponse->status,
+            'response_time' => $taskResponse->response_time ? $taskResponse->response_time->toIso8601String() : null,
+            'response_by' => $taskResponse->user?->name,
             'deadline' => $taskResponse->deadline ? $taskResponse->deadline->toIso8601String() : null,
             'extend_time' => (int) ($taskResponse->extend_time ?? 0),
             'is_marketing' => (int) ($taskResponse->is_marketing ?? 0),

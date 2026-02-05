@@ -33,6 +33,7 @@ class RabInternalController extends Controller
                     'id' => $itemPekerjaan->id,
                     'status' => $itemPekerjaan->status,
                     'order' => [
+                        'id' => $itemPekerjaan->moodboard->order->id,
                         'nama_project' => $itemPekerjaan->moodboard->order->nama_project,
                         'company_name' => $itemPekerjaan->moodboard->order->company_name,
                         'customer_name' => $itemPekerjaan->moodboard->order->customer_name,
@@ -41,6 +42,8 @@ class RabInternalController extends Controller
                         'id' => $itemPekerjaan->rabInternal->id,
                         'response_by' => $itemPekerjaan->rabInternal->response_by,
                         'response_time' => $itemPekerjaan->rabInternal->response_time,
+                        'pm_response_by' => $itemPekerjaan->rabInternal->pm_response_by,
+                        'pm_response_time' => $itemPekerjaan->rabInternal->pm_response_time,
                         'total_produks' => $itemPekerjaan->rabInternal->rabProduks->count(),
                     ] : null,
                 ];
@@ -62,14 +65,19 @@ class RabInternalController extends Controller
             }
 
             if ($itemPekerjaan->rabInternal) {
-                return back()->with('error', 'RAB Internal sudah ada untuk item pekerjaan ini.');
+                $itemPekerjaan->rabInternal->update(
+                    [
+                        'response_by' => auth()->user()->name,
+                        'response_time' => now(),
+                    ]
+                );
+            } else {
+                $rabInternal = RabInternal::create([
+                    'item_pekerjaan_id' => $itemPekerjaanId,
+                    'response_by' => auth()->user()->name,
+                    'response_time' => now(),
+                ]);
             }
-
-            $rabInternal = RabInternal::create([
-                'item_pekerjaan_id' => $itemPekerjaanId,
-                'response_by' => auth()->user()->name,
-                'response_time' => now(),
-            ]);
 
             $itemPekerjaan->moodboard->order->update([
                 'tahapan_proyek' => 'rab',
@@ -80,6 +88,7 @@ class RabInternalController extends Controller
                 ->orderByDesc('extend_time')
                 ->orderByDesc('updated_at')
                 ->orderByDesc('id')
+                ->where('is_marketing', false)
                 ->first();
 
             if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -312,6 +321,7 @@ class RabInternalController extends Controller
                 ->where('tahap', 'rab_internal')
                 ->orderByDesc('extend_time')
                 ->orderByDesc('updated_at')
+                ->where('is_marketing', false)
                 ->orderByDesc('id')
                 ->first();
 
@@ -661,6 +671,7 @@ class RabInternalController extends Controller
                 ->where('tahap', 'rab_internal')
                 ->orderByDesc('extend_time')
                 ->orderByDesc('updated_at')
+                ->where('is_marketing', false)
                 ->orderByDesc('id')
                 ->first();
 

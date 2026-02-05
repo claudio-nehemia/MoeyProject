@@ -108,6 +108,7 @@ class ItemPekerjaanController extends Controller
                 ->orderByDesc('extend_time')
                 ->orderByDesc('updated_at')
                 ->orderByDesc('id')
+                ->where('is_marketing', false)
                 ->first();
 
             if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -303,56 +304,60 @@ class ItemPekerjaanController extends Controller
             $notificationService = new NotificationService();
             $notificationService->sendRabInternalRequestNotification($itemPekerjaan->moodboard->order);
 
-            $taskResponse = TaskResponse::where('order_id', $itemPekerjaan->moodboard->order->id)
-                ->where('tahap', 'item_pekerjaan')
-                ->orderByDesc('extend_time')
-                ->orderByDesc('updated_at')
-                ->orderByDesc('id')
-                ->first();
+            $isDraft = $validated['status'] === 'draft';
+            if (!$isDraft) {
+                $taskResponse = TaskResponse::where('order_id', $itemPekerjaan->moodboard->order->id)
+                    ->where('tahap', 'item_pekerjaan')
+                    ->orderByDesc('extend_time')
+                    ->orderByDesc('updated_at')
+                    ->orderByDesc('id')
+                    ->where('is_marketing', false)
+                    ->first();
 
-            if ($taskResponse) {
-                if ($taskResponse->isOverdue()) {
-                    $taskResponse->update([
-                        'status' => 'telat_submit',
-                        'update_data_time' => now(),
-                    ]);
-                } else {
-                    $taskResponse->update([
-                        'update_data_time' => now(),
-                        'status' => 'selesai',
-                    ]);
-                }
+                if ($taskResponse) {
+                    if ($taskResponse->isOverdue()) {
+                        $taskResponse->update([
+                            'status' => 'telat_submit',
+                            'update_data_time' => now(),
+                        ]);
+                    } else {
+                        $taskResponse->update([
+                            'update_data_time' => now(),
+                            'status' => 'selesai',
+                        ]);
+                    }
 
-                // Create task response untuk tahap selanjutnya (cm_fee)
-                $nextTaskExists = TaskResponse::where('order_id', $itemPekerjaan->moodboard->order->id)
-                    ->where('tahap', 'rab_internal')
-                    ->exists();
+                    // Create task response untuk tahap selanjutnya (cm_fee)
+                    $nextTaskExists = TaskResponse::where('order_id', $itemPekerjaan->moodboard->order->id)
+                        ->where('tahap', 'rab_internal')
+                        ->exists();
 
-                if (!$nextTaskExists) {
-                    TaskResponse::create([
-                        'order_id' => $itemPekerjaan->moodboard->order->id,
-                        'user_id' => null,
-                        'tahap' => 'rab_internal',
-                        'start_time' => now(),
-                        'deadline' => now()->addDays(3), // Deadline untuk cm_fee
-                        'duration' => 3,
-                        'duration_actual' => 3,
-                        'extend_time' => 0,
-                        'status' => 'menunggu_response',
-                    ]);
+                    if (!$nextTaskExists) {
+                        TaskResponse::create([
+                            'order_id' => $itemPekerjaan->moodboard->order->id,
+                            'user_id' => null,
+                            'tahap' => 'rab_internal',
+                            'start_time' => now(),
+                            'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                            'duration' => 3,
+                            'duration_actual' => 3,
+                            'extend_time' => 0,
+                            'status' => 'menunggu_response',
+                        ]);
 
-                    TaskResponse::create([
-                        'order_id' => $itemPekerjaan->moodboard->order->id,
-                        'user_id' => null,
-                        'tahap' => 'rab_internal',
-                        'start_time' => now(),
-                        'deadline' => now()->addDays(3), // Deadline untuk cm_fee
-                        'duration' => 3,
-                        'duration_actual' => 3,
-                        'extend_time' => 0,
-                        'status' => 'menunggu_response',
-                        'is_marketing' => true,
-                    ]);
+                        TaskResponse::create([
+                            'order_id' => $itemPekerjaan->moodboard->order->id,
+                            'user_id' => null,
+                            'tahap' => 'rab_internal',
+                            'start_time' => now(),
+                            'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                            'duration' => 3,
+                            'duration_actual' => 3,
+                            'extend_time' => 0,
+                            'status' => 'menunggu_response',
+                            'is_marketing' => true,
+                        ]);
+                    }
                 }
             }
 
@@ -686,10 +691,69 @@ class ItemPekerjaanController extends Controller
             $produksToDelete = array_diff($existingProdukIds, $submittedProdukIds);
             ItemPekerjaanProduk::whereIn('id', $produksToDelete)->delete();
 
+            $notificationService = new NotificationService();
+            $notificationService->sendRabInternalRequestNotification($itemPekerjaan->moodboard->order);
+
             $statusMessage = $validated['status'] === 'draft'
                 ? 'Data item pekerjaan berhasil disimpan sebagai draft.'
                 : 'Data item pekerjaan berhasil dipublish.';
 
+            $isDraft = $validated['status'] === 'draft';
+            if (!$isDraft) {
+                $taskResponse = TaskResponse::where('order_id', $itemPekerjaan->moodboard->order->id)
+                    ->where('tahap', 'item_pekerjaan')
+                    ->orderByDesc('extend_time')
+                    ->orderByDesc('updated_at')
+                    ->orderByDesc('id')
+                    ->where('is_marketing', false)
+                    ->first();
+
+                if ($taskResponse) {
+                    if ($taskResponse->isOverdue()) {
+                        $taskResponse->update([
+                            'status' => 'telat_submit',
+                            'update_data_time' => now(),
+                        ]);
+                    } else {
+                        $taskResponse->update([
+                            'update_data_time' => now(),
+                            'status' => 'selesai',
+                        ]);
+                    }
+
+                    // Create task response untuk tahap selanjutnya (cm_fee)
+                    $nextTaskExists = TaskResponse::where('order_id', $itemPekerjaan->moodboard->order->id)
+                        ->where('tahap', 'rab_internal')
+                        ->exists();
+
+                    if (!$nextTaskExists) {
+                        TaskResponse::create([
+                            'order_id' => $itemPekerjaan->moodboard->order->id,
+                            'user_id' => null,
+                            'tahap' => 'rab_internal',
+                            'start_time' => now(),
+                            'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                            'duration' => 3,
+                            'duration_actual' => 3,
+                            'extend_time' => 0,
+                            'status' => 'menunggu_response',
+                        ]);
+
+                        TaskResponse::create([
+                            'order_id' => $itemPekerjaan->moodboard->order->id,
+                            'user_id' => null,
+                            'tahap' => 'rab_internal',
+                            'start_time' => now(),
+                            'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                            'duration' => 3,
+                            'duration_actual' => 3,
+                            'extend_time' => 0,
+                            'status' => 'menunggu_response',
+                            'is_marketing' => true,
+                        ]);
+                    }
+                }
+            }
             return redirect()->route('item-pekerjaan.index')
                 ->with('success', $statusMessage);
         } catch (\Exception $e) {

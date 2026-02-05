@@ -17,6 +17,10 @@ class Invoice extends Model
         'status',
         'bukti_bayar',
         'paid_at',
+        'response_time',
+        'response_by',
+        'pm_response_time',
+        'pm_response_by',
         'notes',
     ];
 
@@ -24,6 +28,8 @@ class Invoice extends Model
         'total_amount' => 'decimal:2',
         'termin_persentase' => 'decimal:2',
         'paid_at' => 'datetime',
+        'response_time' => 'datetime',
+        'pm_response_time' => 'datetime',
     ];
 
     public function itemPekerjaan()

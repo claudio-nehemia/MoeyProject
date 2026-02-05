@@ -17,6 +17,8 @@ interface RabInternal {
     id: number;
     response_by: string;
     response_time: string;
+    pm_response_by: string | null;
+    pm_response_time: string | null;
     total_produks: number;
 }
 
@@ -34,6 +36,8 @@ interface Props {
 interface TaskResponse {
     status: string;
     deadline: string | null;
+    response_time?: string | null;
+    response_by?: string | null;
     order_id: number;
     tahap: string;
     extend_time?: number;
@@ -63,7 +67,7 @@ function Index({ itemPekerjaans }: Props) {
             const orderId = itemPekerjaan.order?.id;
             if (orderId) {
                 // Regular
-                axios.get(`/task-response/${orderId}/rab_internal`)
+                axios.get(`/task-response/${orderId}/rab_internal`, { params: { is_marketing: 0 } })
                     .then(res => {
                         const task = Array.isArray(res.data) ? res.data[0] : res.data;
                         setTaskResponses(prev => ({
@@ -106,6 +110,12 @@ function Index({ itemPekerjaans }: Props) {
         }
     };
 
+    const handlePmResponse = (itemPekerjaanId: number) => {
+        if (confirm('Apakah Anda yakin ingin memberikan PM response untuk RAB Internal ini?')) {
+            router.post(`/pm-response/rab-internal/${itemPekerjaanId}`, {}, { preserveScroll: true });
+        }
+    };
+
     const navigateToKontrak = () => {
         router.get('/rab-kontrak');
     };
@@ -133,6 +143,19 @@ function Index({ itemPekerjaans }: Props) {
         const d = new Date(value);
         if (Number.isNaN(d.getTime())) return '-';
         return d.toLocaleDateString('id-ID');
+    };
+
+    const formatDateTime = (value: string | null | undefined) => {
+        if (value == null || value === '') return '-';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '-';
+        return d.toLocaleString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
     };
 
     return (
@@ -236,7 +259,7 @@ function Index({ itemPekerjaans }: Props) {
                                                                     {itemPekerjaan.order.nama_project}
                                                                 </div>
                                                                 {/* Task Response Deadline - REGULAR */}
-                                                                {taskResponseRegular && taskResponseRegular.status !== 'selesai' && (
+                                                                {!isKepalaMarketing && taskResponseRegular && taskResponseRegular.status !== 'selesai' && (
                                                                     <div className="mt-2">
                                                                         <div className={`p-2 rounded border text-xs ${
                                                                             daysLeftRegular !== null && daysLeftRegular < 0 
@@ -350,7 +373,7 @@ function Index({ itemPekerjaans }: Props) {
                                                             )}
                                                         </td>
                                                         <td className="whitespace-nowrap px-6 py-4 text-sm font-medium">
-                                                            {itemPekerjaan.rabInternal ? (
+                                                            {itemPekerjaan.rabInternal?.response_time && (
                                                                 <div className="flex space-x-2">
                                                                     <Link
                                                                         href={`/rab-internal/${itemPekerjaan.rabInternal.id}/show`}
@@ -366,19 +389,48 @@ function Index({ itemPekerjaans }: Props) {
                                                                         Edit
                                                                     </Link>
                                                                 </div>
-                                                            ) : itemPekerjaan.status === 'published' ? (
-                                                                isNotKepalaMarketing ? (
-                                                                    <button
-                                                                        onClick={() => handleResponse(itemPekerjaan.id)}
-                                                                        className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
-                                                                    >
-                                                                        Response RAB
-                                                                    </button>
+                                                            )}
+
+                                                            {itemPekerjaan.status === 'published' ? (
+                                                                isNotKepalaMarketing && !itemPekerjaan.rabInternal?.response_time ? (
+                                                                    <div className="mt-2">
+                                                                        <button
+                                                                            onClick={() => handleResponse(itemPekerjaan.id)}
+                                                                            className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                                                                        >
+                                                                            Response RAB
+                                                                        </button>
+                                                                    </div>
                                                                 ) : null
                                                             ) : (
                                                                 <span className="text-gray-400 text-xs italic">
                                                                     Submit Item Pekerjaan dahulu
                                                                 </span>
+                                                            )}
+
+                                                            {itemPekerjaan.rabInternal?.response_time && (
+                                                                <div className="mt-2 rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-700">
+                                                                    ✓ Response RAB • {itemPekerjaan.rabInternal.response_by || '-'} • {formatDateTime(itemPekerjaan.rabInternal.response_time)}
+                                                                </div>
+                                                            )}
+
+                                                            {isKepalaMarketing && !taskResponseMarketing?.response_time && !itemPekerjaan.rabInternal?.pm_response_time && (
+                                                                <div className="mt-2">
+                                                                    <button
+                                                                        onClick={() => handlePmResponse(itemPekerjaan.id)}
+                                                                        className="text-purple-600 hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300"
+                                                                    >
+                                                                        Marketing Response
+                                                                    </button>
+                                                                </div>
+                                                            )}
+
+                                                            {(taskResponseMarketing?.response_time || itemPekerjaan.rabInternal?.pm_response_time) && (
+                                                                <div className="mt-2 rounded bg-purple-50 px-2 py-1 text-xs text-purple-700">
+                                                                    ✓ Marketing Response • {(taskResponseMarketing?.response_by || itemPekerjaan.rabInternal?.pm_response_by || '-')}
+                                                                    {' • '}
+                                                                    {formatDateTime(taskResponseMarketing?.response_time || itemPekerjaan.rabInternal?.pm_response_time || null)}
+                                                                </div>
                                                             )}
                                                         </td>
                                                     </tr>

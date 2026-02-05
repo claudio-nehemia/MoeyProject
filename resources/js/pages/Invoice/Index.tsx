@@ -1,9 +1,25 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useState, useMemo, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import ExtendModal from '@/components/ExtendModal';
 import axios from 'axios';
+
+interface User {
+    id: number;
+    name: string;
+    email: string;
+    role: {
+        nama_role: string;
+    };
+}
+
+interface PageProps {
+    auth: {
+        user: User;
+    };
+    [key: string]: any;
+}
 
 interface Order {
     id: number;
@@ -75,8 +91,11 @@ export default function Index({ itemPekerjaans }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [expandedRows, setExpandedRows] = useState<number[]>([]);
     const [activeFilter, setActiveFilter] = useState<'semua' | 'belum_bayar' | 'dp' | 'proses' | 'lunas'>('semua');
-    const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
+    const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: any; marketing?: any }>>({});
     const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
+
+    const { auth } = usePage<PageProps>().props;
+    const isKepalaMarketing = auth.user.role?.nama_role === 'Kepala Marketing';
 
     // Fetch task response untuk semua project (tahap: invoice)
     useEffect(() => {
@@ -84,16 +103,36 @@ export default function Index({ itemPekerjaans }: Props) {
             const orderId = item.order?.id;
             if (orderId) {
                 axios
-                    .get(`/task-response/${orderId}/invoice`)
+                    .get(`/task-response/${orderId}/invoice`, { params: { is_marketing: 0 } })
                     .then((res) => {
                         const task = Array.isArray(res.data) ? res.data[0] : res.data;
                         if (task) {
-                            setTaskResponses((prev) => ({ ...prev, [orderId]: task }));
+                            setTaskResponses((prev) => ({
+                                ...prev,
+                                [orderId]: { ...prev[orderId], regular: task },
+                            }));
                         }
                     })
                     .catch((err) => {
                         if (err.response?.status !== 404) {
                             console.error('Error fetching task response (invoice):', err);
+                        }
+                    });
+
+                axios
+                    .get(`/task-response/${orderId}/invoice`, { params: { is_marketing: 1 } })
+                    .then((res) => {
+                        const task = Array.isArray(res.data) ? res.data[0] : res.data;
+                        if (task) {
+                            setTaskResponses((prev) => ({
+                                ...prev,
+                                [orderId]: { ...prev[orderId], marketing: task },
+                            }));
+                        }
+                    })
+                    .catch((err) => {
+                        if (err.response?.status !== 404) {
+                            console.error('Error fetching task response (invoice marketing):', err);
                         }
                     });
             }
@@ -153,6 +192,12 @@ export default function Index({ itemPekerjaans }: Props) {
         router.get(`/invoice/${invoiceId}/show`);
     };
 
+    const handlePmResponse = (itemPekerjaanId: number) => {
+        if (confirm('Apakah Anda yakin ingin melakukan PM Response untuk invoice ini?')) {
+            router.post(route('pm.response.invoice', itemPekerjaanId));
+        }
+    };
+
     const toggleExpand = (id: number) => {
         setExpandedRows(prev => 
             prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
@@ -175,6 +220,19 @@ export default function Index({ itemPekerjaans }: Props) {
             day: 'numeric',
             month: 'long',
             year: 'numeric',
+        });
+    };
+
+    const formatDateTime = (value: string | null | undefined) => {
+        if (value == null || value === '') return '-';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '-';
+        return d.toLocaleString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
         });
     };
 
@@ -385,7 +443,8 @@ export default function Index({ itemPekerjaans }: Props) {
                             ) : (
                                 filteredItems.map((item) => {
                                     const orderId = item.order.id;
-                                    const taskResponse = taskResponses[orderId];
+                                    const taskResponse = taskResponses[orderId]?.regular;
+                                    const marketingResponse = taskResponses[orderId]?.marketing;
 
                                     return (
                                     <div key={item.id} className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
@@ -477,6 +536,29 @@ export default function Index({ itemPekerjaans }: Props) {
                                                             Minta Perpanjangan
                                                         </button>
                                                     </div>
+                                                </div>
+                                            )}
+
+                                            {/* PM Response - Kepala Marketing can respond anytime */}
+                                            {isKepalaMarketing && (
+                                                <div className="mb-4">
+                                                    {!marketingResponse?.response_time ? (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handlePmResponse(item.id);
+                                                            }}
+                                                            className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-4 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-purple-600 hover:to-purple-700"
+                                                        >
+                                                            Marketing Response
+                                                        </button>
+                                                    ) : (
+                                                        <div className="inline-flex flex-col rounded-lg border border-purple-200 bg-purple-50 px-4 py-2 text-xs text-purple-800">
+                                                            <span className="font-semibold">✓ Marketing Response</span>
+                                                            <span>By: {marketingResponse.response_by || '-'}</span>
+                                                            <span>{formatDateTime(marketingResponse.response_time)}</span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
 
@@ -667,7 +749,7 @@ export default function Index({ itemPekerjaans }: Props) {
                 <ExtendModal
                     orderId={showExtendModal.orderId}
                     tahap={showExtendModal.tahap}
-                    taskResponse={taskResponses[showExtendModal.orderId]}
+                    taskResponse={taskResponses[showExtendModal.orderId]?.regular}
                     isMarketing={false}
                     onClose={() => setShowExtendModal(null)}
                 />

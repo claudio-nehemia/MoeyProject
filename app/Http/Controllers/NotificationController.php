@@ -506,22 +506,20 @@ class NotificationController extends Controller
                     'response_time' => now(),
                 ]);
             }
-
-            return redirect()->route('item-pekerjaan.index', ['order_id' => $order->id])
-                ->with('info', 'Item pekerjaan sudah ada untuk project ini.');
+        } else {    
+            ItemPekerjaan::create([
+                'moodboard_id' => $order->moodboard->id,
+                'response_by' => auth()->user()->name,
+                'response_time' => now(),
+            ]);
         }
-
-        ItemPekerjaan::create([
-            'moodboard_id' => $order->moodboard->id,
-            'response_by' => auth()->user()->name,
-            'response_time' => now(),
-        ]);
 
         $taskResponse = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'item_pekerjaan')
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
+            ->where('is_marketing', false)
             ->first();
 
         if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -564,16 +562,13 @@ class NotificationController extends Controller
                     'response_time' => now(),
                 ]);
             }
-
-            return redirect()->route('rab-internal.index', ['order_id' => $order->id])
-                ->with('info', 'RAB Internal sudah ada untuk project ini.');
+        } else {
+            RabInternal::create([
+                'item_pekerjaan_id' => $order->itemPekerjaans->first()->id,
+                'response_by' => auth()->user()->name,
+                'response_time' => now(),
+            ]);
         }
-
-        RabInternal::create([
-            'item_pekerjaan_id' => $order->itemPekerjaans->first()->id,
-            'response_by' => auth()->user()->name,
-            'response_time' => now(),
-        ]);
 
         $order->update([
             'tahapan_proyek' => 'rab',
@@ -584,6 +579,7 @@ class NotificationController extends Controller
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
+            ->where('is_marketing', false)
             ->first();
 
         if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -987,7 +983,7 @@ class NotificationController extends Controller
             case Notification::TYPE_SURVEY_REQUEST: {
                 $survey = $order->surveyResults;
                 if (!$survey) {
-                    $survey = \App\Models\SurveyResults::create([
+                    $survey = SurveyResults::create([
                         'order_id' => $order->id,
                         'pm_response_time' => now(),
                         'pm_response_by' => auth()->user()->name ?? 'Admin',
@@ -1093,22 +1089,10 @@ class NotificationController extends Controller
                 return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Commitment Fee).');
             }
 
-            case Notification::TYPE_FINAL_DESIGN_REQUEST: {
-                if ($order->moodboard) {
-                    $order->moodboard->update([
-                        'pm_response_final_time' => now(),
-                        'pm_response_final_by' => auth()->user()->name ?? 'Admin',
-                    ]);
-                }
-
-                $this->markMarketingTaskResponseDone($order, 'desain_final');
-                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Desain Final).');
-            }
-
             case Notification::TYPE_SURVEY_ULANG_REQUEST: {
                 $surveyUlang = $order->surveyUlang;
                 if (!$surveyUlang) {
-                    \App\Models\SurveyUlang::create([
+                    SurveyUlang::create([
                         'order_id' => $order->id,
                         'pm_response_time' => now(),
                         'pm_response_by' => auth()->user()->name ?? 'Admin',
@@ -1158,6 +1142,55 @@ class NotificationController extends Controller
 
                 $this->markMarketingTaskResponseDone($order, 'item_pekerjaan');
                 return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Item Pekerjaan).');
+            }
+
+            case Notification::TYPE_RAB_INTERNAL_REQUEST: {
+                $itemPekerjaan = $order->itemPekerjaans->first();
+                if ($itemPekerjaan) {
+                    if ($itemPekerjaan->rabInternal) {
+                        $itemPekerjaan->rabInternal->update([
+                            'pm_response_time' => now(),
+                            'pm_response_by' => auth()->user()->name ?? 'Admin',
+                        ]);
+                    } else {
+                        RabInternal::create([
+                            'item_pekerjaan_id' => $itemPekerjaan->id,
+                            'pm_response_time' => now(),
+                            'pm_response_by' => auth()->user()->name ?? 'Admin',
+                        ]);
+                    }
+                }
+
+                $taskResponse = TaskResponse::where('order_id', $order->id)
+                    ->where('tahap', 'rab_internal')
+                    ->where('is_marketing', true)
+                    ->orderByDesc('extend_time')
+                    ->orderByDesc('updated_at')
+                    ->orderByDesc('id')
+                    ->first();
+
+                if (!$taskResponse) {
+                    $taskResponse = TaskResponse::create([
+                        'order_id' => $order->id,
+                        'user_id' => null,
+                        'tahap' => 'rab_internal',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3),
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                        'is_marketing' => true,
+                    ]);
+                }
+
+                $taskResponse->update([
+                    'response_time' => now(),
+                    'status' => 'selesai',
+                    'user_id' => auth()->id(),
+                ]);
+
+                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (RAB Internal).');
             }
 
             case Notification::TYPE_KONTRAK_REQUEST: {
