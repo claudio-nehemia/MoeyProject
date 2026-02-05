@@ -201,18 +201,18 @@ interface Produk {
                                             <span className="bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 px-2 py-1 rounded text-xs">STEP 1</span>
                                             Harga Satuan
                                         </div>
-                                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 p-4 rounded-lg border-l-4 border-indigo-500">
-                                            <div className="font-mono text-sm text-gray-800 dark:text-gray-200">
-                                                <span className="font-bold text-emerald-600 dark:text-emerald-400">Harga BB</span>
+                                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-lg border-l-4 border-indigo-500">
+                                            <div className="font-mono text-sm text-gray-800">
+                                                <span className="font-bold text-emerald-600">(Harga BB</span>
                                                 <span className="mx-2">+</span>
-                                                <span className="font-bold text-blue-600 dark:text-blue-400">Finishing</span>
-                                                <span className="mx-2">÷</span>
-                                                <span className="font-bold text-amber-600 dark:text-amber-400">(Markup / 100)</span>
+                                                <span className="font-bold text-blue-600">Finishing)</span>
                                                 <span className="mx-2">×</span>
-                                                <span className="font-bold text-gray-600 dark:text-gray-400">Dimensi × Qty</span>
+                                                <span className="font-bold text-gray-600">Dimensi × Qty</span>
+                                                <span className="mx-2">÷</span>
+                                                <span className="font-bold text-amber-600">(1 - Markup/100)</span>
                                             </div>
-                                            <div className="mt-2 text-xs text-amber-600 dark:text-amber-400 font-semibold">
-                                                💡 Contoh: Markup 150% → 150/100 = 1.5, lalu harga dibagi 1.5
+                                            <div className="mt-2 text-xs text-amber-600 font-semibold">
+                                                💡 Contoh: (BB + Finishing) × Dimensi = X, lalu X ÷ (1-0.2) = X ÷ 0.8
                                             </div>
                                         </div>
                                         
@@ -250,8 +250,8 @@ interface Produk {
                                             <div className="flex items-start gap-2">
                                                 <div className="w-4 h-4 rounded bg-amber-500 mt-0.5 flex-shrink-0"></div>
                                                 <div>
-                                                    <span className="font-semibold text-amber-700 dark:text-amber-400">Markup:</span>
-                                                    <span className="text-gray-600 dark:text-gray-400"> Persentase dibagi 100 jadi divider (150% → 1.5)</span>
+                                                    <span className="font-semibold text-amber-700">Markup:</span>
+                                                    <span className="text-gray-600"> Persentase dikurangi dari 1 jadi divider (20% → 1-0.2 = 0.8)</span>
                                                 </div>
                                             </div>
                                             <div className="flex items-start gap-2">
@@ -270,10 +270,10 @@ interface Produk {
                                             </div>
                                         </div>
                                         
-                                        <div className="mt-4 p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg border border-indigo-200 dark:border-indigo-700">
-                                            <div className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 mb-1">✅ Karakteristik RAB Internal:</div>
-                                            <ul className="text-xs text-indigo-600 dark:text-indigo-400 space-y-1">
-                                                <li>• Markup sebagai PEMBAGI (150% = 1.5, harga ÷ 1.5)</li>
+                                        <div className="mt-4 p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                                            <div className="text-xs font-semibold text-indigo-700 mb-1">✅ Karakteristik RAB Internal:</div>
+                                            <ul className="text-xs text-indigo-600 space-y-1">
+                                                <li>• Markup sebagai PEMBAGI dengan rumus (1 - markup/100)</li>
                                                 <li>• Include aksesoris dalam harga akhir</li>
                                                 <li>• Pakai harga bahan baku (bukan harga jasa)</li>
                                             </ul>
@@ -394,8 +394,8 @@ interface Produk {
                                             }
                                         });
 
-                                        // Calculate total non-aksesoris (only finishing items - bahan baku not included)
-                                        const totalNonAksesoris = finishingDalamTotal + finishingLuarTotal;
+                                        // Total BB + Finishing adalah harga_satuan (sudah include markup & dimensi)
+                                        const totalBBPlusFinishing = Number(produk.harga_satuan) || 0;
 
                                         // Calculate total aksesoris (use Number() to handle null/undefined)
                                         const totalAksesoris = produk.aksesoris.reduce((sum, aks) => sum + (Number(aks.harga_total) || 0), 0);
@@ -483,10 +483,10 @@ interface Produk {
                                                             </td>
                                                         )}
                                                         
-                                                        {/* Total Non-Aksesoris Column */}
-                                                        {rowIndex === 0 && (
-                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-bold text-purple-700 dark:text-purple-400 bg-purple-50/50 dark:bg-purple-900/10 border-r border-gray-200 dark:border-gray-700">
-                                                                {formatCurrency(totalNonAksesoris)}
+{/* Total BB + Finishing Column */}
+                                        {rowIndex === 0 && (
+                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-bold text-purple-700 bg-purple-50/50 border-r border-gray-200">
+                                                {formatCurrency(totalBBPlusFinishing)}
                                                             </td>
                                                         )}
                                                         

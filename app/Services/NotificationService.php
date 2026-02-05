@@ -887,7 +887,7 @@ class NotificationService
     public function sendApprovalMaterialRequestNotification(Order $order)
     {
         $drafters = $order->surveyUsers()->whereHas('role', function ($query) {
-            $query->where('nama_role', 'Drafter');
+            $query->whereIn('nama_role', ['Drafter', 'Surveyor']);
         })->get();
 
         foreach ($drafters as $drafter) {

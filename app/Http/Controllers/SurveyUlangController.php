@@ -80,22 +80,25 @@ class SurveyUlangController extends Controller
     {
         // Check if survey ulang already exists
         if ($order->surveyUlang) {
-            return back()->with('info', 'Survey ulang request sudah diterima sebelumnya.');
+            $order->surveyUlang->update([
+                'response_time' => now(),
+                'response_by' => auth()->user()->name ?? 'System',
+            ]);
+        } else {
+            // Create new survey ulang record
+            SurveyUlang::create([
+                'order_id' => $order->id,
+                'response_time' => now(),
+                'response_by' => auth()->user()->name ?? 'System',
+            ]);
         }
-
-        // Create empty survey ulang record with ONLY response info
-        // User will fill in details (catatan, foto, temuan, survey_time) later via store
-        SurveyUlang::create([
-            'order_id' => $order->id,
-            'response_time' => now(),
-            'response_by' => auth()->user()->name ?? 'System',
-        ]);
 
         $taskResponse = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'survey_ulang')
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
+            ->where('is_marketing', false)
             ->first();
 
         if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -173,6 +176,7 @@ class SurveyUlangController extends Controller
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
+            ->where('is_marketing', false)
             ->first();
 
         if ($taskResponse) {
@@ -259,6 +263,7 @@ class SurveyUlangController extends Controller
             'foto_lama' => 'nullable',
         ]);
 
+        $order = $surveyUlang->order;
         $fotoLama = json_decode($request->foto_lama, true) ?? [];
 
         $fotoPaths = $fotoLama;
@@ -276,6 +281,73 @@ class SurveyUlangController extends Controller
             'foto' => $fotoPaths,
         ]);
 
+        if (!$order->gambarKerja) {
+            GambarKerja::create([
+                'order_id' => $order->id,
+                'status' => 'pending',
+            ]);
+        }
+
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'survey_ulang')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->where('is_marketing', false)
+            ->first();
+
+        if ($taskResponse) {
+            if ($taskResponse->isOverdue()) {
+                $taskResponse->update([
+                    'status' => 'telat_submit',
+                    'update_data_time' => now(),
+                ]);
+            } else {
+                $taskResponse->update([
+                    'update_data_time' => now(),
+                    'status' => 'selesai',
+                ]);
+            }
+
+            // Create task response untuk tahap selanjutnya (cm_fee)
+            $nextTaskExists = TaskResponse::where('order_id', $order->id)
+                ->where('tahap', 'gambar_kerja')
+                ->exists();
+
+            if (!$nextTaskExists) {
+                TaskResponse::create([
+                    'order_id' => $order->id,
+                    'user_id' => null,
+                    'tahap' => 'gambar_kerja',
+                    'start_time' => now(),
+                    'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                    'duration' => 3,
+                    'duration_actual' => 3,
+                    'extend_time' => 0,
+                    'status' => 'menunggu_response',
+                ]);
+
+                TaskResponse::create([
+                    'order_id' => $order->id,
+                    'user_id' => null,
+                    'tahap' => 'gambar_kerja',
+                    'start_time' => now(),
+                    'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                    'duration' => 3,
+                    'duration_actual' => 3,
+                    'extend_time' => 0,
+                    'status' => 'menunggu_response',
+                    'is_marketing' => true,
+                ]);
+                $notificationService = new NotificationService();
+                $notificationService->sendGambarKerjaRequestNotification($order);
+            }
+        }
+
+        // update tahapan utama
+        $order->update([
+            'tahapan_proyek' => 'survey_ulang', // tetap di survey ulang sampai user lanjut
+        ]);
 
         return redirect()->route('survey-ulang.index')->with('success', 'Survey ulang berhasil diperbarui.');
     }

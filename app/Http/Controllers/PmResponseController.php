@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\Invoice;
 use App\Models\Kontrak;
 use App\Models\Estimasi;
 use App\Models\Moodboard;
@@ -10,10 +11,12 @@ use App\Models\GambarKerja;
 use App\Models\RabInternal;
 use App\Models\SurveyUlang;
 use App\Models\TaskResponse;
+use App\Models\WorkplanItem;
 use Illuminate\Http\Request;
 use App\Models\CommitmentFee;
 use App\Models\ItemPekerjaan;
 use App\Models\SurveyResults;
+use Illuminate\Support\Facades\DB;
 
 class PmResponseController extends Controller
 {
@@ -88,7 +91,7 @@ class PmResponseController extends Controller
         ]);
 
         $taskResponse = TaskResponse::where('order_id', $order->id)
-            ->where('tahap', 'survey')
+            ->where('tahap', 'survey_schedule')
             ->where('is_marketing', true)
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
@@ -325,8 +328,7 @@ class PmResponseController extends Controller
                 'response_by' => auth()->user()->name,
                 'response_time' => now(),
             ]);
-        }
-        else {     
+        } else {
             $this->recordResponse($itemPekerjaan);
         }
 
@@ -405,22 +407,44 @@ class PmResponseController extends Controller
         return back()->with('success', 'PM Response berhasil dicatat untuk RAB Internal.');
     }
 
-    // Survey Ulang
-    public function surveyUlang($id)
+    // Method baru: terima order_id, bukan survey_ulang_id
+    public function surveyUlang($orderId)
     {
         if ($check = $this->checkPm())
             return $check;
-        $surveyUlang = SurveyUlang::findOrFail($id);
-        if ($check = $this->checkOriginalKepalaMarketing($surveyUlang->order))
+
+        // Cari berdasarkan order_id
+        $surveyUlang = SurveyUlang::where('order_id', $orderId)->first();
+
+        // Jika belum ada, buat baru
+        if (!$surveyUlang) {
+            $surveyUlang = SurveyUlang::create([
+                'order_id' => $orderId,
+                'pm_response_by' => auth()->user()->name,
+                'pm_response_time' => now(),
+            ]);
+        } else {
+            // Jika sudah ada, update pm_response
+            $surveyUlang->update([
+                'pm_response_by' => auth()->user()->name,
+                'pm_response_time' => now(),
+            ]);
+        }
+
+        // Verifikasi order exists dan check kepala marketing
+        $order = Order::findOrFail($orderId);
+        if ($check = $this->checkOriginalKepalaMarketing($order))
             return $check;
-        $this->recordResponse($surveyUlang);
-        $taskresponse = TaskResponse::where('order_id', SurveyUlang::findOrFail($id)->order->id)
+
+        // Update task response marketing
+        $taskresponse = TaskResponse::where('order_id', $orderId)
             ->where('tahap', 'survey_ulang')
             ->where('is_marketing', true)
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->first();
+
         if ($taskresponse) {
             $taskresponse->update([
                 'response_time' => now(),
@@ -429,8 +453,9 @@ class PmResponseController extends Controller
             ]);
             \Log::info('Associated TaskResponse ID: ' . $taskresponse->id . ' response_time updated.');
         } else {
-            \Log::info('No associated TaskResponse found for Order ID: ' . SurveyUlang::findOrFail($id)->order->id);
+            \Log::info('No associated TaskResponse found for Order ID: ' . $orderId);
         }
+
         return back()->with('success', 'PM Response berhasil dicatat untuk Survey Ulang.');
     }
 
@@ -468,29 +493,61 @@ class PmResponseController extends Controller
     {
         if ($check = $this->checkPm())
             return $check;
-        $kontrak = Kontrak::findOrFail($id);
-        if ($check = $this->checkOriginalKepalaMarketing($kontrak->itemPekerjaan->moodboard->order))
+        $kontrak = Kontrak::find($id);
+        $itemPekerjaan = null;
+
+        if ($kontrak) {
+            $itemPekerjaan = $kontrak->itemPekerjaan;
+        } else {
+            $itemPekerjaan = ItemPekerjaan::with('moodboard.order', 'kontrak')->findOrFail($id);
+            $kontrak = $itemPekerjaan->kontrak;
+        }
+
+        if ($check = $this->checkOriginalKepalaMarketing($itemPekerjaan->moodboard->order))
             return $check;
-        $this->recordResponse($kontrak);
-        $taskResponse = TaskResponse::where('order_id', Kontrak::findOrFail($id)->itemPekerjaan->moodboard->order->id)
+        if (!$kontrak) {
+            $kontrak = Kontrak::create([
+                'item_pekerjaan_id' => $itemPekerjaan->id,
+                'pm_response_by' => auth()->user()->name,
+                'pm_response_time' => now(),
+            ]);
+        } else {
+            $this->recordResponse($kontrak);
+        }
+
+        $taskResponse = TaskResponse::where('order_id', $itemPekerjaan->moodboard->order->id)
             ->where('tahap', 'kontrak')
             ->where('is_marketing', true)
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->first();
-        if ($taskResponse) {
-            $taskResponse->update([
-                'response_time' => now(),
-                'status' => 'selesai',
-                'user_id' => auth()->user()->id,
+
+        if (!$taskResponse) {
+            $taskResponse = TaskResponse::create([
+                'order_id' => $itemPekerjaan->moodboard->order->id,
+                'user_id' => null,
+                'tahap' => 'kontrak',
+                'start_time' => now(),
+                'deadline' => now()->addDays(3),
+                'duration' => 3,
+                'duration_actual' => 3,
+                'extend_time' => 0,
+                'status' => 'menunggu_response',
+                'is_marketing' => true,
             ]);
-            \Log::info('Associated TaskResponse ID: ' . $taskResponse->id . ' response_time updated.');
-        } else {
-            \Log::info('No associated TaskResponse found for Order ID: ' . Kontrak::findOrFail($id)->itemPekerjaan->moodboard->order->id);
         }
+
+        $taskResponse->update([
+            'response_time' => now(),
+            'status' => 'selesai',
+            'user_id' => auth()->user()->id,
+        ]);
+        \Log::info('Associated TaskResponse ID: ' . $taskResponse->id . ' response_time updated.');
         return back()->with('success', 'PM Response berhasil dicatat untuk Kontrak.');
     }
+
+
 
     // Survey Result
     public function surveyResult($id)
@@ -551,6 +608,40 @@ class PmResponseController extends Controller
         return back()->with('success', 'Marketing Response berhasil dicatat untuk Survey Result.');
     }
 
+    // Approval RAB
+    public function approvalRab($id)
+    {
+        if ($check = $this->checkPm())
+            return $check;
+        $itemPekerjaan = ItemPekerjaan::findOrFail($id);
+        if ($check = $this->checkOriginalKepalaMarketing($itemPekerjaan->moodboard->order))
+            return $check;
+
+        $itemPekerjaan->update([
+            'pm_approval_rab_response_by' => auth()->user()->name,
+            'pm_approval_rab_response_time' => now(),
+        ]);
+
+        $taskresponse = TaskResponse::where('order_id', ItemPekerjaan::findOrFail($id)->moodboard->order->id)
+            ->where('tahap', 'approval_material')
+            ->where('is_marketing', true)
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+        if ($taskresponse) {
+            $taskresponse->update([
+                'response_time' => now(),
+                'status' => 'selesai',
+                'user_id' => auth()->user()->id,
+            ]);
+            \Log::info('Associated TaskResponse ID: ' . $taskresponse->id . ' response_time updated.');
+        } else {
+            \Log::info('No associated TaskResponse found for Order ID: ' . ItemPekerjaan::findOrFail($id)->moodboard->order->id);
+        }
+        return back()->with('success', 'PM Response berhasil dicatat untuk Approval RAB.');
+    }
+
     // Workplan
     public function workplan($orderId)
     {
@@ -568,12 +659,39 @@ class PmResponseController extends Controller
             ->flatMap(fn($ip) => $ip->produks)
             ->flatMap(fn($produk) => $produk->workplanItems);
 
-        foreach ($workplanItems as $item) {
-            $item->update([
-                'pm_response_time' => now(),
-                'pm_response_by' => auth()->user()->name,
-            ]);
-        }
+        DB::transaction(function () use ($order, $workplanItems) {
+            if ($workplanItems->isEmpty()) {
+                // CREATE new workplan items with PM response tracking
+                foreach ($order->moodboard->itemPekerjaans as $itemPekerjaan) {
+                    foreach ($itemPekerjaan->produks as $produk) {
+                        // Create empty workplan items based on default breakdown
+                        $defaultBreakdown = WorkplanItemController::defaultBreakdown();
+                        foreach ($defaultBreakdown as $index => $stage) {
+                            WorkplanItem::create([
+                                'item_pekerjaan_produk_id' => $produk->id,
+                                'nama_tahapan' => $stage['nama_tahapan'],
+                                'start_date' => null,
+                                'end_date' => null,
+                                'duration_days' => null,
+                                'urutan' => $index + 1,
+                                'status' => 'planned',
+                                'catatan' => null,
+                                'pm_response_time' => now(),
+                                'pm_response_by' => auth()->user()->name,
+                            ]);
+                        }
+                    }
+                }
+            } else {
+                // UPDATE existing workplan items - only pm_response_time & pm_response_by
+                foreach ($workplanItems as $item) {
+                    $item->update([
+                        'pm_response_time' => now(),
+                        'pm_response_by' => auth()->user()->name,
+                    ]);
+                }
+            }
+        });
 
         $taskResponse = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'workplan')
@@ -582,6 +700,7 @@ class PmResponseController extends Controller
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->first();
+            
         if ($taskResponse) {
             $taskResponse->update([
                 'response_time' => now(),
@@ -608,6 +727,29 @@ class PmResponseController extends Controller
         if ($check = $this->checkOriginalKepalaMarketing($order))
             return $check;
 
+        // Find invoice termin 1
+        $invoice = $itemPekerjaan->invoices->firstWhere('termin_step', 1);
+
+        // Check if already responded
+        if ($invoice && $invoice->pm_response_time) {
+            return redirect()->back()->with('info', 'Invoice sudah di-response oleh Marketing.');
+        }
+
+        // If invoice termin 1 exists, update it
+        if ($invoice) {
+            $invoice->update([
+                'pm_response_time' => now(),
+                'pm_response_by' => auth()->user()->name,
+            ]);
+        } else {
+            Invoice::create([
+                'item_pekerjaan_id' => $itemPekerjaan->id,
+                'rab_kontrak_id' => $itemPekerjaan->rabKontrak->id,
+                'pm_response_time' => now(),
+                'pm_response_by' => auth()->user()->name,
+            ]);
+        }
+
         // Update marketing task response (invoice stage)
         $taskResponse = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'invoice')
@@ -617,28 +759,17 @@ class PmResponseController extends Controller
             ->orderByDesc('id')
             ->first();
 
-        if ($taskResponse) {
+        if ($taskResponse && !$taskResponse->response_time) {
             $taskResponse->update([
                 'user_id' => auth()->user()->id,
                 'response_time' => now(),
+                'response_by' => auth()->user()->name,
                 'status' => 'selesai',
             ]);
         }
 
-        // If invoice already exists, sync PM response to invoice (prefer termin step 1)
-        $invoice = $itemPekerjaan->invoices
-            ->sortBy('termin_step')
-            ->first();
-
-        if ($invoice && !$invoice->pm_response_time) {
-            $invoice->update([
-                'pm_response_time' => now(),
-                'pm_response_by' => auth()->user()->name,
-            ]);
-        }
-
         \Log::info('=== PM RESPONSE INVOICE END ===');
-        return redirect()->back()->with('success', 'Response Invoice berhasil.');
+        return redirect()->back()->with('success', 'Marketing Response Invoice berhasil.' . (!$invoice ? ' Response akan disimpan di invoice saat di-generate.' : ''));
     }
 
 }

@@ -153,8 +153,9 @@ class WorkplanItemController extends Controller
     }
 
     /**
-     * Response notification - CREATE empty workplan items with response tracking
-     * User must respond first before they can fill the workplan details
+     * Response notification - Logic:
+     * If workplan not exist -> create new with response info
+     * If workplan exist -> update response_time & response_by only
      */
     public function response(Order $order)
     {
@@ -169,41 +170,45 @@ class WorkplanItemController extends Controller
             return back()->with('info', 'Permintaan workplan sudah diterima sebelumnya.');
         }
 
-        // CREATE empty workplan items with response tracking
-        // This marks the response and prepares the structure for filling
-        DB::transaction(function () use ($order) {
-            foreach ($order->moodboard->itemPekerjaans as $itemPekerjaan) {
-                foreach ($itemPekerjaan->produks as $produk) {
-                    // Skip if already has workplan items
-                    if ($produk->workplanItems->count() > 0) {
-                        continue;
-                    }
-
-                    // Create empty workplan items based on default breakdown
-                    $defaultBreakdown = self::defaultBreakdown();
-                    foreach ($defaultBreakdown as $index => $stage) {
-                        WorkplanItem::create([
-                            'item_pekerjaan_produk_id' => $produk->id,
-                            'nama_tahapan' => $stage['nama_tahapan'],
-                            'start_date' => null,
-                            'end_date' => null,
-                            'duration_days' => null,
-                            'urutan' => $index + 1,
-                            'status' => 'planned',
-                            'catatan' => null,
-                            'response_time' => now(),
-                            'response_by' => auth()->user()->name ?? 'System',
-                        ]);
+        DB::transaction(function () use ($order, $workplanItems) {
+            if ($workplanItems->isEmpty()) {
+                // CREATE new workplan items with response tracking
+                foreach ($order->moodboard->itemPekerjaans as $itemPekerjaan) {
+                    foreach ($itemPekerjaan->produks as $produk) {
+                        // Create empty workplan items based on default breakdown
+                        $defaultBreakdown = self::defaultBreakdown();
+                        foreach ($defaultBreakdown as $index => $stage) {
+                            WorkplanItem::create([
+                                'item_pekerjaan_produk_id' => $produk->id,
+                                'nama_tahapan' => $stage['nama_tahapan'],
+                                'start_date' => null,
+                                'end_date' => null,
+                                'duration_days' => null,
+                                'urutan' => $index + 1,
+                                'status' => 'planned',
+                                'catatan' => null,
+                                'response_time' => now(),
+                                'response_by' => auth()->user()->name ?? 'System',
+                            ]);
+                        }
                     }
                 }
+            } else {
+                // UPDATE existing workplan items - only response_time & response_by
+                foreach ($workplanItems as $item) {
+                    $item->update([
+                        'response_time' => now(),
+                        'response_by' => auth()->user()->name ?? 'System',
+                    ]);
+                }
             }
-
 
             $taskResponse = TaskResponse::where('order_id', $order->id)
                 ->where('tahap', 'workplan')
                 ->orderByDesc('extend_time')
                 ->orderByDesc('updated_at')
                 ->orderByDesc('id')
+                ->where('is_marketing', false)
                 ->first();
 
             if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -395,6 +400,7 @@ class WorkplanItemController extends Controller
                 ->orderByDesc('extend_time')
                 ->orderByDesc('updated_at')
                 ->orderByDesc('id')
+                ->where('is_marketing', false)
                 ->first();
 
             if ($taskResponse) {
@@ -460,7 +466,7 @@ class WorkplanItemController extends Controller
             'item_pekerjaans.*.produks.*.workplan_items.*.catatan' => 'nullable|string',
         ]);
 
-        DB::transaction(function () use ($validated) {
+        DB::transaction(function () use ($validated, $orderId) {
             $lastItemPekerjaan = null;
 
             foreach ($validated['item_pekerjaans'] as $ipData) {
@@ -524,6 +530,28 @@ class WorkplanItemController extends Controller
                     ]);
                 }
             }
+
+            $taskResponse = TaskResponse::where('order_id', $orderId)
+                ->where('tahap', 'workplan')
+                ->orderByDesc('extend_time')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
+                ->where('is_marketing', false)
+                ->first();
+
+            if ($taskResponse && $taskResponse->status !== 'selesai') {
+                if ($taskResponse->isOverdue()) {
+                    $taskResponse->update([
+                        'status' => 'telat_submit',
+                        'update_data_time' => now(),
+                    ]);
+                } else {
+                    $taskResponse->update([
+                        'update_data_time' => now(),
+                        'status' => 'selesai',
+                    ]);
+                }
+            }
         });
 
         // Kirim notifikasi project management request ke Supervisor & PM
@@ -557,7 +585,7 @@ class WorkplanItemController extends Controller
     public function export($orderId)
     {
         $order = Order::findOrFail($orderId);
-        
+
         return Excel::download(
             new WorkplanExport($orderId),
             'workplan_' . $order->nama_project . '_' . now()->format('Ymd_His') . '.xlsx'

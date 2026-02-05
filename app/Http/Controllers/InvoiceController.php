@@ -151,6 +151,13 @@ class InvoiceController extends Controller
                     $currentPaymentStatus = $tahapan[$lastPaidStep - 1]['text'] ?? "Tahap $lastPaidStep";
                 }
 
+                // Get response info from first invoice (termin 1) if exists
+                $firstInvoice = $allInvoices->firstWhere('termin_step', 1);
+                $responseTime = $firstInvoice?->response_time;
+                $responseBy = $firstInvoice?->response_by;
+                $pmResponseTime = $firstInvoice?->pm_response_time;
+                $pmResponseBy = $firstInvoice?->pm_response_by;
+
                 return [
                     'id' => $itemPekerjaan->id,
                     'order' => [
@@ -179,6 +186,10 @@ class InvoiceController extends Controller
                     'current_step' => $currentStep,
                     'has_bast' => $hasBast,
                     'is_fully_paid' => $currentStep > $totalTahap && $totalTahap > 0,
+                    'response_time' => $responseTime,
+                    'response_by' => $responseBy,
+                    'pm_response_time' => $pmResponseTime,
+                    'pm_response_by' => $pmResponseBy,
                 ];
             });
 
@@ -232,7 +243,7 @@ class InvoiceController extends Controller
 
         // Check if invoice for this step already exists
         $existingInvoice = $itemPekerjaan->invoices->firstWhere('termin_step', $requestedStep);
-        if ($existingInvoice) {
+        if ($existingInvoice && $existingInvoice->total_amount > 0) {
             return redirect()->route('invoice.show', $existingInvoice->id)
                 ->with('info', 'Invoice untuk tahap ini sudah ada.');
         }
@@ -288,6 +299,9 @@ class InvoiceController extends Controller
         $order = $itemPekerjaan->moodboard->order;
         $taskResponse = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'invoice')
+            ->where(function ($q) {
+                $q->where('is_marketing', false)->orWhereNull('is_marketing');
+            })
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
@@ -296,10 +310,8 @@ class InvoiceController extends Controller
         if ($taskResponse && $taskResponse->status === 'menunggu_input' && !$taskResponse->user_id) {
             $taskResponse->update([
                 'user_id' => auth()->user()->id,
-                // TIDAK ada response_time karena tidak ada response method
-                // Langsung update deadline jika perlu (optional)
-                'deadline' => now()->addDays(6), // Tetap atau tambah hari sesuai kebutuhan
-                'duration' => 6, // Tetap atau update sesuai kebutuhan
+                'deadline' => now()->addDays(6),
+                'duration' => 6,
             ]);
         }
 
@@ -311,18 +323,48 @@ class InvoiceController extends Controller
             ->orderByDesc('id')
             ->first();
 
-        $invoice = Invoice::create([
-            'item_pekerjaan_id' => $itemPekerjaan->id,
-            'rab_kontrak_id' => $itemPekerjaan->rabKontrak->id,
-            'invoice_number' => $invoiceNumber,
-            'termin_step' => $requestedStep,
-            'termin_text' => $terminText,
-            'termin_persentase' => $persentase,
-            'total_amount' => $totalAmount,
-            'pm_response_time' => $marketingTaskResponse?->response_time,
-            'pm_response_by' => $marketingTaskResponse?->user?->name,
-            'status' => 'pending',
-        ]);
+        // For termin step 1, include response info from task response if available
+        $responseTime = null;
+        $responseBy = null;
+        $pmResponseTime = $marketingTaskResponse?->response_time;
+        $pmResponseBy = $marketingTaskResponse?->response_by;
+
+        if ($requestedStep === 1 && $taskResponse) {
+            $responseTime = $taskResponse->response_time;
+            $responseBy = $taskResponse->response_by;
+        }
+
+        // Check if invoice already exists with total_amount = 0 (created from response)
+        // If yes, update it instead of creating new
+        if ($existingInvoice) {
+            $existingInvoice->update([
+                'invoice_number' => $invoiceNumber,
+                'termin_text' => $terminText,
+                'termin_persentase' => $persentase,
+                'total_amount' => $totalAmount,
+                'response_time' => $existingInvoice->response_time ?: $responseTime,
+                'response_by' => $existingInvoice->response_by ?: $responseBy,
+                'pm_response_time' => $existingInvoice->pm_response_time ?: $pmResponseTime,
+                'pm_response_by' => $existingInvoice->pm_response_by ?: $pmResponseBy,
+                'status' => 'pending',
+            ]);
+            $invoice = $existingInvoice;
+        } else {
+            $invoice = Invoice::create([
+                'item_pekerjaan_id' => $itemPekerjaan->id,
+                'rab_kontrak_id' => $itemPekerjaan->rabKontrak->id,
+                'invoice_number' => $invoiceNumber,
+                'termin_step' => $requestedStep,
+                'termin_text' => $terminText,
+                'termin_persentase' => $persentase,
+                'total_amount' => $totalAmount,
+                'response_time' => $responseTime,
+                'response_by' => $responseBy,
+                'pm_response_time' => $pmResponseTime,
+                'pm_response_by' => $pmResponseBy,
+                'status' => 'pending',
+            ]);
+        }
 
 
 
@@ -560,6 +602,20 @@ class InvoiceController extends Controller
                         'extend_time' => 0,
                         'status' => 'menunggu_response',
                     ]);
+
+                    TaskResponse::create([
+                        'order_id' => $order->id,
+                        'user_id' => null,
+                        'tahap' => 'survey_schedule',
+                        'is_marketing' => true,
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3),
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                    ]);
+
                 }
             }
         });
@@ -814,50 +870,66 @@ class InvoiceController extends Controller
         }
     }
 
-    public function response(Request $request, $id)
+    public function response(Request $request, $itemPekerjaanId)
     {
         try {
-            $invoice = Invoice::findOrFail($id);
+            $itemPekerjaan = ItemPekerjaan::with(['invoices', 'moodboard.order'])->findOrFail($itemPekerjaanId);
 
-            // Response only for termin 1
-            if ($invoice->termin_step != 1) {
-                return back()->with('error', 'Response hanya diperlukan untuk invoice tahap pertama.');
-            }
+            // Find invoice termin 1
+            $invoice = $itemPekerjaan->invoices->firstWhere('termin_step', 1);
 
             // prevent duplicate response
-            if ($invoice->response_time) {
+            if ($invoice && $invoice->response_time) {
                 return back()->with('info', 'Invoice sudah di-response.');
             }
 
-            DB::transaction(function () use ($invoice) {
-                $invoice->update([
-                    'response_time' => now(),
-                    'response_by' => auth()->user()->name,
-                ]);
+            DB::transaction(function () use ($invoice, $itemPekerjaan) {
+                // Update invoice termin 1 if exists
+                if ($invoice) {
+                    $invoice->update([
+                        'response_time' => now(),
+                        'response_by' => auth()->user()->name,
+                    ]);
+                } else {
+                    // Create invoice termin 1 with total_amount = 0
+                    Invoice::create([
+                        'item_pekerjaan_id' => $itemPekerjaan->id,
+                        'rab_kontrak_id' => $itemPekerjaan->rabKontrak->id,
+                        'response_time' => now(),
+                        'response_by' => auth()->user()->name,
+                    ]);
+                }
+                // If invoice doesn't exist, only update TaskResponse
+                // Invoice will be created when user clicks generate
 
-                // Update TaskResponse if exists
-                $itemPekerjaan = $invoice->itemPekerjaan;
-                if ($itemPekerjaan && $itemPekerjaan->moodboard && $itemPekerjaan->moodboard->order) {
-                    $order = $itemPekerjaan->moodboard->order;
+                // Update TaskResponse
+                $order = $itemPekerjaan->moodboard->order;
+                if ($order) {
                     $taskResponse = TaskResponse::where('order_id', $order->id)
                         ->where('tahap', 'invoice')
+                        ->where(function ($q) {
+                            $q->where('is_marketing', false)->orWhereNull('is_marketing');
+                        })
+                        ->orderByDesc('extend_time')
+                        ->orderByDesc('updated_at')
+                        ->orderByDesc('id')
                         ->first();
 
                     if ($taskResponse && !$taskResponse->response_time) {
                         $responseTime = now();
-                        // Assuming duration_actual is days difference from start_time
                         $durationActual = $taskResponse->start_time ? $taskResponse->start_time->diffInDays($responseTime) : 0;
 
                         $taskResponse->update([
                             'response_time' => $responseTime,
+                            'response_by' => auth()->user()->name,
                             'duration_actual' => $durationActual,
-                            'status' => 'menunggu_input', // After response, waiting for payment input
+                            'status' => 'on_progress',
                         ]);
                     }
                 }
             });
 
-            return back()->with('success', 'Response invoice berhasil.');
+            return back()->with('success', 'Response invoice berhasil.' . (!$invoice ? ' Silakan generate invoice termin 1 untuk melanjutkan.' : ''));
 
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal update response: ' . $e->getMessage());

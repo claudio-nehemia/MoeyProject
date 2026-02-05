@@ -78,6 +78,10 @@ interface Notification {
             response_by: string | null;
             pm_response_time?: string | null;
             pm_response_by?: string | null;
+            approval_rab_response_time?: string | null;
+            approval_rab_response_by?: string | null;
+            pm_approval_rab_response_time?: string | null;
+            pm_approval_rab_response_by?: string | null;
             rab_internal?: {
                 response_time: string | null;
                 response_by: string | null;
@@ -90,6 +94,12 @@ interface Notification {
                 pm_response_time?: string | null;
                 pm_response_by?: string | null;
             };
+            invoices?: Array<{
+                response_time: string | null;
+                response_by: string | null;
+                pm_response_time?: string | null;
+                pm_response_by?: string | null;
+            }>;
         }>;
         gambar_kerja?: {
             response_time: string | null;
@@ -224,6 +234,14 @@ export default function Index({ notifications, unreadCount }: Props) {
                     responseBy: order.survey_ulang?.response_by || null,
                 };
 
+            case 'invoice_request':
+                const invoice = order.item_pekerjaans?.[0]?.invoices?.[0];
+                return {
+                    responded: !!invoice?.response_time,
+                    responseTime: invoice?.response_time || null,
+                    responseBy: invoice?.response_by || null,
+                };
+
             case 'workplan_request':
                 // Check if any workplan item has response_time
                 const hasAnyWorkplanResponse =
@@ -273,6 +291,14 @@ export default function Index({ notifications, unreadCount }: Props) {
                     responseBy:
                         (order.moodboard as any)?.commitment_fee?.response_by ||
                         null,
+                };
+
+            case 'approval_material_request':
+                const itemPekerjaanApproval = order.item_pekerjaans?.[0];
+                return {
+                    responded: !!itemPekerjaanApproval?.approval_rab_response_time,
+                    responseTime: itemPekerjaanApproval?.approval_rab_response_time || null,
+                    responseBy: itemPekerjaanApproval?.approval_rab_response_by || null,
                 };
 
             default:
@@ -377,6 +403,15 @@ export default function Index({ notifications, unreadCount }: Props) {
                 };
             }
 
+            case 'invoice_request': {
+                const invoice = order.item_pekerjaans?.[0]?.invoices?.[0];
+                return {
+                    responded: !!invoice?.pm_response_time,
+                    responseTime: invoice?.pm_response_time || null,
+                    responseBy: invoice?.pm_response_by || null,
+                };
+            }
+
             case 'workplan_request': {
                 const hasAnyPmWorkplanResponse =
                     order.moodboard?.item_pekerjaans?.some((ip) =>
@@ -412,6 +447,15 @@ export default function Index({ notifications, unreadCount }: Props) {
                     responded: hasAnyPmWorkplanResponse,
                     responseTime: pmWorkplanResponseTime,
                     responseBy: pmWorkplanResponseBy,
+                };
+            }
+
+            case 'approval_material_request': {
+                const itemPekerjaanApprovalPm = order.item_pekerjaans?.[0];
+                return {
+                    responded: !!itemPekerjaanApprovalPm?.pm_approval_rab_response_time,
+                    responseTime: itemPekerjaanApprovalPm?.pm_approval_rab_response_time || null,
+                    responseBy: itemPekerjaanApprovalPm?.pm_approval_rab_response_by || null,
                 };
             }
 
@@ -461,7 +505,9 @@ export default function Index({ notifications, unreadCount }: Props) {
             'item_pekerjaan_request',
             'rab_internal_request',
             'kontrak_request',
+            'invoice_request',
             'gambar_kerja_request',
+            'approval_material_request',
             'workplan_request',
         ];
         return typesWithResponse.includes(type);
@@ -471,8 +517,6 @@ export default function Index({ notifications, unreadCount }: Props) {
     const needsDirectAccess = (type: string): boolean => {
         const typesWithoutResponse = [
             'design_approval',
-            'invoice_request',
-            'approval_material_request',
             'project_management_request',
         ];
         return typesWithoutResponse.includes(type);
@@ -883,47 +927,59 @@ export default function Index({ notifications, unreadCount }: Props) {
 
                                                     if (!requiresResponse(notification.type)) return null;
 
-                                                    // Marketing response and regular response must be independent
-                                                    if (notification.can_marketing_response) {
-                                                        if (marketingStatus?.responded) return null;
+                                                    const actions: React.ReactNode[] = [];
 
-                                                        return (
+                                                    if (
+                                                        notification.can_marketing_response &&
+                                                        isKepalaMarketing &&
+                                                        !marketingStatus?.responded
+                                                    ) {
+                                                        actions.push(
                                                             <button
+                                                                key="marketing-response"
                                                                 onClick={(e) =>
                                                                     handleMarketingResponse(
                                                                         notification.id,
                                                                         e,
                                                                     )
                                                                 }
-                                                                className="mt-2 mb-3 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-4 py-2.5 font-medium text-white shadow-md transition-all hover:from-purple-600 hover:to-purple-700 hover:shadow-lg"
+                                                                className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-4 py-2.5 font-medium text-white shadow-md transition-all hover:from-purple-600 hover:to-purple-700 hover:shadow-lg"
                                                             >
                                                                 <span>
                                                                     Marketing Response
                                                                 </span>
                                                                 <span>→</span>
-                                                            </button>
+                                                            </button>,
                                                         );
                                                     }
 
-                                                    if (responseStatus.responded) return null;
-                                                    if (!isNotKepalaMarketing) return null;
+                                                    if (isNotKepalaMarketing && !responseStatus.responded) {
+                                                        actions.push(
+                                                            <button
+                                                                key="regular-response"
+                                                                onClick={(e) =>
+                                                                    handleResponse(
+                                                                        notification.id,
+                                                                        e,
+                                                                    )
+                                                                }
+                                                                className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2.5 font-medium text-white shadow-md transition-all hover:from-amber-600 hover:to-amber-700 hover:shadow-lg"
+                                                            >
+                                                                <span>
+                                                                    Response &
+                                                                    Buat Record
+                                                                </span>
+                                                                <span>→</span>
+                                                            </button>,
+                                                        );
+                                                    }
+
+                                                    if (actions.length === 0) return null;
 
                                                     return (
-                                                        <button
-                                                            onClick={(e) =>
-                                                                handleResponse(
-                                                                    notification.id,
-                                                                    e,
-                                                                )
-                                                            }
-                                                            className="mt-2 mb-3 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2.5 font-medium text-white shadow-md transition-all hover:from-amber-600 hover:to-amber-700 hover:shadow-lg"
-                                                        >
-                                                            <span>
-                                                                Response &
-                                                                Buat Record
-                                                            </span>
-                                                            <span>→</span>
-                                                        </button>
+                                                        <div className="mt-2 mb-3 flex flex-col gap-2">
+                                                            {actions}
+                                                        </div>
                                                     );
                                                 })()}
 

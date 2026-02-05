@@ -24,6 +24,7 @@ class SurveyScheduleController extends Controller
                 'Desainer',
                 'Kepala Marketing',
                 'Supervisi',
+                'Project Manager',
             ]);
         })->select('id', 'name', 'email')->get();
 
@@ -73,11 +74,12 @@ class SurveyScheduleController extends Controller
         $order->surveyUsers()->sync($validated['survey_schedule_users']);
 
         // TaskResponse: survey schedule sudah diisi (bukan moodboard)
-        $taskResponse = \App\Models\TaskResponse::where('order_id', $order->id)
+        $taskResponse = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'survey_schedule')
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
+            ->where('is_marketing', false)
             ->first();
 
         if ($taskResponse) {
@@ -94,7 +96,7 @@ class SurveyScheduleController extends Controller
             }
 
             // Create task response untuk tahap selanjutnya (survey_ulang)
-            $nextTaskExists = \App\Models\TaskResponse::where('order_id', $order->id)
+            $nextTaskExists = TaskResponse::where('order_id', $order->id)
                 ->where('tahap', 'survey_ulang')
                 ->exists();
 
@@ -146,6 +148,7 @@ class SurveyScheduleController extends Controller
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
+            ->where('is_marketing', false)
             ->first();
 
         if ($taskResponse && $taskResponse->status === 'menunggu_response') {

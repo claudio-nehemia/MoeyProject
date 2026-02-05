@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Models\ItemPekerjaan;
 use App\Models\ItemPekerjaanItem;
 use App\Services\NotificationService;
+use App\Models\ItemPekerjaanProdukBahanBaku;
 
 class ApprovalRabController extends Controller
 {
@@ -20,10 +21,6 @@ class ApprovalRabController extends Controller
     public function index()
     {
         $user = auth()->user();
-        \Log::info('=== APPROVAL RAB INDEX DEBUG ===');
-        \Log::info('User ID: ' . $user->id);
-        \Log::info('User Name: ' . $user->name);
-        \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
 
         $items = ItemPekerjaan::with([
             'moodboard.order',
@@ -62,6 +59,12 @@ class ApprovalRabController extends Controller
                     'customer_name' => $ip->moodboard->order->customer_name,
                     'total_items' => $allItems->count(),
                     'total_bahan_baku' => $allBahanBaku->count(), // 🔥 tambahan
+                    
+                    // Response tracking
+                    'approval_rab_response_time' => $ip->approval_rab_response_time,
+                    'approval_rab_response_by' => $ip->approval_rab_response_by,
+                    'pm_approval_rab_response_time' => $ip->pm_approval_rab_response_time,
+                    'pm_approval_rab_response_by' => $ip->pm_approval_rab_response_by,
     
                     // ⚠️ INI PENTING → supaya items_preview TIDAK undefined
                     'items_preview' => $allItems
@@ -190,7 +193,7 @@ class ApprovalRabController extends Controller
         // Update bahan baku jika ada
         if (isset($validated['bahan_bakus'])) {
             foreach ($validated['bahan_bakus'] as $bahan) {
-                \App\Models\ItemPekerjaanProdukBahanBaku::where('id', $bahan['id'])->update([
+                ItemPekerjaanProdukBahanBaku::where('id', $bahan['id'])->update([
                     'keterangan_bahan_baku' => $bahan['keterangan_bahan_baku'],
                 ]);
             }
@@ -237,6 +240,19 @@ class ApprovalRabController extends Controller
                     'extend_time' => 0,
                     'status' => 'menunggu_response',
                 ]);
+
+                TaskResponse::create([
+                    'order_id' => $order->id,
+                    'user_id' => null,
+                    'tahap' => 'workplan',
+                    'start_time' => now(),
+                    'deadline' => now()->addDays(3), // Deadline untuk workplan
+                    'duration' => 3,
+                    'duration_actual' => 3,
+                    'extend_time' => 0,
+                    'status' => 'menunggu_response',
+                    'is_marketing' => true,
+                ]);
             }
         }
 
@@ -247,6 +263,48 @@ class ApprovalRabController extends Controller
         return redirect()
             ->route('approval-material.index')
             ->with('success', 'Keterangan material dan bahan baku berhasil disimpan dan notifikasi telah dikirim.');
+    }
+
+    public function responses(Request $request, $itemPekerjaanId)
+    {
+        $itemPekerjaan = ItemPekerjaan::with('moodboard.order')->findOrFail($itemPekerjaanId);
+        if($itemPekerjaan->approval_rab_response_by) {
+            return redirect()
+                ->route('approval-material.index')
+                ->with('error', 'RAB sudah pernah direspon.');
+        }
+        $itemPekerjaan->update([
+            'approval_rab_response_by' => auth()->user()->name,
+            'approval_rab_response_time' => now(),
+        ]);
+
+        $taskResponse = TaskResponse::where('order_id', $itemPekerjaan->moodboard->order->id)
+            ->where('tahap', 'approval_material')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->where('is_marketing', false)
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays(6),
+                'duration' => 6,
+                'duration_actual' => $taskResponse->duration_actual,
+                'status' => 'menunggu_input',
+            ]);
+        } elseif ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+            ]);
+        }
+
+        return redirect()
+            ->route('approval-material.index')
+            ->with('success', 'RAB berhasil Diresponses.');
     }
 
 }

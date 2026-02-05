@@ -208,7 +208,7 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props)
                       {hasPmResponse && (
                         <div className="flex items-center gap-2 text-sm">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-medium">
-                            ✓ PM Response
+                            ✓ Marketing Response
                           </span>
                           <span className="text-stone-600">
                             oleh <strong>{order.pm_survey_response_by}</strong> pada{' '}

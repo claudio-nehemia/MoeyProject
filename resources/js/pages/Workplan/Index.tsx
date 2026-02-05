@@ -388,7 +388,7 @@ export default function Index({ orders }: Props) {
                                     </div>
 
                                     {/* Deadline & Minta Perpanjangan - regular */}
-                                    {taskResponses[order.id]?.regular && taskResponses[order.id].regular.status !== 'selesai' && (
+                                    {!isKepalaMarketing && taskResponses[order.id]?.regular && taskResponses[order.id].regular.status !== 'selesai' && (
                                         <div className="mt-3">
                                             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between gap-3">
                                                 <div>

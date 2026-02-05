@@ -250,12 +250,12 @@ class RabInternalController extends Controller
                 }
 
                 // ✅ RUMUS RAB INTERNAL (Sesuai Permintaan Klien):
-                // Harga Satuan = (Harga Bahan Baku + Harga Finishing) / (Markup / 100) × Dimensi × Qty
-                // Contoh: Markup 150% → 150/100 = 1.5, terus harga dibagi 1.5
+                // Harga Satuan = [(Harga Bahan Baku + Harga Finishing) × Dimensi × Qty] / (1 - Markup/100)
+                // Contoh: Markup 20% → 1 - 0.2 = 0.8, lalu [(BB + Finishing) × Dimensi] dibagi 0.8
                 // Note: hargaDimensi sudah include qty
                 $markupSatuan = $produkData['markup_satuan'];
-                $markupDivider = $markupSatuan / 100; // 150 → 1.5
-                $hargaSatuan = ($hargaDasarProduk + $hargaItemsNonAksesoris) / $markupDivider * $hargaDimensi;
+                $markupDivider = 1 - ($markupSatuan / 100); // 20% → 1 - 0.2 = 0.8
+                $hargaSatuan = (($hargaDasarProduk + $hargaItemsNonAksesoris) * $hargaDimensi) / $markupDivider;
 
                 // Create RAB Produk
                 $rabProduk = RabProduk::create([

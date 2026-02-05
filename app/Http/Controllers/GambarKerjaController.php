@@ -55,13 +55,13 @@ class GambarKerjaController extends Controller
         $gambarKerja->update([
             'response_time' => now(),
             'response_by' => auth()->user()->name,
-            'status' => 'pending',
         ]);
 
         $taskResponse = TaskResponse::where('order_id', $gambarKerja->order->id)
             ->where('tahap', 'gambar_kerja')
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
+            ->where('is_marketing', false)
             ->orderByDesc('id')
             ->first();
 
@@ -131,11 +131,11 @@ class GambarKerjaController extends Controller
         ]);
 
         $taskResponse = TaskResponse::where('order_id', $gambarKerja->order->id)
-                ->where('tahap', 'gambar_kerja')
+            ->where('tahap', 'gambar_kerja')
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
-                ->first();
+            ->first();
 
         if ($taskResponse) {
             if ($taskResponse->isOverdue()) {
@@ -165,13 +165,13 @@ class GambarKerjaController extends Controller
                     'duration' => 6,
                     'duration_actual' => 6,
                     'extend_time' => 0,
-                    'status' => 'menunggu_input',
+                    'status' => 'menunggu_response',
                 ]);
 
                 TaskResponse::create([
                     'order_id' => $gambarKerja->order->id,
                     'user_id' => null,
-                    'tahap' => 'workplan',
+                    'tahap' => 'approval_material',
                     'start_time' => now(),
                     'deadline' => now()->addDays(6), // Deadline untuk approval_material
                     'duration' => 6,

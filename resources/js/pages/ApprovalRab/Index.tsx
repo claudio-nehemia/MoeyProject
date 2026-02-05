@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import ExtendModal from '@/components/ExtendModal';
@@ -28,6 +28,10 @@ interface Row {
     total_bahan_baku: number;
     items_preview: ItemPreview[];
     bahan_baku_preview: BahanBakuPreview[];
+    approval_rab_response_time: string | null;
+    approval_rab_response_by: string | null;
+    pm_approval_rab_response_time: string | null;
+    pm_approval_rab_response_by: string | null;
 }
 
 interface Props {
@@ -35,13 +39,17 @@ interface Props {
 }
 
 export default function ApprovalRabIndex({ items }: Props) {
+    const { props } = usePage();
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [search, setSearch] = useState('');
     // Dual task response state
     const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: any; marketing?: any }>>({});
     const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: any } | null>(null);
     // Kepala Marketing
-    const isKepalaMarketing = (window as any)?.Inertia?.page?.props?.auth?.user?.isKepalaMarketing || false;
+    const isKepalaMarketing = (props.auth as any)?.user?.isKepalaMarketing || false;
+
+    console.log('Debug isKepalaMarketing:', isKepalaMarketing);
+    console.log('Debug auth:', props.auth);
 
     const formatDeadline = (value: string | null | undefined) => {
         if (value == null || value === '') return '-';
@@ -52,6 +60,43 @@ export default function ApprovalRabIndex({ items }: Props) {
             month: 'long',
             year: 'numeric',
         });
+    };
+
+    const formatDateTime = (value: string | null | undefined) => {
+        if (value == null || value === '') return '-';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '-';
+        return d.toLocaleString('id-ID', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    };
+
+    const handleResponse = (itemPekerjaanId: number) => {
+        if (confirm('Apakah Anda yakin akan merespon Approval Material ini?')) {
+            router.post(`/approval-material/${itemPekerjaanId}/responses`, {}, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    // Refresh page to get updated data
+                    router.reload();
+                },
+            });
+        }
+    };
+
+    const handlePmResponse = (itemPekerjaanId: number) => {
+        if (confirm('Apakah Anda yakin akan merespon sebagai Marketing untuk Approval Material ini?')) {
+            router.post(`/pm-response/approval-rab/${itemPekerjaanId}`, {}, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    // Refresh page to get updated data
+                    router.reload();
+                },
+            });
+        }
     };
 
     useEffect(() => {
@@ -166,6 +211,13 @@ export default function ApprovalRabIndex({ items }: Props) {
                                 const taskResponse = orderId ? taskResponses[orderId]?.regular : null;
                                 const marketingTaskResponse = orderId ? taskResponses[orderId]?.marketing : null;
 
+                                console.log('Row data:', {
+                                    project: row.project_name,
+                                    pm_approval_rab_response_time: row.pm_approval_rab_response_time,
+                                    pm_approval_rab_response_by: row.pm_approval_rab_response_by,
+                                    isKepalaMarketing
+                                });
+
                                 return (
                                 <div
                                     key={row.id}
@@ -183,6 +235,26 @@ export default function ApprovalRabIndex({ items }: Props) {
                                             <p className="text-sm text-stone-600">
                                                 <strong>Customer:</strong> {row.customer_name}
                                             </p>
+
+                                            {/* Response Status Badges */}
+                                            <div className="mt-2 flex flex-wrap gap-2">
+                                                {row.approval_rab_response_time && (
+                                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 border border-green-300 rounded-md">
+                                                        <span className="text-green-700 text-xs">✓</span>
+                                                        <span className="text-xs font-medium text-green-800">
+                                                            Response: {row.approval_rab_response_by}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {row.pm_approval_rab_response_time && (
+                                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-100 border border-indigo-300 rounded-md">
+                                                        <span className="text-indigo-700 text-xs">✓</span>
+                                                        <span className="text-xs font-medium text-indigo-800">
+                                                            Marketing Response: {row.pm_approval_rab_response_by}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
 
                                             {/* Deadline & Minta Perpanjangan - REGULAR */}
                                             {taskResponse && taskResponse.status !== 'selesai' && (
@@ -236,16 +308,75 @@ export default function ApprovalRabIndex({ items }: Props) {
                                                     </div>
                                                 </div>
                                             )}
+
+                                            {/* Response Status Display */}
+                                            <div className="mt-4 space-y-2">
+                                                {/* Regular Response */}
+                                                {!isKepalaMarketing && !row.approval_rab_response_time ? (
+                                                    <button
+                                                        onClick={() => handleResponse(row.id)}
+                                                        className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                                                    >
+                                                        Response Approval Material
+                                                    
+                                                    
+                                                    </button>
+                                                ) : (
+                                                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                                        <p className="text-xs font-semibold text-green-800 mb-2">
+                                                            ✓ Response Approval Material
+                                                        </p>
+                                                        <div className="space-y-1">
+                                                            <p className="text-xs text-green-700">
+                                                                <span className="font-medium">Direspon oleh:</span> {row.approval_rab_response_by}
+                                                            </p>
+                                                            <p className="text-xs text-green-600">
+                                                                <span className="font-medium">Waktu response:</span> {formatDateTime(row.approval_rab_response_time)}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* PM Response (Kepala Marketing only) */}
+                                                {isKepalaMarketing && (
+                                                    <>
+                                                        {row.pm_approval_rab_response_time ? (
+                                                            <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+                                                                <p className="text-xs font-semibold text-indigo-800 mb-2">
+                                                                    ✓ Marketing Response
+                                                                </p>
+                                                                <div className="space-y-1">
+                                                                    <p className="text-xs text-indigo-700">
+                                                                        <span className="font-medium">Direspon oleh:</span> {row.pm_approval_rab_response_by}
+                                                                    </p>
+                                                                    <p className="text-xs text-indigo-600">
+                                                                        <span className="font-medium">Waktu response:</span> {formatDateTime(row.pm_approval_rab_response_time)}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => handlePmResponse(row.id)}
+                                                                className="w-full px-4 py-2.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors"
+                                                            >
+                                                                Marketing Response
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
                                         </div>
 
-                                        <button
-                                            onClick={() =>
-                                                router.visit(`/approval-material/${row.id}/edit`)
-                                            }
-                                            className="h-fit rounded-lg bg-amber-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-amber-700"
-                                        >
-                                            Edit Item & Isi Keterangan
-                                        </button>
+                                        <div className="flex flex-col gap-2">
+                                            <button
+                                                onClick={() =>
+                                                    router.visit(`/approval-material/${row.id}/edit`)
+                                                }
+                                                className="rounded-lg bg-amber-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-amber-700"
+                                            >
+                                                Edit Item & Isi Keterangan
+                                            </button>
+                                        </div>
                                     </div>
 
                                     {/* Body */}

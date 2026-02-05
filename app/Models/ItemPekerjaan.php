@@ -21,6 +21,10 @@ class ItemPekerjaan extends Model
         'bast_foto_klien_uploaded_at',
         'pm_response_time',
         'pm_response_by',
+        'approval_rab_response_time',
+        'approval_rab_response_by',
+        'pm_approval_rab_response_time',
+        'pm_approval_rab_response_by',
     ];
 
     protected $casts = [

@@ -80,6 +80,10 @@ interface ItemPekerjaan {
     current_step: number;
     has_bast: boolean;
     is_fully_paid: boolean;
+    response_time: string | null;
+    response_by: string | null;
+    pm_response_time: string | null;
+    pm_response_by: string | null;
 }
 
 interface Props {
@@ -192,9 +196,15 @@ export default function Index({ itemPekerjaans }: Props) {
         router.get(`/invoice/${invoiceId}/show`);
     };
 
+    const handleResponse = (itemPekerjaanId: number) => {
+        if (confirm('Apakah Anda yakin ingin melakukan Response untuk invoice ini?')) {
+            router.post(`/invoice/item-pekerjaan/${itemPekerjaanId}/response`);
+        }
+    };
+
     const handlePmResponse = (itemPekerjaanId: number) => {
         if (confirm('Apakah Anda yakin ingin melakukan PM Response untuk invoice ini?')) {
-            router.post(route('pm.response.invoice', itemPekerjaanId));
+            router.post(`/pm-response/invoice/${itemPekerjaanId}`);
         }
     };
 
@@ -539,10 +549,33 @@ export default function Index({ itemPekerjaans }: Props) {
                                                 </div>
                                             )}
 
+                                            {/* Regular Response - Any admin can respond anytime */}
+                                            {!isKepalaMarketing && (
+                                                <div className="mb-4">
+                                                    {!item.response_time ? (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleResponse(item.id);
+                                                            }}
+                                                            className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-blue-600 hover:to-blue-700"
+                                                        >
+                                                            Response Invoice
+                                                        </button>
+                                                    ) : (
+                                                        <div className="inline-flex flex-col rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-xs text-blue-800">
+                                                            <span className="font-semibold">✓ Response Invoice</span>
+                                                            <span>By: {item.response_by || '-'}</span>
+                                                            <span>{formatDateTime(item.response_time)}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
                                             {/* PM Response - Kepala Marketing can respond anytime */}
                                             {isKepalaMarketing && (
                                                 <div className="mb-4">
-                                                    {!marketingResponse?.response_time ? (
+                                                    {!item.pm_response_time ? (
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -555,8 +588,8 @@ export default function Index({ itemPekerjaans }: Props) {
                                                     ) : (
                                                         <div className="inline-flex flex-col rounded-lg border border-purple-200 bg-purple-50 px-4 py-2 text-xs text-purple-800">
                                                             <span className="font-semibold">✓ Marketing Response</span>
-                                                            <span>By: {marketingResponse.response_by || '-'}</span>
-                                                            <span>{formatDateTime(marketingResponse.response_time)}</span>
+                                                            <span>By: {item.pm_response_by || '-'}</span>
+                                                            <span>{formatDateTime(item.pm_response_time)}</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -657,19 +690,22 @@ export default function Index({ itemPekerjaans }: Props) {
                                                             </div>
 
                                                             <div className="flex items-center gap-4">
-                                                                {/* Amount */}
-                                                                <div className="text-right">
-                                                                    <div className="text-sm font-bold text-gray-900">
-                                                                        {step.invoice ? formatRupiah(step.invoice.total_amount || 0) : formatRupiah(step.nominal || 0)}
+                                                                {/* Amount - hide if total_amount is null or 0 */}
+                                                                {(!step.invoice || (step.invoice.total_amount && step.invoice.total_amount > 0)) && (
+                                                                    <div className="text-right">
+                                                                        <div className="text-sm font-bold text-gray-900">
+                                                                            {step.invoice ? formatRupiah(step.invoice.total_amount || 0) : formatRupiah(step.nominal || 0)}
+                                                                        </div>
+                                                                        <div className="text-xs text-gray-500">{step.persentase || 0}%</div>
                                                                     </div>
-                                                                    <div className="text-xs text-gray-500">{step.persentase || 0}%</div>
-                                                                </div>
+                                                                )}
 
                                                                 {/* Status Badge */}
                                                                 {getStepStatusBadge(step)}
 
                                                                 {/* Action Button */}
-                                                                {step.can_pay && !step.invoice && (
+                                                                {/* Show Generate button if: no invoice OR invoice exists but total_amount = 0 or invoice_number is empty */}
+                                                                {(step.can_pay && !step.invoice) || (step.invoice && (!step.invoice.total_amount || step.invoice.total_amount === 0 || !step.invoice.invoice_number)) ? (
                                                                     <button
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
@@ -691,13 +727,14 @@ export default function Index({ itemPekerjaans }: Props) {
                                                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                                                                 </svg>
-                                                                                Generate Invoice
+                                                                                {step.invoice ? 'Update Invoice' : 'Generate Invoice'}
                                                                             </>
                                                                         )}
                                                                     </button>
-                                                                )}
+                                                                ) : null}
 
-                                                                {step.invoice && (
+                                                                {/* Show View button only if invoice exists AND has valid total_amount and invoice_number */}
+                                                                {step.invoice && step.invoice.total_amount > 0 && step.invoice.invoice_number && (
                                                                     <button
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();

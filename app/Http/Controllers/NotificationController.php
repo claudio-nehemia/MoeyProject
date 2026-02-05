@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Inertia\Inertia;
 use App\Models\Order;
+use App\Models\Invoice;
 use App\Models\Kontrak;
 use App\Models\Estimasi;
 use App\Models\Moodboard;
@@ -46,8 +47,10 @@ class NotificationController extends Controller
                 'order.moodboard.commitmentFee',
                 'order.moodboard.estimasi',
                 'order.moodboard.itemPekerjaans.produks.workplanItems',
+                'order.itemPekerjaans', // Load item pekerjaan for approval_rab response
                 'order.itemPekerjaans.rabInternal',
                 'order.itemPekerjaans.kontrak',
+                'order.itemPekerjaans.invoices',
                 'order.gambarKerja',
                 'order.users.role',
             ])
@@ -208,22 +211,21 @@ class NotificationController extends Controller
      */
     private function handleSurveyRequest($order)
     {
-        // Check if survey already exists
-        if ($order->surveyResults) {
-            if (!$order->surveyResults->response_time) {
-                $order->surveyResults->update([
+        $survey = $order->surveyResults;
+        if ($survey) {
+            if (!$survey->response_time) {
+                $survey->update([
                     'response_time' => now(),
                     'response_by' => auth()->user()->name ?? 'Admin',
                 ]);
             }
+        } else {
+            SurveyResults::create([
+                'order_id' => $order->id,
+                'response_time' => now(),
+                'response_by' => auth()->user()->name ?? 'Admin',
+            ]);
         }
-
-        // Create empty survey with response info
-        SurveyResults::create([
-            'order_id' => $order->id,
-            'response_time' => now(),
-            'response_by' => auth()->user()->name ?? 'Admin',
-        ]);
 
         $order->update([
             'tahapan_proyek' => 'survey',
@@ -232,7 +234,9 @@ class NotificationController extends Controller
 
         $taskResponse = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'survey')
-            ->where('is_marketing', false)
+            ->where(function ($q) {
+                $q->where('is_marketing', false)->orWhereNull('is_marketing');
+            })
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
@@ -506,7 +510,7 @@ class NotificationController extends Controller
                     'response_time' => now(),
                 ]);
             }
-        } else {    
+        } else {
             ItemPekerjaan::create([
                 'moodboard_id' => $order->moodboard->id,
                 'response_by' => auth()->user()->name,
@@ -623,15 +627,13 @@ class NotificationController extends Controller
                     'response_by' => auth()->user()->name,
                 ]);
             }
-            return redirect()->route('kontrak.index')
-                ->with('info', 'Kontrak sudah ada untuk project ini.');
+        } else {
+            Kontrak::create([
+                'item_pekerjaan_id' => $itemPekerjaan->id,
+                'response_time' => now(),
+                'response_by' => auth()->user()->name,
+            ]);
         }
-
-        Kontrak::create([
-            'item_pekerjaan_id' => $itemPekerjaan->id,
-            'response_time' => now(),
-            'response_by' => auth()->user()->name,
-        ]);
 
         $order->update([
             'tahapan_proyek' => 'kontrak',
@@ -641,6 +643,7 @@ class NotificationController extends Controller
             ->where('tahap', 'kontrak')
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
+            ->where('is_marketing', false)
             ->orderByDesc('id')
             ->first();
 
@@ -667,13 +670,81 @@ class NotificationController extends Controller
 
     /**
      * Handle invoice request notification
-     * DIRECT REDIRECT - No record creation
+     * CREATES RECORD with response info
      */
     private function handleInvoiceRequest($order)
     {
+        $itemPekerjaan = $order->itemPekerjaans->first();
+        if (!$itemPekerjaan) {
+            return redirect()->route('item-pekerjaan.index', ['order_id' => $order->id])
+                ->with('error', 'Item pekerjaan belum ada untuk order ini. Silakan buat item pekerjaan terlebih dahulu.');
+        }
+
+        // Check if invoice already exists and has response
+        $invoice = $itemPekerjaan->invoices()->first();
+        if ($invoice && $invoice->response_time) {
+            return redirect()->route('invoice.index', ['order_id' => $order->id])
+                ->with('info', 'Invoice untuk order ini sudah di-respond.');
+        }
+
+        // Update response info if invoice exists, or it will be set when creating invoice
+        if ($invoice) {
+            $invoice->update([
+                'response_time' => now(),
+                'response_by' => auth()->user()->name,
+            ]);
+        } else {
+            Invoice::create([
+                'item_pekerjaan_id' => $itemPekerjaan->id,
+                'rab_kontrak_id' => $itemPekerjaan->rabKontrak->id,
+                'response_time' => now(),
+                'response_by' => auth()->user()->name,
+            ]);
+        }
+
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'invoice')
+            ->where(function ($q) {
+                $q->where('is_marketing', false)->orWhereNull('is_marketing');
+            })
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'status' => 'menunggu_input',
+                'response_time' => now(),
+                'response_by' => auth()->user()->name,
+                'response_at' => now(),
+            ]);
+        } elseif ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'status' => 'telat',
+            ]);
+        }
+
+        if (!$taskResponse) {
+            TaskResponse::create([
+                'order_id' => $order->id,
+                'user_id' => null,
+                'tahap' => 'invoice',
+                'start_time' => now(),
+                'deadline' => now()->addDays(6),
+                'duration' => 6,
+                'duration_actual' => 6,
+                'extend_time' => 0,
+                'status' => 'menunggu_input',
+                'response_time' => now(),
+                'response_by' => auth()->user()->name,
+                'response_at' => now(),
+            ]);
+        }
+
         // Redirect to Invoice page
         return redirect()->route('invoice.index', ['order_id' => $order->id])
-            ->with('info', 'Please manage the Invoice for this order.');
+            ->with('success', 'Response recorded. Please manage the Invoice for this order.');
     }
 
     /**
@@ -699,6 +770,7 @@ class NotificationController extends Controller
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
+            ->where('is_marketing', false)
             ->first();
 
         if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -737,17 +809,13 @@ class NotificationController extends Controller
                     'response_by' => auth()->user()->name ?? 'Admin',
                 ]);
             }
-            return redirect()->route('survey-ulang.index', ['order_id' => $order->id])
-                ->with('info', 'Survey ulang sudah ada untuk project ini.');
+        } else {
+            SurveyUlang::create([
+                'order_id' => $order->id,
+                'response_time' => now(),
+                'response_by' => auth()->user()->name ?? 'Admin',
+            ]);
         }
-
-        // Create empty survey ulang record with response info
-        // User will fill in details (catatan, foto, temuan) later
-        SurveyUlang::create([
-            'order_id' => $order->id,
-            'response_time' => now(),
-            'response_by' => auth()->user()->name ?? 'Admin',
-        ]);
 
         $order->update(['tahapan_proyek' => 'survey_ulang']);
 
@@ -756,6 +824,7 @@ class NotificationController extends Controller
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
+            ->where('is_marketing', false)
             ->first();
 
         if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -813,6 +882,7 @@ class NotificationController extends Controller
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
+            ->where('is_marketing', false)
             ->first();
 
         if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -838,18 +908,61 @@ class NotificationController extends Controller
 
     /**
      * Handle approval material request notification
-     * DIRECT REDIRECT - No record creation
+     * CREATES RECORD with response info
      */
     private function handleApprovalMaterialRequest($order)
     {
         // Redirect to Approval Material page
-        return redirect()->route('approval-material.index', ['order_id' => $order->id])
-            ->with('info', 'Please manage the Approval Material for this order.');
-    }
+        if (!$order->itemPekerjaans || $order->itemPekerjaans->isEmpty()) {
+            return redirect()->route('item-pekerjaan.index', ['order_id' => $order->id])
+                ->with('error', 'Item pekerjaan belum ada untuk order ini. Silakan buat item pekerjaan terlebih dahulu.');
+        }
 
+        $itemPekerjaan = $order->itemPekerjaans->first();
+        
+        // Check if already responded
+        if ($itemPekerjaan->approval_rab_response_by) {
+            return redirect()->route('approval-material.index')
+                ->with('info', 'Approval material sudah pernah direspon.');
+        }
+
+        // Update response record
+        $itemPekerjaan->update([
+            'approval_rab_response_time' => now(),
+            'approval_rab_response_by' => auth()->user()->name,
+        ]);
+
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'approval_material')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->where('is_marketing', false)
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays(6),
+                'duration' => 6,
+                'duration_actual' => $taskResponse->duration_actual,
+                'status' => 'menunggu_input',
+            ]);
+        } elseif ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+            ]);
+        }
+
+        return redirect()->route('approval-material.index')
+            ->with('success', 'Response berhasil dicatat. Silakan kelola approval material.');
+    }
     /**
      * Handle workplan request notification
-     * Workplan created during store, response acknowledges the request
+     * Logic: If workplan not exist -> create new with response info
+     *        If workplan exist -> update response_time & response_by only
      */
     private function handleWorkplanRequest($order)
     {
@@ -865,32 +978,36 @@ class NotificationController extends Controller
                 ->with('info', 'Permintaan workplan sudah diterima sebelumnya.');
         }
 
-        // CREATE empty workplan items with response tracking
-        // This marks the response and prepares the structure for filling
-        DB::transaction(function () use ($order) {
-            foreach ($order->moodboard->itemPekerjaans as $itemPekerjaan) {
-                foreach ($itemPekerjaan->produks as $produk) {
-                    // Skip if already has workplan items
-                    if ($produk->workplanItems->count() > 0) {
-                        continue;
+        DB::transaction(function () use ($order, $workplanItems) {
+            if ($workplanItems->isEmpty()) {
+                // CREATE new workplan items with response tracking
+                foreach ($order->moodboard->itemPekerjaans as $itemPekerjaan) {
+                    foreach ($itemPekerjaan->produks as $produk) {
+                        // Create empty workplan items based on default breakdown
+                        $defaultBreakdown = WorkplanItemController::defaultBreakdown();
+                        foreach ($defaultBreakdown as $index => $stage) {
+                            WorkplanItem::create([
+                                'item_pekerjaan_produk_id' => $produk->id,
+                                'nama_tahapan' => $stage['nama_tahapan'],
+                                'start_date' => null,
+                                'end_date' => null,
+                                'duration_days' => null,
+                                'urutan' => $index + 1,
+                                'status' => 'planned',
+                                'catatan' => null,
+                                'response_time' => now(),
+                                'response_by' => auth()->user()->name ?? 'System',
+                            ]);
+                        }
                     }
-
-                    // Create empty workplan items based on default breakdown
-                    $defaultBreakdown = WorkplanItemController::defaultBreakdown();
-                    foreach ($defaultBreakdown as $index => $stage) {
-                        WorkplanItem::create([
-                            'item_pekerjaan_produk_id' => $produk->id,
-                            'nama_tahapan' => $stage['nama_tahapan'],
-                            'start_date' => null,
-                            'end_date' => null,
-                            'duration_days' => null,
-                            'urutan' => $index + 1,
-                            'status' => 'planned',
-                            'catatan' => null,
-                            'response_time' => now(),
-                            'response_by' => auth()->user()->name ?? 'System',
-                        ]);
-                    }
+                }
+            } else {
+                // UPDATE existing workplan items - only response_time & response_by
+                foreach ($workplanItems as $item) {
+                    $item->update([
+                        'response_time' => now(),
+                        'response_by' => auth()->user()->name ?? 'System',
+                    ]);
                 }
             }
         });
@@ -900,6 +1017,7 @@ class NotificationController extends Controller
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
+            ->where('is_marketing', false)
             ->first();
 
         if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -1007,7 +1125,7 @@ class NotificationController extends Controller
                 ]);
 
                 // Marketing task for early stage uses tahap 'survey'
-                $this->markMarketingTaskResponseDone($order, 'survey');
+                $this->markMarketingTaskResponseDone($order, 'survey_schedule');
                 return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Survey Schedule).');
             }
 
@@ -1193,6 +1311,57 @@ class NotificationController extends Controller
                 return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (RAB Internal).');
             }
 
+            case Notification::TYPE_INVOICE_REQUEST: {
+                $itemPekerjaan = $order->itemPekerjaans->first();
+                if ($itemPekerjaan) {
+                    $invoice = $itemPekerjaan->invoices?->sortBy('termin_step')->first();
+                    if ($invoice) {
+                        $invoice->update([
+                            'pm_response_time' => now(),
+                            'pm_response_by' => auth()->user()->name ?? 'Admin',
+                        ]);
+                    } else {
+                        Invoice::create([
+                            'item_pekerjaan_id' => $itemPekerjaan->id,
+                            'rab_kontrak_id' => $itemPekerjaan->rabKontrak->id,
+                            'pm_response_time' => now(),
+                            'pm_response_by' => auth()->user()->name ?? 'Admin',
+                        ]);
+                    }
+                }
+
+                $taskResponse = TaskResponse::where('order_id', $order->id)
+                    ->where('tahap', 'invoice')
+                    ->where('is_marketing', true)
+                    ->orderByDesc('extend_time')
+                    ->orderByDesc('updated_at')
+                    ->orderByDesc('id')
+                    ->first();
+
+                if (!$taskResponse) {
+                    $taskResponse = TaskResponse::create([
+                        'order_id' => $order->id,
+                        'user_id' => null,
+                        'tahap' => 'invoice',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3),
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                        'is_marketing' => true,
+                    ]);
+                }
+
+                $taskResponse->update([
+                    'response_time' => now(),
+                    'status' => 'selesai',
+                    'user_id' => auth()->id(),
+                ]);
+
+                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Invoice).');
+            }
+
             case Notification::TYPE_KONTRAK_REQUEST: {
                 $itemPekerjaan = $order->itemPekerjaans->first();
                 if (!$itemPekerjaan) {
@@ -1201,6 +1370,12 @@ class NotificationController extends Controller
 
                 if ($itemPekerjaan->kontrak) {
                     $itemPekerjaan->kontrak->update([
+                        'pm_response_time' => now(),
+                        'pm_response_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                } else {
+                    Kontrak::create([
+                        'item_pekerjaan_id' => $itemPekerjaan->id,
                         'pm_response_time' => now(),
                         'pm_response_by' => auth()->user()->name ?? 'Admin',
                     ]);
@@ -1217,15 +1392,56 @@ class NotificationController extends Controller
                         ->flatMap(fn($ip) => $ip->produks)
                         ->flatMap(fn($produk) => $produk->workplanItems);
 
-                    foreach ($workplanItems as $item) {
-                        $item->update([
-                            'pm_response_time' => now(),
-                            'pm_response_by' => auth()->user()->name ?? 'Admin',
-                        ]);
-                    }
+                    DB::transaction(function () use ($order, $workplanItems) {
+                        if ($workplanItems->isEmpty()) {
+                            // CREATE new workplan items with PM response tracking
+                            foreach ($order->moodboard->itemPekerjaans as $itemPekerjaan) {
+                                foreach ($itemPekerjaan->produks as $produk) {
+                                    // Create empty workplan items based on default breakdown
+                                    $defaultBreakdown = WorkplanItemController::defaultBreakdown();
+                                    foreach ($defaultBreakdown as $index => $stage) {
+                                        WorkplanItem::create([
+                                            'item_pekerjaan_produk_id' => $produk->id,
+                                            'nama_tahapan' => $stage['nama_tahapan'],
+                                            'start_date' => null,
+                                            'end_date' => null,
+                                            'duration_days' => null,
+                                            'urutan' => $index + 1,
+                                            'status' => 'planned',
+                                            'catatan' => null,
+                                            'pm_response_time' => now(),
+                                            'pm_response_by' => auth()->user()->name ?? 'Admin',
+                                        ]);
+                                    }
+                                }
+                            }
+                        } else {
+                            // UPDATE existing workplan items - only pm_response_time & pm_response_by
+                            foreach ($workplanItems as $item) {
+                                $item->update([
+                                    'pm_response_time' => now(),
+                                    'pm_response_by' => auth()->user()->name ?? 'Admin',
+                                ]);
+                            }
+                        }
+                    });
                 }
 
+                $this->markMarketingTaskResponseDone($order, 'workplan');
                 return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Workplan).');
+            }
+
+            case Notification::TYPE_APPROVAL_MATERIAL_REQUEST: {
+                $itemPekerjaan = $order->itemPekerjaans->first();
+                if ($itemPekerjaan) {
+                    $itemPekerjaan->update([
+                        'pm_approval_rab_response_time' => now(),
+                        'pm_approval_rab_response_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                }
+
+                $this->markMarketingTaskResponseDone($order, 'approval_material');
+                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Approval Material).');
             }
 
             default:

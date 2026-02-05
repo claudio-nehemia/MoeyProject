@@ -94,7 +94,7 @@ export default function Index({ itemPekerjaans, termins }: Props) {
             const orderId = item.order.id;
             if (orderId) {
                 // Regular
-                axios.get(`/task-response/${orderId}/kontrak`)
+                axios.get(`/task-response/${orderId}/kontrak`, { params: { is_marketing: 0 } })
                     .then(res => {
                         const task = Array.isArray(res.data) ? res.data[0] : res.data;
                         setTaskResponses(prev => ({
@@ -152,9 +152,9 @@ export default function Index({ itemPekerjaans, termins }: Props) {
         }
     };
 
-    const handlePmResponse = (kontrakId: number) => {
-        if (confirm('Apakah Anda yakin ingin memberikan PM response untuk kontrak ini?')) {
-            router.post(`/pm-response/kontrak/${kontrakId}`, {}, {
+    const handlePmResponse = (itemPekerjaanId: number) => {
+        if (confirm('Apakah Anda yakin ingin memberikan Marketing response untuk kontrak ini?')) {
+            router.post(`/pm-response/kontrak/${itemPekerjaanId}`, {}, {
                 preserveScroll: true,
             });
         }
@@ -456,51 +456,52 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                 )}
                                                             </td>
                                                             <td className="px-6 py-4">
-                                                                {item.kontrak && item.kontrak.response_time ? (
-                                                                    <div className="space-y-1">
-                                                                        <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
-                                                                            ✓
-                                                                            Sudah
-                                                                            Response
-                                                                        </span>
-                                                                        <div className="text-xs text-gray-600">
-                                                                            <div>
-                                                                                <strong>
-                                                                                    Oleh:
-                                                                                </strong>{' '}
-                                                                                {
-                                                                                    item
-                                                                                        .kontrak
-                                                                                        .response_by
-                                                                                }
-                                                                            </div>
-                                                                            <div>
-                                                                                <strong>
-                                                                                    Waktu:
-                                                                                </strong>{' '}
-                                                                                {
-                                                                                    item
-                                                                                        .kontrak
-                                                                                        .response_time
-                                                                                }
+                                                                <div className="space-y-2">
+                                                                    {item.kontrak?.response_time ? (
+                                                                        <div className="space-y-1">
+                                                                            <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
+                                                                                ✓
+                                                                                Sudah
+                                                                                Response
+                                                                            </span>
+                                                                            <div className="text-xs text-gray-600">
+                                                                                <div>
+                                                                                    <strong>
+                                                                                        Oleh:
+                                                                                    </strong>{' '}
+                                                                                    {
+                                                                                        item
+                                                                                            .kontrak
+                                                                                            .response_by
+                                                                                    }
+                                                                                </div>
+                                                                                <div>
+                                                                                    <strong>
+                                                                                        Waktu:
+                                                                                    </strong>{' '}
+                                                                                    {
+                                                                                        item
+                                                                                            .kontrak
+                                                                                            .response_time
+                                                                                    }
+                                                                                </div>
                                                                             </div>
                                                                         </div>
+                                                                    ) : (
+                                                                        <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-800">
+                                                                            Legal Belum
+                                                                            Response
+                                                                        </span>
+                                                                    )}
 
-                                                                        {item.kontrak.pm_response_time && (
-                                                                            <div className="mt-2 bg-purple-50 border border-purple-200 rounded-lg p-2">
-                                                                                <p className="text-xs font-semibold text-purple-900">✓ PM Response</p>
-                                                                                <p className="text-xs text-purple-700">By: {item.kontrak.pm_response_by}</p>
-                                                                                <p className="text-xs text-purple-700">{item.kontrak.pm_response_time}</p>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                ) : (
-                                                                    <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-800">
-                                                                        ⚠️
-                                                                        Belum
-                                                                        Response
-                                                                    </span>
-                                                                )}
+                                                                    {item.kontrak?.pm_response_time && (
+                                                                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-2">
+                                                                            <p className="text-xs font-semibold text-purple-900">✓ Marketing Response</p>
+                                                                            <p className="text-xs text-purple-700">By: {item.kontrak.pm_response_by}</p>
+                                                                            <p className="text-xs text-purple-700">{item.kontrak.pm_response_time}</p>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </td>
                                                             <td className="px-6 py-4">
                                                                 {!item.kontrak ? (
@@ -531,7 +532,7 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                             Mark as Response
                                                                         </button>
                                                                     ) : null
-                                                                ) : !item.kontrak.durasi_kontrak ? (
+                                                                ) : !item.kontrak.durasi_kontrak && isNotKepalaMarketing ? (
                                                                     <button
                                                                         onClick={() =>
                                                                             handleOpenModal(
@@ -543,61 +544,66 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                         Buat
                                                                         Kontrak
                                                                     </button>
-                                                                ) : (
-                                                                    <div className="space-y-2">
-                                                                        {/* Task Response Deadline & Extend Button */}
-                                                                        {/* Task Response Deadline - REGULAR */}
-                                                                        {taskResponses[orderId]?.regular && taskResponses[orderId]?.regular.status !== 'selesai' && (
-                                                                            <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                                                                <div className="flex justify-between items-center">
-                                                                                    <div>
-                                                                                        <p className="text-xs font-medium text-yellow-800">
-                                                                                            Deadline Kontrak
-                                                                                        </p>
-                                                                                        <p className="text-sm font-semibold text-yellow-900">
-                                                                                            {formatDeadline(taskResponses[orderId]?.regular.deadline)}
-                                                                                        </p>
-                                                                                    </div>
-                                                                                    <button
-                                                                                        onClick={() => setShowExtendModal({ orderId, tahap: 'kontrak', isMarketing: false, taskResponse: taskResponses[orderId]?.regular })}
-                                                                                        className="px-3 py-1.5 bg-orange-500 text-white rounded-md text-xs font-medium hover:bg-orange-600 transition-colors"
-                                                                                    >
-                                                                                        Perpanjang
-                                                                                    </button>
-                                                                                </div>
-                                                                            </div>
-                                                                        )}
-                                                                        {/* Task Response Deadline - MARKETING (Kepala Marketing only) */}
-                                                                        {isKepalaMarketing && taskResponses[orderId]?.marketing && taskResponses[orderId]?.marketing.status !== 'selesai' && (
-                                                                            <div className="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                                                                                <div className="flex justify-between items-center">
-                                                                                    <div>
-                                                                                        <p className="text-xs font-medium text-purple-800">
-                                                                                            Deadline Kontrak (Marketing)
-                                                                                        </p>
-                                                                                        <p className="text-sm font-semibold text-purple-900">
-                                                                                            {formatDeadline(taskResponses[orderId]?.marketing.deadline)}
-                                                                                        </p>
-                                                                                    </div>
-                                                                                    <button
-                                                                                        onClick={() => setShowExtendModal({ orderId, tahap: 'kontrak', isMarketing: true, taskResponse: taskResponses[orderId]?.marketing })}
-                                                                                        className="px-3 py-1.5 bg-purple-500 text-white rounded-md text-xs font-medium hover:bg-purple-600 transition-colors"
-                                                                                    >
-                                                                                        Perpanjang (Marketing)
-                                                                                    </button>
-                                                                                </div>
-                                                                            </div>
-                                                                        )}
+                                                                ) : null}
 
-                                                                        {/* PM Response Button */}
-                                                                        {isKepalaMarketing && !item.kontrak.pm_response_time && (
-                                                                            <button
-                                                                                onClick={() => handlePmResponse(item.kontrak!.id)}
-                                                                                className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:bg-purple-700 hover:shadow-lg"
-                                                                            >
-                                                                                PM Response
-                                                                            </button>
-                                                                        )}
+                                                                <div className="space-y-3 min-w-[280px]">
+                                                                    {/* Task Response Deadline & Extend Button */}
+                                                                    {/* Task Response Deadline - REGULAR */}
+                                                                    {isNotKepalaMarketing && taskResponses[orderId]?.regular && taskResponses[orderId]?.regular.status !== 'selesai' && (
+                                                                        <div className="mb-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                                                            <div className="flex justify-between items-center">
+                                                                                <div>
+                                                                                    <p className="text-xs font-medium text-yellow-800">
+                                                                                        Deadline Kontrak
+                                                                                    </p>
+                                                                                    <p className="text-sm font-semibold text-yellow-900">
+                                                                                        {formatDeadline(taskResponses[orderId]?.regular.deadline)}
+                                                                                    </p>
+                                                                                </div>
+                                                                                <button
+                                                                                    onClick={() => setShowExtendModal({ orderId, tahap: 'kontrak', isMarketing: false, taskResponse: taskResponses[orderId]?.regular })}
+                                                                                    className="px-3 py-1.5 bg-orange-500 text-white rounded-md text-xs font-medium hover:bg-orange-600 transition-colors"
+                                                                                >
+                                                                                    Perpanjang
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                    {/* Task Response Deadline - MARKETING (Kepala Marketing only) */}
+                                                                    {isKepalaMarketing && taskResponses[orderId]?.marketing && taskResponses[orderId]?.marketing.status !== 'selesai' && (
+                                                                        <div className="mb-3 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                                                                            <div className="flex justify-between items-center">
+                                                                                <div>
+                                                                                    <p className="text-xs font-medium text-purple-800">
+                                                                                        Deadline Kontrak (Marketing)
+                                                                                    </p>
+                                                                                    <p className="text-sm font-semibold text-purple-900">
+                                                                                        {formatDeadline(taskResponses[orderId]?.marketing.deadline)}
+                                                                                    </p>
+                                                                                </div>
+                                                                                <button
+                                                                                    onClick={() => setShowExtendModal({ orderId, tahap: 'kontrak', isMarketing: true, taskResponse: taskResponses[orderId]?.marketing })}
+                                                                                    className="px-3 py-1.5 bg-purple-500 text-white rounded-md text-xs font-medium hover:bg-purple-600 transition-colors"
+                                                                                >
+                                                                                    Perpanjang (Marketing)
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* PM Response Button */}
+                                                                    {isKepalaMarketing && !item.kontrak?.pm_response_time && (
+                                                                        <button
+                                                                            onClick={() => handlePmResponse(item.id)}
+                                                                            className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:bg-purple-700 hover:shadow-lg"
+                                                                        >
+                                                                            Marketing Response
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+
+                                                                {item.kontrak && item.kontrak.durasi_kontrak && (
+                                                                    <div className="space-y-2">
 
                                                                         {/* Status Badge */}
                                                                         <div className="flex flex-wrap items-center gap-2">

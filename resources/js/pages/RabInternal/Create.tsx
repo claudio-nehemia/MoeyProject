@@ -210,9 +210,9 @@ export default function Create({ rabInternal }: Props) {
 
         const hargaDasar = Number(produk.harga_dasar) || 0;
 
-        // ✅ RUMUS RAB INTERNAL: (Harga BB + Finishing) ÷ (1 - markup/100) × Dimensi
+        // ✅ RUMUS RAB INTERNAL: [(Harga BB + Finishing) × Dimensi] ÷ (1 - markup/100)
         const markupDivider = 1 - (markup / 100); // 20% → 1-0.2 = 0.8
-        return (hargaDasar + totalHargaItemsNonAksesoris) / markupDivider * hargaDimensi;
+        return ((hargaDasar + totalHargaItemsNonAksesoris) * hargaDimensi) / markupDivider;
     };
 
     const calculateHargaAksesoris = (aksesoris: FormAksesoris) => {

@@ -436,7 +436,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('invoice/{invoiceId}/regenerate', [InvoiceController::class, 'regenerate'])
             ->middleware('permission:invoice.edit')->name('invoice.regenerate');
         
-        Route::post('invoice/{invoiceId}/response', [InvoiceController::class, 'response'])
+        Route::post('invoice/item-pekerjaan/{itemPekerjaanId}/response', [InvoiceController::class, 'response'])
             ->name('invoice.response');
         Route::delete('invoice/{invoiceId}', [InvoiceController::class, 'destroy'])
             ->middleware('permission:invoice.delete')->name('invoice.destroy');
@@ -588,6 +588,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/{itemPekerjaan}', [ApprovalRabController::class, 'update'])
             ->middleware('permission:approval-material.update')
             ->name('update');
+        Route::post('/{itemPekerjaan}/responses', [ApprovalRabController::class, 'responses'])
+            ->middleware('permission:approval-material.index')
+            ->name('responses');
         Route::put('/approval-material/bulk-update', [ApprovalRabController::class, 'bulkUpdate'])
             ->middleware('permission:approval-material.update');
     });
@@ -601,11 +604,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/item-pekerjaan/{id}', [PmResponseController::class, 'itemPekerjaan'])->name('item-pekerjaan');
         Route::post('/item-pekerjaan-by-moodboard/{id}', [PmResponseController::class, 'itemPekerjaanByMoodboard'])->name('item-pekerjaan-by-moodboard');
         Route::post('/rab-internal/{id}', [PmResponseController::class, 'rabInternal'])->name('rab-internal');
-        Route::post('/survey-ulang/{id}', [PmResponseController::class, 'surveyUlang'])->name('survey-ulang');
+        Route::post('/survey-ulang/{orderId}', [PmResponseController::class, 'surveyUlang'])->name('survey-ulang');
         Route::post('/survey-schedule/{id}', [PmResponseController::class, 'surveySchedule'])->name('pm-response.survey-schedule');
         Route::post('/gambar-kerja/{id}', [PmResponseController::class, 'gambarKerja'])->name('gambar-kerja');
         Route::post('/kontrak/{id}', [PmResponseController::class, 'kontrak'])->name('kontrak');
         Route::post('/survey-result/{id}', [PmResponseController::class, 'surveyResult'])->name('survey-result');
+        Route::post('/approval-rab/{id}', [PmResponseController::class, 'approvalRab'])->name('approval-rab');
         Route::post('/workplan/{id}', [PmResponseController::class, 'workplan'])->name('workplan');
         Route::post('/invoice/{id}', [PmResponseController::class, 'invoice'])->name('invoice');
     });

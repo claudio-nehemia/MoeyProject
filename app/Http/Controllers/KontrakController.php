@@ -42,6 +42,7 @@ class KontrakController extends Controller
                 return [
                     'id' => $itemPekerjaan->id,
                     'order' => [
+                        'id' => $itemPekerjaan->moodboard->order->id,
                         'nama_project' => $itemPekerjaan->moodboard->order->nama_project,
                         'company_name' => $itemPekerjaan->moodboard->order->company_name,
                         'customer_name' => $itemPekerjaan->moodboard->order->customer_name,
@@ -155,14 +156,18 @@ class KontrakController extends Controller
         // Check if kontrak sudah ada
         $existingKontrak = Kontrak::where('item_pekerjaan_id', $validated['item_pekerjaan_id'])->first();
         if ($existingKontrak) {
-            return back()->withErrors(['error' => 'Kontrak sudah pernah di-response.']);
-        }
+            $existingKontrak->update([
+                'response_time' => now(),
+                'response_by' => auth()->user()->name,
+            ]);
+        } else {
+            Kontrak::create([
+                'item_pekerjaan_id' => $validated['item_pekerjaan_id'],
+                'response_time' => now(),
+                'response_by' => auth()->user()->name,
+            ]);
 
-        Kontrak::create([
-            'item_pekerjaan_id' => $validated['item_pekerjaan_id'],
-            'response_time' => now(),
-            'response_by' => auth()->user()->name,
-        ]);
+        }
 
         $itempekerjaan = ItemPekerjaan::with('moodboard.order')->find($validated['item_pekerjaan_id']);
         $order = $itempekerjaan->moodboard->order;
@@ -171,6 +176,7 @@ class KontrakController extends Controller
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
+            ->where('is_marketing', false)
             ->first();
 
         if ($taskResponse && $taskResponse->status === 'menunggu_response') {
@@ -337,6 +343,7 @@ class KontrakController extends Controller
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
+            ->where('is_marketing', false)
             ->first();
 
         if ($taskResponse) {
@@ -367,33 +374,13 @@ class KontrakController extends Controller
                     'duration' => 3,
                     'duration_actual' => 3,
                     'extend_time' => 0,
-                    'status' => 'menunggu_input',
+                    'status' => 'menunggu_response',
                 ]);
 
-
-            $nextMarketingTaskExists = TaskResponse::where('order_id', $moodboard->order->id)
-                ->where('tahap', 'invoice')
-                ->where('is_marketing', true)
-                ->exists();
-
-            if (!$nextMarketingTaskExists) {
                 TaskResponse::create([
                     'order_id' => $moodboard->order->id,
                     'user_id' => null,
                     'tahap' => 'invoice',
-                    'start_time' => now(),
-                    'deadline' => now()->addDays(3),
-                    'duration' => 3,
-                    'duration_actual' => 3,
-                    'extend_time' => 0,
-                    'status' => 'menunggu_response',
-                    'is_marketing' => true,
-                ]);
-            }
-                TaskResponse::create([
-                    'order_id' => $moodboard->order->id,
-                    'user_id' => null,
-                    'tahap' => 'survey_schedule',
                     'start_time' => now(),
                     'deadline' => now()->addDays(3), // Deadline untuk cm_fee
                     'duration' => 3,

@@ -25,7 +25,7 @@ class Order extends Model
         'alamat',
         'survey_response_time',
         'survey_response_by',
-        'pm_suruey_response_by',
+        'pm_survey_response_by',
         'pm_survey_response_time',
     ];
 
