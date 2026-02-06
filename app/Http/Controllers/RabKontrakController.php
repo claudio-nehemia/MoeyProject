@@ -76,30 +76,83 @@ class RabKontrakController extends Controller
             ]);
 
             foreach ($rabInternal->rabProduks as $rabProduk) {
-                // ✅ RAB KONTRAK: Apply PERKALIAN (1 - markup/100) pada harga_dasar & harga_items
-                // Contoh: Markup 20% → (1-0.2) = 0.8, harga dikali 0.8
-                $markupMultiplier = 1 - ($rabProduk->markup_satuan / 100); // 20% → 1-0.2 = 0.8
+                // ✅ RAB KONTRAK: Apply PEMBAGIAN dengan (1 - markup/100) pada harga_dasar & harga_items
+                // Rumus: (BB + Finishing) ÷ (1 - Markup/100) × Dimensi × Qty
+                // Contoh: Markup 20% → (1-0.2) = 0.8, harga DIBAGI 0.8 (bukan dikali)
+                $markupDivider = 1 - ($rabProduk->markup_satuan / 100); // 20% → 1-0.2 = 0.8
+
+                // Setiap kolom harga DIBAGI dengan markupDivider agar langsung di-markup
+                $hargaDasarKontrak = $markupDivider > 0 ? $rabProduk->harga_dasar / $markupDivider : $rabProduk->harga_dasar;
+                $hargaItemsKontrak = $markupDivider > 0 ? $rabProduk->harga_items_non_aksesoris / $markupDivider : $rabProduk->harga_items_non_aksesoris;
+                
+                // Hitung finishing dalam dan luar secara terpisah (sudah di-markup)
+                $hargaFinishingDalam = 0;
+                $hargaFinishingLuar = 0;
+                $itemPekerjaanProduk = $rabProduk->itemPekerjaanProduk;
+                
+                foreach ($itemPekerjaanProduk->jenisItems as $jenisItem) {
+                    $namaJenis = strtolower($jenisItem->jenisItem->nama_jenis_item);
+                    
+                    if ($namaJenis === 'finishing dalam') {
+                        foreach ($jenisItem->items as $item) {
+                            $hargaOriginal = $item->item->harga * $item->quantity;
+                            $hargaFinishingDalam += $markupDivider > 0 ? $hargaOriginal / $markupDivider : $hargaOriginal;
+                        }
+                    } elseif ($namaJenis === 'finishing luar') {
+                        foreach ($jenisItem->items as $item) {
+                            $hargaOriginal = $item->item->harga * $item->quantity;
+                            $hargaFinishingLuar += $markupDivider > 0 ? $hargaOriginal / $markupDivider : $hargaOriginal;
+                        }
+                    }
+                }
+                
+                // Hitung ulang harga_satuan dengan nilai yang sudah di-markup
+                $hargaSatuanKontrak = ($hargaDasarKontrak + $hargaItemsKontrak) * $rabProduk->harga_dimensi;
+
+                // Hitung total aksesoris yang sudah di-markup
+                $totalHargaAksesorisKontrak = 0;
+                $aksesorisData = [];
+                foreach ($rabProduk->rabAksesoris as $rabAksesoris) {
+                    $hargaSatuanAksKontrak = $markupDivider > 0 
+                        ? $rabAksesoris->harga_satuan_aksesoris / $markupDivider 
+                        : $rabAksesoris->harga_satuan_aksesoris;
+                    $hargaTotalAks = $hargaSatuanAksKontrak * $rabAksesoris->qty_aksesoris;
+                    $totalHargaAksesorisKontrak += $hargaTotalAks;
+                    
+                    $aksesorisData[] = [
+                        'item_pekerjaan_item_id' => $rabAksesoris->item_pekerjaan_item_id,
+                        'harga_satuan_aksesoris' => $hargaSatuanAksKontrak,
+                        'qty_aksesoris' => $rabAksesoris->qty_aksesoris,
+                        'harga_total' => $hargaTotalAks,
+                    ];
+                }
+
+                // Hitung harga_akhir = harga_satuan + aksesoris - diskon
+                $diskonPerProduk = $rabProduk->diskon_per_produk ?? 0;
+                $hargaAkhirKontrak = ($hargaSatuanKontrak + $totalHargaAksesorisKontrak) - $diskonPerProduk;
 
                 $rabKontrakProduk = RabKontrakProduk::create([
                     'rab_kontrak_id' => $rabKontrak->id,
                     'item_pekerjaan_produk_id' => $rabProduk->item_pekerjaan_produk_id,
-                    'harga_dasar' => $rabProduk->harga_dasar * $markupMultiplier,
-                    'harga_items_non_aksesoris' => $rabProduk->harga_items_non_aksesoris * $markupMultiplier,
+                    'harga_dasar' => $hargaDasarKontrak, // Sudah di-markup (dibagi markupDivider)
+                    'harga_finishing_dalam' => $hargaFinishingDalam, // Sudah di-markup
+                    'harga_finishing_luar' => $hargaFinishingLuar, // Sudah di-markup
+                    'harga_items_non_aksesoris' => $hargaItemsKontrak, // Sudah di-markup (total finishing)
                     'harga_dimensi' => $rabProduk->harga_dimensi,
-                    'harga_satuan' => $rabProduk->harga_satuan, // Sudah include markup dari Internal
-                    'harga_total_aksesoris' => $rabProduk->harga_total_aksesoris,
-                    'diskon_per_produk' => $rabProduk->diskon_per_produk, // Copy diskon dari Internal
-                    'harga_akhir' => $rabProduk->harga_akhir, // Sudah include markup + diskon dari Internal
+                    'harga_satuan' => $hargaSatuanKontrak, // Dihitung ulang dari nilai yang sudah di-markup
+                    'harga_total_aksesoris' => $totalHargaAksesorisKontrak, // Total aksesoris yang sudah di-markup
+                    'diskon_per_produk' => $diskonPerProduk,
+                    'harga_akhir' => $hargaAkhirKontrak, // Harga akhir dengan markup
                 ]);
 
-                // Aksesoris already have markup included (no additional markup)
-                foreach ($rabProduk->rabAksesoris as $rabAksesoris) {
+                // Simpan aksesoris dengan harga yang sudah di-markup
+                foreach ($aksesorisData as $aks) {
                     RabKontrakAksesoris::create([
                         'rab_kontrak_produk_id' => $rabKontrakProduk->id,
-                        'item_pekerjaan_item_id' => $rabAksesoris->item_pekerjaan_item_id,
-                        'harga_satuan_aksesoris' => $rabAksesoris->harga_satuan_aksesoris,
-                        'qty_aksesoris' => $rabAksesoris->qty_aksesoris,
-                        'harga_total' => $rabAksesoris->harga_total,
+                        'item_pekerjaan_item_id' => $aks['item_pekerjaan_item_id'],
+                        'harga_satuan_aksesoris' => $aks['harga_satuan_aksesoris'], // Sudah di-markup
+                        'qty_aksesoris' => $aks['qty_aksesoris'],
+                        'harga_total' => $aks['harga_total'], // Sudah di-markup
                     ]);
                 }
             }
@@ -178,6 +231,8 @@ class RabKontrakController extends Controller
                         'lebar' => $rabProduk->itemPekerjaanProduk->lebar,
                         'tinggi' => $rabProduk->itemPekerjaanProduk->tinggi,
                         'harga_dasar' => $rabProduk->harga_dasar,
+                        'harga_finishing_dalam' => $rabProduk->harga_finishing_dalam ?? 0,
+                        'harga_finishing_luar' => $rabProduk->harga_finishing_luar ?? 0,
                         'harga_items_non_aksesoris' => $rabProduk->harga_items_non_aksesoris,
                         'harga_dimensi' => $rabProduk->harga_dimensi,
                         'harga_satuan' => $rabProduk->harga_satuan,
@@ -268,6 +323,8 @@ class RabKontrakController extends Controller
                 'lebar' => $rabProduk->itemPekerjaanProduk->lebar,
                 'tinggi' => $rabProduk->itemPekerjaanProduk->tinggi,
                 'harga_dasar' => $rabProduk->harga_dasar,
+                'harga_finishing_dalam' => $rabProduk->harga_finishing_dalam ?? 0,
+                'harga_finishing_luar' => $rabProduk->harga_finishing_luar ?? 0,
                 'harga_items_non_aksesoris' => $rabProduk->harga_items_non_aksesoris,
                 'harga_dimensi' => $rabProduk->harga_dimensi,
                 'harga_satuan' => $rabProduk->harga_satuan,
@@ -341,29 +398,83 @@ class RabKontrakController extends Controller
 
                 // Regenerate from RAB Internal (same logic as generate())
                 foreach ($rabInternal->rabProduks as $rabProduk) {
-                    // ✅ RAB KONTRAK: Apply PERKALIAN (1 - markup/100) pada harga_dasar & harga_items
-                    // Contoh: Markup 20% → (1-0.2) = 0.8, harga dikali 0.8
-                    $markupMultiplier = 1 - ($rabProduk->markup_satuan / 100); // 20% → 1-0.2 = 0.8
+                    // ✅ RAB KONTRAK: Apply PEMBAGIAN dengan (1 - markup/100) pada harga_dasar & harga_items
+                    // Rumus: (BB + Finishing) ÷ (1 - Markup/100) × Dimensi × Qty
+                    // Contoh: Markup 20% → (1-0.2) = 0.8, harga DIBAGI 0.8 (bukan dikali)
+                    $markupDivider = 1 - ($rabProduk->markup_satuan / 100); // 20% → 1-0.2 = 0.8
+
+                    // Setiap kolom harga DIBAGI dengan markupDivider agar langsung di-markup
+                    $hargaDasarKontrak = $markupDivider > 0 ? $rabProduk->harga_dasar / $markupDivider : $rabProduk->harga_dasar;
+                    $hargaItemsKontrak = $markupDivider > 0 ? $rabProduk->harga_items_non_aksesoris / $markupDivider : $rabProduk->harga_items_non_aksesoris;
+                    
+                    // Hitung finishing dalam dan luar secara terpisah (sudah di-markup)
+                    $hargaFinishingDalam = 0;
+                    $hargaFinishingLuar = 0;
+                    $itemPekerjaanProduk = $rabProduk->itemPekerjaanProduk;
+                    
+                    foreach ($itemPekerjaanProduk->jenisItems as $jenisItem) {
+                        $namaJenis = strtolower($jenisItem->jenisItem->nama_jenis_item);
+                        
+                        if ($namaJenis === 'finishing dalam') {
+                            foreach ($jenisItem->items as $item) {
+                                $hargaOriginal = $item->item->harga * $item->quantity;
+                                $hargaFinishingDalam += $markupDivider > 0 ? $hargaOriginal / $markupDivider : $hargaOriginal;
+                            }
+                        } elseif ($namaJenis === 'finishing luar') {
+                            foreach ($jenisItem->items as $item) {
+                                $hargaOriginal = $item->item->harga * $item->quantity;
+                                $hargaFinishingLuar += $markupDivider > 0 ? $hargaOriginal / $markupDivider : $hargaOriginal;
+                            }
+                        }
+                    }
+                    
+                    // Hitung ulang harga_satuan dengan nilai yang sudah di-markup
+                    $hargaSatuanKontrak = ($hargaDasarKontrak + $hargaItemsKontrak) * $rabProduk->harga_dimensi;
+
+                    // Hitung total aksesoris yang sudah di-markup
+                    $totalHargaAksesorisKontrak = 0;
+                    $aksesorisData = [];
+                    foreach ($rabProduk->rabAksesoris as $rabAksesoris) {
+                        $hargaSatuanAksKontrak = $markupDivider > 0 
+                            ? $rabAksesoris->harga_satuan_aksesoris / $markupDivider 
+                            : $rabAksesoris->harga_satuan_aksesoris;
+                        $hargaTotalAks = $hargaSatuanAksKontrak * $rabAksesoris->qty_aksesoris;
+                        $totalHargaAksesorisKontrak += $hargaTotalAks;
+                        
+                        $aksesorisData[] = [
+                            'item_pekerjaan_item_id' => $rabAksesoris->item_pekerjaan_item_id,
+                            'harga_satuan_aksesoris' => $hargaSatuanAksKontrak,
+                            'qty_aksesoris' => $rabAksesoris->qty_aksesoris,
+                            'harga_total' => $hargaTotalAks,
+                        ];
+                    }
+
+                    // Hitung harga_akhir = harga_satuan + aksesoris - diskon
+                    $diskonPerProduk = $rabProduk->diskon_per_produk ?? 0;
+                    $hargaAkhirKontrak = ($hargaSatuanKontrak + $totalHargaAksesorisKontrak) - $diskonPerProduk;
 
                     $rabKontrakProduk = RabKontrakProduk::create([
                         'rab_kontrak_id' => $rabKontrak->id,
                         'item_pekerjaan_produk_id' => $rabProduk->item_pekerjaan_produk_id,
-                        'harga_dasar' => $rabProduk->harga_dasar * $markupMultiplier,
-                        'harga_items_non_aksesoris' => $rabProduk->harga_items_non_aksesoris * $markupMultiplier,
+                        'harga_dasar' => $hargaDasarKontrak, // Sudah di-markup (dibagi markupDivider)
+                        'harga_finishing_dalam' => $hargaFinishingDalam, // Sudah di-markup
+                        'harga_finishing_luar' => $hargaFinishingLuar, // Sudah di-markup
+                        'harga_items_non_aksesoris' => $hargaItemsKontrak, // Sudah di-markup (total finishing)
                         'harga_dimensi' => $rabProduk->harga_dimensi,
-                        'harga_satuan' => $rabProduk->harga_satuan, // Sudah include markup dari Internal
-                        'harga_total_aksesoris' => $rabProduk->harga_total_aksesoris,
-                        'diskon_per_produk' => $rabProduk->diskon_per_produk, // Copy diskon dari Internal
-                        'harga_akhir' => $rabProduk->harga_akhir, // Sudah include markup + diskon dari Internal
+                        'harga_satuan' => $hargaSatuanKontrak, // Dihitung ulang dari nilai yang sudah di-markup
+                        'harga_total_aksesoris' => $totalHargaAksesorisKontrak, // Total aksesoris yang sudah di-markup
+                        'diskon_per_produk' => $diskonPerProduk,
+                        'harga_akhir' => $hargaAkhirKontrak, // Harga akhir dengan markup
                     ]);
 
-                    foreach ($rabProduk->rabAksesoris as $rabAksesoris) {
+                    // Simpan aksesoris dengan harga yang sudah di-markup
+                    foreach ($aksesorisData as $aks) {
                         RabKontrakAksesoris::create([
                             'rab_kontrak_produk_id' => $rabKontrakProduk->id,
-                            'item_pekerjaan_item_id' => $rabAksesoris->item_pekerjaan_item_id,
-                            'harga_satuan_aksesoris' => $rabAksesoris->harga_satuan_aksesoris,
-                            'qty_aksesoris' => $rabAksesoris->qty_aksesoris,
-                            'harga_total' => $rabAksesoris->harga_total,
+                            'item_pekerjaan_item_id' => $aks['item_pekerjaan_item_id'],
+                            'harga_satuan_aksesoris' => $aks['harga_satuan_aksesoris'], // Sudah di-markup
+                            'qty_aksesoris' => $aks['qty_aksesoris'],
+                            'harga_total' => $aks['harga_total'], // Sudah di-markup
                         ]);
                     }
                 }

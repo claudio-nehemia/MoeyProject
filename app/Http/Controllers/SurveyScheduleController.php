@@ -83,6 +83,10 @@ class SurveyScheduleController extends Controller
             ->where('is_marketing', false)
             ->first();
 
+        $order->update([
+            'tahap_survey' => 'survey_ulang',
+        ]);
+
         if ($taskResponse) {
             if ($taskResponse->isOverdue()) {
                 $taskResponse->update([

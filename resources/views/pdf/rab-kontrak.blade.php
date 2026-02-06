@@ -310,19 +310,21 @@
     <table>
         <thead>
             <tr>
-                <th style="width: 12%;">Produk</th>
-                <th style="width: 12%;">Bahan Baku</th>
-                <th style="width: 12%;">Finishing Dalam</th>
-                <th style="width: 12%;">Finishing Luar</th>
-                <th class="text-center" style="width: 6%;">Qty</th>
-                <th class="harga-col text-right" style="width: 10%;">Harga Satuan</th>
-                <th class="total-item text-right" style="width: 10%;">Total Item</th>
-                <th style="width: 14%;">Aksesoris</th>
-                <th class="total-aks text-right" style="width: 10%;">Qty</th>
-                <th class="total-aks text-right" style="width: 10%;">Harga Aksesoris</th>
-                <th class="total-aks text-right" style="width: 10%;">Total Aksesoris</th>
-                <th class="text-center" style="width: 6%;">Diskon</th>
-                <th class="grand-total-header text-right" style="width: 10%;">Grand Total</th>
+                <th style="width: 10%;">Produk</th>
+                <th style="width: 9%;">Bahan Baku</th>
+                <th class="harga-col text-right" style="width: 8%;">Harga BB</th>
+                <th style="width: 9%;">Finishing Dalam</th>
+                <th class="harga-col text-right" style="width: 8%;">Harga Fin. Dalam</th>
+                <th style="width: 9%;">Finishing Luar</th>
+                <th class="harga-col text-right" style="width: 8%;">Harga Fin. Luar</th>
+                <th class="text-center" style="width: 4%;">Qty</th>
+                <th class="total-item text-right" style="width: 8%;">Total Item</th>
+                <th style="width: 9%;">Aksesoris</th>
+                <th class="total-aks text-right" style="width: 4%;">Qty</th>
+                <th class="total-aks text-right" style="width: 7%;">Harga Aks</th>
+                <th class="total-aks text-right" style="width: 7%;">Total Aks</th>
+                <th class="text-center" style="width: 4%;">Diskon</th>
+                <th class="grand-total-header text-right" style="width: 8%;">Grand Total</th>
             </tr>
         </thead>
         <tbody>
@@ -391,11 +393,23 @@
                             @endif
                         </td>
 
+                        @if ($rowIndex === 0)
+                            <td rowspan="{{ $maxRows }}" class="harga-col-cell">
+                                Rp {{ number_format($produk['harga_dasar'] ?? 0, 0, ',', '.') }}
+                            </td>
+                        @endif
+
                         <td>
                             @if (isset($finishingDalamItems[$rowIndex]))
                                 • {{ $finishingDalamItems[$rowIndex] }}
                             @endif
                         </td>
+
+                        @if ($rowIndex === 0)
+                            <td rowspan="{{ $maxRows }}" class="harga-col-cell">
+                                Rp {{ number_format($produk['harga_finishing_dalam'] ?? 0, 0, ',', '.') }}
+                            </td>
+                        @endif
 
                         <td>
                             @if (isset($finishingLuarItems[$rowIndex]))
@@ -404,11 +418,14 @@
                         </td>
 
                         @if ($rowIndex === 0)
+                            <td rowspan="{{ $maxRows }}" class="harga-col-cell">
+                                Rp {{ number_format($produk['harga_finishing_luar'] ?? 0, 0, ',', '.') }}
+                            </td>
+                        @endif
+
+                        @if ($rowIndex === 0)
                             <td rowspan="{{ $maxRows }}" class="text-center">
                                 {{ $produk['qty_produk'] }}
-                            </td>
-                            <td rowspan="{{ $maxRows }}" class="harga-col-cell">
-                                Rp {{ number_format($produk['harga_dasar'] ?? 0, 0, ',', '.') }}
                             </td>
                             <td rowspan="{{ $maxRows }}" class="total-item-cell">
                                 Rp {{ number_format($totalItem, 0, ',', '.') }}

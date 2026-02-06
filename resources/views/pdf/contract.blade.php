@@ -475,7 +475,7 @@
     <p class="right-commitmentfee">{{$companyAddress}}, {{ $contractData['today'] }}</p>
 
     <p>No: {{ $contractData['nomor_surat_fee'] }}<br>
-       Hal: Pengajuan Commitment Fee Project Interior</p>
+       Hal: Pengajuan Harga Kontrak Project Interior</p>
 
     <p>Kepada Yth,<br>
        <strong>{{ $contractData['customer_name'] }}</strong><br>
@@ -486,12 +486,11 @@
     <p>
         Sehubungan dengan rencana pelaksanaan project interior
         <strong>{{ $contractData['project']['nama'] }}</strong>, kami mengajukan
-        <strong>Commitment Fee sebesar Rp {{ $contractData['nominal_fee'] }},-</strong>.
+        <strong>Harga Kontrak sebesar Rp {{ number_format($contractData['nominal_kontrak'], 0, ',', '.') }},-</strong>.
     </p>
 
     <p>
-        Commitment Fee ini sebagai tanda keseriusan dan komitmen awal, serta akan diperhitungkan
-        pada nilai kontrak setelah project disetujui.
+        Harga Kontrak ini merupakan nilai total keseluruhan RAB kontrak untuk pelaksanaan project interior sesuai dengan spesifikasi yang telah disepakati.
     </p>
 
     <p>Pembayaran dapat dilakukan melalui rekening berikut:</p>
@@ -530,7 +529,7 @@
 
     <p>
         Kepada : <strong>{{ $contractData['customer_name'] }}</strong><br>
-        Hal : Pembayaran Commitment Fee Interior
+        Hal : Pembayaran Harga Kontrak Interior
     </p>
 
     <table class="invoice-table-commitmentfee">
@@ -542,8 +541,8 @@
         </thead>
         <tbody>
             <tr>
-                <td>Total Pembayaran Commitment Fee</td>
-                <td>Rp {{ $contractData['nominal_fee'] }}</td>
+                <td>Total Pembayaran Harga Kontrak</td>
+                <td>Rp {{ number_format($contractData['nominal_kontrak'], 0, ',', '.') }}</td>
             </tr>
         </tbody>
     </table>
@@ -584,16 +583,16 @@
         </tr>
         <tr>
             <td>Uang Sebesar</td>
-            <td>: <strong>Rp {{ $contractData['nominal_fee'] }},-</strong></td>
+            <td>: <strong>Rp {{ number_format($contractData['nominal_kontrak'], 0, ',', '.') }},-</strong></td>
         </tr>
         <tr>
             <td>Untuk Pembayaran</td>
-            <td>: Commitment Fee Desain Interior</td>
+            <td>: Harga Kontrak Desain Interior</td>
         </tr>
     </table>
 
     <div class="kwitansi-footer-commitmentfee">
-        <div class="nominal-box-commitmentfee">Rp {{ $contractData['nominal_fee'] }},-</div>
+        <div class="nominal-box-commitmentfee">Rp {{ number_format($contractData['nominal_kontrak'], 0, ',', '.') }},-</div>
 
         <div class="signature">
             <p style="margin-bottom: 100px;">Hormat Kami,<br><strong>{{$companyName}}</strong></p>

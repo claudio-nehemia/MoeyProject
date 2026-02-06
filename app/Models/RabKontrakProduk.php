@@ -10,6 +10,8 @@ class RabKontrakProduk extends Model
         'rab_kontrak_id',
         'item_pekerjaan_produk_id',
         'harga_dasar',
+        'harga_finishing_dalam',
+        'harga_finishing_luar',
         'harga_items_non_aksesoris',
         'harga_dimensi',
         'harga_satuan',
