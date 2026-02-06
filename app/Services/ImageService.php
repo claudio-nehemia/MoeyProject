@@ -34,7 +34,9 @@ class ImageService
         
         $encoded = $image->toJpeg(quality: $quality);
 
-        $filename = uniqid() . '.jpg';
+        // Use original filename with timestamp to avoid collision
+        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $filename = $originalName . '_' . time() . '.jpg';
         $path = "{$directory}/{$filename}";
 
         Storage::disk('public')->put($path, (string) $encoded);
@@ -65,7 +67,9 @@ class ImageService
         
         $encoded = $thumb->toJpeg(quality: $quality);
 
-        $filename = uniqid('thumb_') . '.jpg';
+        // Use original filename for thumbnail with timestamp
+        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $filename = 'thumb_' . $originalName . '_' . time() . '.jpg';
         $path = "{$directory}/thumbnails/{$filename}";
 
         Storage::disk('public')->put($path, (string) $encoded);
@@ -96,7 +100,10 @@ class ImageService
         $encodedMain = $image->toJpeg(quality: $quality);
         $mainBinary = (string) $encodedMain;
 
-        $mainFilename = uniqid() . '.jpg';
+        // Use original filename with timestamp to avoid collision
+        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $timestamp = time();
+        $mainFilename = $originalName . '_' . $timestamp . '.jpg';
         $mainPath = "{$directory}/{$mainFilename}";
         Storage::disk('public')->put($mainPath, $mainBinary);
 
@@ -107,7 +114,7 @@ class ImageService
         }
 
         $encodedThumb = $thumbImage->toJpeg(quality: $thumbnailQuality);
-        $thumbFilename = uniqid('thumb_') . '.jpg';
+        $thumbFilename = 'thumb_' . $originalName . '_' . $timestamp . '.jpg';
         $thumbPath = "{$directory}/thumbnails/{$thumbFilename}";
         Storage::disk('public')->put($thumbPath, (string) $encodedThumb);
 
@@ -121,11 +128,15 @@ class ImageService
     }
 
     /**
-     * Save non-image file (PDF, DWG, DXF)
+     * Save non-image file (PDF, DWG, DXF) with original filename
      */
     public function saveRawFile(UploadedFile $file, string $directory): array
     {
-        $path = $file->store($directory, 'public');
+        // Use original filename with timestamp to avoid collision
+        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $extension = $file->getClientOriginalExtension();
+        $filename = $originalName . '_' . time() . '.' . $extension;
+        $path = $file->storeAs($directory, $filename, 'public');
 
         return [
             'path' => $path,

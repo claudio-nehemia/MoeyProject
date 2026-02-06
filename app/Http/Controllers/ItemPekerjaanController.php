@@ -209,8 +209,13 @@ class ItemPekerjaanController extends Controller
                 'produks.*.jenisItems.*.items.*.quantity' => 'required|integer|min:1',
             ]);
 
-            // Update item pekerjaan status
             $itemPekerjaan = ItemPekerjaan::findOrFail($validated['item_pekerjaan_id']);
+            $isDraft = $validated['status'] === 'draft';
+
+            // Wrap in database transaction to ensure data integrity
+            \DB::beginTransaction();
+
+            // Update item pekerjaan status
             $itemPekerjaan->update(['status' => $validated['status']]);
 
             // Save produks and nested data
@@ -299,15 +304,19 @@ class ItemPekerjaanController extends Controller
                 }
             }
 
+            // Commit transaction before sending notifications
+            \DB::commit();
+
             $statusMessage = $validated['status'] === 'draft'
                 ? 'Data item pekerjaan berhasil disimpan sebagai draft.'
                 : 'Data item pekerjaan berhasil dipublish.';
 
-            $notificationService = new NotificationService();
-            $notificationService->sendRabInternalRequestNotification($itemPekerjaan->moodboard->order);
-
-            $isDraft = $validated['status'] === 'draft';
+            // Only send notification and update task response when publishing (not draft)
             if (!$isDraft) {
+                // Send notification to RAB Internal
+                $notificationService = new NotificationService();
+                $notificationService->sendRabInternalRequestNotification($itemPekerjaan->moodboard->order);
+
                 $taskResponse = TaskResponse::where('order_id', $itemPekerjaan->moodboard->order->id)
                     ->where('tahap', 'item_pekerjaan')
                     ->orderByDesc('extend_time')
@@ -329,7 +338,7 @@ class ItemPekerjaanController extends Controller
                         ]);
                     }
 
-                    // Create task response untuk tahap selanjutnya (cm_fee)
+                    // Create task response untuk tahap selanjutnya (rab_internal)
                     $nextTaskExists = TaskResponse::where('order_id', $itemPekerjaan->moodboard->order->id)
                         ->where('tahap', 'rab_internal')
                         ->exists();
@@ -340,7 +349,7 @@ class ItemPekerjaanController extends Controller
                             'user_id' => null,
                             'tahap' => 'rab_internal',
                             'start_time' => now(),
-                            'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                            'deadline' => now()->addDays(3),
                             'duration' => 3,
                             'duration_actual' => 3,
                             'extend_time' => 0,
@@ -366,7 +375,9 @@ class ItemPekerjaanController extends Controller
             return redirect()->route('item-pekerjaan.index')
                 ->with('success', $statusMessage);
         } catch (\Exception $e) {
+            \DB::rollBack();
             Log::error('Store item pekerjaan error: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
             return back()->with('error', 'Gagal menyimpan data: ' . $e->getMessage());
         }
     }
@@ -531,6 +542,10 @@ class ItemPekerjaanController extends Controller
             ]);
 
             $itemPekerjaan = ItemPekerjaan::findOrFail($itemPekerjaanId);
+            $isDraft = $validated['status'] === 'draft';
+
+            // Wrap in database transaction to ensure data integrity
+            \DB::beginTransaction();
 
             // Update status
             $itemPekerjaan->update(['status' => $validated['status']]);
@@ -693,15 +708,19 @@ class ItemPekerjaanController extends Controller
             $produksToDelete = array_diff($existingProdukIds, $submittedProdukIds);
             ItemPekerjaanProduk::whereIn('id', $produksToDelete)->delete();
 
-            $notificationService = new NotificationService();
-            $notificationService->sendRabInternalRequestNotification($itemPekerjaan->moodboard->order);
+            // Commit transaction before sending notifications
+            \DB::commit();
 
             $statusMessage = $validated['status'] === 'draft'
                 ? 'Data item pekerjaan berhasil disimpan sebagai draft.'
                 : 'Data item pekerjaan berhasil dipublish.';
 
-            $isDraft = $validated['status'] === 'draft';
+            // Only send notification and update task response when publishing (not draft)
             if (!$isDraft) {
+                // Send notification to RAB Internal
+                $notificationService = new NotificationService();
+                $notificationService->sendRabInternalRequestNotification($itemPekerjaan->moodboard->order);
+
                 $taskResponse = TaskResponse::where('order_id', $itemPekerjaan->moodboard->order->id)
                     ->where('tahap', 'item_pekerjaan')
                     ->orderByDesc('extend_time')
@@ -723,7 +742,7 @@ class ItemPekerjaanController extends Controller
                         ]);
                     }
 
-                    // Create task response untuk tahap selanjutnya (cm_fee)
+                    // Create task response untuk tahap selanjutnya (rab_internal)
                     $nextTaskExists = TaskResponse::where('order_id', $itemPekerjaan->moodboard->order->id)
                         ->where('tahap', 'rab_internal')
                         ->exists();
@@ -734,7 +753,7 @@ class ItemPekerjaanController extends Controller
                             'user_id' => null,
                             'tahap' => 'rab_internal',
                             'start_time' => now(),
-                            'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                            'deadline' => now()->addDays(3),
                             'duration' => 3,
                             'duration_actual' => 3,
                             'extend_time' => 0,
@@ -746,7 +765,7 @@ class ItemPekerjaanController extends Controller
                             'user_id' => null,
                             'tahap' => 'rab_internal',
                             'start_time' => now(),
-                            'deadline' => now()->addDays(3), // Deadline untuk cm_fee
+                            'deadline' => now()->addDays(3),
                             'duration' => 3,
                             'duration_actual' => 3,
                             'extend_time' => 0,
@@ -759,7 +778,9 @@ class ItemPekerjaanController extends Controller
             return redirect()->route('item-pekerjaan.index')
                 ->with('success', $statusMessage);
         } catch (\Exception $e) {
+            \DB::rollBack();
             Log::error('Update item pekerjaan error: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
             return back()->with('error', 'Gagal update data: ' . $e->getMessage());
         }
     }

@@ -371,7 +371,11 @@ class SurveyResultsController extends Controller
                         $fileName = $file->getClientOriginalName();
                         \Log::info("[Survey Store] Uploading MOM file #{$index}: {$fileName}");
                         
-                        $path = $file->store('mom_files', 'public');
+                        // Save with original filename + timestamp to avoid collision
+                        $originalName = pathinfo($fileName, PATHINFO_FILENAME);
+                        $extension = $file->getClientOriginalExtension();
+                        $newFileName = $originalName . '_' . time() . '.' . $extension;
+                        $path = $file->storeAs('mom_files', $newFileName, 'public');
                         $uploadedMomFiles[] = $path;
                         $existingMomFiles[] = $path;
                         
@@ -714,7 +718,11 @@ class SurveyResultsController extends Controller
                         $fileName = $file->getClientOriginalName();
                         \Log::info("[Survey Update] Uploading MOM file #{$index}: {$fileName}");
                         
-                        $path = $file->store('mom_files', 'public');
+                        // Save with original filename + timestamp to avoid collision
+                        $originalName = pathinfo($fileName, PATHINFO_FILENAME);
+                        $extension = $file->getClientOriginalExtension();
+                        $newFileName = $originalName . '_' . time() . '.' . $extension;
+                        $path = $file->storeAs('mom_files', $newFileName, 'public');
                         $uploadedMomFiles[] = $path;
                         $existingMomFiles[] = $path;
                         
