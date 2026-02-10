@@ -518,12 +518,12 @@ export default function Create({
         ruangans.forEach((ruangan) => {
             ruangan.produks.forEach((p) => {
                 allProduks.push({
-                    produk_id: p.produk_id,
+                    produk_id: p.produk_id ? parseInt(p.produk_id.toString()) : null,
                     nama_ruangan: ruangan.nama_ruangan || null,
                     quantity: p.quantity,
-                    panjang: p.panjang || null,
-                    lebar: p.lebar || null,
-                    tinggi: p.tinggi || null,
+                    panjang: p.panjang ? parseFloat(p.panjang.toString()) : null,
+                    lebar: p.lebar ? parseFloat(p.lebar.toString()) : null,
+                    tinggi: p.tinggi ? parseFloat(p.tinggi.toString()) : null,
                     bahan_bakus: p.selected_bahan_bakus || [],
                     jenisItems: p.jenisItems.map((j) => {
                         const selectedJenisItem = jenisItems.find(
@@ -547,6 +547,19 @@ export default function Create({
             });
         });
 
+        // Client-side validation
+        if (allProduks.length === 0) {
+            alert('Minimal harus ada 1 produk');
+            return;
+        }
+
+        for (const produk of allProduks) {
+            if (!produk.produk_id) {
+                alert('Semua produk harus dipilih');
+                return;
+            }
+        }
+
         const formData = {
             item_pekerjaan_id: itemPekerjaan.id,
             status: status,
@@ -555,10 +568,14 @@ export default function Create({
 
         setProcessing(true);
         router.post('/item-pekerjaan/store', formData, {
+            preserveState: false,
+            preserveScroll: true,
             onSuccess: () => {
-                setProcessing(false);
+                // Tidak perlu setProcessing(false) karena akan redirect
             },
             onError: (errors) => {
+                console.error(errors);
+                alert('Gagal menyimpan data');
                 setErrors(errors);
                 setProcessing(false);
             },

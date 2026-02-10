@@ -336,7 +336,7 @@
 
         <div class="article">Pasal 5<br>NILAI KONTRAK DAN PERUBAHAN NILAI</div>
         <ol>
-            <li>Nilai kontrak adalah sebesar Rp. {{ number_format($contractData['nominal'] ?? 0, 0, ',', '.') }} (Harga belum termasuk PPN).</li>
+            <li>Nilai kontrak adalah sebesar Rp. {{ number_format($contractData['nominal_kontrak'], 0, ',', '.') }},- (Harga belum termasuk PPN).</li>
             <li>Jika ada pengurangan/penambahan item pekerjaan, cukup tanda tangan perwakilan PIHAK PERTAMA pada bagian yang dirubah.</li>
         </ol>
 
