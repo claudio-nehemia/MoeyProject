@@ -110,8 +110,10 @@ class OrderController extends Controller
 
         // Handle file upload
         if ($request->hasFile('mom_file')) {
-            $validated['mom_file'] = $request->file('mom_file')->store('mom_files', 'public');
-            \Log::info('MOM file uploaded:', ['file' => $validated['mom_file']]);
+            $result = image_service()->saveRawFile($request->file('mom_file'), 'mom_files');
+            $validated['mom_file'] = $result['path'];
+            $validated['mom_files'] = [$result];
+            \Log::info('MOM file uploaded:', ['file' => $validated['mom_file'], 'original_name' => $result['original_name'] ?? null]);
         }
 
         // Remove user_ids from validated data before creating order
@@ -261,9 +263,21 @@ class OrderController extends Controller
                 \Storage::disk('public')->delete($order->mom_file);
                 \Log::info('Old MOM file deleted:', ['file' => $order->mom_file]);
             }
+
+            // Also delete any existing MOM files stored in mom_files
+            $existingMomFiles = $order->mom_files ?? [];
+            foreach ($existingMomFiles as $entry) {
+                $path = is_array($entry) ? ($entry['path'] ?? null) : (is_string($entry) ? $entry : null);
+                if ($path && \Storage::disk('public')->exists($path)) {
+                    \Storage::disk('public')->delete($path);
+                }
+            }
+
             // Store new file
-            $validated['mom_file'] = $request->file('mom_file')->store('mom_files', 'public');
-            \Log::info('New MOM file uploaded:', ['file' => $validated['mom_file']]);
+            $result = image_service()->saveRawFile($request->file('mom_file'), 'mom_files');
+            $validated['mom_file'] = $result['path'];
+            $validated['mom_files'] = [$result];
+            \Log::info('New MOM file uploaded:', ['file' => $validated['mom_file'], 'original_name' => $result['original_name'] ?? null]);
         }
 
         // Remove user_ids from validated data before updating order

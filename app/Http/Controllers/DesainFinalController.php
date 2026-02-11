@@ -128,7 +128,7 @@ class DesainFinalController extends Controller
             $validated = $request->validate([
                 'moodboard_id' => 'required|exists:moodboards,id',
                 'moodboard_final' => 'required|array',
-                'moodboard_final.*' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
+                'moodboard_final.*' => 'required|file|mimes:jpg,jpeg,png,pdf',
             ]);
 
             Log::info('Validation passed');

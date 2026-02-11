@@ -14,13 +14,11 @@ import { login as loginRoute } from '@/routes';
 interface LoginProps {
     status?: string;
     canResetPassword: boolean;
-    canRegister: boolean;
 }
 
 export default function Login({
     status,
     canResetPassword,
-    canRegister,
 }: LoginProps) {
     const [emailFocused, setEmailFocused] = useState(false);
     const [passwordFocused, setPasswordFocused] = useState(false);

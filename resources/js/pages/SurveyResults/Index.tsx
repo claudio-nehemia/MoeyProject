@@ -155,10 +155,10 @@ export default function Index({ surveys }: Props) {
         }
     };
 
-    const handlePmResponse = (surveyId: number) => {
+    const handlePmResponse = (orderId: number) => {
         if (confirm('Apakah Anda yakin ingin memberikan Marketing response untuk survey result ini?')) {
-            console.log('Marketing Response surveyId:', surveyId);
-            router.post(`/pm-response/survey-result/${surveyId}`, {}, {
+            console.log('Marketing Response orderId:', orderId);
+            router.post(`/pm-response/survey-result/${orderId}`, {}, {
                 onSuccess: () => {
                     console.log('Marketing response recorded successfully');
                     // Force full page reload untuk update tampilan

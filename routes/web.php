@@ -226,6 +226,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('permission:survey-results.edit')->name('survey-results.edit');
     Route::put('survey-results/{surveyResult}', [SurveyResultsController::class, 'update'])
         ->middleware('permission:survey-results.edit')->name('survey-results.update');
+    Route::get('survey-results/{surveyResult}/download/{type}/{index}', [SurveyResultsController::class, 'downloadFile'])
+        ->middleware('permission:survey-results.show')->name('survey-results.download');
     Route::delete('survey-results/{surveyResult}/file/{fileIndex}', [SurveyResultsController::class, 'deleteFile'])
         ->middleware('permission:survey-results.edit')->name('survey-results.delete-file');
     Route::get('survey-results/{surveyResult}', [SurveyResultsController::class, 'show'])
@@ -597,7 +599,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // PM Response Routes
     Route::prefix('pm-response')->name('pm.response.')->middleware('auth')->group(function () {
-        Route::post('/moodboard/{id}', [PmResponseController::class, 'moodboard'])->name('moodboard');
+        Route::post('/moodboard/{orderId}', [PmResponseController::class, 'moodboard'])->name('moodboard');
         Route::post('/estimasi/{id}', [PmResponseController::class, 'estimasi'])->name('estimasi');
         Route::post('/commitment-fee/{id}', [PmResponseController::class, 'commitmentFee'])->name('commitment-fee');
         Route::post('/desain-final/{id}', [PmResponseController::class, 'desainFinal'])->name('desain-final');
@@ -605,10 +607,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/item-pekerjaan-by-moodboard/{id}', [PmResponseController::class, 'itemPekerjaanByMoodboard'])->name('item-pekerjaan-by-moodboard');
         Route::post('/rab-internal/{id}', [PmResponseController::class, 'rabInternal'])->name('rab-internal');
         Route::post('/survey-ulang/{orderId}', [PmResponseController::class, 'surveyUlang'])->name('survey-ulang');
-        Route::post('/survey-schedule/{id}', [PmResponseController::class, 'surveySchedule'])->name('pm-response.survey-schedule');
+        Route::post('/survey-schedule/{orderId}', [PmResponseController::class, 'surveySchedule'])->name('pm-response.survey-schedule');
         Route::post('/gambar-kerja/{id}', [PmResponseController::class, 'gambarKerja'])->name('gambar-kerja');
         Route::post('/kontrak/{id}', [PmResponseController::class, 'kontrak'])->name('kontrak');
-        Route::post('/survey-result/{id}', [PmResponseController::class, 'surveyResult'])->name('survey-result');
+        Route::post('/survey-result/{orderId}', [PmResponseController::class, 'surveyResult'])->name('survey-result');
         Route::post('/approval-rab/{id}', [PmResponseController::class, 'approvalRab'])->name('approval-rab');
         Route::post('/workplan/{id}', [PmResponseController::class, 'workplan'])->name('workplan');
         Route::post('/invoice/{id}', [PmResponseController::class, 'invoice'])->name('invoice');

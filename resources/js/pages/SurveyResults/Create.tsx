@@ -24,7 +24,7 @@ interface Order {
     phone_number: string;
     jenis_interior: JenisInterior;
     mom_file: string | null;
-    mom_files?: string[] | null;
+        mom_files?: Array<string | { path: string; original_name?: string }> | null;
     users: User[];
 }
 
@@ -445,15 +445,36 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                     </label>
 
                                     {(() => {
-                                        const existingMomFiles: string[] = [
-                                            ...((order.mom_files || []) as string[]),
-                                            ...(order.mom_file ? [order.mom_file] : []),
-                                        ];
+                                            const raw: Array<string | { path: string; original_name?: string }> = [
+                                                ...((order.mom_files || []) as Array<string | { path: string; original_name?: string }>),
+                                                ...(order.mom_file ? [order.mom_file] : []),
+                                            ];
+
+                                            const existingMomFiles = raw
+                                                .map((entry) => {
+                                                    if (typeof entry === 'string') {
+                                                        return {
+                                                            path: entry,
+                                                            original_name: entry.split('/').pop() || entry,
+                                                        };
+                                                    }
+                                                    return {
+                                                        path: entry.path,
+                                                        original_name:
+                                                            entry.original_name || entry.path.split('/').pop() || entry.path,
+                                                    };
+                                                })
+                                                .filter((x) => !!x.path);
 
                                         if (existingMomFiles.length === 0 || data.mom_files.length > 0) return null;
 
                                         // de-dupe
-                                        const deduped = existingMomFiles.filter((p, i) => existingMomFiles.indexOf(p) === i);
+                                            const seen = new Set<string>();
+                                            const deduped = existingMomFiles.filter((f) => {
+                                                if (seen.has(f.path)) return false;
+                                                seen.add(f.path);
+                                                return true;
+                                            });
 
                                         return (
                                             <div className="mb-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -461,17 +482,17 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                                     Existing MOM files ({deduped.length})
                                                 </p>
                                                 <div className="space-y-2">
-                                                    {deduped.map((path, idx) => (
+                                                    {deduped.map((file, idx) => (
                                                         <div
-                                                            key={`${path}-${idx}`}
+                                                            key={`${file.path}-${idx}`}
                                                             className="flex items-center justify-between gap-3 bg-white/70 rounded-lg px-3 py-2"
                                                         >
                                                             <div className="min-w-0">
-                                                                <p className="text-xs font-semibold text-blue-800 truncate">{path.split('/').pop()}</p>
-                                                                <p className="text-[11px] text-blue-600 truncate">{path}</p>
+                                                                <p className="text-xs font-semibold text-blue-800 truncate">{file.original_name}</p>
+                                                                <p className="text-[11px] text-blue-600 truncate">{file.path}</p>
                                                             </div>
                                                             <a
-                                                                href={`/storage/${path}`}
+                                                                href={`/storage/${file.path}`}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
                                                                 className="inline-flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"

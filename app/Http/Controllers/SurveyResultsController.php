@@ -11,9 +11,67 @@ use App\Models\JenisPengukuran;
 use Illuminate\Support\Facades\DB;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SurveyResultsController extends Controller
 {
+    private function normalizeMomFilesForOrder(Order $order): array
+    {
+        $momFiles = $order->mom_files ?? [];
+
+        // Migrate legacy single file path into the array
+        if (!empty($order->mom_file)) {
+            $momFiles[] = $order->mom_file;
+        }
+
+        $normalized = [];
+        foreach ($momFiles as $entry) {
+            if (is_string($entry)) {
+                $normalized[] = [
+                    'path' => $entry,
+                    'original_name' => basename($entry),
+                ];
+                continue;
+            }
+
+            if (is_array($entry) && !empty($entry['path'])) {
+                $path = (string) $entry['path'];
+                $normalized[] = array_merge(
+                    [
+                        'path' => $path,
+                        'original_name' => $entry['original_name'] ?? basename($path),
+                    ],
+                    $entry
+                );
+            }
+        }
+
+        // De-dupe by path while preserving order
+        $deduped = [];
+        $seen = [];
+        foreach ($normalized as $file) {
+            $path = $file['path'] ?? null;
+            if (!$path || isset($seen[$path])) {
+                continue;
+            }
+            $seen[$path] = true;
+            $deduped[] = $file;
+        }
+
+        return $deduped;
+    }
+
+    private function momEntryPath($entry): ?string
+    {
+        if (is_string($entry)) {
+            return $entry;
+        }
+        if (is_array($entry)) {
+            return $entry['path'] ?? null;
+        }
+        return null;
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -358,33 +416,25 @@ class SurveyResultsController extends Controller
 
             if (!empty($momUploads)) {
                 $order = $survey->order;
-                $existingMomFiles = $order->mom_files ?? [];
+                $existingMomFiles = $this->normalizeMomFilesForOrder($order);
                 $uploadedMomFiles = [];
-
-                // Migrate legacy single file into the array to keep behavior consistent
-                if (!empty($order->mom_file)) {
-                    $existingMomFiles[] = $order->mom_file;
-                }
 
                 foreach ($momUploads as $index => $file) {
                     try {
                         $fileName = $file->getClientOriginalName();
                         \Log::info("[Survey Store] Uploading MOM file #{$index}: {$fileName}");
-                        
-                        // Save with original filename + timestamp to avoid collision
-                        $originalName = pathinfo($fileName, PATHINFO_FILENAME);
-                        $extension = $file->getClientOriginalExtension();
-                        $newFileName = $originalName . '_' . time() . '.' . $extension;
-                        $path = $file->storeAs('mom_files', $newFileName, 'public');
-                        $uploadedMomFiles[] = $path;
-                        $existingMomFiles[] = $path;
-                        
-                        \Log::info("[Survey Store] MOM file #{$index} uploaded successfully: {$path}");
+
+                        $result = image_service()->saveRawFile($file, 'mom_files');
+                        $uploadedMomFiles[] = $result;
+                        $existingMomFiles[] = $result;
+
+                        \Log::info("[Survey Store] MOM file #{$index} uploaded successfully: {$result['path']}");
                     } catch (\Exception $fileError) {
                         // Cleanup uploaded MOM files
-                        foreach ($uploadedMomFiles as $uploadedPath) {
+                        foreach ($uploadedMomFiles as $uploaded) {
                             try {
-                                if (Storage::disk('public')->exists($uploadedPath)) {
+                                $uploadedPath = $this->momEntryPath($uploaded);
+                                if ($uploadedPath && Storage::disk('public')->exists($uploadedPath)) {
                                     Storage::disk('public')->delete($uploadedPath);
                                 }
                             } catch (\Exception $cleanupError) {
@@ -411,12 +461,18 @@ class SurveyResultsController extends Controller
                     }
                 }
 
-                // Remove duplicates while preserving order
+                // De-dupe by path while preserving order
                 $deduped = [];
-                foreach ($existingMomFiles as $path) {
-                    if (!in_array($path, $deduped, true)) {
-                        $deduped[] = $path;
+                $seen = [];
+                foreach ($existingMomFiles as $entry) {
+                    $path = $this->momEntryPath($entry);
+                    if (!$path || isset($seen[$path])) {
+                        continue;
                     }
+                    $seen[$path] = true;
+                    $deduped[] = is_array($entry)
+                        ? $entry
+                        : ['path' => $path, 'original_name' => basename($path)];
                 }
 
                 $order->update([
@@ -632,7 +688,7 @@ class SurveyResultsController extends Controller
                                 \Log::error("[Survey Update] Cleanup error: " . $cleanupError->getMessage());
                             }
                         }
-                        
+
                         \Log::error("[Survey Update] Layout file #{$index} upload failed: " . $fileError->getMessage());
                         throw new \Exception("Failed to upload layout file: {$fileName}. " . $fileError->getMessage());
                     }
@@ -705,33 +761,25 @@ class SurveyResultsController extends Controller
 
             if (!empty($momUploads)) {
                 $order = $survey->order;
-                $existingMomFiles = $order->mom_files ?? [];
+                $existingMomFiles = $this->normalizeMomFilesForOrder($order);
                 $uploadedMomFiles = [];
-
-                // Migrate legacy single file into the array to keep behavior consistent
-                if (!empty($order->mom_file)) {
-                    $existingMomFiles[] = $order->mom_file;
-                }
 
                 foreach ($momUploads as $index => $file) {
                     try {
                         $fileName = $file->getClientOriginalName();
                         \Log::info("[Survey Update] Uploading MOM file #{$index}: {$fileName}");
-                        
-                        // Save with original filename + timestamp to avoid collision
-                        $originalName = pathinfo($fileName, PATHINFO_FILENAME);
-                        $extension = $file->getClientOriginalExtension();
-                        $newFileName = $originalName . '_' . time() . '.' . $extension;
-                        $path = $file->storeAs('mom_files', $newFileName, 'public');
-                        $uploadedMomFiles[] = $path;
-                        $existingMomFiles[] = $path;
-                        
-                        \Log::info("[Survey Update] MOM file #{$index} uploaded successfully: {$path}");
+
+                        $result = image_service()->saveRawFile($file, 'mom_files');
+                        $uploadedMomFiles[] = $result;
+                        $existingMomFiles[] = $result;
+
+                        \Log::info("[Survey Update] MOM file #{$index} uploaded successfully: {$result['path']}");
                     } catch (\Exception $fileError) {
                         // Cleanup uploaded MOM files from this request
-                        foreach ($uploadedMomFiles as $uploadedPath) {
+                        foreach ($uploadedMomFiles as $uploaded) {
                             try {
-                                if (Storage::disk('public')->exists($uploadedPath)) {
+                                $uploadedPath = $this->momEntryPath($uploaded);
+                                if ($uploadedPath && Storage::disk('public')->exists($uploadedPath)) {
                                     Storage::disk('public')->delete($uploadedPath);
                                 }
                             } catch (\Exception $cleanupError) {
@@ -758,12 +806,18 @@ class SurveyResultsController extends Controller
                     }
                 }
 
-                // Remove duplicates while preserving order
+                // De-dupe by path while preserving order
                 $deduped = [];
-                foreach ($existingMomFiles as $path) {
-                    if (!in_array($path, $deduped, true)) {
-                        $deduped[] = $path;
+                $seen = [];
+                foreach ($existingMomFiles as $entry) {
+                    $path = $this->momEntryPath($entry);
+                    if (!$path || isset($seen[$path])) {
+                        continue;
                     }
+                    $seen[$path] = true;
+                    $deduped[] = is_array($entry)
+                        ? $entry
+                        : ['path' => $path, 'original_name' => basename($path)];
                 }
 
                 $order->update([
@@ -970,24 +1024,19 @@ class SurveyResultsController extends Controller
             } elseif ($fileType === 'mom') {
                 $order = $survey->order;
 
-                // Ensure legacy single file is migrated to array for consistent indexing
-                $momFiles = $order->mom_files ?? [];
-                if (empty($momFiles) && !empty($order->mom_file)) {
-                    $momFiles = [$order->mom_file];
-                    $order->update([
-                        'mom_files' => $momFiles,
-                        'mom_file' => null,
-                    ]);
-                }
+                $momFiles = $this->normalizeMomFilesForOrder($order);
 
                 if (isset($momFiles[$fileIndex])) {
-                    $path = $momFiles[$fileIndex];
+                    $path = $momFiles[$fileIndex]['path'] ?? null;
                     if ($path && Storage::disk('public')->exists($path)) {
                         Storage::disk('public')->delete($path);
                     }
 
                     array_splice($momFiles, $fileIndex, 1);
-                    $order->update(['mom_files' => !empty($momFiles) ? array_values($momFiles) : null]);
+                    $order->update([
+                        'mom_files' => !empty($momFiles) ? array_values($momFiles) : null,
+                        'mom_file' => null,
+                    ]);
 
                     DB::commit();
                     return back()->with('success', 'MOM file deleted successfully.');
@@ -1002,6 +1051,52 @@ class SurveyResultsController extends Controller
             \Log::error('Error deleting file: ' . $e->getMessage());
             return back()->with('error', 'Failed to delete file. Please try again.');
         }
+    }
+
+    /**
+     * Download file for Survey show (layout/foto/mom) with original filename.
+     */
+    public function downloadFile(SurveyResults $surveyResult, string $type, int $index): StreamedResponse
+    {
+        $surveyResult->load('order');
+
+        if ($type === 'layout') {
+            $files = $surveyResult->layout_files ?? [];
+            abort_unless(isset($files[$index]), 404);
+
+            $path = $files[$index]['path'] ?? null;
+            abort_unless($path && Storage::disk('public')->exists($path), 404);
+
+            $name = $files[$index]['original_name'] ?? basename($path);
+            return Storage::disk('public')->download($path, $name);
+        }
+
+        if ($type === 'foto') {
+            $files = $surveyResult->foto_lokasi_files ?? [];
+            abort_unless(isset($files[$index]), 404);
+
+            $path = $files[$index]['path'] ?? null;
+            abort_unless($path && Storage::disk('public')->exists($path), 404);
+
+            $name = $files[$index]['original_name'] ?? basename($path);
+            return Storage::disk('public')->download($path, $name);
+        }
+
+        if ($type === 'mom') {
+            $order = $surveyResult->order;
+            abort_unless($order, 404);
+
+            $momFiles = $this->normalizeMomFilesForOrder($order);
+            abort_unless(isset($momFiles[$index]), 404);
+
+            $path = $momFiles[$index]['path'] ?? null;
+            abort_unless($path && Storage::disk('public')->exists($path), 404);
+
+            $name = $momFiles[$index]['original_name'] ?? basename($path);
+            return Storage::disk('public')->download($path, $name);
+        }
+
+        abort(404);
     }
 
     /**

@@ -26,7 +26,7 @@ interface Order {
     jenis_interior: JenisInterior;
     users: User[];
     mom_file: string | null;
-    mom_files?: string[] | null;
+    mom_files?: Array<string | { path: string; original_name?: string }> | null;
 }
 
 interface JenisPengukuran {
@@ -72,6 +72,34 @@ export default function Show({ survey }: Props) {
 
     const [currentLayoutIndex, setCurrentLayoutIndex] = useState(0);
     const [currentFotoIndex, setCurrentFotoIndex] = useState(0);
+
+    const normalizeMomFiles = (order: Order): Array<{ path: string; original_name: string }> => {
+        const raw: Array<string | { path: string; original_name?: string }> = [
+            ...((order.mom_files || []) as Array<string | { path: string; original_name?: string }>),
+            ...(order.mom_file ? [order.mom_file] : []),
+        ];
+
+        const normalized: Array<{ path: string; original_name: string }> = [];
+        for (const entry of raw) {
+            if (!entry) continue;
+            if (typeof entry === 'string') {
+                normalized.push({ path: entry, original_name: entry.split('/').pop() || entry });
+            } else if (typeof entry === 'object' && entry.path) {
+                normalized.push({
+                    path: entry.path,
+                    original_name: entry.original_name || entry.path.split('/').pop() || entry.path,
+                });
+            }
+        }
+
+        // de-dupe by path, preserve order
+        const seen = new Set<string>();
+        return normalized.filter((f) => {
+            if (!f.path || seen.has(f.path)) return false;
+            seen.add(f.path);
+            return true;
+        });
+    };
 
     const formatDate = (date: string) => {
         return new Date(date).toLocaleDateString('id-ID', {
@@ -354,15 +382,13 @@ export default function Show({ survey }: Props) {
                                     <p className="font-semibold text-amber-900 text-sm sm:text-base">MOM File</p>
                                 </div>
                                 {(() => {
-                                    const momFiles: string[] = [
-                                        ...((survey.order.mom_files || []) as string[]),
-                                        ...(survey.order.mom_file ? [survey.order.mom_file] : []),
-                                    ];
-                                    const deduped = momFiles.filter((p, i) => momFiles.indexOf(p) === i);
+                                        const deduped = normalizeMomFiles(survey.order);
 
                                     if (deduped.length === 0) {
                                         return <p className="text-amber-700 text-xs sm:text-sm">No MOM file</p>;
                                     }
+
+                                        const latestIndex = deduped.length - 1;
 
                                     return (
                                         <div className="space-y-2">
@@ -371,9 +397,7 @@ export default function Show({ survey }: Props) {
                                                 <p className="text-amber-700 text-xs mt-1">{deduped.length === 1 ? 'file' : 'files'} uploaded</p>
                                             </div>
                                             <a
-                                                href={`/storage/${deduped[0]}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
+                                                    href={`/survey-results/${survey.id}/download/mom/${latestIndex}`}
                                                 className="inline-flex items-center px-3 sm:px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors w-full justify-center"
                                             >
                                                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -402,11 +426,22 @@ export default function Show({ survey }: Props) {
                                 <div className="overflow-hidden rounded-xl bg-gradient-to-br from-cyan-50 to-blue-50 border-2 border-cyan-200">
                                     <div className="aspect-video flex items-center justify-center p-8">
                                         {survey.layout_files[currentLayoutIndex].mime_type.includes('image') ? (
-                                            <img
-                                                src={`/storage/${survey.layout_files[currentLayoutIndex].path}`}
-                                                alt={survey.layout_files[currentLayoutIndex].original_name}
-                                                className="max-h-full max-w-full object-contain rounded-lg shadow-lg"
-                                            />
+                                            <div className="flex flex-col items-center gap-4">
+                                                <img
+                                                    src={`/storage/${survey.layout_files[currentLayoutIndex].path}`}
+                                                    alt={survey.layout_files[currentLayoutIndex].original_name}
+                                                    className="max-h-[420px] max-w-full object-contain rounded-lg shadow-lg"
+                                                />
+                                                <a
+                                                    href={`/survey-results/${survey.id}/download/layout/${currentLayoutIndex}`}
+                                                    className="inline-flex items-center px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg transition-colors shadow-lg"
+                                                >
+                                                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                    </svg>
+                                                    Download File
+                                                </a>
+                                            </div>
                                         ) : (
                                             <div className="text-center">
                                                 <div className="flex justify-center mb-4">
@@ -419,9 +454,7 @@ export default function Show({ survey }: Props) {
                                                     {(survey.layout_files[currentLayoutIndex].size / 1024).toFixed(1)} KB
                                                 </p>
                                                 <a
-                                                    href={`/storage/${survey.layout_files[currentLayoutIndex].path}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
+                                                    href={`/survey-results/${survey.id}/download/layout/${currentLayoutIndex}`}
                                                     className="inline-flex items-center px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg transition-colors shadow-lg"
                                                 >
                                                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -513,11 +546,22 @@ export default function Show({ survey }: Props) {
                             <div className="relative">
                                 <div className="overflow-hidden rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200">
                                     <div className="aspect-video flex items-center justify-center p-8">
-                                        <img
-                                            src={`/storage/${survey.foto_lokasi_files[currentFotoIndex].path}`}
-                                            alt={survey.foto_lokasi_files[currentFotoIndex].original_name}
-                                            className="max-h-full max-w-full object-contain rounded-lg shadow-lg"
-                                        />
+                                        <div className="flex flex-col items-center gap-4">
+                                            <img
+                                                src={`/storage/${survey.foto_lokasi_files[currentFotoIndex].path}`}
+                                                alt={survey.foto_lokasi_files[currentFotoIndex].original_name}
+                                                className="max-h-[420px] max-w-full object-contain rounded-lg shadow-lg"
+                                            />
+                                            <a
+                                                href={`/survey-results/${survey.id}/download/foto/${currentFotoIndex}`}
+                                                className="inline-flex items-center px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-colors shadow-lg"
+                                            >
+                                                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                </svg>
+                                                Download Photo
+                                            </a>
+                                        </div>
                                     </div>
 
                                     <div className="bg-gradient-to-r from-emerald-600 to-green-600 text-white px-4 py-3">
@@ -581,11 +625,7 @@ export default function Show({ survey }: Props) {
 
                     {/* MOM File Section */}
                     {(() => {
-                        const momFiles: string[] = [
-                            ...((survey.order.mom_files || []) as string[]),
-                            ...(survey.order.mom_file ? [survey.order.mom_file] : []),
-                        ];
-                        const deduped = momFiles.filter((p, i) => momFiles.indexOf(p) === i);
+                        const deduped = normalizeMomFiles(survey.order);
 
                         if (deduped.length === 0) return null;
 
@@ -600,17 +640,15 @@ export default function Show({ survey }: Props) {
                             <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 border-2 border-amber-200">
                                 <div className="space-y-3">
                                     {deduped.map((path, index) => (
-                                        <div key={`${path}-${index}`} className="flex items-center justify-between gap-3 bg-white/70 rounded-lg px-4 py-3">
+                                        <div key={`${path.path}-${index}`} className="flex items-center justify-between gap-3 bg-white/70 rounded-lg px-4 py-3">
                                             <div className="flex items-center gap-3 min-w-0">
                                                 <svg className="w-7 h-7 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                                 </svg>
-                                                <p className="font-semibold text-amber-900 truncate">{path.split('/').pop()}</p>
+                                                <p className="font-semibold text-amber-900 truncate">{path.original_name}</p>
                                             </div>
                                             <a
-                                                href={`/storage/${path}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
+                                                href={`/survey-results/${survey.id}/download/mom/${index}`}
                                                 className="inline-flex items-center px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg transition-colors shadow-lg"
                                             >
                                                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

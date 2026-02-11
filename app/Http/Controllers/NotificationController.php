@@ -276,15 +276,13 @@ class NotificationController extends Controller
                     'response_by' => auth()->user()->name ?? 'Admin',
                 ]);
             }
-            return redirect()->route('moodboard.index', $order->moodboard->id);
+        } else {
+            Moodboard::create([
+                'order_id' => $order->id,
+                'response_time' => now(),
+                'response_by' => auth()->user()->name ?? 'Admin',
+            ]);
         }
-
-        // Create empty moodboard with response info
-        Moodboard::create([
-            'order_id' => $order->id,
-            'response_time' => now(),
-            'response_by' => auth()->user()->name ?? 'Admin',
-        ]);
 
         $order->update([
             'tahapan_proyek' => 'moodboard',
@@ -919,7 +917,7 @@ class NotificationController extends Controller
         }
 
         $itemPekerjaan = $order->itemPekerjaans->first();
-        
+
         // Check if already responded
         if ($itemPekerjaan->approval_rab_response_by) {
             return redirect()->route('approval-material.index')

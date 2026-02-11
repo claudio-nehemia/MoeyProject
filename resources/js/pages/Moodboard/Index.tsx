@@ -287,9 +287,9 @@ export default function Index({ orders }: Props) {
         setSelectedOrder(null);
     };
 
-    const handlePmResponse = (moodboardId: number) => {
+    const handlePmResponse = (orderId: number) => {
         if (confirm('Apakah Anda yakin ingin merespon sebagai Kepala Marketing?')) {
-            router.post(`/pm-response/moodboard/${moodboardId}`, {}, {
+            router.post(`/pm-response/moodboard/${orderId}`, {}, {
                 preserveScroll: true,
             });
         }
@@ -346,7 +346,8 @@ export default function Index({ orders }: Props) {
     const getActionButtons = (order: Order) => {
         const moodboard = order.moodboard;
 
-        if (!moodboard) {
+        // Tampilkan tombol Response jika belum ada response (berdasarkan response_by dan response_time)
+        if (!moodboard || (!moodboard.response_time && !moodboard.response_by)) {
             return isNotKepalaMarketing ? (
                 <button
                     onClick={() => openCreateMoodboard(order)}
@@ -826,7 +827,7 @@ export default function Index({ orders }: Props) {
                                             {/* Marketing Response Button */}
                                             {isKepalaMarketing && (!order.moodboard?.pm_response_time) && (
                                                 <button
-                                                    onClick={() => handlePmResponse(order.moodboard?.id || order.id)}
+                                                    onClick={() => handlePmResponse(order.id)}
                                                     className="rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-3 py-1.5 text-xs font-medium text-white transition-all hover:from-purple-600 hover:to-purple-700 sm:px-3.5 sm:py-2"
                                                 >
                                                     Marketing Response

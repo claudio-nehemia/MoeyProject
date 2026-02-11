@@ -115,45 +115,37 @@ class PmResponseController extends Controller
     }
 
     // Moodboard (Tahap Moodboard - setelah survey)
-    public function moodboard($id)
+    public function moodboard($orderId)
     {
         if ($check = $this->checkPm())
             return $check;
 
         \Log::info('=== PM RESPONSE MOODBOARD START ===');
-        \Log::info('ID received: ' . $id);
+        \Log::info('Order ID received: ' . $orderId);
 
-        $moodboard = Moodboard::find($id);
+        // IMPORTANT: route param is treated as order_id (avoid ambiguity with moodboard.id)
+        $order = Order::findOrFail($orderId);
+        if ($check = $this->checkOriginalKepalaMarketing($order))
+            return $check;
 
-        if (!$moodboard) {
-            \Log::info('Moodboard not found by ID, trying order_id');
-            $moodboard = Moodboard::where('order_id', $id)->first();
-        }
-
-        if ($moodboard) {
-            if ($check = $this->checkOriginalKepalaMarketing($moodboard->order))
-                return $check;
-        } else {
-            $order = Order::findOrFail($id);
-            if ($check = $this->checkOriginalKepalaMarketing($order))
-                return $check;
-        }
+        $moodboard = Moodboard::where('order_id', $orderId)->first();
 
         if (!$moodboard) {
-            \Log::info('Moodboard not found, creating new with order_id: ' . $id);
+            \Log::info('Moodboard not found for order_id, creating new: ' . $orderId);
             $moodboard = Moodboard::create([
-                'order_id' => $id,
+                'order_id' => $orderId,
                 'status' => 'pending',
                 'pm_response_time' => now(),
                 'pm_response_by' => auth()->user()->name,
             ]);
             \Log::info('Moodboard created with ID: ' . $moodboard->id);
-            return back()->with('success', 'Moodboard dibuat dan PM Response berhasil dicatat.');
+        } else {
+            \Log::info('Moodboard found for order_id, ID: ' . $moodboard->id . ', updating PM response');
+            $this->recordResponse($moodboard);
         }
 
-        \Log::info('Moodboard found, ID: ' . $moodboard->id . ', updating PM response');
-        $this->recordResponse($moodboard);
-        $taskresponse = TaskResponse::where('order_id', $moodboard->order->id)
+
+        $taskresponse = TaskResponse::where('order_id', $orderId)
             ->where('tahap', 'moodboard')
             ->where('is_marketing', true)
             ->orderByDesc('extend_time')
@@ -168,7 +160,7 @@ class PmResponseController extends Controller
             ]);
             \Log::info('Associated TaskResponse ID: ' . $taskresponse->id . ' response_time updated.');
         } else {
-            \Log::info('No associated TaskResponse found for Order ID: ' . $moodboard->order->id);
+            \Log::info('No associated TaskResponse found for Order ID: ' . $orderId);
         }
         \Log::info('=== PM RESPONSE MOODBOARD END ===');
         return back()->with('success', 'PM Response berhasil dicatat untuk Moodboard.');
@@ -550,34 +542,25 @@ class PmResponseController extends Controller
 
 
     // Survey Result
-    public function surveyResult($id)
+    public function surveyResult($orderId)
     {
         if ($check = $this->checkPm())
             return $check;
 
         \Log::info('=== PM RESPONSE SURVEY RESULT START ===');
-        \Log::info('ID received: ' . $id);
+        \Log::info('Order ID received: ' . $orderId);
 
-        $surveyResult = SurveyResults::find($id);
+        // IMPORTANT: route param is treated as order_id (avoid ambiguity with survey_results.id)
+        $order = Order::findOrFail($orderId);
+        if ($check = $this->checkOriginalKepalaMarketing($order))
+            return $check;
 
-        if (!$surveyResult) {
-            \Log::info('Survey Result not found by ID, trying order_id');
-            $surveyResult = SurveyResults::where('order_id', $id)->first();
-        }
-
-        if ($surveyResult) {
-            if ($check = $this->checkOriginalKepalaMarketing($surveyResult->order))
-                return $check;
-        } else {
-            $order = Order::findOrFail($id);
-            if ($check = $this->checkOriginalKepalaMarketing($order))
-                return $check;
-        }
+        $surveyResult = SurveyResults::where('order_id', $orderId)->first();
 
         if (!$surveyResult) {
-            \Log::info('Survey Result not found, creating new with order_id: ' . $id);
+            \Log::info('Survey Result not found for order_id, creating new: ' . $orderId);
             $surveyResult = SurveyResults::create([
-                'order_id' => $id,
+                'order_id' => $orderId,
                 'pm_response_time' => now(),
                 'pm_response_by' => auth()->user()->name,
             ]);
@@ -588,7 +571,7 @@ class PmResponseController extends Controller
 
         \Log::info('Survey Result found, ID: ' . $surveyResult->id . ', updating Marketing response');
         \Log::info('=== PM RESPONSE SURVEY RESULT END ===');
-        $taskResponse = TaskResponse::where('order_id', $surveyResult->order->id)
+        $taskResponse = TaskResponse::where('order_id', $orderId)
             ->where('tahap', 'survey')
             ->where('is_marketing', true)
             ->orderByDesc('extend_time')
@@ -603,7 +586,7 @@ class PmResponseController extends Controller
             ]);
             \Log::info('Associated TaskResponse ID: ' . $taskResponse->id . ' response_time updated.');
         } else {
-            \Log::info('No associated TaskResponse found for Order ID: ' . $surveyResult->order->id);
+            \Log::info('No associated TaskResponse found for Order ID: ' . $orderId);
         }
         return back()->with('success', 'Marketing Response berhasil dicatat untuk Survey Result.');
     }
@@ -700,7 +683,7 @@ class PmResponseController extends Controller
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->first();
-            
+
         if ($taskResponse) {
             $taskResponse->update([
                 'response_time' => now(),

@@ -293,7 +293,7 @@ export default function Index({ surveys }: Props) {
                                                                   )
                                                                 : '-'}
                                                         </p>
-                                                    </div>
+                                                    </div>  
 
                                                     <div>
                                                         <p className="text-xs text-stone-500">
@@ -334,7 +334,7 @@ export default function Index({ surveys }: Props) {
                                                     </div>
 
                                                     {/* Deadline & Extend Button - regular */}
-                                                    {taskResponseRegular &&
+                                                    {!isKepalaMarketing && taskResponseRegular &&
                                                         taskResponseRegular.status !==
                                                             'selesai' &&
                                                         taskResponseRegular.status !==
@@ -464,7 +464,7 @@ export default function Index({ surveys }: Props) {
 
                                             {/* ACTIONS */}
                                             <div className="flex flex-col gap-2">
-                                                {/* Marketing Response Button - INDEPENDENT */}
+                                                {/* Marketing Response Button - Hanya untuk Kepala Marketing */}
                                                 {isKepalaMarketing &&
                                                     !s.pm_response_time && (
                                                         <button
@@ -479,6 +479,7 @@ export default function Index({ surveys }: Props) {
                                                         </button>
                                                     )}
 
+                                                {/* Regular Response Button - Hanya untuk Non-Marketing */}
                                                 {isNotKepalaMarketing &&
                                                     s.status_survey_ulang ===
                                                         'pending' && (
@@ -494,33 +495,37 @@ export default function Index({ surveys }: Props) {
                                                         </button>
                                                     )}
 
-                                                {s.status_survey_ulang ===
-                                                    'waiting_input' && (
-                                                    <Link
-                                                        href={`/survey-ulang/create/${s.id}`}
-                                                        className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-amber-600"
-                                                    >
-                                                        📝 Input Hasil Survey
-                                                    </Link>
-                                                )}
+                                                {/* Input Hasil Survey - Hanya untuk Non-Marketing */}
+                                                {isNotKepalaMarketing &&
+                                                    s.status_survey_ulang ===
+                                                        'waiting_input' && (
+                                                        <Link
+                                                            href={`/survey-ulang/create/${s.id}`}
+                                                            className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-amber-600"
+                                                        >
+                                                            📝 Input Hasil Survey
+                                                        </Link>
+                                                    )}
 
-                                                {s.status_survey_ulang ===
-                                                    'done' && (
-                                                    <div className="flex gap-2">
-                                                        <Link
-                                                            href={`/survey-ulang/show/${s.survey_ulang_id}`}
-                                                            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
-                                                        >
-                                                            View
-                                                        </Link>
-                                                        <Link
-                                                            href={`/survey-ulang/edit/${s.survey_ulang_id}`}
-                                                            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
-                                                        >
-                                                            Edit
-                                                        </Link>
-                                                    </div>
-                                                )}
+                                                {/* View & Edit - Hanya untuk Non-Marketing */}
+                                                {isNotKepalaMarketing &&
+                                                    s.status_survey_ulang ===
+                                                        'done' && (
+                                                        <div className="flex gap-2">
+                                                            <Link
+                                                                href={`/survey-ulang/show/${s.survey_ulang_id}`}
+                                                                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
+                                                            >
+                                                                View
+                                                            </Link>
+                                                            <Link
+                                                                href={`/survey-ulang/edit/${s.survey_ulang_id}`}
+                                                                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
+                                                            >
+                                                                Edit
+                                                            </Link>
+                                                        </div>
+                                                    )}
                                             </div>
                                         </div>
                                     </div>

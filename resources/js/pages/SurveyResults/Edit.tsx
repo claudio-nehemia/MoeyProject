@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { Head, useForm, router, Link } from '@inertiajs/react';
 import JenisPengukuranModal from '@/components/JenisPengukuranModal';
 import Navbar from '@/components/Navbar';
@@ -13,8 +13,12 @@ interface User {
     id: number;
     name: string;
     email: string;
-    role: { nama_role: string };
+    role: {
+        nama_role: string;
+    };
 }
+
+type MomFileEntry = string | { path: string; original_name?: string };
 
 interface Order {
     id: number;
@@ -24,26 +28,24 @@ interface Order {
     phone_number: string;
     jenis_interior: JenisInterior;
     mom_file: string | null;
-    mom_files?: string[] | null;
+    mom_files?: MomFileEntry[] | null;
     users: User[];
+}
+
+interface SurveyStoredFile {
+    path: string;
+    original_name: string;
+    mime_type: string;
+    size: number;
+    thumbnail?: string;
 }
 
 interface Survey {
     id: number;
     order_id: number;
     feedback: string | null;
-    layout_files?: Array<{
-        path: string;
-        original_name: string;
-        mime_type: string;
-        size: number;
-    }>;
-    foto_lokasi_files?: Array<{
-        path: string;
-        original_name: string;
-        mime_type: string;
-        size: number;
-    }>;
+    layout_files?: SurveyStoredFile[];
+    foto_lokasi_files?: SurveyStoredFile[];
     response_time: string | null;
     response_by: string | null;
     order: Order;
@@ -53,7 +55,6 @@ interface Pengukuran {
     id: number;
     nama_pengukuran: string;
 }
-
 interface Props {
     survey: Survey;
     jenisPengukuran: Pengukuran[]; // semua jenis pengukuran
@@ -545,26 +546,48 @@ export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }:
 
                                     {/* Existing MOM Files */}
                                     {(() => {
-                                        const existingMomFiles: string[] = [
-                                            ...((survey.order.mom_files || []) as string[]),
+                                        const raw: Array<string | { path: string; original_name?: string }> = [
+                                            ...((survey.order.mom_files || []) as Array<string | { path: string; original_name?: string }>),
                                             ...(survey.order.mom_file ? [survey.order.mom_file] : []),
                                         ];
 
+                                        const existingMomFiles = raw
+                                            .map((entry) => {
+                                                if (typeof entry === 'string') {
+                                                    return {
+                                                        path: entry,
+                                                        original_name: entry.split('/').pop() || entry,
+                                                    };
+                                                }
+
+                                                return {
+                                                    path: entry.path,
+                                                    original_name:
+                                                        entry.original_name || entry.path.split('/').pop() || entry.path,
+                                                };
+                                            })
+                                            .filter((x) => !!x.path);
+
                                         if (existingMomFiles.length === 0) return null;
 
-                                        const deduped = existingMomFiles.filter((p, i) => existingMomFiles.indexOf(p) === i);
+                                        const seen = new Set<string>();
+                                        const deduped = existingMomFiles.filter((f) => {
+                                            if (seen.has(f.path)) return false;
+                                            seen.add(f.path);
+                                            return true;
+                                        });
 
                                         return (
                                             <div className="mb-4 space-y-2">
                                                 <p className="text-xs font-semibold text-stone-700">Existing MOM files ({deduped.length}):</p>
-                                                {deduped.map((path, index) => (
-                                                    <div key={`${path}-${index}`} className="flex items-center gap-2 text-xs text-stone-600 bg-amber-50 px-3 py-2 rounded-lg">
+                                                {deduped.map((file, index) => (
+                                                    <div key={`${file.path}-${index}`} className="flex items-center gap-2 text-xs text-stone-600 bg-amber-50 px-3 py-2 rounded-lg">
                                                         <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                                         </svg>
-                                                        <span className="flex-1 truncate">{path.split('/').pop()}</span>
+                                                        <span className="flex-1 truncate">{file.original_name}</span>
                                                         <a
-                                                            href={`/storage/${path}`}
+                                                            href={`/survey-results/${survey.id}/download/mom/${index}`}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="text-amber-700 hover:text-amber-800"

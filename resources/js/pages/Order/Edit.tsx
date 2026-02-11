@@ -29,6 +29,7 @@ interface OrderData {
     project_status: string;
     priority_level: string;
     mom_file: string | null;
+    mom_files?: Array<string | { path: string; original_name?: string }> | null;
 }
 
 interface Props {
@@ -424,7 +425,15 @@ export default function Edit({ order, marketings, drafters, desainers, jenisInte
                                                 </svg>
                                                 <div>
                                                     <p className="text-sm font-semibold text-blue-900">Current File</p>
-                                                    <p className="text-xs text-blue-700">{order.mom_file.split('/').pop()}</p>
+                                                    <p className="text-xs text-blue-700">
+                                                        {(() => {
+                                                            const first = order.mom_files?.[0];
+                                                            if (first && typeof first === 'object') {
+                                                                return first.original_name || order.mom_file.split('/').pop();
+                                                            }
+                                                            return order.mom_file.split('/').pop();
+                                                        })()}
+                                                    </p>
                                                 </div>
                                             </div>
                                             <a

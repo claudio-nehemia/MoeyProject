@@ -181,11 +181,11 @@ export default function EstimasiIndex({ moodboards }: Props) {
         }
     };
 
-    const handlePmResponse = (moodboardId: number) => {
-        console.log('handlePmResponse called with moodboardId:', moodboardId);
+    const handlePmResponse = (orderId: number) => {
+        console.log('handlePmResponse called with orderId:', orderId);
         if (window.confirm('Apakah Anda yakin ingin memberikan PM response untuk moodboard ini?')) {
-            console.log('Sending PM response request to:', `/pm-response/moodboard/${moodboardId}`);
-            router.post(`/pm-response/moodboard/${moodboardId}`, {}, {
+            console.log('Sending PM response request to:', `/pm-response/moodboard/${orderId}`);
+            router.post(`/pm-response/moodboard/${orderId}`, {}, {
                 preserveScroll: true,
                 onSuccess: () => {
                     console.log('PM Response success');
@@ -501,7 +501,7 @@ export default function EstimasiIndex({ moodboards }: Props) {
                                         {isKepalaMarketing && !moodboard.pm_response_time && (
                                             <div className="mb-4">
                                                 <button
-                                                    onClick={() => handlePmResponse(moodboard.id)}
+                                                    onClick={() => handlePmResponse(moodboard.order_id)}
                                                     className="w-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg transition-all"
                                                 >
                                                     Marketing Response
