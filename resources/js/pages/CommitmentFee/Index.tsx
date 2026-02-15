@@ -65,6 +65,11 @@ export default function Index({ moodboards }: Props) {
     const [paymentFile, setPaymentFile] = useState<File | null>(null);
     const [showImagePreview, setShowImagePreview] = useState(false);
     const [previewImage, setPreviewImage] = useState('');
+    const [showFilePreview, setShowFilePreview] = useState(false);
+    const [previewFileUrl, setPreviewFileUrl] = useState('');
+    const [previewFileType, setPreviewFileType] = useState('');
+    const [expandedCards, setExpandedCards] = useState<Record<number, boolean>>({});
+    const [searchQuery, setSearchQuery] = useState('');
     // Dual task response state: { [orderId]: { regular?: TaskResponse, marketing?: TaskResponse } }
     const [taskResponses, setTaskResponses] = useState<
         Record<number, { regular?: TaskResponse; marketing?: TaskResponse }>
@@ -320,10 +325,49 @@ export default function Index({ moodboards }: Props) {
         return diffDays;
     };
 
+    const handleFilePreview = (fileUrl: string) => {
+        const fileExt = fileUrl.split('.').pop()?.toLowerCase() || '';
+        setPreviewFileUrl(fileUrl);
+        setPreviewFileType(fileExt);
+        setShowFilePreview(true);
+    };
+
+    const toggleCardExpansion = (moodboardId: number) => {
+        setExpandedCards(prev => ({
+            ...prev,
+            [moodboardId]: !prev[moodboardId]
+        }));
+    };
+
+    const getFileExtension = (filename: string) => {
+        return filename.split('.').pop()?.toLowerCase() || '';
+    };
+
+    const isImageFile = (filename: string) => {
+        const ext = getFileExtension(filename);
+        return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext);
+    };
+
+    const isPdfFile = (filename: string) => {
+        return getFileExtension(filename) === 'pdf';
+    };
+
+    // Filter moodboards based on search query
+    const filteredMoodboards = moodboards.filter(moodboard => {
+        if (!searchQuery) return true;
+        const query = searchQuery.toLowerCase();
+        return (
+            moodboard.order.nama_project.toLowerCase().includes(query) ||
+            moodboard.order.customer_name.toLowerCase().includes(query) ||
+            moodboard.order.company_name?.toLowerCase().includes(query) ||
+            moodboard.order.alamat.toLowerCase().includes(query)
+        );
+    });
+
     return (
         <>
             <Head title="Commitment Fee" />
-            <div className="min-h-screen bg-gray-50">
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
                 <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
                 <Sidebar
                     isOpen={sidebarOpen}
@@ -333,25 +377,53 @@ export default function Index({ moodboards }: Props) {
 
                 <div className="pt-16 lg:pl-64">
                     <div className="px-4 py-8 sm:px-6 lg:px-8">
-                        <div className="mb-8">
-                            <h1 className="text-3xl font-bold text-gray-900">
+                        <div className="mb-6">
+                            <h1 className="text-2xl font-bold text-gray-800">
                                 Commitment Fee
                             </h1>
-                            <p className="mt-2 text-sm text-gray-600">
-                                Kelola commitment fee untuk moodboard yang sudah
-                                approved
+                            <p className="mt-1 text-sm text-gray-500">
+                                Kelola commitment fee untuk moodboard yang sudah approved
                             </p>
                         </div>
 
-                        <div className="space-y-4">
-                            {moodboards.length === 0 ? (
-                                <div className="rounded-lg bg-white p-8 text-center shadow">
+                        {/* Search Bar */}
+                        <div className="mb-6">
+                            <div className="relative">
+                                <svg
+                                    className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                    />
+                                </svg>
+                                <input
+                                    type="text"
+                                    placeholder="Cari project, customer, company, atau alamat..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pr-4 pl-10 text-sm shadow-sm focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            {filteredMoodboards.length === 0 ? (
+                                <div className="rounded-lg bg-white p-8 text-center shadow-md">
                                     <p className="text-gray-500">
-                                        Tidak ada moodboard yang sudah approved.
+                                        {searchQuery 
+                                            ? "Tidak ada hasil yang sesuai dengan pencarian." 
+                                            : "Tidak ada moodboard yang sudah approved."
+                                        }
                                     </p>
                                 </div>
                             ) : (
-                                moodboards.map((moodboard) => {
+                                filteredMoodboards.map((moodboard) => {
                                     const orderId = moodboard.order?.id;
                                     const taskResponseRegular = orderId
                                         ? taskResponses[orderId]?.regular
@@ -374,410 +446,350 @@ export default function Index({ moodboards }: Props) {
                                     const canShowResponseCommitmentFee =
                                         !moodboard.commitmentFee ||
                                         !moodboard.commitmentFee.response_time;
+                                    const isExpanded = expandedCards[moodboard.id] || false;
 
                                     return (
                                         <div
                                             key={moodboard.id}
-                                            className="rounded-lg bg-white shadow transition-shadow hover:shadow-md"
+                                            className="rounded-lg border-l-4 border-l-blue-400 border-t border-r border-b border-gray-200 bg-gradient-to-br from-white to-blue-50/30 shadow-md transition-all hover:shadow-lg hover:border-l-blue-500"
                                         >
-                                            <div className="p-6">
-                                                <div className="mb-4 flex items-start justify-between">
-                                                    <div className="flex-1">
-                                                        <h3 className="text-lg font-semibold text-gray-900">
-                                                            {
-                                                                moodboard.order
-                                                                    .nama_project
-                                                            }
+                                            <div className="p-4">
+                                                {/* Compact Header */}
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="flex-1 min-w-0">
+                                                        <h3 className="text-sm font-semibold text-gray-800 truncate">
+                                                            {moodboard.order.nama_project}
                                                         </h3>
-                                                        <div className="mt-1 space-y-1 text-sm text-gray-600">
-                                                            {/* Task Response Deadline - REGULAR */}
-                                                            {!isKepalaMarketing &&
-                                                                taskResponseRegular &&
-                                                                taskResponseRegular.status !==
-                                                                    'selesai' && (
-                                                                    <div className="mb-2">
-                                                                        <div
-                                                                            className={`rounded-lg border p-2 ${
-                                                                                daysLeftRegular !==
-                                                                                    null &&
-                                                                                daysLeftRegular <
-                                                                                    0
-                                                                                    ? 'border-red-200 bg-red-50'
-                                                                                    : daysLeftRegular !==
-                                                                                            null &&
-                                                                                        daysLeftRegular <=
-                                                                                            3
-                                                                                      ? 'border-orange-200 bg-orange-50'
-                                                                                      : 'border-yellow-200 bg-yellow-50'
-                                                                            }`}
-                                                                        >
-                                                                            <div className="flex items-center justify-between">
-                                                                                <div>
-                                                                                    <p
-                                                                                        className={`mb-1 text-xs font-semibold ${
-                                                                                            daysLeftRegular !==
-                                                                                                null &&
-                                                                                            daysLeftRegular <
-                                                                                                0
-                                                                                                ? 'text-red-900'
-                                                                                                : daysLeftRegular !==
-                                                                                                        null &&
-                                                                                                    daysLeftRegular <=
-                                                                                                        3
-                                                                                                  ? 'text-orange-900'
-                                                                                                  : 'text-yellow-900'
-                                                                                        }`}
-                                                                                    >
-                                                                                        {daysLeftRegular !==
-                                                                                            null &&
-                                                                                        daysLeftRegular <
-                                                                                            0
-                                                                                            ? '⚠️ Deadline Terlewat'
-                                                                                            : '⏰ Deadline Commitment Fee'}
-                                                                                    </p>
-                                                                                    <p
-                                                                                        className={`text-xs ${
-                                                                                            daysLeftRegular !==
-                                                                                                null &&
-                                                                                            daysLeftRegular <
-                                                                                                0
-                                                                                                ? 'text-red-700'
-                                                                                                : daysLeftRegular !==
-                                                                                                        null &&
-                                                                                                    daysLeftRegular <=
-                                                                                                        3
-                                                                                                  ? 'text-orange-700'
-                                                                                                  : 'text-yellow-700'
-                                                                                        }`}
-                                                                                    >
-                                                                                        {formatDeadline(
-                                                                                            taskResponseRegular.deadline,
-                                                                                        )}
-                                                                                    </p>
-                                                                                    {daysLeftRegular !==
-                                                                                        null && (
-                                                                                        <p
-                                                                                            className={`mt-1 text-xs font-medium ${
-                                                                                                daysLeftRegular <
-                                                                                                0
-                                                                                                    ? 'text-red-700'
-                                                                                                    : daysLeftRegular <=
-                                                                                                        3
-                                                                                                      ? 'text-orange-700'
-                                                                                                      : 'text-yellow-700'
-                                                                                            }`}
-                                                                                        >
-                                                                                            {daysLeftRegular <
-                                                                                            0
-                                                                                                ? `Terlambat ${Math.abs(daysLeftRegular)} hari`
-                                                                                                : `${daysLeftRegular} hari lagi`}
-                                                                                        </p>
-                                                                                    )}
-                                                                                </div>
-                                                                                <button
-                                                                                    onClick={() =>
-                                                                                        orderId &&
-                                                                                        setShowExtendModal(
-                                                                                            {
-                                                                                                orderId,
-                                                                                                tahap: 'cm_fee',
-                                                                                                isMarketing: false,
-                                                                                                taskResponse:
-                                                                                                    taskResponseRegular,
-                                                                                            },
-                                                                                        )
-                                                                                    }
-                                                                                    className="rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-orange-600"
-                                                                                >
-                                                                                    Minta
-                                                                                    Perpanjangan
-                                                                                </button>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                            {/* Task Response Deadline - MARKETING (Kepala Marketing only) */}
-                                                            {isKepalaMarketing &&
-                                                                taskResponseMarketing &&
-                                                                taskResponseMarketing.status !==
-                                                                    'selesai' && (
-                                                                    <div className="mb-2">
-                                                                        <div className="rounded-lg border border-purple-200 bg-purple-50 p-2">
-                                                                            <div className="flex items-center justify-between">
-                                                                                <div>
-                                                                                    <p className="mb-1 text-xs font-semibold text-purple-900">
-                                                                                        ⏰
-                                                                                        Deadline
-                                                                                        Commitment
-                                                                                        Fee
-                                                                                        (Marketing)
-                                                                                    </p>
-                                                                                    <p className="text-xs text-purple-700">
-                                                                                        {formatDeadline(
-                                                                                            taskResponseMarketing.deadline,
-                                                                                        )}
-                                                                                    </p>
-                                                                                    {daysLeftMarketing !==
-                                                                                        null && (
-                                                                                        <p className="mt-1 text-xs font-medium text-purple-700">
-                                                                                            {daysLeftMarketing <
-                                                                                            0
-                                                                                                ? `Terlambat ${Math.abs(daysLeftMarketing)} hari`
-                                                                                                : `${daysLeftMarketing} hari lagi`}
-                                                                                        </p>
-                                                                                    )}
-                                                                                </div>
-                                                                                <button
-                                                                                    onClick={() =>
-                                                                                        orderId &&
-                                                                                        setShowExtendModal(
-                                                                                            {
-                                                                                                orderId,
-                                                                                                tahap: 'cm_fee',
-                                                                                                isMarketing: true,
-                                                                                                taskResponse:
-                                                                                                    taskResponseMarketing,
-                                                                                            },
-                                                                                        )
-                                                                                    }
-                                                                                    className="rounded-lg bg-purple-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-purple-600"
-                                                                                >
-                                                                                    Minta
-                                                                                    Perpanjangan
-                                                                                </button>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                            <p>
-                                                                Customer:{' '}
-                                                                <span className="font-medium">
-                                                                    {
-                                                                        moodboard
-                                                                            .order
-                                                                            .customer_name
-                                                                    }
-                                                                </span>
-                                                            </p>
-                                                            {moodboard.order
-                                                                .company_name && (
-                                                                <p>
-                                                                    Company:{' '}
-                                                                    <span className="font-medium">
-                                                                        {
-                                                                            moodboard
-                                                                                .order
-                                                                                .company_name
-                                                                        }
-                                                                    </span>
-                                                                </p>
+                                                        <p className="text-xs text-gray-500 truncate">
+                                                            {moodboard.order.customer_name}
+                                                            {moodboard.order.company_name && ` • ${moodboard.order.company_name}`}
+                                                        </p>
+                                                    </div>
+                                                    
+                                                    <div className="flex items-center gap-2">
+                                                        {moodboard.commitmentFee && (
+                                                            <span
+                                                                className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                                                    moodboard.commitmentFee.payment_status === 'completed'
+                                                                        ? 'bg-green-50 text-green-700 border border-green-200'
+                                                                        : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                                                                }`}
+                                                            >
+                                                                {moodboard.commitmentFee.payment_status === 'completed'
+                                                                    ? '✓ Completed'
+                                                                    : '⏳ Pending'}
+                                                            </span>
+                                                        )}
+                                                        
+                                                        <button
+                                                            onClick={() => toggleCardExpansion(moodboard.id)}
+                                                            className="rounded-md bg-blue-100 p-2 text-blue-600 hover:bg-blue-200 transition-colors"
+                                                        >
+                                                            <svg
+                                                                className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M19 9l-7 7-7-7"
+                                                                />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Expanded Content */}
+                                                {isExpanded && (
+                                                    <div className="mt-4 space-y-4">
+                                                        {/* Project Details */}
+                                                        <div className="rounded-md bg-gradient-to-br from-blue-50 to-indigo-50/50 border border-blue-100 p-3 text-xs text-gray-600 space-y-1">
+                                                            <p><span className="font-medium text-gray-700">Customer:</span> {moodboard.order.customer_name}</p>
+                                                            {moodboard.order.company_name && (
+                                                                <p><span className="font-medium text-gray-700">Company:</span> {moodboard.order.company_name}</p>
                                                             )}
-                                                            {moodboard.order
-                                                                .alamat && (
-                                                                <p>
-                                                                    Address:{' '}
-                                                                    <span className="font-medium">
-                                                                        {
-                                                                            moodboard
-                                                                                .order
-                                                                                .alamat
-                                                                        }
-                                                                    </span>
-                                                                </p>
+                                                            {moodboard.order.alamat && (
+                                                                <p><span className="font-medium text-gray-700">Alamat:</span> {moodboard.order.alamat}</p>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Task Response Deadline - REGULAR */}
+                                                        {!isKepalaMarketing &&
+                                                            taskResponseRegular &&
+                                                            taskResponseRegular.status !== 'selesai' && (
+                                                                <div className="rounded-md border border-gray-300 bg-gray-50 p-2.5">
+                                                                    <div className="flex items-center justify-between gap-2">
+                                                                        <div className="flex-1">
+                                                                            <p className="text-xs font-medium text-gray-800">
+                                                                                ⏰ Deadline Commitment Fee
+                                                                            </p>
+                                                                            <p className="mt-0.5 text-xs text-gray-600">
+                                                                                {formatDeadline(taskResponseRegular.deadline)}
+                                                                            </p>
+                                                                            {daysLeftRegular !== null && (
+                                                                                <p className={`mt-0.5 text-xs font-medium ${
+                                                                                    daysLeftRegular < 0 
+                                                                                        ? 'text-red-600' 
+                                                                                        : daysLeftRegular <= 3 
+                                                                                        ? 'text-orange-600' 
+                                                                                        : 'text-gray-600'
+                                                                                }`}>
+                                                                                    {daysLeftRegular < 0
+                                                                                        ? `Terlambat ${Math.abs(daysLeftRegular)} hari`
+                                                                                        : `${daysLeftRegular} hari lagi`}
+                                                                                </p>
+                                                                            )}
+                                                                        </div>
+                                                                        <button
+                                                                            onClick={() =>
+                                                                                orderId &&
+                                                                                setShowExtendModal({
+                                                                                    orderId,
+                                                                                    tahap: 'cm_fee',
+                                                                                    isMarketing: false,
+                                                                                    taskResponse: taskResponseRegular,
+                                                                                })
+                                                                            }
+                                                                            className="rounded-md bg-gray-700 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-gray-800 transition-colors"
+                                                                        >
+                                                                            Perpanjangan
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                        {/* Task Response Deadline - MARKETING */}
+                                                        {isKepalaMarketing &&
+                                                            taskResponseMarketing &&
+                                                            taskResponseMarketing.status !== 'selesai' && (
+                                                                <div className="rounded-md border border-gray-300 bg-gray-50 p-2.5">
+                                                                    <div className="flex items-center justify-between gap-2">
+                                                                        <div className="flex-1">
+                                                                            <p className="text-xs font-medium text-gray-800">
+                                                                                ⏰ Deadline CF (Marketing)
+                                                                            </p>
+                                                                            <p className="mt-0.5 text-xs text-gray-600">
+                                                                                {formatDeadline(taskResponseMarketing.deadline)}
+                                                                            </p>
+                                                                            {daysLeftMarketing !== null && (
+                                                                                <p className={`mt-0.5 text-xs font-medium ${
+                                                                                    daysLeftMarketing < 0 
+                                                                                        ? 'text-red-600' 
+                                                                                        : daysLeftMarketing <= 3 
+                                                                                        ? 'text-orange-600' 
+                                                                                        : 'text-gray-600'
+                                                                                }`}>
+                                                                                    {daysLeftMarketing < 0
+                                                                                        ? `Terlambat ${Math.abs(daysLeftMarketing)} hari`
+                                                                                        : `${daysLeftMarketing} hari lagi`}
+                                                                                </p>
+                                                                            )}
+                                                                        </div>
+                                                                        <button
+                                                                            onClick={() =>
+                                                                                orderId &&
+                                                                                setShowExtendModal({
+                                                                                    orderId,
+                                                                                    tahap: 'cm_fee',
+                                                                                    isMarketing: true,
+                                                                                    taskResponse: taskResponseMarketing,
+                                                                                })
+                                                                            }
+                                                                            className="rounded-md bg-gray-700 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-gray-800 transition-colors"
+                                                                        >
+                                                                            Perpanjangan
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                        {/* Files Section - Vertical Layout */}
+                                                        <div className="space-y-2.5">
+                                                            {/* Moodboard File */}
+                                                            {moodboard.moodboard_kasar && (
+                                                                <div className="rounded-md border border-purple-200 bg-gradient-to-br from-white to-purple-50/40 p-3">
+                                                                    <div className="flex items-center justify-between gap-3">
+                                                                        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                                                                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-purple-100">
+                                                                                <svg
+                                                                                    className="h-5 w-5 text-purple-600"
+                                                                                    fill="none"
+                                                                                    stroke="currentColor"
+                                                                                    viewBox="0 0 24 24"
+                                                                                >
+                                                                                    <path
+                                                                                        strokeLinecap="round"
+                                                                                        strokeLinejoin="round"
+                                                                                        strokeWidth={2}
+                                                                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                                                                    />
+                                                                                </svg>
+                                                                            </div>
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <p className="text-xs font-medium text-gray-800 truncate">
+                                                                                    Moodboard Design
+                                                                                </p>
+                                                                                <p className="text-xs text-gray-500">
+                                                                                    Klik preview atau download
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="flex gap-1.5">
+                                                                            <button
+                                                                                onClick={() => handleImagePreview(`/storage/${moodboard.moodboard_kasar}`)}
+                                                                                className="rounded-md bg-gray-100 p-2 text-gray-600 hover:bg-gray-200 transition-colors"
+                                                                                title="Preview"
+                                                                            >
+                                                                                <svg
+                                                                                    className="h-4 w-4"
+                                                                                    fill="none"
+                                                                                    stroke="currentColor"
+                                                                                    viewBox="0 0 24 24"
+                                                                                >
+                                                                                    <path
+                                                                                        strokeLinecap="round"
+                                                                                        strokeLinejoin="round"
+                                                                                        strokeWidth={2}
+                                                                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                                                    />
+                                                                                    <path
+                                                                                        strokeLinecap="round"
+                                                                                        strokeLinejoin="round"
+                                                                                        strokeWidth={2}
+                                                                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                                                    />
+                                                                                </svg>
+                                                                            </button>
+                                                                            <a
+                                                                                href={`/storage/${moodboard.moodboard_kasar}`}
+                                                                                download
+                                                                                className="rounded-md bg-gray-100 p-2 text-gray-600 hover:bg-gray-200 transition-colors"
+                                                                                title="Download"
+                                                                            >
+                                                                                <svg
+                                                                                    className="h-4 w-4"
+                                                                                    fill="none"
+                                                                                    stroke="currentColor"
+                                                                                    viewBox="0 0 24 24"
+                                                                                >
+                                                                                    <path
+                                                                                        strokeLinecap="round"
+                                                                                        strokeLinejoin="round"
+                                                                                        strokeWidth={2}
+                                                                                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                                                                                    />
+                                                                                </svg>
+                                                                            </a>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Estimasi File */}
+                                                            {moodboard.estimasi && (
+                                                                <div className="rounded-md border border-blue-200 bg-gradient-to-br from-white to-blue-50/40 p-3">
+                                                                    <div className="flex items-center justify-between gap-3">
+                                                                        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                                                                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-100">
+                                                                                <svg
+                                                                                    className="h-5 w-5 text-blue-600"
+                                                                                    fill="none"
+                                                                                    stroke="currentColor"
+                                                                                    viewBox="0 0 24 24"
+                                                                                >
+                                                                                    <path
+                                                                                        strokeLinecap="round"
+                                                                                        strokeLinejoin="round"
+                                                                                        strokeWidth={2}
+                                                                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                                                                    />
+                                                                                </svg>
+                                                                            </div>
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <p className="text-xs font-medium text-gray-800 truncate">
+                                                                                    File Estimasi Biaya
+                                                                                </p>
+                                                                                <p className="text-xs text-gray-500">
+                                                                                    {isPdfFile(moodboard.estimasi.estimated_cost) ? 'PDF Document' : 'File Document'}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="flex gap-1.5">
+                                                                            <button
+                                                                                onClick={() => moodboard.estimasi && handleFilePreview(`/storage/${moodboard.estimasi.estimated_cost}`)}
+                                                                                className="rounded-md bg-gray-100 p-2 text-gray-600 hover:bg-gray-200 transition-colors"
+                                                                                title="Preview"
+                                                                            >
+                                                                                <svg
+                                                                                    className="h-4 w-4"
+                                                                                    fill="none"
+                                                                                    stroke="currentColor"
+                                                                                    viewBox="0 0 24 24"
+                                                                                >
+                                                                                    <path
+                                                                                        strokeLinecap="round"
+                                                                                        strokeLinejoin="round"
+                                                                                        strokeWidth={2}
+                                                                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                                                    />
+                                                                                    <path
+                                                                                        strokeLinecap="round"
+                                                                                        strokeLinejoin="round"
+                                                                                        strokeWidth={2}
+                                                                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                                                    />
+                                                                                </svg>
+                                                                            </button>
+                                                                            <a
+                                                                                href={`/storage/${moodboard.estimasi.estimated_cost}`}
+                                                                                download
+                                                                                className="rounded-md bg-gray-100 p-2 text-gray-600 hover:bg-gray-200 transition-colors"
+                                                                                title="Download"
+                                                                            >
+                                                                                <svg
+                                                                                    className="h-4 w-4"
+                                                                                    fill="none"
+                                                                                    stroke="currentColor"
+                                                                                    viewBox="0 0 24 24"
+                                                                                >
+                                                                                    <path
+                                                                                        strokeLinecap="round"
+                                                                                        strokeLinejoin="round"
+                                                                                        strokeWidth={2}
+                                                                                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                                                                                    />
+                                                                                </svg>
+                                                                            </a>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
                                                             )}
                                                         </div>
                                                     </div>
+                                                )}
 
-                                                    {moodboard.commitmentFee && (
-                                                        <span
-                                                            className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${
-                                                                moodboard
-                                                                    .commitmentFee
-                                                                    .payment_status ===
-                                                                'completed'
-                                                                    ? 'bg-green-100 text-green-800'
-                                                                    : 'bg-yellow-100 text-yellow-800'
-                                                            }`}
-                                                        >
-                                                            {moodboard
-                                                                .commitmentFee
-                                                                .payment_status ===
-                                                            'completed'
-                                                                ? 'Completed'
-                                                                : 'Pending'}
-                                                        </span>
-                                                    )}
-                                                </div>
-
-                                                <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                                                    {moodboard.moodboard_kasar && (
-                                                        <div className="rounded-lg border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-4">
-                                                            <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-purple-900">
-                                                                <svg
-                                                                    className="h-4 w-4"
-                                                                    fill="none"
-                                                                    stroke="currentColor"
-                                                                    viewBox="0 0 24 24"
-                                                                >
-                                                                    <path
-                                                                        strokeLinecap="round"
-                                                                        strokeLinejoin="round"
-                                                                        strokeWidth={
-                                                                            2
-                                                                        }
-                                                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                                                    />
-                                                                </svg>
-                                                                Desain Moodboard
-                                                                Terpilih
-                                                            </p>
-                                                            <div
-                                                                className="group relative cursor-pointer overflow-hidden rounded-lg"
-                                                                onClick={() =>
-                                                                    handleImagePreview(
-                                                                        `/storage/${moodboard.moodboard_kasar}`,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <img
-                                                                    src={`/storage/${moodboard.moodboard_kasar}`}
-                                                                    alt="Moodboard Kasar"
-                                                                    className="h-48 w-full rounded-lg object-cover shadow-md transition-transform group-hover:scale-110"
-                                                                />
-
-                                                                <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-black opacity-0 transition-opacity group-hover:opacity-40">
-                                                                    <svg
-                                                                        className="h-12 w-12 text-white opacity-0 drop-shadow-lg transition-opacity group-hover:opacity-100"
-                                                                        fill="none"
-                                                                        stroke="currentColor"
-                                                                        viewBox="0 0 24 24"
-                                                                    >
-                                                                        <path
-                                                                            strokeLinecap="round"
-                                                                            strokeLinejoin="round"
-                                                                            strokeWidth={
-                                                                                2
-                                                                            }
-                                                                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"
-                                                                        />
-                                                                    </svg>
-                                                                </div>
-                                                            </div>
-
-                                                            <p className="mt-2 text-center text-xs text-purple-600">
-                                                                Klik untuk
-                                                                memperbesar
-                                                            </p>
-                                                        </div>
-                                                    )}
-
-                                                    {moodboard.estimasi && (
-                                                        <div className="rounded-lg border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-4">
-                                                            <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-blue-900">
-                                                                <svg
-                                                                    className="h-4 w-4"
-                                                                    fill="none"
-                                                                    stroke="currentColor"
-                                                                    viewBox="0 0 24 24"
-                                                                >
-                                                                    <path
-                                                                        strokeLinecap="round"
-                                                                        strokeLinejoin="round"
-                                                                        strokeWidth={
-                                                                            2
-                                                                        }
-                                                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                                                    />
-                                                                </svg>
-                                                                File Estimasi
-                                                                Biaya
-                                                            </p>
-                                                            <a
-                                                                href={`/storage/${moodboard.estimasi.estimated_cost}`}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="block"
-                                                            >
-                                                                <div className="rounded-lg border-2 border-blue-300 bg-white p-6 shadow-md transition-shadow hover:border-blue-500 hover:shadow-lg">
-                                                                    <div className="flex flex-col items-center justify-center gap-3">
-                                                                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-500">
-                                                                            <svg
-                                                                                className="h-8 w-8 text-white"
-                                                                                fill="none"
-                                                                                stroke="currentColor"
-                                                                                viewBox="0 0 24 24"
-                                                                            >
-                                                                                <path
-                                                                                    strokeLinecap="round"
-                                                                                    strokeLinejoin="round"
-                                                                                    strokeWidth={
-                                                                                        2
-                                                                                    }
-                                                                                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                                                                />
-                                                                            </svg>
-                                                                        </div>
-                                                                        <div className="text-center">
-                                                                            <p className="text-sm font-semibold text-blue-900">
-                                                                                File
-                                                                                Estimasi
-                                                                            </p>
-                                                                            <p className="mt-1 text-xs text-blue-600">
-                                                                                Klik
-                                                                                untuk
-                                                                                membuka
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </a>
-                                                        </div>
-                                                    )}
-                                                </div>
-
+                                                {/* Commitment Fee Info */}
                                                 {moodboard.commitmentFee && (
-                                                    <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
-                                                        <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
-                                                            <div>
-                                                                <p className="font-medium text-amber-700">
-                                                                    Response By
-                                                                </p>
-                                                                <p className="text-gray-900">
-                                                                    {
-                                                                        moodboard
-                                                                            .commitmentFee
-                                                                            .response_by
-                                                                    }
-                                                                </p>
+                                                    <div className="rounded-md border border-indigo-200 bg-gradient-to-br from-indigo-50 to-blue-50/50 p-3 mt-2">
+                                                        <div className="space-y-2 text-xs">
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                <div>
+                                                                    <p className="font-medium text-indigo-700">Response By</p>
+                                                                    <p className="text-gray-900">{moodboard.commitmentFee?.response_by}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="font-medium text-indigo-700">Response Time</p>
+                                                                    <p className="text-gray-900">{formatDate(moodboard.commitmentFee?.response_time)}</p>
+                                                                </div>
                                                             </div>
-                                                            <div>
-                                                                <p className="font-medium text-amber-700">
-                                                                    Response
-                                                                    Time
-                                                                </p>
-                                                                <p className="text-gray-900">
-                                                                    {formatDate(
-                                                                        moodboard
-                                                                            .commitmentFee
-                                                                            ?.response_time,
-                                                                    )}
-                                                                </p>
-                                                            </div>
-                                                            {moodboard
-                                                                .commitmentFee
-                                                                .total_fee !==
-                                                                null && (
-                                                                <div className="md:col-span-2">
-                                                                    <p className="font-medium text-amber-700">
-                                                                        Total
-                                                                        Fee
-                                                                    </p>
-                                                                    <p className="text-lg font-semibold text-gray-900">
-                                                                        {formatCurrency(
-                                                                            moodboard
-                                                                                .commitmentFee
-                                                                                .total_fee!,
-                                                                        )}
+                                                            {moodboard.commitmentFee?.total_fee !== null && (
+                                                                <div className="pt-2 border-t border-indigo-200">
+                                                                    <p className="font-medium text-indigo-700">Total Fee</p>
+                                                                    <p className="text-base font-bold text-gray-900">
+                                                                        {formatCurrency(moodboard.commitmentFee?.total_fee!)}
                                                                     </p>
                                                                 </div>
                                                             )}
@@ -785,33 +797,30 @@ export default function Index({ moodboards }: Props) {
                                                     </div>
                                                 )}
 
-                                                {/* Marketing Response Button - INDEPENDENT */}
+                                                {/* Marketing Response Button */}
                                                 {isKepalaMarketing &&
                                                     !moodboard.commitmentFee
                                                         ?.pm_response_time && (
-                                                        <div className="mb-4">
-                                                            <button
-                                                                onClick={() => {
-                                                                    handlePmResponse(
-                                                                        moodboard.id,
-                                                                    );
-                                                                }}
-                                                                className="w-full rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:from-purple-600 hover:to-purple-700"
-                                                            >
-                                                                Marketing
-                                                                Response
-                                                            </button>
-                                                        </div>
+                                                        <button
+                                                            onClick={() => {
+                                                                handlePmResponse(
+                                                                    moodboard.id,
+                                                                );
+                                                            }}
+                                                            className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors shadow-sm"
+                                                        >
+                                                            Marketing Response
+                                                        </button>
                                                     )}
 
                                                 {/* PM Response Badge */}
                                                 {moodboard.commitmentFee
                                                     ?.pm_response_time && (
-                                                    <div className="mb-4 rounded-lg border border-purple-200 bg-purple-50 p-3">
-                                                        <p className="text-sm font-semibold text-purple-900">
+                                                    <div className="rounded-md border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50/50 p-2.5 mt-2">
+                                                        <p className="text-xs font-medium text-green-700">
                                                             ✓ PM Response
                                                         </p>
-                                                        <p className="text-xs text-purple-700">
+                                                        <p className="text-xs text-gray-600">
                                                             By:{' '}
                                                             {
                                                                 moodboard
@@ -819,7 +828,7 @@ export default function Index({ moodboards }: Props) {
                                                                     ?.pm_response_by
                                                             }
                                                         </p>
-                                                        <p className="text-xs text-purple-700">
+                                                        <p className="text-xs text-gray-600">
                                                             {formatDate(
                                                                 moodboard
                                                                     .commitmentFee
@@ -829,7 +838,8 @@ export default function Index({ moodboards }: Props) {
                                                     </div>
                                                 )}
 
-                                                <div className="flex flex-wrap gap-3">
+                                                {/* Action Buttons */}
+                                                <div className="flex flex-wrap gap-2 mt-4">
                                                     {!isKepalaMarketing &&
                                                     canShowResponseCommitmentFee ? (
                                                         <button
@@ -838,10 +848,9 @@ export default function Index({ moodboards }: Props) {
                                                                     moodboard,
                                                                 )
                                                             }
-                                                            className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700"
+                                                            className="rounded-md bg-gray-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
                                                         >
-                                                            Response Commitment
-                                                            Fee
+                                                            Response Commitment Fee
                                                         </button>
                                                     ) : moodboard.commitmentFee
                                                           ?.total_fee ===
@@ -852,7 +861,7 @@ export default function Index({ moodboards }: Props) {
                                                                     moodboard,
                                                                 )
                                                             }
-                                                            className="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white transition-colors hover:bg-indigo-700"
+                                                            className="rounded-md bg-gray-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
                                                         >
                                                             Isi Total Fee
                                                         </button>
@@ -869,20 +878,18 @@ export default function Index({ moodboards }: Props) {
                                                                         true,
                                                                     )
                                                                 }
-                                                                className="rounded-lg bg-yellow-500 px-4 py-2 font-medium text-white transition-colors hover:bg-yellow-600"
+                                                                className="rounded-md bg-gray-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700 transition-colors"
                                                             >
                                                                 Revisi Total Fee
                                                             </button>
 
-                                                            {/* Tombol cetak commitment fee */}
                                                             <a
                                                                 href={`/commitment-fee/${moodboard.commitmentFee?.id}/print`}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
-                                                                className="rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-700"
+                                                                className="rounded-md bg-gray-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
                                                             >
-                                                                Cetak Commitment
-                                                                Fee
+                                                                Cetak CF
                                                             </a>
 
                                                             <button
@@ -891,32 +898,28 @@ export default function Index({ moodboards }: Props) {
                                                                         moodboard,
                                                                     )
                                                                 }
-                                                                className="rounded-lg bg-green-600 px-4 py-2 font-medium text-white transition-colors hover:bg-green-700"
+                                                                className="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-900 transition-colors"
                                                             >
-                                                                Upload Bukti
-                                                                Pembayaran
+                                                                Upload Bukti Bayar
                                                             </button>
                                                         </>
                                                     ) : (
                                                         <>
-                                                            {/* Tombol cetak commitment fee */}
                                                             <a
                                                                 href={`/commitment-fee/${moodboard.commitmentFee?.id}/print`}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
-                                                                className="rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-700"
+                                                                className="rounded-md bg-gray-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
                                                             >
-                                                                Cetak Commitment
-                                                                Fee
+                                                                Cetak CF
                                                             </a>
                                                             <a
                                                                 href={`/storage/${moodboard.commitmentFee?.payment_proof!}`}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
-                                                                className="rounded-lg bg-gray-600 px-4 py-2 font-medium text-white transition-colors hover:bg-gray-700"
+                                                                className="rounded-md bg-gray-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
                                                             >
                                                                 Download Bukti
-                                                                Pembayaran
                                                             </a>
                                                             <button
                                                                 onClick={() =>
@@ -924,10 +927,9 @@ export default function Index({ moodboards }: Props) {
                                                                         moodboard,
                                                                     )
                                                                 }
-                                                                className="rounded-lg bg-red-600 px-4 py-2 font-medium text-white transition-colors hover:bg-red-700"
+                                                                className="rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800 transition-colors"
                                                             >
                                                                 Reset & Revisi
-                                                                Fee
                                                             </button>
                                                         </>
                                                     )}
@@ -971,6 +973,105 @@ export default function Index({ moodboards }: Props) {
                                 className="h-auto max-h-[90vh] w-full rounded-lg object-contain shadow-2xl"
                                 onClick={(e) => e.stopPropagation()}
                             />
+                        </div>
+                    </div>
+                )}
+
+                {/* File Preview Modal (untuk PDF dan file lainnya) */}
+                {showFilePreview && (
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-75"
+                        onClick={() => setShowFilePreview(false)}
+                    >
+                        <div className="relative w-full max-w-6xl h-[90vh] bg-white rounded-lg shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                            <div className="absolute top-0 right-0 z-10 flex gap-2 p-4">
+                                <a
+                                    href={previewFileUrl}
+                                    download
+                                    className="rounded-md bg-gray-700 p-2 text-white shadow-lg hover:bg-gray-800 transition-colors"
+                                    title="Download"
+                                >
+                                    <svg
+                                        className="h-5 w-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                                        />
+                                    </svg>
+                                </a>
+                                <button
+                                    onClick={() => setShowFilePreview(false)}
+                                    className="rounded-md bg-gray-700 p-2 text-white shadow-lg hover:bg-gray-800 transition-colors"
+                                    title="Close"
+                                >
+                                    <svg
+                                        className="h-5 w-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M6 18L18 6M6 6l12 12"
+                                        />
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            <div className="h-full w-full p-2">
+                                {isPdfFile(previewFileUrl) ? (
+                                    <iframe
+                                        src={previewFileUrl}
+                                        className="h-full w-full rounded-lg"
+                                        title="PDF Preview"
+                                    />
+                                ) : isImageFile(previewFileUrl) ? (
+                                    <img
+                                        src={previewFileUrl}
+                                        alt="Preview"
+                                        className="h-full w-full object-contain rounded-lg"
+                                    />
+                                ) : (
+                                    <div className="flex h-full items-center justify-center">
+                                        <div className="text-center">
+                                            <svg
+                                                className="mx-auto h-16 w-16 text-gray-400"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth={2}
+                                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                                />
+                                            </svg>
+                                            <p className="mt-4 text-gray-600">
+                                                Preview tidak tersedia untuk file ini.
+                                            </p>
+                                            <p className="mt-2 text-sm text-gray-500">
+                                                Silakan download untuk melihat file.
+                                            </p>
+                                            <a
+                                                href={previewFileUrl}
+                                                download
+                                                className="mt-4 inline-block rounded-md bg-gray-700 px-4 py-2 text-white hover:bg-gray-800 transition-colors"
+                                            >
+                                                Download File
+                                            </a>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}

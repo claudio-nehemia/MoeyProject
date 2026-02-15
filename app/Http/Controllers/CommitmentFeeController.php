@@ -19,7 +19,7 @@ class CommitmentFeeController extends Controller
      */
     public function index()
     {
-        $moodboards = Moodboard::with('commitmentFee', 'order')
+        $moodboards = Moodboard::with('commitmentFee', 'order', 'estimasi')
             ->where('status', 'approved')
             ->orderBy('created_at', 'desc')
             ->get()
@@ -340,6 +340,7 @@ class CommitmentFeeController extends Controller
             return back()->with('error', 'Terjadi kesalahan saat merevisi Total Fee: ' . $e->getMessage());
         }
     }
+
     public function print($id)
     {
         $fee = CommitmentFee::with('moodboard.order')->findOrFail($id);
