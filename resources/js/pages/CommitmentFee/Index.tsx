@@ -482,23 +482,30 @@ export default function Index({ moodboards }: Props) {
                                                         )}
                                                         
                                                         <button
-                                                            onClick={() => toggleCardExpansion(moodboard.id)}
-                                                            className="rounded-md bg-blue-100 p-2 text-blue-600 hover:bg-blue-200 transition-colors"
-                                                        >
-                                                            <svg
-                                                                className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={2}
-                                                                    d="M19 9l-7 7-7-7"
-                                                                />
-                                                            </svg>
-                                                        </button>
+  onClick={() => toggleCardExpansion(moodboard.id)}
+  className="flex items-center gap-2 rounded-md bg-blue-100 px-3 py-2 text-blue-600 hover:bg-blue-200 transition-colors"
+>
+  <p className="text-xs">
+    {isExpanded ? "Tutup Detail" : "Lihat Detail"}
+  </p>
+
+  <svg
+    className={`h-4 w-4 transition-transform duration-300 ${
+      isExpanded ? "rotate-180" : ""
+    }`}
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M9 5l7 7-7 7"
+    />
+  </svg>
+</button>
+
                                                     </div>
                                                 </div>
 
