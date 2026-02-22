@@ -244,6 +244,20 @@ class ProjectManagementController extends Controller
             ];
         });
 
+        // Count products at each QC stage
+        $finishingQcCount = 0;
+        $installQcCount = 0;
+        foreach ($order->moodboard->itemPekerjaans as $ip) {
+            foreach ($ip->produks as $produk) {
+                if ($produk->current_stage === 'Finishing QC') {
+                    $finishingQcCount++;
+                }
+                if ($produk->current_stage === 'Install QC') {
+                    $installQcCount++;
+                }
+            }
+        }
+
         return inertia('ProjectManagement/Detail', [
             'order' => [
                 'id'              => $order->id,
@@ -255,6 +269,10 @@ class ProjectManagementController extends Controller
             ],
             'kontrak' => $kontrakInfo,
             'stages' => config('stage.stages'),
+            'qc_counts' => [
+                'finishing_qc' => $finishingQcCount,
+                'install_qc'  => $installQcCount,
+            ],
         ]);
     }
 

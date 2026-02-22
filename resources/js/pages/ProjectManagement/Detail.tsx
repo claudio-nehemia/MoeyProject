@@ -122,14 +122,21 @@ type KontrakInfo = {
     deadline_status: 'overdue' | 'urgent' | 'warning' | 'normal' | null;
 } | null;
 
+type QcCounts = {
+    finishing_qc: number;
+    install_qc: number;
+};
+
 export default function Detail({
     order,
     kontrak,
     stages,
+    qc_counts,
 }: {
     order: Order;
     kontrak: KontrakInfo;
     stages: StageMap;
+    qc_counts: QcCounts;
 }) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [updatingProduk, setUpdatingProduk] = useState<number | null>(null);
@@ -789,6 +796,47 @@ export default function Detail({
                                                 </span>
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* QC Summary Cards */}
+                        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            {/* Finishing QC Card */}
+                            <div className="relative overflow-hidden rounded-xl border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-5 shadow-lg transition-all duration-300 hover:shadow-xl">
+                                <div className="absolute top-0 right-0 h-24 w-24 translate-x-6 -translate-y-6 rounded-full bg-amber-200/30" />
+                                <div className="relative z-10 flex items-center gap-4">
+                                    <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-md">
+                                        <svg className="h-7 w-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-semibold tracking-wide text-amber-600 uppercase">Finishing QC</p>
+                                        <p className="text-3xl font-bold text-amber-800">
+                                            {qc_counts.finishing_qc}
+                                            <span className="ml-1 text-sm font-medium text-amber-500">produk</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Install QC Card */}
+                            <div className="relative overflow-hidden rounded-xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50 p-5 shadow-lg transition-all duration-300 hover:shadow-xl">
+                                <div className="absolute top-0 right-0 h-24 w-24 translate-x-6 -translate-y-6 rounded-full bg-emerald-200/30" />
+                                <div className="relative z-10 flex items-center gap-4">
+                                    <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-green-500 shadow-md">
+                                        <svg className="h-7 w-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-semibold tracking-wide text-emerald-600 uppercase">Install QC</p>
+                                        <p className="text-3xl font-bold text-emerald-800">
+                                            {qc_counts.install_qc}
+                                            <span className="ml-1 text-sm font-medium text-emerald-500">produk</span>
+                                        </p>
                                     </div>
                                 </div>
                             </div>
