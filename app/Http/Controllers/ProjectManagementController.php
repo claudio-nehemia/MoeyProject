@@ -42,6 +42,20 @@ class ProjectManagementController extends Controller
                         break;
                     }
                 }
+
+                // Count products at each QC stage
+                $finishingQcCount = 0;
+                $installQcCount = 0;
+                foreach ($order->moodboard->itemPekerjaans as $ip) {
+                    foreach ($ip->produks as $produk) {
+                        if ($produk->current_stage === 'Finishing QC') {
+                            $finishingQcCount++;
+                        }
+                        if ($produk->current_stage === 'Install QC') {
+                            $installQcCount++;
+                        }
+                    }
+                }
                 
                 return [
                     'id'              => $order->id,
@@ -51,6 +65,8 @@ class ProjectManagementController extends Controller
                     'progress'        => $order->progress,
                     'deadline_status' => $deadlineStatus,
                     'sisa_hari'       => $sisaHari,
+                    'finishing_qc'    => $finishingQcCount,
+                    'install_qc'      => $installQcCount,
                 ];
             });
 

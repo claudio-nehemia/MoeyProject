@@ -11,6 +11,8 @@ type Order = {
     progress: number;
     deadline_status: 'overdue' | 'urgent' | 'warning' | 'normal' | null;
     sisa_hari: number | null;
+    finishing_qc: number;
+    install_qc: number;
 };
 
 type FilterType = 'semua' | 'belum_mulai' | 'proses' | 'deadline' | 'selesai';
@@ -189,6 +191,24 @@ export default function Index({ orders }: { orders: Order[] }) {
                                                     </div>
                                                 </div>
                                             </div>
+
+                                            {/* QC Counts */}
+                                            {(order.finishing_qc > 0 || order.install_qc > 0) && (
+                                                <div className="mt-3 flex flex-wrap items-center gap-2">
+                                                    {order.finishing_qc > 0 && (
+                                                        <div className="flex items-center gap-1.5 rounded-lg bg-purple-100 px-3 py-1.5 text-xs font-semibold text-purple-800">
+                                                            <span>🔍</span>
+                                                            <span>Finishing QC: <strong>{order.finishing_qc}</strong></span>
+                                                        </div>
+                                                    )}
+                                                    {order.install_qc > 0 && (
+                                                        <div className="flex items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-800">
+                                                            <span>✅</span>
+                                                            <span>Install QC: <strong>{order.install_qc}</strong></span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
 
                                             <div className="mt-5 pt-4 border-t-2 border-white/50">
                                                 <button className={`w-full inline-flex items-center justify-center px-4 py-3 bg-gradient-to-r ${getProgressColor(order.progress)} text-white text-sm font-bold rounded-xl shadow-md hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200`}>
