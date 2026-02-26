@@ -218,7 +218,6 @@
                 <th class="total-aks text-right" style="width: 4%;">Qty</th>
                 <th class="total-aks text-right" style="width: 7%;">Harga Aks</th>
                 <th class="total-aks text-right" style="width: 7%;">Total Aks</th>
-                <th class="text-center" style="width: 4%;">Diskon</th>
                 <th class="grand-total-header text-right" style="width: 8%;">Grand Total</th>
             </tr>
         </thead>
@@ -331,9 +330,7 @@
                             <td rowspan="{{ $maxRows }}" class="total-aks-cell">
                                 Rp {{ number_format($totalAksesoris, 0, ',', '.') }}
                             </td>
-                            <td rowspan="{{ $maxRows }}" class="text-center">
-                                {{ $diskon }}%
-                            </td>
+
                             <td rowspan="{{ $maxRows }}" class="grand-total-cell">
                                 Rp {{ number_format($hargaSetelahDiskon, 0, ',', '.') }}
                             </td>

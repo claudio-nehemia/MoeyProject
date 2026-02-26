@@ -201,9 +201,7 @@ export default function Show({ rabKontrak }: Props) {
                                         <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20">
                                             Total Harga Aksesoris
                                         </th>
-                                        <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/20">
-                                            Diskon
-                                        </th>
+                                        
                                         <th className="bg-green-100 px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-green-800 dark:bg-green-900/30 dark:text-green-400">
                                             Grand Total
                                         </th>
@@ -344,13 +342,6 @@ export default function Show({ rabKontrak }: Props) {
                                                         {rowIndex === 0 && (
                                                             <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-orange-700 dark:text-orange-400 bg-orange-50/50 dark:bg-orange-900/10 border-r border-gray-200 dark:border-gray-700">
                                                                 {formatCurrency(totalAksesoris)}
-                                                            </td>
-                                                        )}
-
-                                                        {/* Diskon Column */}
-                                                        {rowIndex === 0 && (
-                                                            <td rowSpan={maxRows} className="px-4 py-3 text-center align-top text-sm font-medium text-rose-700 dark:text-rose-300 border-r border-gray-200 dark:border-gray-700">
-                                                                {produk.diskon_per_produk ?? 0}%
                                                             </td>
                                                         )}
                                                         
