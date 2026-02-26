@@ -210,21 +210,6 @@ export default function Show({ rabKontrak }: Props) {
                                         <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 p-4 rounded-lg border-l-4 border-amber-500">
                                             <div className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
                                                 <div>
-                                                    <span className="font-bold text-emerald-600 dark:text-emerald-400">Harga BB (Kontrak)</span>
-                                                    <span className="mx-2">=</span>
-                                                    <span className="text-gray-600 dark:text-gray-400">BB Internal ÷ (1 - Markup/100)</span>
-                                                </div>
-                                                <div>
-                                                    <span className="font-bold text-blue-600 dark:text-blue-400">Finishing Dalam</span>
-                                                    <span className="mx-2">=</span>
-                                                    <span className="text-gray-600 dark:text-gray-400">Fin. Dalam Internal ÷ (1 - Markup/100)</span>
-                                                </div>
-                                                <div>
-                                                    <span className="font-bold text-cyan-600 dark:text-cyan-400">Finishing Luar</span>
-                                                    <span className="mx-2">=</span>
-                                                    <span className="text-gray-600 dark:text-gray-400">Fin. Luar Internal ÷ (1 - Markup/100)</span>
-                                                </div>
-                                                <div>
                                                     <span className="font-bold text-indigo-600 dark:text-indigo-400">Harga Satuan</span>
                                                     <span className="mx-2">=</span>
                                                     <span className="text-gray-600 dark:text-gray-400">(BB + Fin. Dalam + Fin. Luar) × Dimensi</span>
@@ -281,8 +266,7 @@ export default function Show({ rabKontrak }: Props) {
                                             <div className="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-1">✅ Karakteristik RAB Kontrak:</div>
                                             <ul className="text-xs text-purple-600 dark:text-purple-400 space-y-1">
                                                 <li>• Markup diterapkan dengan PEMBAGIAN (20% → 0.8, harga ÷ 0.8)</li>
-                                                <li>• Breakdown harga BB, Finishing Dalam, Finishing Luar sudah di-markup</li>
-                                                <li>• Setiap kolom harga sudah include markup untuk customer</li>
+                                                <li>• Harga Satuan sudah include markup untuk customer</li>
                                                 <li>• Include aksesoris dengan markup yang sama</li>
                                                 <li>• Tidak menampilkan kolom markup (karena sudah diterapkan)</li>
                                             </ul>
@@ -302,33 +286,20 @@ export default function Show({ rabKontrak }: Props) {
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Produk
                                         </th>
-                                        
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Bahan Baku
-                                        </th>
-                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20">
-                                            Harga Dasar
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Finishing Dalam
                                         </th>
-                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20">
-                                            Harga Fin. Dalam
-                                        </th>
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Finishing Luar
-                                        </th>
-                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-900/20">
-                                            Harga Fin. Luar
                                         </th>
                                         <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Qty
                                         </th>
-                                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20">
-                                            Harga Satuan
-                                        </th>
                                         <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20">
-                                            Total Item
+                                            Harga Satuan
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                             Aksesoris
@@ -355,7 +326,7 @@ export default function Show({ rabKontrak }: Props) {
                                         <>
                                             {/* Ruangan Header Row */}
                                             <tr key={`ruangan-header-${ruanganIndex}`} className="bg-gradient-to-r from-cyan-500 to-cyan-600">
-                                                <td colSpan={16} className="px-4 py-3">
+                                                <td colSpan={12} className="px-4 py-3">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-2">
                                                             <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -374,10 +345,8 @@ export default function Show({ rabKontrak }: Props) {
                                             </tr>
                                             {/* Products in this Ruangan */}
                                             {ruangan.produks.map((produk, produkIndex) => {
-                                        // Get bahan baku names from produk (from selected bahan baku)
                                         const bahanBakuNames = produk.bahan_baku_names || [];
                                         
-                                        // Group items by jenis with prices (only for finishing)
                                         const finishingDalamItems: { nama: string; harga: number }[] = [];
                                         const finishingLuarItems: { nama: string; harga: number }[] = [];
                                         
@@ -396,7 +365,6 @@ export default function Show({ rabKontrak }: Props) {
                                             }
                                         });
 
-                                        // Calculate total item = harga_akhir - total aksesoris
                                         const totalAksesoris = produk.aksesoris.reduce((sum, aks) => sum + (Number(aks.harga_total) || 0), 0);
                                         const totalItem = Number(produk.harga_akhir) - totalAksesoris;
                                         
@@ -426,19 +394,12 @@ export default function Show({ rabKontrak }: Props) {
                                                             </td>
                                                         )}
                                                         
-                                                        {/* Bahan Baku Column - Names only */}
+                                                        {/* Bahan Baku Column */}
                                                         <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
                                                             {bahanBakuNames[rowIndex] && (
                                                                 <div>• {bahanBakuNames[rowIndex]}</div>
                                                             )}
                                                         </td>
-                                                        
-                                                        {/* Harga BB Column */}
-                                                        {rowIndex === 0 && (
-                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10 border-r border-gray-200 dark:border-gray-700">
-                                                                {formatCurrency(produk.harga_dasar || 0)}
-                                                            </td>
-                                                        )}
                                                         
                                                         {/* Finishing Dalam Column */}
                                                         <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
@@ -447,13 +408,6 @@ export default function Show({ rabKontrak }: Props) {
                                                             )}
                                                         </td>
                                                         
-                                                        {/* Harga Finishing Dalam Column */}
-                                                        {rowIndex === 0 && (
-                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10 border-r border-gray-200 dark:border-gray-700">
-                                                                {formatCurrency(produk.harga_finishing_dalam || 0)}
-                                                            </td>
-                                                        )}
-                                                        
                                                         {/* Finishing Luar Column */}
                                                         <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
                                                             {finishingLuarItems[rowIndex] && (
@@ -461,40 +415,25 @@ export default function Show({ rabKontrak }: Props) {
                                                             )}
                                                         </td>
                                                         
-                                                        {/* Harga Finishing Luar Column */}
-                                                        {rowIndex === 0 && (
-                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-cyan-700 dark:text-cyan-400 bg-cyan-50/50 dark:bg-cyan-900/10 border-r border-gray-200 dark:border-gray-700">
-                                                                {formatCurrency(produk.harga_finishing_luar || 0)}
-                                                            </td>
-                                                        )}
-                                                        
                                                         {/* Qty Column */}
                                                         {rowIndex === 0 && (
                                                             <td rowSpan={maxRows} className="px-4 py-3 text-center align-top text-sm font-medium text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
                                                                 {produk.qty_produk}
                                                             </td>
                                                         )}
-
-                                                        {/* Harga Dasar Column - REMOVED, already shown after Bahan Baku */}
-                                                        {/* {rowIndex === 0 && (
-                                                            <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10 border-r border-gray-200 dark:border-gray-700">
-                                                                {formatCurrency(produk.harga_dasar || 0)}
-                                                            </td>
-                                                        )} */}
                                                         
-                                                        {/* Total Item Column */}
+                                                        {/* Harga Satuan Column (was Total Item) */}
                                                         {rowIndex === 0 && (
                                                             <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-bold text-purple-700 dark:text-purple-400 bg-purple-50/50 dark:bg-purple-900/10 border-r border-gray-200 dark:border-gray-700">
                                                                 {formatCurrency(totalItem)}
                                                             </td>
                                                         )}
                                                         
-                                                        {/* Aksesoris Column with price per item */}
+                                                        {/* Aksesoris Column */}
                                                         <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
                                                             {produk.aksesoris[rowIndex] && (
                                                                 <div>
                                                                     <div className="font-medium">• {produk.aksesoris[rowIndex].nama_aksesoris}</div>
-                                                                    
                                                                 </div>
                                                             )}
                                                         </td>

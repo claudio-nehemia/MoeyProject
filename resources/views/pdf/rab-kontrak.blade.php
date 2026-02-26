@@ -81,11 +81,6 @@
             text-align: right;
         }
 
-        table th.harga-col {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-
         table th.total-item {
             background: #f3e8ff;
             color: #7c3aed;
@@ -119,12 +114,6 @@
         .produk-dim {
             font-size: 7px;
             color: #6b7280;
-        }
-
-        .harga-col-cell {
-            background: #eff6ff;
-            color: #1e40af;
-            text-align: right;
         }
 
         .total-item-cell {
@@ -220,13 +209,9 @@
 
         .kop-logo img {
             width: 100%;
-            /* FULL PANJANG */
             max-width: 100%;
-            /* pastikan tidak kepotong */
             height: 120px;
-            /* 🔥 NAIKIN TINGGI LOGO */
             object-fit: contain;
-            /* JAGA PROPORSI */
             display: block;
             margin: 0 auto;
         }
@@ -244,7 +229,6 @@
             font-size: 17px;
             font-weight: bold;
             color: #7c3aed;
-            /* UNGU */
             margin: 0 0 3px 0;
             letter-spacing: 0.5px;
         }
@@ -306,23 +290,20 @@
         </div>
     </div>
 
-    <!-- Table - Same layout as Show.tsx -->
+    <!-- Table -->
     <table>
         <thead>
             <tr>
-                <th style="width: 10%;">Produk</th>
-                <th style="width: 9%;">Bahan Baku</th>
-                <th class="harga-col text-right" style="width: 8%;">Harga BB</th>
-                <th style="width: 9%;">Finishing Dalam</th>
-                <th class="harga-col text-right" style="width: 8%;">Harga Fin. Dalam</th>
-                <th style="width: 9%;">Finishing Luar</th>
-                <th class="harga-col text-right" style="width: 8%;">Harga Fin. Luar</th>
+                <th style="width: 12%;">Produk</th>
+                <th style="width: 11%;">Bahan Baku</th>
+                <th style="width: 11%;">Finishing Dalam</th>
+                <th style="width: 11%;">Finishing Luar</th>
                 <th class="text-center" style="width: 4%;">Qty</th>
-                <th class="total-item text-right" style="width: 8%;">Total Item</th>
-                <th style="width: 9%;">Aksesoris</th>
+                <th class="total-item text-right" style="width: 9%;">Harga Satuan</th>
+                <th style="width: 10%;">Aksesoris</th>
                 <th class="total-aks text-right" style="width: 4%;">Qty</th>
-                <th class="total-aks text-right" style="width: 7%;">Harga Aks</th>
-                <th class="total-aks text-right" style="width: 7%;">Total Aks</th>
+                <th class="total-aks text-right" style="width: 8%;">Harga Aks</th>
+                <th class="total-aks text-right" style="width: 8%;">Total Aks</th>
                 <th class="text-center" style="width: 4%;">Diskon</th>
                 <th class="grand-total-header text-right" style="width: 8%;">Grand Total</th>
             </tr>
@@ -330,10 +311,8 @@
         <tbody>
             @foreach ($produks as $index => $produk)
                 @php
-                    // Get bahan baku names from selected bahan baku
                     $bahanBakuNames = $produk['bahan_baku_names'] ?? [];
 
-                    // Group items by jenis (only for finishing)
                     $finishingDalamItems = [];
                     $finishingLuarItems = [];
 
@@ -348,7 +327,6 @@
                         }
                     }
 
-                    // Calculate total aksesoris
                     $totalAksesoris = 0;
                     foreach ($produk['aksesoris'] ?? [] as $aks) {
                         $totalAksesoris += $aks['harga_total'] ?? 0;
@@ -356,13 +334,10 @@
 
                     $diskon = $produk['diskon_per_produk'] ?? 0;
                     $hargaSebelumDiskon = ($produk['harga_satuan'] ?? 0) + ($produk['harga_total_aksesoris'] ?? 0);
-                    // ✅ APPLY DISKON: Harga Diskon = Harga Jual - (diskon/100 × Harga Jual)
                     $hargaSetelahDiskon = $produk['harga_akhir'] ?? ($hargaSebelumDiskon - ($hargaSebelumDiskon * $diskon / 100));
 
-                    // Calculate total item = harga setelah diskon - total aksesoris (diskon sudah applied ke harga akhir)
                     $totalItem = $hargaSetelahDiskon - $totalAksesoris;
 
-                    // Aksesoris with details
                     $aksesorisData = $produk['aksesoris'] ?? [];
 
                     $maxRows = max(
@@ -384,7 +359,6 @@
                                         {{ $produk['tinggi'] }} cm</div>
                                 @endif
                             </td>
-                            
                         @endif
 
                         <td>
@@ -393,35 +367,17 @@
                             @endif
                         </td>
 
-                        @if ($rowIndex === 0)
-                            <td rowspan="{{ $maxRows }}" class="harga-col-cell">
-                                Rp {{ number_format($produk['harga_dasar'] ?? 0, 0, ',', '.') }}
-                            </td>
-                        @endif
-
                         <td>
                             @if (isset($finishingDalamItems[$rowIndex]))
                                 • {{ $finishingDalamItems[$rowIndex] }}
                             @endif
                         </td>
 
-                        @if ($rowIndex === 0)
-                            <td rowspan="{{ $maxRows }}" class="harga-col-cell">
-                                Rp {{ number_format($produk['harga_finishing_dalam'] ?? 0, 0, ',', '.') }}
-                            </td>
-                        @endif
-
                         <td>
                             @if (isset($finishingLuarItems[$rowIndex]))
                                 • {{ $finishingLuarItems[$rowIndex] }}
                             @endif
                         </td>
-
-                        @if ($rowIndex === 0)
-                            <td rowspan="{{ $maxRows }}" class="harga-col-cell">
-                                Rp {{ number_format($produk['harga_finishing_luar'] ?? 0, 0, ',', '.') }}
-                            </td>
-                        @endif
 
                         @if ($rowIndex === 0)
                             <td rowspan="{{ $maxRows }}" class="text-center">
