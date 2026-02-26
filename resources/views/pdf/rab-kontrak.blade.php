@@ -17,27 +17,6 @@
             color: #333;
         }
 
-        .header {
-            text-align: center;
-            margin-bottom: 15px;
-            border-bottom: 3px solid #9333ea;
-            padding-bottom: 10px;
-        }
-
-        .header h1 {
-            margin: 0;
-            font-size: 16px;
-            color: #9333ea;
-            font-weight: bold;
-        }
-
-        .header h2 {
-            margin: 3px 0 0 0;
-            font-size: 14px;
-            color: #333;
-            font-weight: bold;
-        }
-
         .info-section {
             margin-bottom: 10px;
             background: #f9fafb;
@@ -73,12 +52,12 @@
             text-transform: uppercase;
         }
 
-        table th.text-center {
-            text-align: center;
-        }
+        table th.text-center { text-align: center; }
+        table th.text-right { text-align: right; }
 
-        table th.text-right {
-            text-align: right;
+        table th.harga-satuan {
+            background: #d1fae5;
+            color: #065f46;
         }
 
         table th.total-item {
@@ -102,9 +81,7 @@
             vertical-align: top;
         }
 
-        .produk-row {
-            background: #faf5ff;
-        }
+        .produk-row { background: #faf5ff; }
 
         .produk-name {
             font-weight: bold;
@@ -114,6 +91,13 @@
         .produk-dim {
             font-size: 7px;
             color: #6b7280;
+        }
+
+        .harga-satuan-cell {
+            background: #ecfdf5;
+            color: #065f46;
+            font-weight: bold;
+            text-align: right;
         }
 
         .total-item-cell {
@@ -129,12 +113,6 @@
             text-align: right;
         }
 
-        .aksesoris-detail {
-            font-size: 7px;
-            color: #6b7280;
-            margin-left: 8px;
-        }
-
         .grand-total-cell {
             background: #dcfce7;
             text-align: right;
@@ -143,13 +121,8 @@
             font-size: 11px;
         }
 
-        .text-center {
-            text-align: center;
-        }
-
-        .text-right {
-            text-align: right;
-        }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
 
         .final-total {
             background: #16a34a;
@@ -159,36 +132,11 @@
             margin-top: 15px;
         }
 
-        .final-total-table {
-            width: 100%;
-            border: none;
-        }
-
-        .final-total-table td {
-            border: none;
-            padding: 0;
-            vertical-align: middle;
-        }
-
-        .final-total-label {
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        .final-total-sublabel {
-            font-size: 9px;
-            margin-top: 3px;
-        }
-
-        .final-total-amount {
-            font-size: 18px;
-            font-weight: bold;
-            text-align: right;
-        }
-
-        /* ===============================
-        KOP SURAT
-        =============================== */
+        .final-total-table { width: 100%; border: none; }
+        .final-total-table td { border: none; padding: 0; vertical-align: middle; }
+        .final-total-label { font-size: 14px; font-weight: bold; }
+        .final-total-sublabel { font-size: 9px; margin-top: 3px; }
+        .final-total-amount { font-size: 18px; font-weight: bold; text-align: right; }
 
         .kop-surat {
             width: 100%;
@@ -197,16 +145,7 @@
             margin-bottom: 18px;
         }
 
-        /* ===============================
-        LOGO AREA (PALING ATAS)
-        =============================== */
-
-        .kop-logo {
-            width: 100%;
-            text-align: center;
-            margin-bottom: 10px;
-        }
-
+        .kop-logo { width: 100%; text-align: center; margin-bottom: 10px; }
         .kop-logo img {
             width: 100%;
             max-width: 100%;
@@ -216,15 +155,7 @@
             margin: 0 auto;
         }
 
-        /* ===============================
-        JUDUL DOKUMEN
-        =============================== */
-
-        .kop-judul {
-            text-align: center;
-            margin-top: 6px;
-        }
-
+        .kop-judul { text-align: center; margin-top: 6px; }
         .judul-utama {
             font-size: 17px;
             font-weight: bold;
@@ -232,34 +163,16 @@
             margin: 0 0 3px 0;
             letter-spacing: 0.5px;
         }
-
-        .judul-sub {
-            font-size: 13px;
-            font-weight: bold;
-            color: #111827;
-            margin: 0;
-        }
-
-        /* ===============================
-        GARIS PEMISAH HIJAU
-        =============================== */
-
-        .kop-divider {
-            margin-top: 10px;
-            border-top: 2px solid #16a34a;
-        }
+        .judul-sub { font-size: 13px; font-weight: bold; color: #111827; margin: 0; }
     </style>
 </head>
 
 <body>
     <!-- Header -->
     <div class="kop-surat">
-        <!-- LOGO -->
         <div class="kop-logo">
             <img src="{{ public_path('kop-moey.png') }}" alt="MOEY Logo">
         </div>
-
-        <!-- JUDUL -->
         <div class="kop-judul">
             <div class="judul-utama">RANCANGAN ANGGARAN BIAYA KONTRAK</div>
             <div class="judul-sub">MOEY INTERIOR</div>
@@ -294,16 +207,17 @@
     <table>
         <thead>
             <tr>
-                <th style="width: 12%;">Produk</th>
-                <th style="width: 11%;">Bahan Baku</th>
-                <th style="width: 11%;">Finishing Dalam</th>
-                <th style="width: 11%;">Finishing Luar</th>
+                <th style="width: 10%;">Produk</th>
+                <th style="width: 9%;">Bahan Baku</th>
+                <th style="width: 9%;">Finishing Dalam</th>
+                <th style="width: 9%;">Finishing Luar</th>
                 <th class="text-center" style="width: 4%;">Qty</th>
-                <th class="total-item text-right" style="width: 9%;">Harga Satuan</th>
-                <th style="width: 10%;">Aksesoris</th>
+                <th class="harga-satuan text-right" style="width: 8%;">Harga Satuan</th>
+                <th class="total-item text-right" style="width: 8%;">Total Item</th>
+                <th style="width: 9%;">Aksesoris</th>
                 <th class="total-aks text-right" style="width: 4%;">Qty</th>
-                <th class="total-aks text-right" style="width: 8%;">Harga Aks</th>
-                <th class="total-aks text-right" style="width: 8%;">Total Aks</th>
+                <th class="total-aks text-right" style="width: 7%;">Harga Aks</th>
+                <th class="total-aks text-right" style="width: 7%;">Total Aks</th>
                 <th class="text-center" style="width: 4%;">Diskon</th>
                 <th class="grand-total-header text-right" style="width: 8%;">Grand Total</th>
             </tr>
@@ -336,6 +250,12 @@
                     $hargaSebelumDiskon = ($produk['harga_satuan'] ?? 0) + ($produk['harga_total_aksesoris'] ?? 0);
                     $hargaSetelahDiskon = $produk['harga_akhir'] ?? ($hargaSebelumDiskon - ($hargaSebelumDiskon * $diskon / 100));
 
+                    // Harga Satuan = harga_dasar + harga_finishing_dalam + harga_finishing_luar
+                    $hargaSatuan = ($produk['harga_dasar'] ?? 0)
+                                 + ($produk['harga_finishing_dalam'] ?? 0)
+                                 + ($produk['harga_finishing_luar'] ?? 0);
+
+                    // Total Item = original (harga_akhir - total aksesoris)
                     $totalItem = $hargaSetelahDiskon - $totalAksesoris;
 
                     $aksesorisData = $produk['aksesoris'] ?? [];
@@ -383,6 +303,9 @@
                             <td rowspan="{{ $maxRows }}" class="text-center">
                                 {{ $produk['qty_produk'] }}
                             </td>
+                            <td rowspan="{{ $maxRows }}" class="harga-satuan-cell">
+                                Rp {{ number_format($hargaSatuan, 0, ',', '.') }}
+                            </td>
                             <td rowspan="{{ $maxRows }}" class="total-item-cell">
                                 Rp {{ number_format($totalItem, 0, ',', '.') }}
                             </td>
@@ -393,18 +316,14 @@
                                 <div>• {{ $aksesorisData[$rowIndex]['nama_aksesoris'] }}</div>
                             @endif
                         </td>
-                        <td>
+                        <td class="text-right">
                             @if (isset($aksesorisData[$rowIndex]))
-                                <div class="aksesoris-detail">
-                                    {{ $aksesorisData[$rowIndex]['qty_aksesoris'] }}
-                                </div>
+                                {{ $aksesorisData[$rowIndex]['qty_aksesoris'] }}
                             @endif
                         </td>
-                        <td>
+                        <td class="text-right">
                             @if (isset($aksesorisData[$rowIndex]))
-                                <div class="aksesoris-detail">
-                                    Rp {{ number_format($aksesorisData[$rowIndex]['harga_satuan_aksesoris'] ?? 0, 0, ',', '.') }}
-                                </div>
+                                Rp {{ number_format($aksesorisData[$rowIndex]['harga_satuan_aksesoris'] ?? 0, 0, ',', '.') }}
                             @endif
                         </td>
 
