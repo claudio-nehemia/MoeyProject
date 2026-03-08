@@ -21,6 +21,7 @@ export default function Index({ orders }: { orders: Order[] }) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [animatedProgress, setAnimatedProgress] = useState<{[key: number]: number}>({});
     const [activeFilter, setActiveFilter] = useState<FilterType>('semua');
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -36,20 +37,27 @@ export default function Index({ orders }: { orders: Order[] }) {
     // Filter logic
     const filteredOrders = useMemo(() => {
         return orders.filter(order => {
-            switch (activeFilter) {
-                case 'belum_mulai':
-                    return order.progress === 0;
-                case 'proses':
-                    return order.progress > 0 && order.progress < 100 && (order.deadline_status !== 'overdue' && (order.sisa_hari === null || order.sisa_hari > 0));
-                case 'deadline':
-                    return order.deadline_status === 'overdue' || (order.sisa_hari !== null && order.sisa_hari <= 0 && order.progress < 100);
-                case 'selesai':
-                    return order.progress >= 100;
-                default:
-                    return true;
-            }
+            const matchesFilter = (() => {
+                switch (activeFilter) {
+                    case 'belum_mulai':
+                        return order.progress === 0;
+                    case 'proses':
+                        return order.progress > 0 && order.progress < 100 && (order.deadline_status !== 'overdue' && (order.sisa_hari === null || order.sisa_hari > 0));
+                    case 'deadline':
+                        return order.deadline_status === 'overdue' || (order.sisa_hari !== null && order.sisa_hari <= 0 && order.progress < 100);
+                    case 'selesai':
+                        return order.progress >= 100;
+                    default:
+                        return true;
+                }
+            })();
+            const matchesSearch = !searchQuery ||
+                order.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                order.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                order.customer_name.toLowerCase().includes(searchQuery.toLowerCase());
+            return matchesFilter && matchesSearch;
         });
-    }, [orders, activeFilter]);
+    }, [orders, activeFilter, searchQuery]);
 
     // Count for each filter
     const filterCounts = useMemo(() => {
@@ -111,6 +119,24 @@ export default function Index({ orders }: { orders: Order[] }) {
                             <p className="mt-2 text-sm text-gray-600">
                                 Monitor dan kelola progress semua project
                             </p>
+                        </div>
+
+                        {/* Search */}
+                        <div className="mb-4">
+                            <div className="relative">
+                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                    <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Cari nama project, company, atau customer..."
+                                    className="block w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                            </div>
                         </div>
 
                         {/* Filter Buttons */}

@@ -222,7 +222,7 @@ export default function Index({ users }: Props) {
 
             {/* Main Content */}
             <div className="p-3 lg:ml-60">
-                <div className="p-3 mt-12">
+                <div className="p-3 mt-20">
                     {/* Header */}
                     <div className={`flex items-center justify-between mb-5 ${mounted ? 'fadeInUp' : 'opacity-0'}`}>
                         <div>

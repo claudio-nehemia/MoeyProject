@@ -1,7 +1,7 @@
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import { Head, Link, router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 interface User {
     id: number;
@@ -39,6 +39,15 @@ export default function Index({ orders }: Props) {
         return true;
     });
     const [mounted, setMounted] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const filteredOrders = useMemo(() =>
+        orders.filter(order =>
+            order.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            order.company_name.toLowerCase().includes(searchQuery.toLowerCase())
+        ),
+        [orders, searchQuery]
+    );
 
 useEffect(() => {
         setMounted(true);
@@ -201,7 +210,7 @@ useEffect(() => {
             <Sidebar isOpen={sidebarOpen} currentPage="order" onClose={() => setSidebarOpen(false)} />
 
             <div className="p-3 lg:ml-60">
-                <div className="mt-12 p-3">
+                <div className="mt-20 p-3">
                     {/* Header */}
                     <div
                         className={`mb-8 ${mounted ? 'fadeInUp' : 'opacity-0'}`}
@@ -258,8 +267,26 @@ useEffect(() => {
                         </div>
                     </div>
 
+                    {/* Search */}
+                    <div className="mb-6">
+                        <div className="relative">
+                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                <svg className="h-4 w-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Cari nama project atau perusahaan..."
+                                className="block w-full rounded-lg border border-stone-200 bg-white py-2.5 pl-10 pr-4 text-sm text-stone-700 shadow-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                            />
+                        </div>
+                    </div>
+
                     {/* Orders Grid */}
-                    {orders.length === 0 ? (
+                    {filteredOrders.length === 0 ? (
                         <div
                             className={`rounded-2xl border border-stone-200 bg-white p-12 text-center shadow-lg ${mounted ? 'fadeInUp' : 'opacity-0'}`}
                         >
@@ -304,7 +331,7 @@ useEffect(() => {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                            {orders.map((order, index) => (
+                            {filteredOrders.map((order, index) => (
                                 <div
                                     key={order.id}
                                     className={`order-card group relative overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm ${mounted ? 'fadeInUp' : 'opacity-0'}`}

@@ -417,7 +417,7 @@ export default function Edit({ rabInternal }: Props) {
             />
 
             <div className="p-3 lg:ml-60">
-                <div className="mt-12 p-3">
+                <div className="mt-20 p-3">
                     {/* Header Project */}
                     <div className="mb-2 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
                         <div className="p-2">

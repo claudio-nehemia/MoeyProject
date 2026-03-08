@@ -69,7 +69,7 @@ export default function Create({ order }: { order: Order }) {
             <Sidebar isOpen={sidebarOpen} currentPage="survey-ulang" />
 
             <div className="p-4 lg:ml-60">
-                <div className="mt-12 max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+                <div className="mt-20 max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6 sm:p-8">
 
                     {/* Header */}
                     <div className="mb-6">

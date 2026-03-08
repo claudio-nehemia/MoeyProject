@@ -25,7 +25,7 @@ export default function Show({ survey }: any) {
             <Sidebar isOpen={sidebarOpen} currentPage="survey-ulang" />
 
             <div className="p-4 lg:ml-60">
-                <div className="mt-12 max-w-4xl mx-auto bg-white shadow rounded-xl p-6 sm:p-8">
+                <div className="mt-20 max-w-4xl mx-auto bg-white shadow rounded-xl p-6 sm:p-8">
 
                     {/* HEADER */}
                     <div className="flex justify-between mb-6">

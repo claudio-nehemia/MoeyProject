@@ -223,7 +223,7 @@ function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: Props) {
             <Sidebar isOpen={sidebarOpen} currentPage="item-pekerjaan" onClose={() => setSidebarOpen(false)} />
 
             <div className="p-3 lg:ml-60">
-                <div className="mt-12 p-3">
+                <div className="mt-20 p-3">
                     {/* Header */}
                     <div className="mb-8">
                         <div className="mb-2 flex items-center justify-between">

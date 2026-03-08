@@ -332,7 +332,7 @@ export default function Index({ surveys }: Props) {
             />
 
             <div className="p-2 sm:p-3 lg:ml-60">
-                <div className="mt-12 p-2 sm:p-3">
+                <div className="mt-20 p-2 sm:p-3">
                     {/* Header */}
                     <div
                         className={`mb-6 sm:mb-8 ${mounted ? 'fadeInUp' : 'opacity-0'}`}

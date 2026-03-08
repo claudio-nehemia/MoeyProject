@@ -103,7 +103,7 @@ export default function ApprovalRabEdit({ itemPekerjaan }: Props) {
             />
 
             <div className="p-3 lg:ml-60">
-                <div className="mt-12 p-3 max-w-6xl">
+                <div className="mt-20 p-3 max-w-6xl">
                     {/* Header */}
                     <div className="mb-6">
                         <h1 className="text-3xl font-light text-stone-800">

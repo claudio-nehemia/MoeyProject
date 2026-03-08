@@ -122,7 +122,7 @@ export default function Show({ itemPekerjaan }: Props) {
             <Sidebar isOpen={sidebarOpen} currentPage="item-pekerjaan" onClose={() => setSidebarOpen(false)} />
 
             <div className="p-3 lg:ml-60">
-                <div className="mt-12 p-3">
+                <div className="mt-20 p-3">
                     {/* Header */}
                     <div className="mb-8">
                         <div className="flex items-center gap-3 mb-6">

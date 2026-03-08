@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { usePage } from '@inertiajs/react';
 import { router, Link, Head } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
@@ -46,6 +46,16 @@ interface TaskResponse {
 function Index({ itemPekerjaans }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [activeTab, setActiveTab] = useState<'internal' | 'kontrak'>('internal');
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const filteredItemPekerjaans = useMemo(() =>
+        (itemPekerjaans as ItemPekerjaan[]).filter(item =>
+            item.order.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.order.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.order.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
+        ),
+        [itemPekerjaans, searchQuery]
+    );
     // Dual task response state
     const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: TaskResponse; marketing?: TaskResponse }>>({});
     const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: TaskResponse } | null>(null);
@@ -166,7 +176,7 @@ function Index({ itemPekerjaans }: Props) {
             <Sidebar isOpen={sidebarOpen} currentPage="rab-internal" onClose={() => setSidebarOpen(false)} />
 
             <div className="p-3 lg:ml-60">
-                <div className="mt-12 p-3">
+                <div className="mt-20 p-3">
                     {/* Tabs */}
                     <div className="mb-6">
                         <div className="border-b border-gray-200 dark:border-gray-700">
@@ -212,7 +222,25 @@ function Index({ itemPekerjaans }: Props) {
                                 </p>
                             </div>
 
-                            {itemPekerjaans.length === 0 ? (
+                            {/* Search */}
+                            <div className="mb-4">
+                                <div className="relative">
+                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                        <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        placeholder="Cari nama project, company, atau customer..."
+                                        className="block w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                                    />
+                                </div>
+                            </div>
+
+                            {filteredItemPekerjaans.length === 0 ? (
                                 <div className="rounded-md bg-blue-50 p-4 dark:bg-blue-900/20">
                                     <p className="text-sm text-blue-700 dark:text-blue-400">
                                         Belum ada item pekerjaan yang tersedia.
@@ -244,7 +272,7 @@ function Index({ itemPekerjaans }: Props) {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
-                                            {(itemPekerjaans as ItemPekerjaan[]).map((itemPekerjaan: ItemPekerjaan) => {
+                                            {filteredItemPekerjaans.map((itemPekerjaan: ItemPekerjaan) => {
                                                 const orderId = itemPekerjaan.order?.id;
                                                 const taskResponseRegular = orderId ? taskResponses[orderId]?.regular : null;
                                                 const taskResponseMarketing = orderId ? taskResponses[orderId]?.marketing : null;

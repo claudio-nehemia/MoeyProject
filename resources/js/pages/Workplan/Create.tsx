@@ -628,7 +628,7 @@ export default function Create({ order, itemPekerjaans }: Props) {
                 onClose={() => setSidebarOpen(false)}
             />
 
-            <main className="px-2 pt-12 pb-6 pl-0 transition-all sm:px-4 sm:pl-60">
+            <main className="px-2 pt-20 pb-6 pl-0 transition-all sm:px-4 sm:pl-60">
                 {/* Header */}
                 <div className="mb-6">
                     <div className="mb-2 flex items-center gap-2 text-sm text-stone-500">

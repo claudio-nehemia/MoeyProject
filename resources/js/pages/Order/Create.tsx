@@ -321,7 +321,7 @@ export default function Create({
             />
 
             <div className="p-3 lg:ml-60">
-                <div className="mt-12 p-3">
+                <div className="mt-20 p-3">
                     {/* Header */}
                     <div
                         className={`mb-8 ${mounted ? 'fadeInUp' : 'opacity-0'}`}

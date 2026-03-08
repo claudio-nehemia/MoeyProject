@@ -52,7 +52,7 @@ export default function Show({ jenisPengukuran }: Props) {
             <div
                 className={`transition-all duration-300 ${
                     sidebarOpen ? "ml-60" : "ml-0"
-                } p-3 mt-12`}
+                } p-3 mt-20`}
                 style={{
                     opacity: mounted ? 1 : 0,
                     transform: mounted ? "translateY(0)" : "translateY(20px)",

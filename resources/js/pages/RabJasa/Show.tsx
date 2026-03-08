@@ -128,7 +128,7 @@ export default function Show({ rabJasa }: Props) {
             />
 
             <div className="p-3 lg:ml-60">
-                <div className="mt-12 p-3">
+                <div className="mt-20 p-3">
                     {/* Header */}
                     <div className="mb-6 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
                         <div className="bg-gradient-to-r from-green-600 to-green-700 p-6">

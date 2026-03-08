@@ -373,7 +373,7 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                 onClose={() => setSidebarOpen(false)}
             />
 
-            <main className="w-full overflow-y-auto px-2 pt-12 pb-6 pl-0 transition-all sm:px-4 sm:pl-60">
+            <main className="w-full overflow-y-auto px-2 pt-20 pb-6 pl-0 transition-all sm:px-4 sm:pl-60">
                 {/* Header */}
                 <div className="mb-6">
                     <div className="mb-2 flex items-center gap-2.5">

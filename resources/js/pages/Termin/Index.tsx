@@ -167,7 +167,7 @@ export default function Index({ termins }: Props) {
             />
 
             {/* Main Content */}
-            <main className="px-2 pt-12 pb-6 pl-0 transition-all sm:px-4 sm:pl-60">
+            <main className="px-2 pt-20 pb-6 pl-0 transition-all sm:px-4 sm:pl-60">
                 {/* Header Section */}
                 <div className="mb-4 sm:mb-5">
                     <div className="mb-2 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-0">

@@ -232,7 +232,7 @@ export default function Index({ produks, bahanBakuItems = [] }: Props) {
             <Sidebar isOpen={sidebarOpen} currentPage="produk" onClose={() => setSidebarOpen(false)} />
 
             {/* Main Content */}
-            <main className="pt-12 pl-0 sm:pl-60 px-2 sm:px-4 pb-6 transition-all">
+            <main className="pt-20 pl-0 sm:pl-60 px-2 sm:px-4 pb-6 transition-all">
                 {/* Header Section */}
                 <div className="mb-4 sm:mb-5">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-2">

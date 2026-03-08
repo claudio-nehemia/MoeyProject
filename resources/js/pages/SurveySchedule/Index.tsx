@@ -2,7 +2,7 @@ import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import ExtendModal from '@/components/ExtendModal';
 import { Head, router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 
 /* ================= TYPES ================= */
@@ -41,6 +41,16 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props)
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
   const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: any } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredOrders = useMemo(() =>
+    orders.filter(order =>
+      order.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
+    ),
+    [orders, searchQuery]
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -161,13 +171,31 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props)
             Order yang perlu dijadwalkan survey
           </p>
 
-          {orders.length === 0 ? (
+          {/* Search */}
+          <div className="mb-6">
+            <div className="relative">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <svg className="h-4 w-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Cari nama project, company, atau customer..."
+                className="block w-full rounded-lg border border-stone-200 bg-white py-2.5 pl-10 pr-4 text-sm text-stone-700 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              />
+            </div>
+          </div>
+
+          {filteredOrders.length === 0 ? (
             <div className="text-center py-12 text-stone-500">
               Tidak ada order.
             </div>
           ) : (
             <div className="space-y-4">
-              {orders.map(order => {
+              {filteredOrders.map(order => {
                 const hasResponse = !!order.survey_response_time;
                 const hasPmResponse = !!order.pm_survey_response_time;
                 const showScheduleButton = hasResponse;

@@ -54,7 +54,7 @@ export default function Show({ item }: Props) {
             <Sidebar isOpen={sidebarOpen} currentPage="item" onClose={() => setSidebarOpen(false)} />
 
             {/* Main Content */}
-            <main className="pt-12 pl-60 px-4 pb-6 transition-all">
+            <main className="pt-20 pl-60 px-4 pb-6 transition-all">
                 {/* Breadcrumb */}
                 <div className="mb-4 text-xs text-stone-600 flex items-center gap-2">
                     <Link href="/dashboard" className="hover:text-stone-900">Dashboard</Link>

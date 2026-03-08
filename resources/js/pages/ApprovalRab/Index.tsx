@@ -171,7 +171,7 @@ export default function ApprovalRabIndex({ items }: Props) {
             />
 
             <div className="p-3 lg:ml-60">
-                <div className="mt-12 p-3">
+                <div className="mt-20 p-3">
                     {/* Header */}
                     <div className="mb-8 flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 shadow">

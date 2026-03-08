@@ -1,5 +1,5 @@
 import { Link, Head } from "@inertiajs/react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 
@@ -18,6 +18,16 @@ interface Defect {
 
 export default function Index({ defects }: { defects: Defect[] }) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const filteredDefects = useMemo(() =>
+        defects.filter(defect =>
+            defect.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            defect.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            defect.nama_produk.toLowerCase().includes(searchQuery.toLowerCase())
+        ),
+        [defects, searchQuery]
+    );
 
     // Status badge colors
     const getStatusColor = (status: string) => {
@@ -92,9 +102,27 @@ export default function Index({ defects }: { defects: Defect[] }) {
                             </div>
                         </div>
 
+                        {/* Search */}
+                        <div className="mb-6">
+                            <div className="relative">
+                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                    <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Cari nama project, company, atau produk..."
+                                    className="block w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-700 shadow-sm focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-red-400"
+                                />
+                            </div>
+                        </div>
+
                         {/* Defects Grid */}
                         <div className="grid grid-cols-1 gap-6">
-                            {defects.map((defect, index) => {
+                            {filteredDefects.map((defect, index) => {
                                 const percentage = (defect.total_repaired / defect.total_defects) * 100;
                                 
                                 return (

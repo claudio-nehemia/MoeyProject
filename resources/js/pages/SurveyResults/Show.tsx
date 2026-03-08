@@ -151,7 +151,7 @@ export default function Show({ survey }: Props) {
             <Sidebar isOpen={sidebarOpen} currentPage="survey" onClose={() => setSidebarOpen(false)} />
 
             <div className="p-2 sm:p-3 lg:ml-60">
-                <div className="p-2 sm:p-3 mt-12">
+                <div className="p-2 sm:p-3 mt-20">
                     {/* Header */}
                     <div className="mb-6 sm:mb-8">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3">

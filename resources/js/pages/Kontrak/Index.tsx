@@ -1,7 +1,7 @@
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import { Head, router, usePage } from '@inertiajs/react';
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import KontrakModal from './KontrakModal';
 import ExtendModal from '@/components/ExtendModal';
 import axios from 'axios';
@@ -87,6 +87,16 @@ export default function Index({ itemPekerjaans, termins }: Props) {
     const { auth } = usePage<{ auth: { user: { isKepalaMarketing: boolean } } }>().props;
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
     const isNotKepalaMarketing = !isKepalaMarketing;
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const filteredItemPekerjaans = useMemo(() =>
+        itemPekerjaans.filter(item =>
+            item.order.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.order.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.order.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
+        ),
+        [itemPekerjaans, searchQuery]
+    );
 
     // Fetch dual task responses (regular & marketing)
     useEffect(() => {
@@ -227,6 +237,25 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                 <h2 className="mb-6 text-2xl font-semibold text-gray-800">
                                     Kontrak Management
                                 </h2>
+
+                                {/* Search */}
+                                <div className="mb-4">
+                                    <div className="relative">
+                                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                            <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                            </svg>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            placeholder="Cari nama project, company, atau customer..."
+                                            className="block w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                </div>
+
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-gray-200">
                                         <thead className="bg-gray-50">
@@ -258,7 +287,7 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-200 bg-white">
-                                            {itemPekerjaans.length === 0 ? (
+                                            {filteredItemPekerjaans.length === 0 ? (
                                                 <tr>
                                                     <td
                                                         colSpan={8}
@@ -270,7 +299,7 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                     </td>
                                                 </tr>
                                             ) : (
-                                                itemPekerjaans.map((item) => {
+                                                filteredItemPekerjaans.map((item) => {
                                                     const orderId = item.order.id;
                                                     const taskResponse = taskResponses[orderId];
                                                     const tahap1 =

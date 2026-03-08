@@ -221,7 +221,7 @@ export default function Edit({ order, marketings, drafters, desainers, jenisInte
             <Sidebar isOpen={sidebarOpen} currentPage="order" onClose={() => setSidebarOpen(false)} />
 
             <div className="p-3 lg:ml-60">
-                <div className="p-3 mt-12">
+                <div className="p-3 mt-20">
                     {/* Header */}
                     <div className={`mb-8 ${mounted ? 'fadeInUp' : 'opacity-0'}`}>
                         <div className="flex items-center justify-between mb-2">

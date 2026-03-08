@@ -294,7 +294,7 @@ export default function Dashboard({
             />
 
             <div className="p-3 lg:ml-60 bg-gradient-to-br from-stone-50 via-amber-50/20 to-stone-50 min-h-screen">
-                <div className="p-3 mt-12">
+                <div className="p-3 mt-20">
                     {/* Header with User Info */}
                     <div className={`mb-6 ${mounted ? 'animate-fadeInUp' : 'opacity-0'}`}>
                         <div className="flex items-center justify-between mb-4">

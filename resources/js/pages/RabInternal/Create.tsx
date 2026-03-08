@@ -300,7 +300,7 @@ export default function Create({ rabInternal }: Props) {
             <Sidebar isOpen={sidebarOpen} currentPage="rab-internal" onClose={() => setSidebarOpen(false)} />
 
             <div className="p-3 lg:ml-60">
-                <div className="mt-12 p-3">
+                <div className="mt-20 p-3">
 
                     {/* 🔹 Formula RAB Internal */}
                     <div className="mb-3 overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 shadow-sm sm:rounded-lg dark:from-indigo-950 dark:via-purple-950 dark:to-pink-950">

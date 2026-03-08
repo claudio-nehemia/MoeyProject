@@ -19,7 +19,7 @@ export default function GambarKerjaShow({ file }: any) {
                 onClose={() => setSidebarOpen(false)}
             />
 
-            <main className="pt-12 pl-0 sm:pl-60 px-3 pb-6 w-full overflow-y-auto">
+            <main className="pt-20 pl-0 sm:pl-60 px-3 pb-6 w-full overflow-y-auto">
                 <div className="mb-6 flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-stone-900">

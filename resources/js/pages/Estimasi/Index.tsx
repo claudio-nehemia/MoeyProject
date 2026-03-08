@@ -305,7 +305,7 @@ export default function EstimasiIndex({ moodboards }: Props) {
                 onClose={() => setSidebarOpen(false)}
             />
 
-            <main className="pt-12 pl-0 sm:pl-60 px-2 sm:px-4 pb-6 transition-all w-full overflow-y-auto">
+            <main className="pt-20 pl-0 sm:pl-60 px-2 sm:px-4 pb-6 transition-all w-full overflow-y-auto">
                 {/* Header */}
                 <div className="mb-6">
                     <div className="flex items-center gap-2.5 mb-2">

@@ -465,7 +465,7 @@ export default function Index({ orders }: Props) {
             />
 
             {/* Main Content */}
-            <main className="px-2 pt-12 pb-6 pl-0 transition-all sm:px-4 sm:pl-60">
+            <main className="px-2 pt-20 pb-6 pl-0 transition-all sm:px-4 sm:pl-60">
                 {/* Header */}
                 <div className="mb-4 sm:mb-6">
                     <div className="mb-2 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-0">

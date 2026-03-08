@@ -115,7 +115,7 @@ export default function Show({ rabKontrak }: Props) {
             <Sidebar isOpen={sidebarOpen} currentPage="rab-kontrak" onClose={() => setSidebarOpen(false)} />
 
             <div className="p-3 lg:ml-60">
-                <div className="mt-12 p-3">
+                <div className="mt-20 p-3">
                     {/* Header */}
                     <div className="mb-6 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
                         <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-6">

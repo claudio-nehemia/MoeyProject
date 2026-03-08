@@ -177,7 +177,7 @@ export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }:
             <Sidebar isOpen={sidebarOpen} currentPage="survey" onClose={() => setSidebarOpen(false)} />
 
             <div className="p-3 lg:ml-60">
-                <div className="p-3 mt-12">
+                <div className="p-3 mt-20">
                     {/* Header */}
                     <div className="mb-8 fadeInUp">
                         <div className="flex items-center gap-3 mb-6">

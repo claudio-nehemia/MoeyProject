@@ -95,6 +95,7 @@ export default function Index({ itemPekerjaans }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [expandedRows, setExpandedRows] = useState<number[]>([]);
     const [activeFilter, setActiveFilter] = useState<'semua' | 'belum_bayar' | 'dp' | 'proses' | 'lunas'>('semua');
+    const [searchQuery, setSearchQuery] = useState('');
     const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: any; marketing?: any }>>({});
     const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
 
@@ -163,9 +164,15 @@ export default function Index({ itemPekerjaans }: Props) {
 
     // Filter items based on active filter
     const filteredItems = useMemo(() => {
-        if (activeFilter === 'semua') return itemPekerjaans;
-        return itemPekerjaans.filter(item => getPaymentCategory(item) === activeFilter);
-    }, [itemPekerjaans, activeFilter]);
+        return itemPekerjaans.filter(item => {
+            const matchesFilter = activeFilter === 'semua' || getPaymentCategory(item) === activeFilter;
+            const matchesSearch = !searchQuery ||
+                item.order.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.order.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.order.customer_name.toLowerCase().includes(searchQuery.toLowerCase());
+            return matchesFilter && matchesSearch;
+        });
+    }, [itemPekerjaans, activeFilter, searchQuery]);
 
     // Calculate filter counts
     const filterCounts = useMemo(() => {
@@ -340,6 +347,23 @@ export default function Index({ itemPekerjaans }: Props) {
 
                         {/* Filter Tabs */}
                         <div className="mb-6 bg-white rounded-xl shadow-lg p-4 border border-gray-100">
+                            {/* Search */}
+                            <div className="mb-3">
+                                <div className="relative">
+                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                        <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        placeholder="Cari nama project, company, atau customer..."
+                                        className="block w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-10 pr-3 text-sm focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+                                </div>
+                            </div>
                             <div className="flex flex-wrap gap-2">
                                 <button
                                     onClick={() => setActiveFilter('semua')}
