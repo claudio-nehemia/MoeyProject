@@ -58,6 +58,7 @@ interface Props {
         order_id?: number;
         tahap?: string;
         status?: string;
+        search?: string;
     };
 }
 
@@ -88,6 +89,9 @@ export default function Index({
     const [selectedStatus, setSelectedStatus] = useState<string>(
         filters.status || '',
     );
+    const [searchQuery, setSearchQuery] = useState<string>(
+        filters.search || '',
+    );
 
     useEffect(() => {
         setMounted(true);
@@ -112,6 +116,7 @@ export default function Index({
                 order_id: selectedOrderId || undefined,
                 tahap: selectedTahap || undefined,
                 status: selectedStatus || undefined,
+                search: searchQuery || undefined,
             },
             {
                 preserveState: true,
@@ -125,6 +130,7 @@ export default function Index({
         setSelectedOrderId('');
         setSelectedTahap('');
         setSelectedStatus('');
+        setSearchQuery('');
         router.get('/log');
     };
 
@@ -214,6 +220,22 @@ export default function Index({
                             </h3>
                         </div>
                         <div className="p-6">
+                            {/* Search box directly inside filter */}
+                            <div className="mb-5 relative">
+                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                    <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Cari berdasarkan nama project atau user..."
+                                    className="block w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm shadow-sm transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                                    onKeyDown={(e) => e.key === 'Enter' && handleFilter()}
+                                />
+                            </div>
                             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
                                 <div>
                                     <label className="mb-2 block text-sm font-medium text-slate-700">

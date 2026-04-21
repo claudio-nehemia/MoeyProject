@@ -2,8 +2,9 @@ import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import ExtendModal from '@/components/ExtendModal';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
+import { Eye, Edit2, PlusCircle, PenTool, CheckCircle, Clock } from 'lucide-react';
 
 interface Survey {
     id: number;
@@ -57,6 +58,11 @@ export default function Index({ surveys }: Props) {
     });
     const [mounted, setMounted] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [tahapanFilter, setTahapanFilter] = useState('all');
+
+    const ITEMS_PER_PAGE = 15;
+    const [currentPage, setCurrentPage] = useState(1);
 
     // TaskResponse (deadline & extension) state
     const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: TaskResponse; marketing?: TaskResponse }>>({});
@@ -221,13 +227,35 @@ export default function Index({ surveys }: Props) {
     const getStatusColor = (status: string) => {
         switch (status.toLowerCase()) {
             case 'completed':
-                return 'bg-emerald-100 text-emerald-700 border-emerald-300';
+                return 'bg-emerald-50 text-emerald-600 border-emerald-200';
             case 'in_progress':
-                return 'bg-blue-100 text-blue-700 border-blue-300';
+                return 'bg-blue-50 text-blue-600 border-blue-200';
             case 'pending':
-                return 'bg-amber-100 text-amber-700 border-amber-300';
+                return 'bg-amber-50 text-amber-600 border-amber-200';
             default:
-                return 'bg-stone-100 text-stone-700 border-stone-300';
+                return 'bg-slate-50 text-slate-600 border-slate-200';
+        }
+    };
+    
+    const getTahapanStyle = (tahapan: string) => {
+        switch (tahapan) {
+            case 'produksi':
+                return { color: 'bg-amber-50 text-amber-600 border-amber-200', icon: '✨' };
+            case 'kontrak':
+                return { color: 'bg-indigo-50 text-indigo-600 border-indigo-200', icon: '📄' };
+            case 'rab':
+                return { color: 'bg-blue-50 text-blue-600 border-blue-200', icon: '💰' };
+            case 'desain_final':
+                return { color: 'bg-cyan-50 text-cyan-600 border-cyan-200', icon: '🎨' };
+            case 'cm_fee':
+                return { color: 'bg-amber-50 text-amber-600 border-amber-200', icon: '💳' };
+            case 'moodboard':
+                return { color: 'bg-pink-50 text-pink-600 border-pink-200', icon: '🎨' };
+            case 'survey':
+                return { color: 'bg-purple-50 text-purple-600 border-purple-200', icon: '📋' };
+            case 'not_start':
+            default:
+                return { color: 'bg-slate-50 text-slate-500 border-slate-200', icon: '⏳' };
         }
     };
 
@@ -249,49 +277,56 @@ export default function Index({ surveys }: Props) {
         });
     };
 
-    const filteredSurveys = surveys.filter(
-        (survey) =>
-            survey.nama_project
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase()) ||
-            survey.company_name
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase()) ||
-            survey.customer_name
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase()),
-    );
+    const filteredSurveys = surveys.filter((survey) => {
+        const matchesSearch =
+            survey.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            survey.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            survey.customer_name.toLowerCase().includes(searchQuery.toLowerCase());
+            
+        const matchesStatus = statusFilter === 'all' || survey.project_status.toLowerCase() === statusFilter.toLowerCase();
+        const matchesTahapan = tahapanFilter === 'all' || survey.tahapan_proyek.toLowerCase() === tahapanFilter.toLowerCase();
+        
+        return matchesSearch && matchesStatus && matchesTahapan;
+    });
+
+    // Reset pagination when filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, statusFilter, tahapanFilter]);
+
+    const totalPages = Math.ceil(filteredSurveys.length / ITEMS_PER_PAGE);
+    
+    // Get current page data
+    const currentSurveys = useMemo(() => {
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        return filteredSurveys.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    }, [filteredSurveys, currentPage]);
 
     if (!mounted) return null;
 
-    const renderDeadlineSection = (task: TaskResponse | undefined, orderId: number, tahap: string, isMarketing: boolean) => {
-        if (!task) {
-            console.debug('[SurveyResults] renderDeadlineSection:skip', { orderId, tahap, isMarketing, reason: 'no-task' });
-            return null;
-        }
-        if (task.status === 'selesai') {
-            console.debug('[SurveyResults] renderDeadlineSection:skip', { orderId, tahap, isMarketing, reason: 'status-selesai', task });
-            return null;
-        }
+    const renderCompactDeadlineSection = (task: TaskResponse | undefined, orderId: number, tahap: string, isMarketing: boolean) => {
+        if (!task || task.status === 'selesai') return null;
         return (
-            <div className={`mt-3 rounded-lg border p-3 ${isMarketing ? 'border-purple-200 bg-purple-50' : 'border-yellow-200 bg-yellow-50'}`}>
-                <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                        <p className={`text-xs font-medium ${isMarketing ? 'text-purple-700' : 'text-yellow-700'}`}>
-                            Deadline: {formatDeadline(task.deadline)}
-                        </p>
+            <div className={`mt-1 flex flex-col gap-1 rounded border p-1.5 ${isMarketing ? 'border-purple-200 bg-purple-50' : 'border-yellow-200 bg-yellow-50'}`}>
+                <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex flex-col">
+                        <span className={`text-[10px] font-semibold flex items-center gap-1 ${isMarketing ? 'text-purple-700' : 'text-yellow-700'}`}>
+                            <Clock size={10} /> 
+                            {formatDeadline(task.deadline)}
+                        </span>
                         {task.extend_time > 0 && (
-                            <p className={`mt-0.5 text-xs font-semibold ${isMarketing ? 'text-purple-600' : 'text-orange-600'}`}>
-                                Perpanjangan: {task.extend_time}x
-                            </p>
+                            <span className={`text-[9px] font-bold ${isMarketing ? 'text-purple-600' : 'text-orange-600'}`}>
+                                Ext: {task.extend_time}x
+                            </span>
                         )}
                     </div>
                     <button
                         type="button"
-                        onClick={() => setShowExtendModal({ orderId, tahap, isMarketing, taskResponse: task })}
-                        className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${isMarketing ? 'bg-purple-600 hover:bg-purple-700' : 'bg-orange-500 hover:bg-orange-600'}`}
+                        onClick={(e) => { e.preventDefault(); setShowExtendModal({ orderId, tahap, isMarketing, taskResponse: task }); }}
+                        className={`flex-shrink-0 rounded px-1.5 py-1 text-[9px] font-bold text-white transition-colors ${isMarketing ? 'bg-purple-500 hover:bg-purple-600' : 'bg-orange-500 hover:bg-orange-600'}`}
+                        title="Minta Perpanjangan"
                     >
-                        Minta Perpanjangan
+                        Ext
                     </button>
                 </div>
             </div>
@@ -339,167 +374,145 @@ export default function Index({ surveys }: Props) {
                     >
                         <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
                             <div>
-                                <h1
-                                    className="mb-2 text-2xl font-light text-stone-800 sm:text-3xl lg:text-4xl"
-                                    style={{
-                                        fontFamily: "'Playfair Display', serif",
-                                    }}
-                                >
+                                <h1 className="text-2xl font-bold tracking-tight text-slate-800 sm:text-3xl">
                                     Survey Results
                                 </h1>
-                                <p className="text-sm text-stone-600 sm:text-base">
+                                <p className="mt-1 text-sm text-slate-500">
                                     Manage project survey results and feedback
                                 </p>
                             </div>
                         </div>
 
-                        {/* Search Bar */}
-                        <div className="relative">
-                            <input
-                                type="text"
-                                placeholder="Search by project name, company, or customer..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full rounded-xl border-2 border-stone-200 bg-white px-4 py-3 pl-10 text-sm text-stone-700 placeholder-stone-400 transition-all outline-none focus:border-transparent focus:ring-2 focus:ring-cyan-500 sm:px-5 sm:py-3.5 sm:pl-12 sm:text-base"
-                            />
-                            <svg
-                                className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-stone-400 sm:left-4 sm:h-5 sm:w-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        {/* Search & Filters */}
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                            <div className="relative flex-1">
+                                <input
+                                    type="text"
+                                    placeholder="Search by project name, company, or customer..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full rounded-xl border-2 border-stone-200 bg-white px-4 py-2.5 pl-10 text-sm text-stone-700 placeholder-stone-400 transition-all outline-none focus:border-transparent focus:ring-2 focus:ring-cyan-500 sm:px-5 sm:py-3 sm:pl-12 sm:text-base"
                                 />
-                            </svg>
+                                <svg
+                                    className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-stone-400 sm:left-4 sm:h-5 sm:w-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                    />
+                                </svg>
+                            </div>
+                            <div className="flex gap-2 sm:gap-3 items-center w-full sm:w-auto">
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="flex-1 sm:w-40 rounded-xl border-2 border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-700 transition-all outline-none focus:border-transparent focus:ring-2 focus:ring-cyan-500 sm:py-3"
+                                >
+                                    <option value="all">All Status</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="completed">Completed</option>
+                                </select>
+                                <select
+                                    value={tahapanFilter}
+                                    onChange={(e) => setTahapanFilter(e.target.value)}
+                                    className="flex-1 sm:w-44 rounded-xl border-2 border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-700 transition-all outline-none focus:border-transparent focus:ring-2 focus:ring-cyan-500 sm:py-3"
+                                >
+                                    <option value="all">All Stage</option>
+                                    <option value="not_start">Not Start</option>
+                                    <option value="survey">Survey</option>
+                                    <option value="moodboard">Moodboard</option>
+                                    <option value="cm_fee">Commitment Fee</option>
+                                    <option value="desain_final">Desain Final</option>
+                                    <option value="rab">RAB</option>
+                                    <option value="kontrak">Kontrak</option>
+                                    <option value="produksi">Produksi</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
                     {/* Stats Cards */}
                     <div
-                        className={`mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-4 lg:grid-cols-4 lg:gap-6 ${mounted ? 'fadeInUp' : 'opacity-0'}`}
+                        className={`mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-4 lg:grid-cols-4 lg:gap-5 ${mounted ? 'fadeInUp' : 'opacity-0'}`}
                         style={{ animationDelay: '0.1s' }}
                     >
-                        <div className="rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 p-4 text-white shadow-lg sm:rounded-2xl sm:p-6">
+                        {/* Total Surveys */}
+                        <div className="rounded-xl border-l-4 border-blue-400 bg-white p-4 shadow-md sm:rounded-2xl sm:p-5">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="mb-1 text-xs font-medium text-blue-100 sm:text-sm">
+                                    <p className="mb-1 text-xs font-medium text-slate-500 sm:text-sm">
                                         Total Surveys
                                     </p>
-                                    <p className="text-2xl font-bold sm:text-3xl">
-                                        {
-                                            surveys.filter((s) => s.has_survey)
-                                                .length
-                                        }
+                                    <p className="text-2xl font-bold text-slate-800 sm:text-3xl">
+                                        {surveys.filter((s) => s.has_survey).length}
                                     </p>
                                 </div>
-                                <div className="bg-opacity-20 rounded-lg bg-white p-2 sm:rounded-xl sm:p-3">
-                                    <svg
-                                        className="h-6 w-6 sm:h-8 sm:w-8"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                                        />
+                                <div className="rounded-lg bg-blue-50 p-2 text-blue-400 sm:rounded-xl sm:p-3">
+                                    <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                     </svg>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-4 text-white shadow-lg sm:rounded-2xl sm:p-6">
+                        {/* Responded */}
+                        <div className="rounded-xl border-l-4 border-emerald-400 bg-white p-4 shadow-md sm:rounded-2xl sm:p-5">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="mb-1 text-xs font-medium text-emerald-100 sm:text-sm">
+                                    <p className="mb-1 text-xs font-medium text-slate-500 sm:text-sm">
                                         Responded
                                     </p>
-                                    <p className="text-2xl font-bold sm:text-3xl">
-                                        {
-                                            surveys.filter(
-                                                (s) => s.response_time,
-                                            ).length
-                                        }
+                                    <p className="text-2xl font-bold text-slate-800 sm:text-3xl">
+                                        {surveys.filter((s) => s.response_time).length}
                                     </p>
                                 </div>
-                                <div className="bg-opacity-20 rounded-lg bg-white p-2 sm:rounded-xl sm:p-3">
-                                    <svg
-                                        className="h-6 w-6 sm:h-8 sm:w-8"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                        />
+                                <div className="rounded-lg bg-emerald-50 p-2 text-emerald-400 sm:rounded-xl sm:p-3">
+                                    <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 p-4 text-white shadow-lg sm:rounded-2xl sm:p-6">
+                        {/* Pending */}
+                        <div className="rounded-xl border-l-4 border-amber-400 bg-white p-4 shadow-md sm:rounded-2xl sm:p-5">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="mb-1 text-xs font-medium text-amber-100 sm:text-sm">
+                                    <p className="mb-1 text-xs font-medium text-slate-500 sm:text-sm">
                                         Pending
                                     </p>
-                                    <p className="text-2xl font-bold sm:text-3xl">
-                                        {
-                                            surveys.filter(
-                                                (s) =>
-                                                    s.has_survey &&
-                                                    !s.response_time,
-                                            ).length
-                                        }
+                                    <p className="text-2xl font-bold text-slate-800 sm:text-3xl">
+                                        {surveys.filter((s) => s.has_survey && !s.response_time).length}
                                     </p>
                                 </div>
-                                <div className="bg-opacity-20 rounded-lg bg-white p-2 sm:rounded-xl sm:p-3">
-                                    <svg
-                                        className="h-6 w-6 sm:h-8 sm:w-8"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                        />
+                                <div className="rounded-lg bg-amber-50 p-2 text-amber-400 sm:rounded-xl sm:p-3">
+                                    <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 p-4 text-white shadow-lg sm:rounded-2xl sm:p-6">
+                        {/* No Survey */}
+                        <div className="rounded-xl border-l-4 border-rose-400 bg-white p-4 shadow-md sm:rounded-2xl sm:p-5">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="mb-1 text-xs font-medium text-rose-100 sm:text-sm">
+                                    <p className="mb-1 text-xs font-medium text-slate-500 sm:text-sm">
                                         No Survey
                                     </p>
-                                    <p className="text-2xl font-bold sm:text-3xl">
-                                        {
-                                            surveys.filter((s) => !s.has_survey)
-                                                .length
-                                        }
+                                    <p className="text-2xl font-bold text-slate-800 sm:text-3xl">
+                                        {surveys.filter((s) => !s.has_survey).length}
                                     </p>
                                 </div>
-                                <div className="bg-opacity-20 rounded-lg bg-white p-2 sm:rounded-xl sm:p-3">
-                                    <svg
-                                        className="h-6 w-6 sm:h-8 sm:w-8"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
+                                <div className="rounded-lg bg-rose-50 p-2 text-rose-400 sm:rounded-xl sm:p-3">
+                                    <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    
                                         <path
                                             strokeLinecap="round"
                                             strokeLinejoin="round"
@@ -512,396 +525,193 @@ export default function Index({ surveys }: Props) {
                         </div>
                     </div>
 
-                    {/* Survey List */}
+                    {/* Survey Table Mode */}
                     <div className="space-y-3 sm:space-y-4">
                         {filteredSurveys.length === 0 ? (
-                            <div className="rounded-xl border border-stone-200 bg-white p-8 text-center shadow-lg sm:rounded-2xl sm:p-12">
-                                <svg
-                                    className="mx-auto mb-4 h-12 w-12 text-stone-300 sm:h-16 sm:w-16"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={1.5}
-                                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                                    />
-                                </svg>
-                                <p className="text-sm font-medium text-stone-600 sm:text-base">
-                                    No surveys found
-                                </p>
-                                <p className="mt-1 text-xs text-stone-500 sm:text-sm">
-                                    Try adjusting your search
-                                </p>
+                            <div className="rounded-2xl border border-stone-200 bg-white p-16 text-center shadow-sm">
+                                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-stone-50">
+                                    <svg className="h-8 w-8 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
+                                </div>
+                                <p className="mb-2 text-lg font-semibold text-slate-800">Tidak ada survey</p>
+                                <p className="text-sm text-stone-500">Coba sesuaikan pencarian Anda</p>
                             </div>
                         ) : (
-                            filteredSurveys.map((survey, index) => (
-                                <div
-                                    key={survey.id}
-                                    className={`survey-card overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg sm:rounded-2xl ${mounted ? 'slideIn' : 'opacity-0'}`}
-                                    style={{
-                                        animationDelay: `${0.15 + index * 0.05}s`,
-                                    }}
-                                >
-                                    <div className="p-4 sm:p-6">
-                                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                                            {/* Left Section - Project Info */}
-                                            <div className="flex-1">
-                                                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                                                    <h3 className="text-lg font-bold text-stone-900 sm:text-xl">
-                                                        {survey.nama_project}
-                                                    </h3>
-                                                    <span
-                                                        className={`w-fit rounded-lg border px-3 py-1 text-xs font-semibold ${getStatusColor(survey.project_status)}`}
-                                                    >
-                                                        {survey.project_status}
-                                                    </span>
-                                                    {survey.is_draft && survey.response_time && (
-                                                        <span className="w-fit flex items-center gap-1.5 rounded-lg border-2 border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 px-3 py-1 text-xs font-bold text-amber-700 shadow-sm">
-                                                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                            </svg>
-                                                            DRAFT
-                                                        </span>
-                                                    )}
-                                                </div>
-
-                                                <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-                                                    <div>
-                                                        <p className="mb-1 text-xs font-medium text-stone-500">
-                                                            Company
-                                                        </p>
-                                                        <p className="truncate font-semibold text-stone-900">
-                                                            {
-                                                                survey.company_name
-                                                            }
-                                                        </p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="mb-1 text-xs font-medium text-stone-500">
-                                                            Customer
-                                                        </p>
-                                                        <p className="truncate font-semibold text-stone-900">
-                                                            {
-                                                                survey.customer_name
-                                                            }
-                                                        </p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="mb-1 text-xs font-medium text-stone-500">
-                                                            Interior Type
-                                                        </p>
-                                                        <p className="truncate font-semibold text-stone-900">
-                                                            {
-                                                                survey.jenis_interior
-                                                            }
-                                                        </p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="mb-1 text-xs font-medium text-stone-500">
-                                                            Survey Date
-                                                        </p>
-                                                        <p className="truncate font-semibold text-stone-900">
-                                                            {survey.tanggal_survey
-                                                                ? formatSimpleDate(
-                                                                      survey.tanggal_survey,
-                                                                  )
-                                                                : '-'}
-                                                        </p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="mb-1 text-xs font-medium text-stone-500">
-                                                            Tahapan Proyek
-                                                        </p>
-                                                        <p className="truncate font-semibold text-stone-900">
-                                                            {formatTahapanProyek(survey.tahapan_proyek)}
-                                                        </p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="mb-1 text-xs font-medium text-stone-500">
-                                                            Payment Status
-                                                        </p>
-                                                        <p className="truncate font-semibold text-stone-900">
-                                                            {formatPaymentStatus(survey.payment_status)}
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                {/* Team Members */}
-                                                {survey.team &&
-                                                    survey.team.length > 0 && (
-                                                        <div className="mt-4 rounded-lg border-2 border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50 p-3 sm:rounded-xl sm:p-4">
-                                                            <div className="mb-3 flex items-center gap-2">
-                                                                <svg
-                                                                    className="h-4 w-4 text-indigo-600 sm:h-5 sm:w-5"
-                                                                    fill="none"
-                                                                    stroke="currentColor"
-                                                                    viewBox="0 0 24 24"
-                                                                >
-                                                                    <path
-                                                                        strokeLinecap="round"
-                                                                        strokeLinejoin="round"
-                                                                        strokeWidth={
-                                                                            2
-                                                                        }
-                                                                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                                                                    />
-                                                                </svg>
-                                                                <p className="text-xs font-bold text-indigo-900 sm:text-sm">
-                                                                    Project Team
-                                                                    (
-                                                                    {
-                                                                        survey
-                                                                            .team
-                                                                            .length
-                                                                    }
-                                                                    )
-                                                                </p>
+                            <div className={`overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ${mounted ? 'slideIn' : 'opacity-0'} survey-card`}>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full whitespace-nowrap text-left text-sm">
+                                        <thead className="bg-[#f8fafc] text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                                            <tr>
+                                                <th className="px-6 py-4">Project / Client Info</th>
+                                                <th className="px-6 py-4">Service Type</th>
+                                                <th className="px-6 py-4">Survey Date & Deadline</th>
+                                                <th className="px-6 py-4">Stage / Tahapan</th>
+                                                <th className="px-6 py-4">Survey Status</th>
+                                                <th className="px-6 py-4">Team</th>
+                                                <th className="px-6 py-4 text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 bg-white">
+                                            {currentSurveys.map((survey, index) => {
+                                                const tahapan = getTahapanStyle(survey.tahapan_proyek);
+                                                return (
+                                                <tr key={survey.id} className="hover:bg-slate-50/50 transition-colors duration-200">
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="font-bold text-slate-900 truncate max-w-[200px]">{survey.nama_project}</div>
+                                                            {survey.is_draft && survey.response_time && (
+                                                                <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 border border-amber-200">
+                                                                    DRAFT
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-xs text-slate-500 mt-0.5 max-w-[200px] truncate">{survey.company_name}</div>
+                                                        <div className="text-[11px] text-slate-400 font-bold tracking-tight mt-0.5">{survey.customer_name}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-slate-700 font-medium">{survey.jenis_interior || '-'}</div>
+                                                        <div className="mt-1">
+                                                            <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold border rounded-full ${getStatusColor(survey.project_status)}`}>
+                                                                {survey.project_status}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-slate-700">{survey.tanggal_survey ? formatSimpleDate(survey.tanggal_survey) : '-'}</div>
+                                                        { survey.tahapan_proyek === "survey" && (
+                                                            <div className="max-w-[160px]">
+                                                                {!isKepalaMarketing && renderCompactDeadlineSection(taskResponses[survey.id]?.regular, survey.id, 'survey', false)}
+                                                                {(survey.can_marketing_response ?? isKepalaMarketing) && renderCompactDeadlineSection(taskResponses[survey.id]?.marketing, survey.id, 'survey', true)}
                                                             </div>
-                                                            <div className="flex flex-wrap gap-2">
-                                                                {survey.team.map(
-                                                                    (
-                                                                        member,
-                                                                    ) => (
-                                                                        <div
-                                                                            key={
-                                                                                member.id
-                                                                            }
-                                                                            className="inline-flex items-center gap-2 rounded-lg border-2 border-indigo-300 bg-white px-2 py-1.5 shadow-sm transition-all hover:shadow-md sm:px-3 sm:py-2"
-                                                                        >
-                                                                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white sm:h-8 sm:w-8">
-                                                                                {member.name
-                                                                                    .charAt(
-                                                                                        0,
-                                                                                    )
-                                                                                    .toUpperCase()}
-                                                                            </div>
-                                                                            <div className="min-w-0">
-                                                                                <p className="truncate text-xs leading-tight font-semibold text-stone-900 sm:text-sm">
-                                                                                    {
-                                                                                        member.name
-                                                                                    }
-                                                                                </p>
-                                                                                <p className="truncate text-xs font-medium text-indigo-600">
-                                                                                    {
-                                                                                        member.role
-                                                                                    }
-                                                                                </p>
-                                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold tracking-wide border rounded-full ${tahapan.color}`}>
+                                                            <span>{tahapan.icon}</span>
+                                                            {formatTahapanProyek(survey.tahapan_proyek)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        {survey.response_time ? (
+                                                            <div className="flex flex-col gap-1">
+                                                                <div className="inline-flex items-center gap-1 text-[10px] px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded max-w-fit">
+                                                                    <CheckCircle size={10} />
+                                                                    <div>
+                                                                        <span className="font-semibold">{survey.response_by}</span>
+                                                                        <span className="text-emerald-500 ml-1">{formatDate(survey.response_time)}</span>
+                                                                    </div>
+                                                                </div>
+                                                                {survey.pm_response_time && (
+                                                                    <div className="inline-flex items-center gap-1 text-[10px] px-2 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded max-w-fit">
+                                                                        <CheckCircle size={10} />
+                                                                        <div>
+                                                                            <span className="font-semibold">Mkt: {survey.pm_response_by}</span>
                                                                         </div>
-                                                                    ),
+                                                                    </div>
                                                                 )}
                                                             </div>
-                                                        </div>
-                                                    )}
-
-                                                {/* Response Info */}
-                                                {survey.response_time && (
-                                                    <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                                                        <div className="flex items-center gap-2">
-                                                            <svg
-                                                                className="h-4 w-4 flex-shrink-0 text-emerald-600 sm:h-5 sm:w-5"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={
-                                                                        2
-                                                                    }
-                                                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                                />
-                                                            </svg>
-                                                            <div className="min-w-0 flex-1">
-                                                                <p className="truncate text-xs font-medium text-emerald-700">
-                                                                    Responded by{' '}
-                                                                    <span className="font-bold">
-                                                                        {
-                                                                            survey.response_by
-                                                                        }
-                                                                    </span>
-                                                                </p>
-                                                                <p className="mt-0.5 text-xs text-emerald-600">
-                                                                    {formatDate(
-                                                                        survey.response_time,
-                                                                    )}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Marketing Response Badge */}
-                                                        {survey.pm_response_time && (
-                                                            <div className="mt-2 bg-purple-50 border border-purple-200 rounded-lg p-2">
-                                                                <p className="text-xs font-semibold text-purple-900">✓ Marketing Response</p>
-                                                                <p className="text-xs text-purple-700">By: {survey.pm_response_by}</p>
-                                                                <p className="text-xs text-purple-700">{formatDate(survey.pm_response_time)}</p>
-                                                            </div>
-                                                        )}
-
-                                                    </div>
-                                                )}
-
-                                                {/* Deadline & Perpanjangan (tahapan survey) */}
-                                                {survey.tahapan_proyek === "survey" && (
-                                                    <>
-                                                        {!isKepalaMarketing && renderDeadlineSection(taskResponses[survey.id]?.regular, survey.id, 'survey', false)}
-                                                        {(survey.can_marketing_response ?? isKepalaMarketing) && renderDeadlineSection(taskResponses[survey.id]?.marketing, survey.id, 'survey', true)}
-                                                    </>
-                                                )}
-                                            </div>
-
-                                            {/* Right Section - Actions */}
-                                            <div className="flex flex-row justify-end gap-2 lg:flex-col lg:justify-start">
-                                                {/* Marketing Response Button - INDEPENDENT dari general response */}
-                                                {(survey.can_marketing_response ?? isKepalaMarketing) && !survey.pm_response_time && (
-                                                    <button
-                                                        onClick={() => handlePmResponse(survey.survey_id || survey.id)}
-                                                        className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-purple-600 hover:to-purple-700 sm:px-4 sm:text-sm"
-                                                    >
-                                                        Marketing Response
-                                                    </button>
-                                                )}
-
-                                                {/* General Response - Trigger dari response_time NULL */}
-                                                {!survey.response_time ? (
-                                                    isNotKepalaMarketing ? (
-                                                        // Belum response - Tampilkan tombol Response
-                                                        <button
-                                                            onClick={() =>
-                                                                handleMarkResponse(
-                                                                    survey.id,
-                                                                )
-                                                            }
-                                                            className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-emerald-600 hover:to-emerald-700 sm:px-4 sm:text-sm"
-                                                        >
-                                                            <svg
-                                                                className="mr-1 h-4 w-4 sm:mr-2"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={2}
-                                                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                                />
-                                                            </svg>
-                                                            <span className="hidden sm:inline">
-                                                                Response
-                                                            </span>
-                                                            <span className="sm:hidden">
-                                                                Respond
-                                                            </span>
-                                                        </button>
-                                                    ) : null
-                                                ) : survey.is_draft ? (
-                                                    // Draft - Tampilkan tombol Create atau Edit Draft
-                                                    <>
-                                                        {survey.has_draft ? (
-                                                            <Link
-                                                                href={`/survey-results/${survey.survey_id || survey.id}/edit`}
-                                                                className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-amber-600 hover:to-orange-600 sm:px-4 sm:text-sm"
-                                                            >
-                                                                <svg
-                                                                    className="mr-1 h-4 w-4 sm:mr-2"
-                                                                    fill="none"
-                                                                    stroke="currentColor"
-                                                                    viewBox="0 0 24 24"
-                                                                >
-                                                                    <path
-                                                                        strokeLinecap="round"
-                                                                        strokeLinejoin="round"
-                                                                        strokeWidth={2}
-                                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                                                    />
-                                                                </svg>
-                                                                <span className="hidden sm:inline">Isi Survey</span>
-                                                                <span className="sm:hidden">Isi Survey</span>
-                                                            </Link>
                                                         ) : (
-                                                            <Link
-                                                                href={`/survey-results/order/${survey.id}/create`}
-                                                                className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-cyan-600 hover:to-blue-600 sm:px-4 sm:text-sm"
-                                                            >
-                                                                <svg
-                                                                    className="mr-1 h-4 w-4 sm:mr-2"
-                                                                    fill="none"
-                                                                    stroke="currentColor"
-                                                                    viewBox="0 0 24 24"
-                                                                >
-                                                                    <path
-                                                                        strokeLinecap="round"
-                                                                        strokeLinejoin="round"
-                                                                        strokeWidth={2}
-                                                                        d="M12 4v16m8-8H4"
-                                                                    />
-                                                                </svg>
-                                                                <span className="hidden sm:inline">Create Survey</span>
-                                                                <span className="sm:hidden">Create</span>
-                                                            </Link>
+                                                            <span className="text-[10px] text-slate-400 italic">Belum ada respon</span>
                                                         )}
-                                                    </>
-                                                ) : (
-                                                    // Published - Tampilkan tombol View & Edit
-                                                    <>
-                                                        <Link
-                                                            href={`/survey-results/${survey.survey_id || survey.id}`}
-                                                            className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-blue-600 hover:to-blue-700 sm:px-4 sm:text-sm"
-                                                        >
-                                                            <svg
-                                                                className="mr-1 h-4 w-4 sm:mr-2"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={2}
-                                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                                                />
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={2}
-                                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                                                />
-                                                            </svg>
-                                                            <span className="hidden sm:inline">View</span>
-                                                            <span className="sm:hidden">View</span>
-                                                        </Link>
-                                                        <Link
-                                                            href={`/survey-results/${survey.survey_id || survey.id}/edit`}
-                                                            className="inline-flex transform items-center justify-center rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-3 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-amber-600 hover:to-amber-700 sm:px-4 sm:text-sm"
-                                                        >
-                                                            <svg
-                                                                className="mr-1 h-4 w-4 sm:mr-2"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={2}
-                                                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                                                />
-                                                            </svg>
-                                                            <span className="hidden sm:inline">Edit</span>
-                                                            <span className="sm:hidden">Edit</span>
-                                                        </Link>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex -space-x-2">
+                                                            {survey.team && survey.team.length > 0 ? (
+                                                                <>
+                                                                    {survey.team.slice(0, 3).map((member, i) => {
+                                                                        const colors = ['bg-indigo-500', 'bg-rose-500', 'bg-teal-500', 'bg-amber-500', 'bg-emerald-500'];
+                                                                        const colorClass = colors[member.id % colors.length];
+                                                                        return (
+                                                                            <div key={member.id} className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-white shadow-sm hover:z-10 transition-all cursor-default ${colorClass}`} title={`${member.name} - ${member.role}`}>
+                                                                                {member.name.substring(0, 2).toUpperCase()}
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                    {survey.team.length > 3 && (
+                                                                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 border-2 border-white shadow-sm hover:z-10 transition-all cursor-default" title={`${survey.team.length - 3} more`}>
+                                                                            +{survey.team.length - 3}
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            ) : (
+                                                                <span className="text-slate-400 text-xs">-</span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            {/* General Response Workflow Actions */}
+                                                            {!survey.response_time ? (
+                                                                isNotKepalaMarketing ? (
+                                                                    <button onClick={() => handleMarkResponse(survey.id)} className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-600 border border-emerald-200 hover:bg-emerald-100 transition-colors">
+                                                                        <CheckCircle size={12} /> Respond
+                                                                    </button>
+                                                                ) : null
+                                                            ) : survey.is_draft ? (
+                                                                // Draft Mode
+                                                                survey.has_draft ? (
+                                                                    <Link href={`/survey-results/${survey.survey_id || survey.id}/edit`} className="inline-flex items-center gap-1 rounded bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-600 border border-amber-200 hover:bg-amber-100 transition-colors">
+                                                                        <PenTool size={12} /> Edit Draft
+                                                                    </Link>
+                                                                ) : (
+                                                                    <Link href={`/survey-results/order/${survey.id}/create`} className="inline-flex items-center gap-1 rounded bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors">
+                                                                        <PlusCircle size={12} /> Create
+                                                                    </Link>
+                                                                )
+                                                            ) : (
+                                                                // Published Mode (Icons only for clean look)
+                                                                <div className="flex items-center gap-3 mr-2">
+                                                                    <Link href={`/survey-results/${survey.survey_id || survey.id}`} className="text-slate-400 hover:text-indigo-600 transition-colors" title="View Detail">
+                                                                        <Eye size={18} />
+                                                                    </Link>
+                                                                    <Link href={`/survey-results/${survey.survey_id || survey.id}/edit`} className="text-slate-400 hover:text-amber-600 transition-colors" title="Edit Survey">
+                                                                        <Edit2 size={18} />
+                                                                    </Link>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Marketing Response Button Extra */}
+                                                            {(survey.can_marketing_response ?? isKepalaMarketing) && !survey.pm_response_time && (
+                                                                <button onClick={() => handlePmResponse(survey.survey_id || survey.id)} className="inline-flex items-center gap-1 rounded bg-purple-50 px-2.5 py-1 text-[11px] font-bold text-purple-600 border border-purple-200 hover:bg-purple-100 transition-colors">
+                                                                    MKT Res
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )})}
+                                        </tbody>
+                                    </table>
                                 </div>
-                            ))
+                                {/* Pagination Footer */}
+                                <div className="px-6 py-4 border-t border-slate-100 text-sm text-slate-500 bg-slate-50 flex flex-col sm:flex-row justify-between items-center gap-3">
+                                    <div>
+                                        Showing <span className="font-semibold text-slate-700">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to <span className="font-semibold text-slate-700">{Math.min(currentPage * ITEMS_PER_PAGE, filteredSurveys.length)}</span> of <span className="font-semibold text-slate-700">{filteredSurveys.length}</span> surveys
+                                    </div>
+                                    {totalPages > 1 && (
+                                        <div className="flex gap-1.5">
+                                            <button
+                                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                                disabled={currentPage === 1}
+                                                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                                            >
+                                                Prev
+                                            </button>
+                                            <div className="flex items-center px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-sm">
+                                                {currentPage} / {totalPages}
+                                            </div>
+                                            <button
+                                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                                disabled={currentPage === totalPages}
+                                                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                                            >
+                                                Next
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>

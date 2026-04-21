@@ -27,6 +27,7 @@ class OrderController extends Controller
 
         $orders = Order::with('users', 'jenisInterior')
             ->visibleToUser($user)
+            ->orderBy('created_at', 'desc')
             ->get();
 
         \Log::info('Orders count: ' . $orders->count());

@@ -137,7 +137,7 @@ class SurveyUlangController extends Controller
         $validated = $request->validate([
             'catatan' => 'nullable|string',
             'temuan' => 'nullable|array',
-            'foto.*' => 'nullable|image',
+            'foto.*' => 'nullable|file',
         ]);
 
         $fotoPaths = [];
@@ -259,7 +259,7 @@ class SurveyUlangController extends Controller
         $validated = $request->validate([
             'catatan' => 'nullable|string',
             'temuan' => 'nullable|array',
-            'foto.*' => 'nullable|image',
+            'foto.*' => 'nullable|file',
             'foto_lama' => 'nullable',
         ]);
 

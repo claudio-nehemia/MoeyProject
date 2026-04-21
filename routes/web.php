@@ -463,6 +463,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:project-management.response-perpanjangan');
         Route::put('/item-pekerjaan/{pengajuanId}/reject-perpanjangan', [ProjectManagementController::class, 'rejectPerpanjanganTimeline'])
             ->middleware('permission:project-management.response-perpanjangan');
+        Route::get('/project-management/{id}/export-pdf', [ProjectManagementController::class, 'exportPdf'])
+            ->name('project-management.export-pdf');
+        Route::get('/project-management/{id}/export-excel', [ProjectManagementController::class, 'exportExcel'])
+            ->name('project-management.export-excel');
     });
 
     // WORKPLAN ROUTES

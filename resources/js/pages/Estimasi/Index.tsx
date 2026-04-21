@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { router, usePage } from '@inertiajs/react';
+import { useState, useEffect, Fragment } from 'react';
+import { router, usePage, Head } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import ExtendModal from '@/components/ExtendModal';
@@ -100,6 +100,7 @@ export default function EstimasiIndex({ moodboards }: Props) {
     const [uploadFile, setUploadFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [uploadStatusFilter, setUploadStatusFilter] = useState('All');
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type: string } | null>(null);
     const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
@@ -124,7 +125,7 @@ export default function EstimasiIndex({ moodboards }: Props) {
                             ...prev,
                             [orderId]: {
                                 ...prev[orderId],
-                                regular: task ?? null,
+                                regular: task ?? undefined,
                             },
                         }));
                     })
@@ -141,7 +142,7 @@ export default function EstimasiIndex({ moodboards }: Props) {
                             ...prev,
                             [orderId]: {
                                 ...prev[orderId],
-                                marketing: task ?? null,
+                                marketing: task ?? undefined,
                             },
                         }));
                     })
@@ -156,11 +157,20 @@ export default function EstimasiIndex({ moodboards }: Props) {
 
     const filteredMoodboards = moodboards.filter((moodboard) => {
         const search = searchQuery.toLowerCase();
-        return (
+        const matchesSearch = 
             moodboard.order?.nama_project.toLowerCase().includes(search) ||
             moodboard.order?.customer_name.toLowerCase().includes(search) ||
-            moodboard.order?.company_name.toLowerCase().includes(search)
-        );
+            moodboard.order?.company_name.toLowerCase().includes(search);
+        
+        const totalFiles = moodboard.kasar_files.length;
+        const uploadedFiles = moodboard.kasar_files.filter(f => f.estimasi_file).length;
+        const progress = totalFiles > 0 ? (uploadedFiles / totalFiles) * 100 : 0;
+        
+        let matchesStatus = true;
+        if (uploadStatusFilter === 'Selesai') matchesStatus = progress === 100;
+        if (uploadStatusFilter === 'Pending') matchesStatus = progress < 100;
+
+        return matchesSearch && matchesStatus;
     });
 
     const handleResponseEstimasi = async (moodboard: Moodboard) => {
@@ -182,9 +192,7 @@ export default function EstimasiIndex({ moodboards }: Props) {
     };
 
     const handlePmResponse = (orderId: number) => {
-        console.log('handlePmResponse called with orderId:', orderId);
         if (window.confirm('Apakah Anda yakin ingin memberikan PM response untuk moodboard ini?')) {
-            console.log('Sending PM response request to:', `/pm-response/moodboard/${orderId}`);
             router.post(`/pm-response/moodboard/${orderId}`, {}, {
                 preserveScroll: true,
                 onSuccess: () => {
@@ -195,8 +203,6 @@ export default function EstimasiIndex({ moodboards }: Props) {
                     alert('Gagal memberikan PM response');
                 }
             });
-        } else {
-            console.log('User cancelled PM response');
         }
     };
 
@@ -231,8 +237,7 @@ export default function EstimasiIndex({ moodboards }: Props) {
         setShowUploadModal(true);
     };
 
-    // Function to open preview modal
-    const openPreviewModal = (url: string, fileName: string, type: 'kasar' | 'estimasi') => {
+    const openPreviewModal = (url: string, fileName: string, type: string) => {
         setPreviewFile({
             url: url,
             name: fileName,
@@ -241,7 +246,6 @@ export default function EstimasiIndex({ moodboards }: Props) {
         setShowPreviewModal(true);
     };
 
-    // Function to download file
     const downloadFile = (url: string, fileName: string) => {
         const link = document.createElement('a');
         link.href = url;
@@ -251,13 +255,11 @@ export default function EstimasiIndex({ moodboards }: Props) {
         document.body.removeChild(link);
     };
 
-    // Function to detect if file is an image
     const isImageFile = (fileName: string): boolean => {
         const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
         return imageExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
     };
 
-    // Function to detect if file is a PDF
     const isPdfFile = (fileName: string): boolean => {
         return fileName.toLowerCase().endsWith('.pdf');
     };
@@ -286,18 +288,9 @@ export default function EstimasiIndex({ moodboards }: Props) {
         });
     };
 
-    const calculateDaysLeft = (deadline: string | null | undefined) => {
-        if (!deadline) return null;
-        const now = new Date();
-        const deadlineDate = new Date(deadline);
-        if (Number.isNaN(deadlineDate.getTime())) return null;
-        const diffTime = deadlineDate.getTime() - now.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays;
-    };
-
     return (
-        <div className="flex h-screen bg-stone-50">
+        <div className="min-h-screen bg-gradient-to-br from-stone-50 via-slate-50 to-stone-50 overflow-x-hidden">
+            <Head title="Estimasi Management" />
             <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
             <Sidebar
                 isOpen={sidebarOpen}
@@ -305,577 +298,387 @@ export default function EstimasiIndex({ moodboards }: Props) {
                 onClose={() => setSidebarOpen(false)}
             />
 
-            <main className="pt-20 pl-0 sm:pl-60 px-2 sm:px-4 pb-6 transition-all w-full overflow-y-auto">
-                {/* Header */}
-                <div className="mb-6">
-                    <div className="flex items-center gap-2.5 mb-2">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-md">
-                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h1 className="text-2xl sm:text-3xl font-bold text-stone-900">Estimasi Management</h1>
-                            <p className="text-xs text-stone-600">Upload estimasi untuk setiap file desain kasar</p>
-                        </div>
+            {/* Main Content */}
+            <main className="px-2 pt-20 pb-10 pl-0 transition-all sm:px-6 sm:pl-64">
+                <div className="max-w-[1600px] mx-auto">
+                    {/* Page Header */}
+                    <div className="mb-8">
+                        <h1 className="text-3xl font-bold tracking-tight text-slate-800">
+                            Estimasi Management
+                        </h1>
+                        <p className="mt-1.5 text-slate-500 font-medium">
+                            Review dan upload file estimasi biaya berdasarkan desain kasar
+                        </p>
                     </div>
-                </div>
 
-                {/* Search */}
-                <div className="mb-4">
-                    <div className="relative">
-                        <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        <input
-                            type="text"
-                            placeholder="Cari project, customer, atau company..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                    </div>
-                </div>
-
-                {/* Moodboards Grid */}
-                <div className="grid grid-cols-1 gap-4">
-                    {filteredMoodboards.length === 0 ? (
-                        <div className="col-span-full py-12">
-                            <div className="text-center">
-                                <svg className="w-16 h-16 text-stone-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    {/* Filters & Search */}
+                    <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div className="relative w-full sm:w-96 group">
+                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
+                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                 </svg>
-                                <p className="text-stone-500 text-sm">Tidak ada moodboard dengan desain kasar</p>
                             </div>
+                            <input
+                                type="text"
+                                placeholder="Cari project atau client..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="block w-full rounded-xl border-slate-200 bg-white py-2.5 pl-11 pr-4 text-sm text-slate-700 shadow-sm transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none"
+                            />
                         </div>
-                    ) : (
-                        filteredMoodboards.map((moodboard) => {
-                            const orderId = moodboard.order?.id;
-                            const taskResponseRegular = orderId ? taskResponses[orderId]?.regular : null;
-                            const taskResponseMarketing = orderId ? taskResponses[orderId]?.marketing : null;
-                            const daysLeftRegular = taskResponseRegular?.deadline ? calculateDaysLeft(taskResponseRegular.deadline) : null;
-                            const daysLeftMarketing = taskResponseMarketing?.deadline ? calculateDaysLeft(taskResponseMarketing.deadline) : null;
+                        <div className="flex items-center gap-3 w-full sm:w-auto">
+                            <select 
+                                value={uploadStatusFilter}
+                                onChange={(e) => setUploadStatusFilter(e.target.value)}
+                                className="flex-1 sm:flex-none py-2.5 pl-4 pr-10 rounded-xl border-slate-200 bg-white text-sm text-slate-600 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none"
+                            >
+                                <option value="All">Semua Status Upload</option>
+                                <option value="Pending">Pending / Belum Selesai</option>
+                                <option value="Selesai">Selesai Upload</option>
+                            </select>
+                        </div>
+                    </div>
 
-                            return (
-                                <div key={moodboard.id} className="rounded-xl border-2 bg-white border-stone-200 hover:border-blue-300 transition-all overflow-hidden">
-                                    <div className="p-4 sm:p-5">
-                                        {/* Project Info */}
-                                        <div className="mb-4 pb-4 border-b border-stone-200">
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div>
-                                                    <h3 className="text-lg sm:text-xl font-bold text-stone-900 mb-1">
-                                                        {moodboard.order?.nama_project}
-                                                    </h3>
-                                                    <p className="text-sm text-stone-600">{moodboard.order?.company_name}</p>
-                                                    <p className="text-xs text-stone-500 mt-1">Customer: {moodboard.order?.customer_name}</p>
-                                                </div>
-                                                <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${statusColors[moodboard.status].badge} ${statusColors[moodboard.status].text}`}>
-                                                    {statusLabels[moodboard.status]}
-                                                </span>
-                                            </div>
-                                        </div>
+                    {/* Data Table */}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[900px]">
+                            <thead>
+                                <tr className="bg-slate-50 border-b border-slate-200">
+                                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">Project & Client</th>
+                                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">Deadline</th>
+                                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 text-center">Design Preview</th>
+                                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 text-center">Status Upload</th>
+                                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 text-center">Progress</th>
+                                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 text-right pr-6"></th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {filteredMoodboards.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="px-6 py-16 text-center">
+                                            <svg className="w-12 h-12 text-slate-200 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                            <p className="text-sm text-slate-400 font-medium">Tidak ada moodboard yang ditemukan</p>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredMoodboards.map((moodboard) => {
+                                        const isExpanded = expandedCards.has(moodboard.id);
+                                        const order = moodboard.order;
+                                        if (!order) return null;
 
-                                        {/* Task Response Deadline - REGULAR */}
-                                        {!isKepalaMarketing && taskResponseRegular && taskResponseRegular.status !== 'selesai' && (
-                                            <div className="mb-4">
-                                                <div className={`p-3 rounded-lg border ${
-                                                    daysLeftRegular !== null && daysLeftRegular < 0 
-                                                        ? 'bg-red-50 border-red-200' 
-                                                        : daysLeftRegular !== null && daysLeftRegular <= 3
-                                                        ? 'bg-orange-50 border-orange-200'
-                                                        : 'bg-yellow-50 border-yellow-200'
-                                                }`}>
-                                                    <div className="flex justify-between items-center">
-                                                        <div>
-                                                            <p className={`text-xs font-semibold mb-1 ${
-                                                                daysLeftRegular !== null && daysLeftRegular < 0
-                                                                    ? 'text-red-900'
-                                                                    : daysLeftRegular !== null && daysLeftRegular <= 3
-                                                                    ? 'text-orange-900'
-                                                                    : 'text-yellow-900'
-                                                            }`}>
-                                                                {daysLeftRegular !== null && daysLeftRegular < 0 ? '⚠️ Deadline Terlewat' : '⏰ Deadline Estimasi'}
-                                                            </p>
-                                                            <p className={`text-xs ${
-                                                                daysLeftRegular !== null && daysLeftRegular < 0
-                                                                    ? 'text-red-700'
-                                                                    : daysLeftRegular !== null && daysLeftRegular <= 3
-                                                                    ? 'text-orange-700'
-                                                                    : 'text-yellow-700'
-                                                            }`}>
-                                                                {formatDeadline(taskResponseRegular.deadline)}
-                                                            </p>
-                                                            {daysLeftRegular !== null && (
-                                                                <p className={`text-xs mt-1 font-medium ${
-                                                                    daysLeftRegular < 0 
-                                                                        ? 'text-red-700'
-                                                                        : daysLeftRegular <= 3
-                                                                        ? 'text-orange-700'
-                                                                        : 'text-yellow-700'
-                                                                }`}>
-                                                                    {daysLeftRegular < 0 
-                                                                        ? `Terlambat ${Math.abs(daysLeftRegular)} hari` 
-                                                                        : `${daysLeftRegular} hari lagi`}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                        <button
-                                                            onClick={() => orderId && setShowExtendModal({ orderId, tahap: 'estimasi', isMarketing: false, taskResponse: taskResponseRegular })}
-                                                            className="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-medium hover:bg-orange-600 transition-colors"
-                                                        >
-                                                            Minta Perpanjangan
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
+                                        const taskResponsesData = taskResponses[order.id];
+                                        const deadline = taskResponsesData?.regular?.deadline || taskResponsesData?.marketing?.deadline;
+                                        
+                                        const totalFiles = moodboard.kasar_files.length;
+                                        const uploadedFiles = moodboard.kasar_files.filter(f => f.estimasi_file).length;
+                                        const progress = totalFiles > 0 ? (uploadedFiles / totalFiles) * 100 : 0;
 
-                                        {/* Task Response Deadline - MARKETING (Kepala Marketing only) */}
-                                        {isKepalaMarketing && taskResponseMarketing && taskResponseMarketing.status !== 'selesai' && (
-                                            <div className="mb-4">
-                                                <div className={`p-3 rounded-lg border bg-purple-50 border-purple-200`}>
-                                                    <div className="flex justify-between items-center">
-                                                        <div>
-                                                            <p className="text-xs font-semibold mb-1 text-purple-900">
-                                                                ⏰ Deadline Estimasi (Marketing)
-                                                            </p>
-                                                            <p className="text-xs text-purple-700">
-                                                                {formatDeadline(taskResponseMarketing.deadline)}
-                                                            </p>
-                                                            {daysLeftMarketing !== null && (
-                                                                <p className="text-xs mt-1 font-medium text-purple-700">
-                                                                    {daysLeftMarketing < 0 
-                                                                        ? `Terlambat ${Math.abs(daysLeftMarketing)} hari` 
-                                                                        : `${daysLeftMarketing} hari lagi`}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                        <button
-                                                            onClick={() => orderId && setShowExtendModal({ orderId, tahap: 'estimasi', isMarketing: true, taskResponse: taskResponseMarketing })}
-                                                            className="px-3 py-1.5 bg-purple-500 text-white rounded-lg text-xs font-medium hover:bg-purple-600 transition-colors"
-                                                        >
-                                                            Minta Perpanjangan
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Estimasi Response Info */}
-                                        {isNotKepalaMarketing && !moodboard.estimasi && (
-                                            <div className="mb-4">
-                                                <button
-                                                    onClick={() => handleResponseEstimasi(moodboard)}
-                                                    disabled={loading}
-                                                    className="w-full px-4 py-3 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-lg transition-all disabled:opacity-50"
+                                        return (
+                                            <Fragment key={moodboard.id}>
+                                                <tr 
+                                                    className={`group cursor-pointer transition-colors duration-200 ${isExpanded ? 'bg-indigo-50/30' : 'hover:bg-slate-50/70'}`}
+                                                    onClick={() => toggleExpand(moodboard.id)}
                                                 >
-                                                    {loading ? 'Memproses...' : 'Buat Response Estimasi'}
-                                                </button>
-                                            </div>
-                                        )}
+                                                    {/* Project Info */}
+                                                    <td className="px-5 py-4">
+                                                        <div className="font-bold text-slate-800 text-sm leading-tight transition-colors group-hover:text-indigo-600">{order.nama_project}</div>
+                                                        <div className="text-xs text-slate-400 mt-1 font-medium italic">{order.company_name}</div>
+                                                    </td>
 
-                                        {moodboard.estimasi && (
-                                            <div className="mb-4">
-                                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                                    <p className="text-xs font-semibold text-blue-900 mb-1">Response Estimasi:</p>
-                                                    <p className="text-xs text-blue-700">Oleh: {moodboard.estimasi.response_by}</p>
-                                                    <p className="text-xs text-blue-700">
-                                                        Waktu: {moodboard.estimasi.response_time ? new Date(moodboard.estimasi.response_time).toLocaleString('id-ID') : '-'}
-                                                    </p>
-                                                </div>
+                                                    {/* Deadline */}
+                                                    <td className="px-5 py-4">
+                                                        <div className="text-xs text-slate-600 font-bold whitespace-nowrap">
+                                                            {formatDeadline(deadline)}
+                                                        </div>
+                                                        {taskResponsesData?.regular?.extend_time! > 0 && (
+                                                            <div className="mt-1 flex items-center gap-1">
+                                                                <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 text-[9px] font-bold rounded border border-indigo-100 uppercase italic">
+                                                                    {taskResponsesData.regular?.extend_time}x Ext
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </td>
 
-                                                {/* PM Response Badge */}
-                                                {moodboard.estimasi.pm_response_time && (
-                                                    <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-2">
-                                                        <p className="text-xs font-semibold text-purple-900">✓ PM Response:</p>
-                                                        <p className="text-xs text-purple-700">By: {moodboard.estimasi.pm_response_by}</p>
-                                                        <p className="text-xs text-purple-700">
-                                                            {moodboard.estimasi.pm_response_time ? new Date(moodboard.estimasi.pm_response_time).toLocaleString('id-ID') : '-'}
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* Marketing Response Button - INDEPENDENT */}
-                                        {isKepalaMarketing && !moodboard.pm_response_time && (
-                                            <div className="mb-4">
-                                                <button
-                                                    onClick={() => handlePmResponse(moodboard.order_id)}
-                                                    className="w-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg transition-all"
-                                                >
-                                                    Marketing Response
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        {/* PM Response Badge */}
-                                        {moodboard.pm_response_time && (
-                                            <div className="mb-4 bg-purple-50 border border-purple-200 rounded-lg p-3">
-                                                <p className="text-xs font-semibold text-purple-900">✓ PM Response</p>
-                                                <p className="text-xs text-purple-700">By: {moodboard.pm_response_by}</p>
-                                                <p className="text-xs text-purple-700">
-                                                    {new Date(moodboard.pm_response_time).toLocaleString('id-ID')}
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        {/* Kasar Files List */}
-                                        {moodboard.estimasi && moodboard.kasar_files.length > 0 && (
-                                            <div>
-                                                <p className="text-sm font-semibold text-stone-700 mb-3">
-                                                    File Desain Kasar ({moodboard.kasar_files.length}):
-                                                </p>
-                                                <div className="space-y-3">
-                                                    {moodboard.kasar_files.map((kasarFile, idx) => (
-                                                        <div key={kasarFile.id} className="border border-stone-200 rounded-lg p-3 bg-stone-50">
-                                                            <div className="flex items-start gap-3">
-                                                                {/* Preview Image with Click to Enlarge */}
-                                                                <div 
-                                                                    className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-stone-200 cursor-pointer hover:ring-2 hover:ring-blue-300 transition-all"
-                                                                    onClick={() => openPreviewModal(kasarFile.url, kasarFile.original_name, 'kasar')}
-                                                                >
-                                                                    <img
-                                                                        src={kasarFile.url}
-                                                                        alt={kasarFile.original_name}
-                                                                        className="w-full h-full object-cover hover:scale-105 transition-transform"
-                                                                    />
+                                                    {/* Design Preview */}
+                                                    <td className="px-5 py-4 text-center">
+                                                        <div className="flex items-center justify-center -space-x-1.5">
+                                                            {moodboard.kasar_files.slice(0, 3).map((file) => (
+                                                                <img 
+                                                                    key={file.id}
+                                                                    src={file.url} 
+                                                                    className="w-8 h-8 rounded-lg object-cover border-2 border-white shadow-sm ring-1 ring-slate-100"
+                                                                    alt="Design"
+                                                                />
+                                                            ))}
+                                                            {totalFiles > 3 && (
+                                                                <div className="w-8 h-8 rounded-lg bg-slate-50 border-2 border-white flex items-center justify-center text-[9px] font-black text-slate-300">
+                                                                    +{totalFiles - 3}
                                                                 </div>
+                                                            )}
+                                                        </div>
+                                                    </td>
 
-                                                                {/* File Info & Actions */}
-                                                                <div className="flex-1 min-w-0">
-                                                                    <div className="flex items-start justify-between gap-2 mb-2">
-                                                                        <div className="flex-1 min-w-0">
-                                                                            <p className="text-sm font-semibold text-stone-900 truncate mb-1">
-                                                                                File #{idx + 1}: {kasarFile.original_name}
-                                                                            </p>
-                                                                        </div>
-                                                                        {/* Kasar File Actions */}
-                                                                        <div className="flex gap-1">
-                                                                            <button
-                                                                                onClick={() => openPreviewModal(kasarFile.url, kasarFile.original_name, 'kasar')}
-                                                                                className="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded transition-all"
-                                                                                title="Preview Desain Kasar"
-                                                                            >
-                                                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                                                </svg>
-                                                                            </button>
-                                                                            <button
-                                                                                onClick={() => downloadFile(kasarFile.url, kasarFile.original_name)}
-                                                                                className="px-2 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 hover:bg-green-100 rounded transition-all"
-                                                                                title="Download Desain Kasar"
-                                                                            >
-                                                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                                                </svg>
-                                                                            </button>
-                                                                        </div>
+                                                    {/* Status Upload */}
+                                                    <td className="px-5 py-4 text-center">
+                                                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-black tracking-widest uppercase ${progress === 100 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                                                            <span className={`w-1 h-1 rounded-full ${progress === 100 ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                                                            {uploadedFiles}/{totalFiles} FILES
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Progress Bar */}
+                                                    <td className="px-5 py-4 min-w-[120px]">
+                                                        <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                                                            <div 
+                                                                className={`h-full transition-all duration-700 ease-out ${progress === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                                                                style={{ width: `${progress}%` }}
+                                                            ></div>
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Actions */}
+                                                    <td className="px-5 py-4 pr-6 text-right" onClick={(e) => e.stopPropagation()}>
+                                                        <div className="flex items-center justify-end gap-1 text-slate-300">
+                                                            <div className={`p-1.5 rounded-lg transition-all pointer-events-none ${isExpanded ? 'bg-indigo-600 text-white shadow-lg' : ''}`}>
+                                                                <svg className={`w-3.5 h-3.5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                                </svg>
+                                                            </div>
+
+                                                            {isKepalaMarketing && !moodboard.estimasi?.pm_response_time && (
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); handlePmResponse(order.id); }}
+                                                                    className="p-1.5 hover:bg-violet-50 hover:text-violet-500 rounded-lg transition-all"
+                                                                    title="Marketing Review"
+                                                                >
+                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                                    </svg>
+                                                                </button>
+                                                            )}
+                                                            
+                                                            {!moodboard.estimasi && isNotKepalaMarketing && (
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); handleResponseEstimasi(moodboard); }}
+                                                                    className="p-1.5 hover:bg-indigo-50 hover:text-indigo-500 rounded-lg transition-all"
+                                                                    title="Input Estimasi"
+                                                                >
+                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                                                    </svg>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+
+                                                {/* Expanded Content */}
+                                                {isExpanded && (
+                                                    <tr>
+                                                        <td colSpan={6} className="bg-slate-50/50 px-8 py-8 border-b border-indigo-50">
+                                                            <div className="animate-in fade-in slide-in-from-top-1 duration-300">
+                                                                <div className="flex items-center justify-between mb-6 pb-4 border-b border-indigo-100/50">
+                                                                    <div>
+                                                                        <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-widest italic leading-none">Management Repository</h4>
+                                                                        <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-tighter">Setiap file desain kasar harus memiliki file estimasi yang sesuai</p>
                                                                     </div>
-                                                                    
-                                                                    {kasarFile.estimasi_file ? (
-                                                                        <div className="space-y-2">
-                                                                            <div className="flex items-center gap-2">
-                                                                                <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                                                </svg>
-                                                                                <span className="text-xs font-medium text-emerald-700">
-                                                                                    ✓ Estimasi sudah diupload
-                                                                                </span>
-                                                                            </div>
-                                                                            <div className="flex flex-wrap gap-1">
-                                                                                {/* Estimasi File Actions */}
-                                                                                <button
-                                                                                    onClick={() => openPreviewModal(kasarFile.estimasi_file!.url, kasarFile.estimasi_file!.original_name, 'estimasi')}
-                                                                                    className="px-2 py-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100 rounded transition-all"
-                                                                                    title="Preview Estimasi"
-                                                                                >
-                                                                                    <svg className="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                                                    </svg>
-                                                                                    Preview
-                                                                                </button>
-                                                                                <button
-                                                                                    onClick={() => downloadFile(kasarFile.estimasi_file!.url, kasarFile.estimasi_file!.original_name)}
-                                                                                    className="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded transition-all"
-                                                                                    title="Download Estimasi"
-                                                                                >
-                                                                                    <svg className="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                                                    </svg>
-                                                                                    Download
-                                                                                </button>
-                                                                                <button
-                                                                                    onClick={() => openUploadModal(moodboard, kasarFile)}
-                                                                                    className="px-2 py-1 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded transition-all"
-                                                                                    title="Update Estimasi"
-                                                                                >
-                                                                                    Update
-                                                                                </button>
-                                                                            </div>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div className="space-y-2">
-                                                                            <div className="flex items-center gap-2">
-                                                                                <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                                                                </svg>
-                                                                                <span className="text-xs font-medium text-amber-700">
-                                                                                    Belum upload estimasi
-                                                                                </span>
-                                                                            </div>
-                                                                            <button
-                                                                                onClick={() => openUploadModal(moodboard, kasarFile)}
-                                                                                className="px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 rounded transition-all"
-                                                                            >
-                                                                                Upload Estimasi
-                                                                            </button>
-                                                                        </div>
+                                                                    {taskResponsesData?.regular && taskResponsesData?.regular?.status !== 'selesai' && (
+                                                                        <button
+                                                                            onClick={() => setShowExtendModal({
+                                                                                orderId: order.id,
+                                                                                tahap: 'estimasi',
+                                                                                isMarketing: false,
+                                                                                taskResponse: taskResponsesData.regular!
+                                                                            })}
+                                                                            className="px-4 py-2 bg-white border border-slate-200 text-[11px] font-bold text-slate-600 rounded-xl shadow-sm hover:bg-slate-50 transition-all uppercase tracking-wider"
+                                                                        >
+                                                                            Minta Perpanjangan
+                                                                        </button>
                                                                     )}
                                                                 </div>
+
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                                    {moodboard.kasar_files.map((file) => (
+                                                                        <div key={file.id} className="bg-white rounded-xl border border-slate-100 p-3 shadow-sm hover:border-indigo-200 transition-colors">
+                                                                            <div className="flex gap-4">
+                                                                                <img 
+                                                                                    src={file.url} 
+                                                                                    className="w-16 h-16 rounded-lg object-cover cursor-pointer hover:opacity-80 transition-opacity ring-1 ring-slate-100"
+                                                                                    alt="Preview"
+                                                                                    onClick={() => openPreviewModal(file.url, file.original_name, 'kasar')}
+                                                                                />
+                                                                                <div className="flex-grow min-w-0 flex flex-col justify-between py-0.5">
+                                                                                    <h5 className="text-[10px] font-bold text-slate-700 truncate" title={file.original_name}>
+                                                                                        {file.original_name}
+                                                                                    </h5>
+                                                                                    {file.estimasi_file ? (
+                                                                                        <div className="flex flex-col gap-1.5">
+                                                                                            <span className="text-[9px] font-black text-emerald-500 uppercase tracking-tighter leading-none italic">✓ Estimasi Ready</span>
+                                                                                            <div className="flex gap-1.5">
+                                                                                                <button 
+                                                                                                    onClick={() => openPreviewModal(file.estimasi_file!.url, file.estimasi_file!.original_name, 'estimasi')}
+                                                                                                    className="flex-1 py-1.5 bg-indigo-600 text-white rounded text-[9px] font-black uppercase hover:bg-indigo-700 transition-colors shadow-sm"
+                                                                                                >
+                                                                                                    Preview
+                                                                                                </button>
+                                                                                                <button 
+                                                                                                    onClick={() => downloadFile(file.estimasi_file!.url, file.estimasi_file!.original_name)}
+                                                                                                    className="px-2 py-1.5 bg-slate-50 text-slate-400 rounded hover:bg-slate-100 transition-colors border border-slate-200"
+                                                                                                >
+                                                                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                                                                    </svg>
+                                                                                                </button>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <div className="flex flex-col gap-2 transition-all p-1">
+                                                                                            <span className="text-[9px] font-black text-amber-500 uppercase tracking-tighter leading-none italic">Waiting Estimation</span>
+                                                                                            {moodboard.estimasi && isNotKepalaMarketing ? (
+                                                                                                <button 
+                                                                                                    onClick={() => openUploadModal(moodboard, file)}
+                                                                                                    className="py-1.5 bg-white border border-dashed border-indigo-200 text-indigo-500 rounded text-[9px] font-black uppercase hover:bg-indigo-50 transition-colors shadow-sm"
+                                                                                                >
+                                                                                                    Upload
+                                                                                                </button>
+                                                                                            ) : (
+                                                                                                <div className="w-full h-2 bg-slate-100 rounded-full animate-pulse"></div>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })
-                    )}
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </Fragment>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 {/* Upload Modal */}
-                {showUploadModal && selectedMoodboard && selectedKasarFile && (
-                    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-                            <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
-                                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3v-5" />
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h2 className="text-base sm:text-lg font-bold text-white">Upload Estimasi</h2>
-                                        <p className="text-xs text-indigo-100 mt-0.5">{selectedKasarFile.original_name}</p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        setShowUploadModal(false);
-                                        setUploadFile(null);
-                                        setSelectedKasarFile(null);
-                                    }}
-                                    className="text-white/80 hover:text-white transition-colors p-1"
-                                >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {showUploadModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 border border-white/20">
+                            <div className="px-6 py-4 border-b border-slate-50 flex items-center justify-between">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">File Authentication</h3>
+                                <button onClick={() => setShowUploadModal(false)} className="hover:bg-slate-50 p-2 rounded-xl transition-colors text-slate-300">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                     </svg>
                                 </button>
                             </div>
-
-                            <form onSubmit={(e) => { e.preventDefault(); handleUploadEstimasi(); }} className="p-4 sm:p-6 space-y-4">
-                                {/* Preview Kasar File */}
-                                <div className="bg-stone-50 border border-stone-200 rounded-lg p-3">
-                                    <p className="text-xs font-semibold text-stone-700 mb-2">File Desain Kasar:</p>
-                                    <img
-                                        src={selectedKasarFile.url}
-                                        alt={selectedKasarFile.original_name}
-                                        className="w-full h-32 object-cover rounded border border-stone-200"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs sm:text-sm font-semibold text-stone-700 mb-2">
-                                        File Estimasi
-                                    </label>
-                                    <div className="relative border-2 border-dashed border-indigo-300 rounded-lg p-4 sm:p-6 text-center hover:border-indigo-400 transition-colors">
-                                        <input
-                                            type="file"
-                                            accept=".jpg,.jpeg,.png,.pdf"
-                                            onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                                            className="hidden"
-                                            id="estimasi-upload"
-                                            required
-                                        />
-                                        <label htmlFor="estimasi-upload" className="cursor-pointer">
-                                            {uploadFile ? (
-                                                <div className="text-center">
-                                                    <svg className="w-8 h-8 text-emerald-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                    </svg>
-                                                    <p className="text-xs sm:text-sm font-medium text-emerald-700">{uploadFile.name}</p>
-                                                    <p className="text-xs text-stone-500 mt-1">
-                                                        {(uploadFile.size / 1024 / 1024).toFixed(2)} MB
-                                                    </p>
-                                                </div>
-                                            ) : (
-                                                <div>
-                                                    <svg className="w-8 h-8 text-indigo-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3v-5" />
-                                                    </svg>
-                                                    <p className="text-xs sm:text-sm font-medium text-stone-900">
-                                                        Drag & drop atau klik untuk upload
-                                                    </p>
-                                                    <p className="text-xs text-stone-500 mt-1">JPG, PNG, PDF (Max 10MB)</p>
-                                                </div>
-                                            )}
-                                        </label>
+                            <div className="p-8">
+                                <div className="mb-6 flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <img src={selectedKasarFile?.url} className="w-12 h-12 rounded-xl object-cover ring-4 ring-white shadow-sm" />
+                                    <div className="min-w-0">
+                                        <div className="text-[11px] font-black text-slate-800 truncate uppercase tracking-tight">{selectedKasarFile?.original_name}</div>
+                                        <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest italic mt-0.5">Reference Document</div>
                                     </div>
                                 </div>
 
-                                <div className="flex gap-2 sm:gap-3 pt-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setShowUploadModal(false);
-                                            setUploadFile(null);
-                                            setSelectedKasarFile(null);
-                                        }}
-                                        className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm border border-stone-300 text-stone-700 rounded-lg hover:bg-stone-50 transition-colors font-medium"
-                                        disabled={loading}
+                                <div className="mb-8">
+                                    <input
+                                        type="file"
+                                        id="estimasi-file"
+                                        className="hidden"
+                                        onChange={(e) => setUploadFile(e.target.files ? e.target.files[0] : null)}
+                                        accept=".pdf,image/*"
+                                    />
+                                    <label
+                                        htmlFor="estimasi-file"
+                                        className={`group block border-2 border-dashed rounded-2xl p-10 cursor-pointer transition-all duration-300 text-center ${
+                                            uploadFile ? 'bg-indigo-50 border-indigo-300' : 'bg-slate-50 border-slate-200 hover:border-indigo-400 hover:bg-white shadow-inner'
+                                        }`}
                                     >
-                                        Batal
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={loading || !uploadFile}
-                                        className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:from-indigo-600 hover:to-indigo-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {loading ? 'Memproses...' : 'Upload'}
-                                    </button>
+                                        <div className="flex flex-col items-center">
+                                            <div className={`w-12 h-12 rounded-full mb-3 flex items-center justify-center transition-all ${uploadFile ? 'bg-indigo-500 text-white scale-110' : 'bg-slate-200 text-slate-400 group-hover:scale-110 group-hover:bg-indigo-100 group-hover:text-indigo-500'}`}>
+                                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                                </svg>
+                                            </div>
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none group-hover:text-indigo-600">
+                                                {uploadFile ? uploadFile.name : 'Verify & Upload'}
+                                            </span>
+                                            <span className="text-[8px] text-slate-300 mt-2 uppercase font-bold">Standard PDF / JPEG protocol</span>
+                                        </div>
+                                    </label>
                                 </div>
-                            </form>
+
+                                <button
+                                    onClick={handleUploadEstimasi}
+                                    disabled={loading || !uploadFile}
+                                    className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest shadow-2xl shadow-slate-200 hover:bg-black disabled:bg-slate-50 disabled:text-slate-200 transition-all active:scale-[0.98] text-[10px]"
+                                >
+                                    {loading ? 'Processing...' : 'Deploy Estimation'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
 
                 {/* Preview Modal */}
                 {showPreviewModal && previewFile && (
-                    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/75 backdrop-blur-sm p-2 sm:p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden">
-                            {/* Header */}
-                            <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                        previewFile.type === 'kasar' 
-                                            ? 'bg-blue-500/20' 
-                                            : 'bg-purple-500/20'
-                                    }`}>
-                                        {previewFile.type === 'kasar' ? (
-                                            <svg className="w-4 h-4 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                        ) : (
-                                            <svg className="w-4 h-4 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                            </svg>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <h2 className="text-base sm:text-lg font-bold text-white">
-                                            Preview {previewFile.type === 'kasar' ? 'Desain Kasar' : 'File Estimasi'}
-                                        </h2>
-                                        <p className="text-xs text-slate-200 mt-0.5 truncate max-w-60 sm:max-w-96">
-                                            {previewFile.name}
-                                        </p>
-                                    </div>
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/95 backdrop-blur-xl animate-in fade-in duration-500">
+                        <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[90vh] ring-1 ring-white/20">
+                            <div className="px-8 py-5 border-b border-slate-50 flex items-center justify-between bg-white/80 backdrop-blur-md">
+                                <div className="min-w-0">
+                                    <h3 className="text-sm font-black text-slate-800 truncate uppercase tracking-tight">{previewFile.name}</h3>
+                                    <p className="text-[9px] text-slate-300 uppercase font-black tracking-widest italic mt-0.5">{previewFile.type === 'kasar' ? 'Visual Architect Draft' : 'Validated Financial Estimation'}</p>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    {/* Download Button in Header */}
-                                    <button
+                                <div className="flex items-center gap-3">
+                                    <button 
                                         onClick={() => downloadFile(previewFile.url, previewFile.name)}
-                                        className="p-2 text-slate-200 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                                        title="Download File"
+                                        className="p-3 bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-2xl transition-all border border-slate-100"
                                     >
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                         </svg>
                                     </button>
-                                    {/* Close Button */}
-                                    <button
-                                        onClick={() => {
-                                            setShowPreviewModal(false);
-                                            setPreviewFile(null);
-                                        }}
-                                        className="p-2 text-slate-200 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                                    >
+                                    <button onClick={() => setShowPreviewModal(false)} className="p-3 bg-slate-50 text-slate-300 hover:text-slate-500 hover:bg-slate-100 rounded-2xl transition-all border border-slate-100">
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                         </svg>
                                     </button>
                                 </div>
                             </div>
-
-                            {/* Content */}
-                            <div className="p-4 sm:p-6 max-h-[calc(95vh-120px)] overflow-auto">
+                            <div className="flex-grow overflow-auto p-12 bg-slate-100/30">
                                 {isImageFile(previewFile.name) ? (
-                                    <div className="flex justify-center">
-                                        <img
-                                            src={previewFile.url}
-                                            alt={previewFile.name}
-                                            className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
-                                        />
+                                    <div className="flex items-center justify-center min-h-[50vh]">
+                                        <img src={previewFile.url} className="max-w-full rounded-3xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.15)] ring-8 ring-white" alt="Preview" />
                                     </div>
                                 ) : isPdfFile(previewFile.name) ? (
-                                    <div className="w-full" style={{ height: '70vh' }}>
-                                        <iframe
-                                            src={previewFile.url}
-                                            className="w-full h-full border rounded-lg"
-                                            title={previewFile.name}
-                                        />
-                                    </div>
+                                    <iframe src={previewFile.url} className="w-full h-full min-h-[65vh] border-0 rounded-3xl bg-white shadow-2xl" />
                                 ) : (
-                                    <div className="text-center py-12">
-                                        <div className="max-w-md mx-auto">
-                                            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                                                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                </svg>
-                                            </div>
-                                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                                Preview Tidak Tersedia
-                                            </h3>
-                                            <p className="text-sm text-gray-600 mb-4">
-                                                File ini tidak dapat dipratinjau di browser. Silakan unduh untuk melihat konten.
-                                            </p>
-                                            <button
-                                                onClick={() => downloadFile(previewFile.url, previewFile.name)}
-                                                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                                            >
-                                                Download File
-                                            </button>
+                                    <div className="h-full flex flex-col items-center justify-center py-20 text-center">
+                                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
+                                            <svg className="w-8 h-8 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
                                         </div>
+                                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] italic leading-relaxed">System cannot render this format extension.<br/>Please proceed with manual decryption/download.</p>
                                     </div>
                                 )}
                             </div>
-
-                            {/* Footer Actions */}
-                            <div className="px-4 sm:px-6 py-4 bg-gray-50 border-t flex justify-between items-center">
-                                <div className="text-xs text-gray-500">
-                                    {previewFile.type === 'kasar' ? 'File Desain Kasar' : 'File Estimasi'}
-                                </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => downloadFile(previewFile.url, previewFile.name)}
-                                        className="px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded-lg transition-colors"
-                                    >
-                                        Download
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setShowPreviewModal(false);
-                                            setPreviewFile(null);
-                                        }}
-                                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors"
-                                    >
-                                        Tutup
-                                    </button>
-                                </div>
+                            <div className="px-8 py-6 border-t border-slate-50 flex justify-end gap-4 bg-white/80 backdrop-blur-md">
+                                <button onClick={() => setShowPreviewModal(false)} className="px-8 py-3 text-slate-300 text-[10px] font-black uppercase tracking-widest hover:text-slate-600 transition-colors">Abort Review</button>
+                                <button 
+                                    onClick={() => downloadFile(previewFile.url, previewFile.name)}
+                                    className="px-12 py-3 bg-indigo-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-[0_20px_40px_-10px_rgba(79,70,229,0.3)] hover:bg-indigo-700 transition-all hover:-translate-y-1 active:translate-y-0"
+                                >
+                                    Download Object
+                                </button>
                             </div>
                         </div>
                     </div>

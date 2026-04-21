@@ -486,27 +486,47 @@ export default function Detail({
                     <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                         {/* Header */}
                         <div className="mb-8">
-                            <button
-                                onClick={() =>
-                                    router.get('/project-management')
-                                }
-                                className="mb-6 inline-flex transform items-center rounded-xl border-2 border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-gray-50 hover:shadow-lg"
-                            >
-                                <svg
-                                    className="mr-2 h-5 w-5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
+                            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+                                <button
+                                    onClick={() =>
+                                        router.get('/project-management')
+                                    }
+                                    className="inline-flex transform items-center rounded-xl border-2 border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-gray-50 hover:shadow-lg"
                                 >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                                    />
-                                </svg>
-                                Kembali
-                            </button>
+                                    <svg
+                                        className="mr-2 h-5 w-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                                        />
+                                    </svg>
+                                    Kembali
+                                </button>
+
+                                <div className="flex flex-wrap gap-3">
+                                    <a
+                                        href={`/project-management/${order.id}/export-pdf`}
+                                        target="_blank"
+                                        className="inline-flex transform items-center rounded-xl border-2 border-rose-500 bg-rose-50 px-5 py-3 text-sm font-semibold text-rose-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-rose-100 hover:shadow-lg"
+                                    >
+                                        <span className="mr-2">📄</span>
+                                        Export PDF
+                                    </a>
+                                    <a
+                                        href={`/project-management/${order.id}/export-excel`}
+                                        className="inline-flex transform items-center rounded-xl border-2 border-emerald-500 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-emerald-100 hover:shadow-lg"
+                                    >
+                                        <span className="mr-2">📊</span>
+                                        Export Excel
+                                    </a>
+                                </div>
+                            </div>
                             {order.item_pekerjaans.map((itemPekerjaan) => {
                                 const statusPerpanjangan:
                                     | 'none'

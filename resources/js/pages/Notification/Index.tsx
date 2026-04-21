@@ -721,10 +721,8 @@ export default function Index({ notifications, unreadCount }: Props) {
                                 </div>
                                 <div>
                                     <h1
-                                        className="text-2xl font-bold text-stone-800"
-                                        style={{
-                                            fontFamily:
-                                                "'Playfair Display', serif",
+                                        className="text-2xl font-bold text-slate-800"
+                                        style={{,
                                         }}
                                     >
                                         Notifikasi
@@ -756,7 +754,7 @@ export default function Index({ notifications, unreadCount }: Props) {
                         {notifications.data.length === 0 ? (
                             <div className="rounded-xl border-2 border-stone-200 bg-white p-12 text-center">
                                 <Bell className="mx-auto mb-4 h-16 w-16 text-stone-300" />
-                                <h3 className="mb-2 text-lg font-semibold text-stone-800">
+                                <h3 className="mb-2 text-lg font-semibold text-slate-800">
                                     Tidak Ada Notifikasi
                                 </h3>
                                 <p className="text-stone-500">
@@ -800,7 +798,7 @@ export default function Index({ notifications, unreadCount }: Props) {
                                             {/* Content */}
                                             <div className="min-w-0 flex-1">
                                                 <div className="mb-2 flex items-start justify-between gap-3">
-                                                    <h3 className="text-base font-semibold text-stone-800">
+                                                    <h3 className="text-base font-semibold text-slate-800">
                                                         {notification.title}
                                                     </h3>
                                                     <div className="flex items-center gap-2">

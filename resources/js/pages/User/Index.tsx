@@ -227,7 +227,7 @@ export default function Index({ users }: Props) {
                     <div className={`flex items-center justify-between mb-5 ${mounted ? 'fadeInUp' : 'opacity-0'}`}>
                         <div>
                             <div className="flex items-center gap-2.5 mb-1.5">
-                                <h1 className="text-2xl font-light tracking-tight text-stone-800" style={{ fontFamily: "'Playfair Display', serif" }}>
+                                <h1 className="text-2xl font-bold tracking-tight tracking-tight text-slate-800" >
                                     User Management
                                 </h1>
                                 <span className="flex h-2.5 w-2.5">

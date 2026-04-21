@@ -184,29 +184,22 @@ export default function Edit({ survey }: { survey: Survey }) {
                             </div>
                         )}
 
-                        {/* FOTO BARU */}
+                        {/* FILE BARU */}
                         <div>
                             <label className="font-semibold text-sm mb-1 block">
-                                Upload Foto Baru
+                                Upload File Baru
                             </label>
 
                             <input
                                 type="file"
-                                accept="image/*"
                                 multiple
                                 onChange={handleFotoBaruChange}
                                 className="border p-2 rounded w-full"
                             />
 
                             {fotoBaru.length > 0 && (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
-                                    {fotoBaru.map((file, i) => (
-                                        <img
-                                            key={i}
-                                            src={URL.createObjectURL(file)}
-                                            className="rounded shadow h-28 object-cover"
-                                        />
-                                    ))}
+                                <div className="mt-2 text-xs text-stone-600">
+                                    {fotoBaru.length} file dipilih.
                                 </div>
                             )}
                         </div>

@@ -42,6 +42,7 @@ export default function ApprovalRabIndex({ items }: Props) {
     const { props } = usePage();
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('semua');
     // Dual task response state
     const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: any; marketing?: any }>>({});
     const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: any } | null>(null);
@@ -151,6 +152,18 @@ export default function ApprovalRabIndex({ items }: Props) {
     }, [items]);
 
     const filtered = items.filter((row) => {
+        // Status filter
+        let meetsStatus = true;
+        if (statusFilter === 'pending_response') {
+            meetsStatus = !row.approval_rab_response_time;
+        } else if (statusFilter === 'responded') {
+            meetsStatus = !!row.approval_rab_response_time;
+        } else if (statusFilter === 'marketing_responded') {
+            meetsStatus = !!row.pm_approval_rab_response_time;
+        }
+
+        if (!meetsStatus) return false;
+
         const s = search.toLowerCase();
         return (
             row.project_name.toLowerCase().includes(s) ||
@@ -180,7 +193,7 @@ export default function ApprovalRabIndex({ items }: Props) {
                             </svg>
                         </div>
                         <div>
-                            <h1 className="text-3xl font-light text-stone-800">
+                            <h1 className="text-3xl font-bold tracking-tight text-slate-800">
                                 Approval Material
                             </h1>
                             <p className="text-sm text-stone-500">
@@ -189,276 +202,198 @@ export default function ApprovalRabIndex({ items }: Props) {
                         </div>
                     </div>
 
-                    {/* Search */}
-                    <div className="mb-6">
-                        <input
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Cari project / company / customer..."
-                            className="w-full rounded-lg border border-stone-200 px-4 py-2 text-sm focus:ring-amber-300 focus:border-amber-500"
-                        />
+                    {/* Filters */}
+                    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">
+                        <div className="relative flex-1">
+                            <input
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Cari project / company / customer..."
+                                className="w-full rounded-lg border border-stone-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-500 outline-none transition-shadow"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-stone-500 whitespace-nowrap">Status:</span>
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-500 outline-none min-w-[180px]"
+                            >
+                                <option value="semua">Semua Status</option>
+                                <option value="pending_response">Belum Response</option>
+                                <option value="responded">Sudah Response</option>
+                                <option value="marketing_responded">Marketing Responded</option>
+                            </select>
+                        </div>
                     </div>
 
-                    {/* List */}
-                    <div className="space-y-6">
-                        {filtered.length === 0 ? (
-                            <div className="rounded-lg border-2 border-dashed border-stone-200 bg-stone-50 p-10 text-center text-sm text-stone-500">
-                                Tidak ada data
-                            </div>
-                        ) : (
-                            filtered.map((row) => {
-                                const orderId = row.order_id;
-                                const taskResponse = orderId ? taskResponses[orderId]?.regular : null;
-                                const marketingTaskResponse = orderId ? taskResponses[orderId]?.marketing : null;
+                    {/* Table View */}
+                    <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm">
+                        <table className="w-full whitespace-nowrap text-left text-sm">
+                            <thead className="border-b border-slate-200 bg-[#f8fafc] text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                <tr>
+                                    <th className="px-5 py-4">Project / Client Info</th>
+                                    <th className="px-5 py-4">Items & Keterangan</th>
+                                    <th className="px-5 py-4">Deadline Info</th>
+                                    <th className="px-5 py-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 bg-white">
+                                {filtered.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={4} className="py-12 text-center text-stone-500">
+                                            Tidak ada data
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filtered.map((row) => {
+                                        const orderId = row.order_id;
+                                        const taskResponse = orderId ? taskResponses[orderId]?.regular : null;
+                                        const marketingTaskResponse = orderId ? taskResponses[orderId]?.marketing : null;
 
-                                console.log('Row data:', {
-                                    project: row.project_name,
-                                    pm_approval_rab_response_time: row.pm_approval_rab_response_time,
-                                    pm_approval_rab_response_by: row.pm_approval_rab_response_by,
-                                    isKepalaMarketing
-                                });
-
-                                return (
-                                <div
-                                    key={row.id}
-                                    className="rounded-lg border border-stone-200 bg-white shadow-sm hover:shadow-md transition"
-                                >
-                                    {/* Header */}
-                                    <div className="border-b bg-gradient-to-r from-amber-50 to-white p-6 flex justify-between gap-4">
-                                        <div>
-                                            <h3 className="text-xl font-semibold text-stone-800">
-                                                {row.project_name}
-                                            </h3>
-                                            <p className="text-sm text-stone-600 mt-1">
-                                                <strong>Company:</strong> {row.company_name}
-                                            </p>
-                                            <p className="text-sm text-stone-600">
-                                                <strong>Customer:</strong> {row.customer_name}
-                                            </p>
-
-                                            {/* Response Status Badges */}
-                                            <div className="mt-2 flex flex-wrap gap-2">
-                                                {row.approval_rab_response_time && (
-                                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 border border-green-300 rounded-md">
-                                                        <span className="text-green-700 text-xs">✓</span>
-                                                        <span className="text-xs font-medium text-green-800">
-                                                            Response: {row.approval_rab_response_by}
-                                                        </span>
+                                        return (
+                                            <tr key={row.id} className="transition-colors hover:bg-slate-50/50">
+                                                {/* Project Info */}
+                                                <td className="px-5 py-4 align-top">
+                                                    <div className="font-semibold text-slate-800 mb-1 max-w-[200px] whitespace-normal break-words leading-tight">
+                                                        {row.project_name}
                                                     </div>
-                                                )}
-                                                {row.pm_approval_rab_response_time && (
-                                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-100 border border-indigo-300 rounded-md">
-                                                        <span className="text-indigo-700 text-xs">✓</span>
-                                                        <span className="text-xs font-medium text-indigo-800">
-                                                            Marketing Response: {row.pm_approval_rab_response_by}
-                                                        </span>
+                                                    <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-2">
+                                                        <span className="truncate max-w-[150px] font-medium text-slate-700">{row.company_name}</span>
+                                                        <span>•</span>
+                                                        <span className="truncate max-w-[150px]">{row.customer_name}</span>
                                                     </div>
-                                                )}
-                                            </div>
-
-                                            {/* Deadline & Minta Perpanjangan - REGULAR */}
-                                            {taskResponse && taskResponse.status !== 'selesai' && (
-                                                <div className="mt-3">
-                                                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between gap-3">
-                                                        <div>
-                                                            <p className="text-xs font-medium text-yellow-800">
-                                                                Deadline Approval Material
-                                                            </p>
-                                                            <p className="text-sm font-semibold text-yellow-900">
-                                                                {formatDeadline(taskResponse.deadline)}
-                                                            </p>
-                                                            {taskResponse.extend_time > 0 && (
-                                                                <p className="mt-1 text-xs text-orange-600">
-                                                                    Perpanjangan: {taskResponse.extend_time}x
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                        <button
-                                                            onClick={() => orderId && setShowExtendModal({ orderId, tahap: 'approval_material', isMarketing: false, taskResponse })}
-                                                            className="px-3 py-1.5 bg-orange-500 text-white rounded-md text-xs font-medium hover:bg-orange-600 transition-colors"
-                                                        >
-                                                            Minta Perpanjangan
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {/* Deadline & Minta Perpanjangan - MARKETING (Kepala Marketing only) */}
-                                            {isKepalaMarketing && marketingTaskResponse && marketingTaskResponse.status !== 'selesai' && (
-                                                <div className="mt-3">
-                                                    <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg flex items-center justify-between gap-3">
-                                                        <div>
-                                                            <p className="text-xs font-medium text-purple-800">
-                                                                Deadline Approval Material (Marketing)
-                                                            </p>
-                                                            <p className="text-sm font-semibold text-purple-900">
-                                                                {formatDeadline(marketingTaskResponse.deadline)}
-                                                            </p>
-                                                            {marketingTaskResponse.extend_time > 0 && (
-                                                                <p className="mt-1 text-xs text-purple-600">
-                                                                    Perpanjangan: {marketingTaskResponse.extend_time}x
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                        <button
-                                                            onClick={() => orderId && setShowExtendModal({ orderId, tahap: 'approval_material', isMarketing: true, taskResponse: marketingTaskResponse })}
-                                                            className="px-3 py-1.5 bg-purple-500 text-white rounded-md text-xs font-medium hover:bg-purple-600 transition-colors"
-                                                        >
-                                                            Minta Perpanjangan (Marketing)
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Response Status Display */}
-                                            <div className="mt-4 space-y-2">
-                                                {/* Regular Response */}
-                                                {!isKepalaMarketing && !row.approval_rab_response_time ? (
-                                                    <button
-                                                        onClick={() => handleResponse(row.id)}
-                                                        className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                                                    >
-                                                        Response Approval Material
-                                                    
-                                                    
-                                                    </button>
-                                                ) : (
-                                                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                                                        <p className="text-xs font-semibold text-green-800 mb-2">
-                                                            ✓ Response Approval Material
-                                                        </p>
-                                                        <div className="space-y-1">
-                                                            <p className="text-xs text-green-700">
-                                                                <span className="font-medium">Direspon oleh:</span> {row.approval_rab_response_by}
-                                                            </p>
-                                                            <p className="text-xs text-green-600">
-                                                                <span className="font-medium">Waktu response:</span> {formatDateTime(row.approval_rab_response_time)}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* PM Response (Kepala Marketing only) */}
-                                                {isKepalaMarketing && (
-                                                    <>
-                                                        {row.pm_approval_rab_response_time ? (
-                                                            <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
-                                                                <p className="text-xs font-semibold text-indigo-800 mb-2">
-                                                                    ✓ Marketing Response
-                                                                </p>
-                                                                <div className="space-y-1">
-                                                                    <p className="text-xs text-indigo-700">
-                                                                        <span className="font-medium">Direspon oleh:</span> {row.pm_approval_rab_response_by}
-                                                                    </p>
-                                                                    <p className="text-xs text-indigo-600">
-                                                                        <span className="font-medium">Waktu response:</span> {formatDateTime(row.pm_approval_rab_response_time)}
-                                                                    </p>
-                                                                </div>
+                                                    <div className="flex flex-col gap-1.5 mt-2">
+                                                        {row.approval_rab_response_time && (
+                                                            <div className="inline-flex flex-col gap-0.5 px-2 py-1.5 bg-green-50 border border-green-200 rounded max-w-fit">
+                                                                <span className="text-[9px] font-bold text-green-700 uppercase tracking-wider">✓ Response: {row.approval_rab_response_by}</span>
+                                                                <span className="text-[10px] text-green-600">{formatDateTime(row.approval_rab_response_time)}</span>
                                                             </div>
-                                                        ) : (
+                                                        )}
+                                                        {row.pm_approval_rab_response_time && (
+                                                            <div className="inline-flex flex-col gap-0.5 px-2 py-1.5 bg-indigo-50 border border-indigo-200 rounded max-w-fit">
+                                                                <span className="text-[9px] font-bold text-indigo-700 uppercase tracking-wider">✓ PM Res: {row.pm_approval_rab_response_by}</span>
+                                                                <span className="text-[10px] text-indigo-600">{formatDateTime(row.pm_approval_rab_response_time)}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+
+                                                {/* Items & Keterangan */}
+                                                <td className="px-5 py-4 align-top">
+                                                    <div className="max-w-[300px] max-h-[160px] overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                                                        <div className="space-y-1.5">
+                                                            <h4 className="text-[10px] font-bold text-stone-500 uppercase">Items ({row.total_items})</h4>
+                                                            {row.items_preview.map((item, idx) => (
+                                                                <div key={idx} className="rounded border border-stone-200 bg-stone-50 p-1.5 whitespace-normal">
+                                                                    <div className="text-[11px] font-semibold text-slate-800 leading-tight">
+                                                                        • {item.item_name}
+                                                                    </div>
+                                                                    <div className="mt-0.5 text-[10px]">
+                                                                        {item.keterangan_material ? (
+                                                                            <span className="text-stone-600">↳ {item.keterangan_material}</span>
+                                                                        ) : (
+                                                                            <span className="italic text-amber-600">↳ belum ada keterangan</span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+
+                                                        {row.bahan_baku_preview && row.bahan_baku_preview.length > 0 && (
+                                                            <div className="space-y-1.5">
+                                                                <h4 className="text-[10px] font-bold text-green-600 uppercase">Bahan Baku ({row.total_bahan_baku})</h4>
+                                                                {row.bahan_baku_preview.map((bahan, idx) => (
+                                                                    <div key={idx} className="rounded border border-green-200 bg-green-50 p-1.5 whitespace-normal">
+                                                                        <div className="text-[11px] font-semibold text-slate-800 leading-tight">
+                                                                            • {bahan.item_name}
+                                                                        </div>
+                                                                        <div className="mt-0.5 text-[9px] text-stone-600 flex gap-2">
+                                                                            <span>Dasar: Rp{Number(bahan.harga_dasar).toLocaleString('id-ID')}</span>
+                                                                            <span>Jasa: Rp{Number(bahan.harga_jasa).toLocaleString('id-ID')}</span>
+                                                                        </div>
+                                                                        <div className="mt-0.5 text-[10px]">
+                                                                            {bahan.keterangan_bahan_baku ? (
+                                                                                <span className="text-stone-600">↳ {bahan.keterangan_bahan_baku}</span>
+                                                                            ) : (
+                                                                                <span className="italic text-amber-600">↳ belum ada keterangan</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+
+                                                {/* Deadline */}
+                                                <td className="px-5 py-4 align-top">
+                                                    <div className="space-y-2">
+                                                        {taskResponse && taskResponse.status !== 'selesai' && (
+                                                            <div className="inline-flex max-w-[200px] flex-col items-start gap-1 rounded-md border border-yellow-200 bg-yellow-50 px-2 py-1.5 w-full">
+                                                                <p className="text-[10px] font-bold text-yellow-800">Deadline Approval</p>
+                                                                <p className="text-[11px] font-semibold text-yellow-900">{formatDeadline(taskResponse.deadline)}</p>
+                                                                {taskResponse.extend_time > 0 && (
+                                                                    <p className="bg-yellow-200 px-1 py-0.5 rounded text-[9px] font-bold text-yellow-800">Ext: {taskResponse.extend_time}x</p>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => orderId && setShowExtendModal({ orderId, tahap: 'approval_material', isMarketing: false, taskResponse })}
+                                                                    className="mt-1 w-full rounded bg-orange-500 px-2 py-1 text-[10px] font-medium text-white transition hover:bg-orange-600 shadow-sm text-center"
+                                                                >Minta Extend</button>
+                                                            </div>
+                                                        )}
+
+                                                        {isKepalaMarketing && marketingTaskResponse && marketingTaskResponse.status !== 'selesai' && (
+                                                            <div className="inline-flex max-w-[200px] flex-col items-start gap-1 rounded-md border border-purple-200 bg-purple-50 px-2 py-1.5 w-full mt-1">
+                                                                <p className="text-[10px] font-bold text-purple-800">Deadline (Marketing)</p>
+                                                                <p className="text-[11px] font-semibold text-purple-900">{formatDeadline(marketingTaskResponse.deadline)}</p>
+                                                                {marketingTaskResponse.extend_time > 0 && (
+                                                                    <p className="bg-purple-200 px-1 py-0.5 rounded text-[9px] font-bold text-purple-800">Ext: {marketingTaskResponse.extend_time}x</p>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => orderId && setShowExtendModal({ orderId, tahap: 'approval_material', isMarketing: true, taskResponse: marketingTaskResponse })}
+                                                                    className="mt-1 w-full rounded bg-purple-500 px-2 py-1 text-[10px] font-medium text-white transition hover:bg-purple-600 shadow-sm text-center"
+                                                                >Minta Extend</button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+
+                                                {/* Actions */}
+                                                <td className="px-5 py-4 align-top text-right">
+                                                    <div className="flex flex-col items-end gap-1.5">
+                                                        <button
+                                                            onClick={() => router.visit(`/approval-material/${row.id}/edit`)}
+                                                            className="w-full rounded-md bg-amber-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-amber-700 text-center"
+                                                        >
+                                                            ✏️ Edit & Isi Keterangan
+                                                        </button>
+
+                                                        {isKepalaMarketing && !row.pm_approval_rab_response_time && (
                                                             <button
                                                                 onClick={() => handlePmResponse(row.id)}
-                                                                className="w-full px-4 py-2.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors"
+                                                                className="w-full rounded-md bg-purple-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-purple-700 text-center mt-1"
                                                             >
                                                                 Marketing Response
                                                             </button>
                                                         )}
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
 
-                                        <div className="flex flex-col gap-2">
-                                            <button
-                                                onClick={() =>
-                                                    router.visit(`/approval-material/${row.id}/edit`)
-                                                }
-                                                className="rounded-lg bg-amber-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-amber-700"
-                                            >
-                                                Edit Item & Isi Keterangan
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Body */}
-                                    <div className="p-6 space-y-4">
-                                        {/* Preview Item */}
-                                        <div className="space-y-2">
-                                            <h4 className="text-sm font-semibold text-stone-700 mb-2">
-                                                Items
-                                            </h4>
-                                            {row.items_preview.map((item, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    className="rounded-lg border border-stone-200 bg-stone-50 p-3"
-                                                >
-                                                    <div className="text-sm font-medium text-stone-800">
-                                                        • {item.item_name}
-                                                    </div>
-                                                    <div className="mt-1 text-xs">
-                                                        {item.keterangan_material ? (
-                                                            <span className="text-stone-600">
-                                                                ↳ {item.keterangan_material}
-                                                            </span>
-                                                        ) : (
-                                                            <span className="italic text-amber-600">
-                                                                ↳ belum ada keterangan
-                                                            </span>
+                                                        {!isKepalaMarketing && !row.approval_rab_response_time && (
+                                                            <button
+                                                                onClick={() => handleResponse(row.id)}
+                                                                className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-blue-700 text-center mt-1"
+                                                            >
+                                                                ✓ Response Approval
+                                                            </button>
                                                         )}
                                                     </div>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Preview Bahan Baku */}
-                                        {row.bahan_baku_preview && row.bahan_baku_preview.length > 0 && (
-                                            <div className="space-y-2">
-                                                <h4 className="text-sm font-semibold text-stone-700 mb-2">
-                                                    Bahan Baku
-                                                </h4>
-                                                {row.bahan_baku_preview.map((bahan, idx) => (
-                                                    <div
-                                                        key={idx}
-                                                        className="rounded-lg border border-green-200 bg-green-50 p-3"
-                                                    >
-                                                        <div className="text-sm font-medium text-stone-800">
-                                                            • {bahan.item_name}
-                                                        </div>
-                                                        <div className="mt-1 text-xs text-stone-600 space-x-3">
-                                                            <span>
-                                                                Harga Dasar: Rp {Number(bahan.harga_dasar).toLocaleString('id-ID')}
-                                                            </span>
-                                                            <span>
-                                                                Harga Jasa: Rp {Number(bahan.harga_jasa).toLocaleString('id-ID')}
-                                                            </span>
-                                                        </div>
-                                                        <div className="mt-1 text-xs">
-                                                            {bahan.keterangan_bahan_baku ? (
-                                                                <span className="text-stone-600">
-                                                                    ↳ {bahan.keterangan_bahan_baku}
-                                                                </span>
-                                                            ) : (
-                                                                <span className="italic text-amber-600">
-                                                                    ↳ belum ada keterangan
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        <div className="flex gap-3">
-                                            <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-800 flex-1">
-                                                <strong>Total Item:</strong> {row.total_items}
-                                            </div>
-                                            <div className="rounded-lg bg-green-50 p-4 text-sm text-green-800 flex-1">
-                                                <strong>Total Bahan Baku:</strong> {row.total_bahan_baku}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )})
-                        )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

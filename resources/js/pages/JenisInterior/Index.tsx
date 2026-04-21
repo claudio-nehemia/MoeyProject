@@ -121,7 +121,7 @@ useEffect(() => {
                 <div className="mb-6">
                     <h1
                         className="text-3xl font-bold bg-gradient-to-r from-teal-600 to-teal-400 bg-clip-text text-transparent mb-2"
-                        style={{ fontFamily: "Playfair Display, serif" }}
+                        
                     >
                         Jenis Interior Management
                     </h1>
@@ -157,7 +157,7 @@ useEffect(() => {
                                     </svg>
                                 </div>
                                 <div>
-                                    <h2 className="text-lg font-bold text-stone-800">
+                                    <h2 className="text-lg font-bold text-slate-800">
                                         All Interior Types
                                     </h2>
                                     <p className="text-xs text-stone-500">
@@ -230,7 +230,7 @@ useEffect(() => {
                                                     {jenisInterior.nama_interior.charAt(0).toUpperCase()}
                                                 </div>
                                                 <div>
-                                                    <div className="text-sm font-semibold text-stone-800">
+                                                    <div className="text-sm font-semibold text-slate-800">
                                                         {jenisInterior.nama_interior}
                                                     </div>
                                                 </div>

@@ -1,0 +1,48 @@
+﻿0001_01_01_000002_create_jobs_table.php: $table->integer('total_jobs');
+2025_11_09_144509_create_items_table.php: $table->decimal('harga', 18, 2)->default(0);
+2025_11_09_173752_add_harga_to_produks_table.php: $table->decimal('harga', 15, 2);
+2025_11_11_231208_create_commitment_fees_table.php: $table->decimal('total_fee', 15, 2)->nullable();
+2025_11_12_235504_create_rab_produks_table.php: $table->decimal('harga_dasar', 15, 2)->default(0)->comment('Harga dasar produk');
+2025_11_12_235504_create_rab_produks_table.php: $table->decimal('harga_items_non_aksesoris', 15, 2)->default(0)->comment('Total harga items (bahan baku + finishing)');
+2025_11_12_235504_create_rab_produks_table.php: $table->decimal('harga_dimensi', 15, 2)->default(0)->comment('Harga dari dimensi (P×L×T×Qty)');
+2025_11_12_235504_create_rab_produks_table.php: $table->decimal('harga_satuan', 15, 2)->default(0)->comment('Harga satuan setelah markup');
+2025_11_12_235504_create_rab_produks_table.php: $table->decimal('harga_total_aksesoris', 15, 2)->default(0)->comment('Total harga semua aksesoris');
+2025_11_12_235504_create_rab_produks_table.php: $table->decimal('harga_akhir', 15, 2)->default(0)->comment('Harga final produk');
+2025_11_12_235511_create_rab_aksesoris_table.php: $table->decimal('harga_satuan_aksesoris', 15, 2)->default(0)->comment('Harga satuan aksesoris dari item');
+2025_11_12_235511_create_rab_aksesoris_table.php: $table->decimal('harga_total', 15, 2)->default(0)->comment('Total = harga_satuan × qty × (1 + markup/100)');
+2025_11_13_011931_create_rab_kontraks_table.php: $table->decimal('harga_dasar', 15, 2); // Already with markup
+2025_11_13_011931_create_rab_kontraks_table.php: $table->decimal('harga_items_non_aksesoris', 15, 2); // Already with markup
+2025_11_13_011931_create_rab_kontraks_table.php: $table->decimal('harga_dimensi', 15, 2);
+2025_11_13_011931_create_rab_kontraks_table.php: $table->decimal('harga_satuan', 15, 2); // Final price per unit
+2025_11_13_011931_create_rab_kontraks_table.php: $table->decimal('harga_total_aksesoris', 15, 2)->default(0);
+2025_11_13_011931_create_rab_kontraks_table.php: $table->decimal('harga_akhir', 15, 2); // Final price (satuan + aksesoris)
+2025_11_13_011931_create_rab_kontraks_table.php: $table->decimal('harga_satuan_aksesoris', 15, 2); // Already with markup
+2025_11_13_011931_create_rab_kontraks_table.php: $table->decimal('harga_total', 15, 2);
+2025_11_13_023135_create_rab_vendor_produks_table.php: $table->decimal('harga_dasar', 15, 2);
+2025_11_13_023135_create_rab_vendor_produks_table.php: $table->decimal('harga_items_non_aksesoris', 15, 2);
+2025_11_13_023135_create_rab_vendor_produks_table.php: $table->decimal('harga_dimensi', 15, 2);
+2025_11_13_023135_create_rab_vendor_produks_table.php: $table->decimal('harga_satuan', 15, 2);
+2025_11_13_023135_create_rab_vendor_produks_table.php: $table->decimal('harga_total_aksesoris', 15, 2)->default(0);
+2025_11_13_023135_create_rab_vendor_produks_table.php: $table->decimal('harga_akhir', 15, 2);
+2025_11_13_023143_create_rab_vendor_aksesoris_table.php: $table->decimal('harga_satuan_aksesoris', 15, 2);
+2025_11_13_023143_create_rab_vendor_aksesoris_table.php: $table->decimal('harga_total', 15, 2);
+2025_11_13_023203_create_rab_jasa_produks_table.php: $table->decimal('harga_dasar', 15, 2);
+2025_11_13_023203_create_rab_jasa_produks_table.php: $table->decimal('harga_items_non_aksesoris', 15, 2);
+2025_11_13_023203_create_rab_jasa_produks_table.php: $table->decimal('harga_dimensi', 15, 2);
+2025_11_13_023203_create_rab_jasa_produks_table.php: $table->decimal('harga_satuan', 15, 2);
+2025_11_13_023203_create_rab_jasa_produks_table.php: $table->decimal('harga_akhir', 15, 2);
+2025_11_13_030736_add_harga_kontrak_to_kontraks_table.php: $table->decimal('harga_kontrak', 15, 2)->nullable();
+2025_11_15_125942_create_invoices_table.php: $table->decimal('total_amount', 15, 2);
+2025_12_01_020629_add_harga_jasa_to_produks_table.php: $table->decimal('harga_jasa', 10, 2)->nullable();
+2025_12_03_130810_add_harga_fields_to_produk_items_table.php: $table->decimal('harga_dasar', 18, 2)->default(0)->after('item_id');
+2025_12_03_130810_add_harga_fields_to_produk_items_table.php: $table->decimal('harga_jasa', 18, 2)->default(0)->after('harga_dasar');
+2025_12_03_130833_make_harga_nullable_in_items_table.php: $table->decimal('harga', 18, 2)->nullable()->default(null)->change();
+2025_12_03_130833_make_harga_nullable_in_items_table.php: $table->decimal('harga', 18, 2)->default(0)->change();
+2025_12_03_225011_create_item_pekerjaan_produk_bahan_bakus_table.php: $table->decimal('harga_dasar', 18, 2)->default(0); // harga dasar dari produk_items pivot
+2025_12_04_100000_add_harga_jasa_to_item_pekerjaan_produk_bahan_bakus_table.php: $table->decimal('harga_jasa', 18, 2)->default(0)->after('harga_dasar');
+2026_01_14_191954_update_harga_jasa_precision_in_produks_table.php: $table->decimal('harga_jasa', 21, 2)->nullable()->change();
+2026_01_14_191954_update_harga_jasa_precision_in_produks_table.php: $table->decimal('harga_jasa', 10, 2)->nullable()->change();
+2026_02_05_142320_alter_invoice_columns_nullable_on_invoices_table.php: $table->decimal('total_amount', 15, 2)->nullable()->change();
+2026_02_05_142320_alter_invoice_columns_nullable_on_invoices_table.php: $table->decimal('total_amount', 15, 2)->nullable(false)->change();
+2026_02_06_000001_add_finishing_columns_to_rab_kontrak_produks_table.php: $table->decimal('harga_finishing_dalam', 15, 2)->default(0)->after('harga_dasar');
+2026_02_06_000001_add_finishing_columns_to_rab_kontrak_produks_table.php: $table->decimal('harga_finishing_luar', 15, 2)->default(0)->after('harga_finishing_dalam');

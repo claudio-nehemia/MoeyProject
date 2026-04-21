@@ -64,7 +64,7 @@ export default function Edit({ order, marketings, drafters, desainers, jenisInte
         alamat: order.alamat || '',
         tanggal_masuk_customer: order.tanggal_masuk_customer,
         project_status: order.project_status,
-        tanggal_surveyL: order.tanggal_survey,
+        tanggal_survey: order.tanggal_survey ? order.tanggal_survey.split(' ')[0] : '',
         priority_level: order.priority_level,
         mom_file: null as File | null,
         user_ids: [] as number[],
@@ -351,6 +351,18 @@ export default function Edit({ order, marketings, drafters, desainers, jenisInte
                                             className="w-full px-4 py-2.5 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
                                         />
                                         {errors.tanggal_masuk_customer && <p className="text-red-500 text-xs mt-1">{errors.tanggal_masuk_customer}</p>}
+                                    </div>
+
+                                    {/* Survey Date */}
+                                    <div>
+                                        <label className="block text-sm font-semibold text-stone-700 mb-2">Survey Date</label>
+                                        <input
+                                            type="date"
+                                            value={data.tanggal_survey}
+                                            onChange={(e) => setData('tanggal_survey', e.target.value)}
+                                            className="w-full px-4 py-2.5 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                                        />
+                                        {errors.tanggal_survey && <p className="text-red-500 text-xs mt-1">{errors.tanggal_survey}</p>}
                                     </div>
 
                                     {/* Project Status */}

@@ -185,7 +185,7 @@ export default function Index({ roles }: Props) {
                 <div className="mb-6">
                     <h1
                         className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent mb-2"
-                        style={{ fontFamily: "Playfair Display, serif" }}
+                        
                     >
                         Role Management
                     </h1>
@@ -221,7 +221,7 @@ export default function Index({ roles }: Props) {
                                     </svg>
                                 </div>
                                 <div>
-                                    <h2 className="text-lg font-bold text-stone-800">
+                                    <h2 className="text-lg font-bold text-slate-800">
                                         All Roles
                                     </h2>
                                     <p className="text-xs text-stone-500">
@@ -315,7 +315,7 @@ export default function Index({ roles }: Props) {
                                                     {role.nama_role.charAt(0).toUpperCase()}
                                                 </div>
                                                 <div>
-                                                    <div className="text-sm font-semibold text-stone-800 hover:text-purple-600 transition-colors">
+                                                    <div className="text-sm font-semibold text-slate-800 hover:text-purple-600 transition-colors">
                                                         {role.nama_role}
                                                     </div>
                                                 </div>

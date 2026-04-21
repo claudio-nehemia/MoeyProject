@@ -82,8 +82,8 @@ interface ItemPekerjaan {
     is_fully_paid: boolean;
     response_time: string | null;
     response_by: string | null;
-    pm_response_time: string | null;
     pm_response_by: string | null;
+    has_signed_contract?: boolean;
 }
 
 interface Props {
@@ -162,9 +162,12 @@ export default function Index({ itemPekerjaans }: Props) {
         return 'proses'; // lebih dari tahap 1 tapi belum lunas
     };
 
-    // Filter items based on active filter
+    // Filter items based on active filter and signed contract
     const filteredItems = useMemo(() => {
         return itemPekerjaans.filter(item => {
+            // Sembunyikan card jika belum upload ttd kontrak
+            if (!item.has_signed_contract) return false;
+
             const matchesFilter = activeFilter === 'semua' || getPaymentCategory(item) === activeFilter;
             const matchesSearch = !searchQuery ||
                 item.order.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -174,14 +177,15 @@ export default function Index({ itemPekerjaans }: Props) {
         });
     }, [itemPekerjaans, activeFilter, searchQuery]);
 
-    // Calculate filter counts
+    // Calculate filter counts only for items with signed contract
     const filterCounts = useMemo(() => {
+        const validItems = itemPekerjaans.filter(i => i.has_signed_contract);
         return {
-            semua: itemPekerjaans.length,
-            belum_bayar: itemPekerjaans.filter(i => getPaymentCategory(i) === 'belum_bayar').length,
-            dp: itemPekerjaans.filter(i => getPaymentCategory(i) === 'dp').length,
-            proses: itemPekerjaans.filter(i => getPaymentCategory(i) === 'proses').length,
-            lunas: itemPekerjaans.filter(i => getPaymentCategory(i) === 'lunas').length,
+            semua: validItems.length,
+            belum_bayar: validItems.filter(i => getPaymentCategory(i) === 'belum_bayar').length,
+            dp: validItems.filter(i => getPaymentCategory(i) === 'dp').length,
+            proses: validItems.filter(i => getPaymentCategory(i) === 'proses').length,
+            lunas: validItems.filter(i => getPaymentCategory(i) === 'lunas').length,
         };
     }, [itemPekerjaans]);
 

@@ -65,6 +65,7 @@ export default function DesainFinalIndex({ moodboards }: Props) {
     const [reviseNotes, setReviseNotes] = useState('');
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState('semua');
     const [showReplaceModal, setShowReplaceModal] = useState(false);
     const [selectedFile, setSelectedFile] = useState<MoodboardFile | null>(
         null,
@@ -147,6 +148,18 @@ export default function DesainFinalIndex({ moodboards }: Props) {
     }, [moodboards]);
 
     const filteredMoodboards = moodboards.filter((moodboard) => {
+        // Status filter logic
+        let meetsStatus = true;
+        if (statusFilter === 'pending_response') {
+            meetsStatus = !moodboard.has_response_final;
+        } else if (statusFilter === 'in_progress') {
+            meetsStatus = moodboard.has_response_final && !moodboard.moodboard_final;
+        } else if (statusFilter === 'completed') {
+            meetsStatus = !!moodboard.moodboard_final;
+        }
+
+        if (!meetsStatus) return false;
+
         const search = searchQuery.toLowerCase();
         return (
             moodboard.order?.nama_project.toLowerCase().includes(search) ||
@@ -404,9 +417,9 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                     </div>
                 </div>
 
-                {/* Search */}
-                <div className="mb-4">
-                    <div className="relative">
+                {/* Filters */}
+                <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">
+                    <div className="relative flex-1">
                         <svg
                             className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-stone-400"
                             fill="none"
@@ -428,632 +441,209 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                             className="w-full rounded-lg border border-stone-200 py-2.5 pr-4 pl-10 text-sm focus:border-transparent focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                         />
                     </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-stone-500 whitespace-nowrap">Status:</span>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-transparent focus:ring-2 focus:ring-indigo-500 focus:outline-none min-w-[180px]"
+                        >
+                            <option value="semua">Semua Status</option>
+                            <option value="pending_response">Belum Response</option>
+                            <option value="in_progress">Dalam Proses</option>
+                            <option value="completed">Selesai (Approved)</option>
+                        </select>
+                    </div>
                 </div>
 
                 {/* Moodboards Grid */}
-                <div className="grid grid-cols-1 gap-4">
-                    {filteredMoodboards.length === 0 ? (
-                        <div className="col-span-full py-12">
-                            <div className="text-center">
-                                <svg
-                                    className="mx-auto mb-4 h-16 w-16 text-stone-300"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={1.5}
-                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                    />
-                                </svg>
-                                <p className="text-sm text-stone-500">
-                                    Tidak ada project yang siap untuk desain
-                                    final
-                                </p>
-                            </div>
-                        </div>
-                    ) : (
-                        filteredMoodboards.map((moodboard) => {
-                            const orderId = moodboard.order?.id;
-                            const taskResponseRegular = orderId
-                                ? taskResponses[orderId]?.regular
-                                : null;
-                            const taskResponseMarketing = orderId
-                                ? taskResponses[orderId]?.marketing
-                                : null;
-                            const daysLeftRegular =
-                                taskResponseRegular?.deadline
-                                    ? calculateDaysLeft(
-                                          taskResponseRegular.deadline,
-                                      )
-                                    : null;
-                            const daysLeftMarketing =
-                                taskResponseMarketing?.deadline
-                                    ? calculateDaysLeft(
-                                          taskResponseMarketing.deadline,
-                                      )
-                                    : null;
+                        <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm">
+                            <table className="w-full whitespace-nowrap text-left text-sm">
+                                <thead className="border-b border-slate-200 bg-[#f8fafc] text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                    <tr>
+                                        <th className="px-5 py-4">Project / Client Info</th>
+                                        <th className="px-5 py-4">Deadline Info</th>
+                                        <th className="px-5 py-4">Final Files</th>
+                                        <th className="px-5 py-4">Status & Notes</th>
+                                        <th className="px-5 py-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 bg-white">
+                                    {filteredMoodboards.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="py-12 text-center text-gray-500">
+                                                Tidak ada project yang siap untuk desain final
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredMoodboards.map((moodboard) => {
+                                            const orderId = moodboard.order?.id;
+                                            const taskResponseRegular = orderId
+                                                ? taskResponses[orderId]?.regular
+                                                : null;
+                                            const taskResponseMarketing = orderId
+                                                ? taskResponses[orderId]?.marketing
+                                                : null;
+                                            const daysLeftRegular =
+                                                taskResponseRegular?.deadline
+                                                    ? calculateDaysLeft(
+                                                          taskResponseRegular.deadline,
+                                                      )
+                                                    : null;
+                                            const daysLeftMarketing =
+                                                taskResponseMarketing?.deadline
+                                                    ? calculateDaysLeft(
+                                                          taskResponseMarketing.deadline,
+                                                      )
+                                                    : null;
 
-                            return (
-                                <div
-                                    key={moodboard.id}
-                                    className="overflow-hidden rounded-xl border-2 border-stone-200 bg-white transition-all hover:border-indigo-300"
-                                >
-                                    <div className="p-4 sm:p-5">
-                                        {/* Project Info */}
-                                        <div className="mb-4 border-b border-stone-200 pb-4">
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div>
-                                                    <h3 className="mb-1 text-lg font-bold text-stone-900 sm:text-xl">
-                                                        {
-                                                            moodboard.order
-                                                                ?.nama_project
-                                                        }
-                                                    </h3>
-                                                    <p className="text-sm text-stone-600">
-                                                        {
-                                                            moodboard.order
-                                                                ?.company_name
-                                                        }
-                                                    </p>
-                                                    <p className="mt-1 text-xs text-stone-500">
-                                                        Customer:{' '}
-                                                        {
-                                                            moodboard.order
-                                                                ?.customer_name
-                                                        }
-                                                    </p>
-                                                </div>
-                                                <div className="flex flex-col items-end gap-1">
-                                                    {moodboard.moodboard_final && (
-                                                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold whitespace-nowrap text-emerald-700">
-                                                            ✓ Final Approved
-                                                        </span>
-                                                    )}
-                                                    {moodboard.has_response_final && (
-                                                        <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold whitespace-nowrap text-violet-700">
-                                                            ✓ Responded
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Deadline & Extend Button - REGULAR */}
-                                            {!isKepalaMarketing && taskResponseRegular &&
-                                                taskResponseRegular.status !==
-                                                    'selesai' && (
-                                                    <div className="mt-3">
-                                                        <div
-                                                            className={`rounded-lg border p-3 ${
-                                                                daysLeftRegular !==
-                                                                    null &&
-                                                                daysLeftRegular <
-                                                                    0
-                                                                    ? 'border-red-200 bg-red-50'
-                                                                    : daysLeftRegular !==
-                                                                            null &&
-                                                                        daysLeftRegular <=
-                                                                            3
-                                                                      ? 'border-orange-200 bg-orange-50'
-                                                                      : 'border-yellow-200 bg-yellow-50'
-                                                            }`}
-                                                        >
-                                                            <div className="flex items-center justify-between gap-3">
-                                                                <div>
-                                                                    <p
-                                                                        className={`text-xs font-medium ${
-                                                                            daysLeftRegular !==
-                                                                                null &&
-                                                                            daysLeftRegular <
-                                                                                0
-                                                                                ? 'text-red-800'
-                                                                                : daysLeftRegular !==
-                                                                                        null &&
-                                                                                    daysLeftRegular <=
-                                                                                        3
-                                                                                  ? 'text-orange-800'
-                                                                                  : 'text-yellow-800'
-                                                                        }`}
-                                                                    >
-                                                                        {daysLeftRegular !==
-                                                                            null &&
-                                                                        daysLeftRegular <
-                                                                            0
-                                                                            ? '⚠️ Deadline Terlewat'
-                                                                            : '⏰ Deadline Desain Final'}
-                                                                    </p>
-                                                                    <p
-                                                                        className={`text-sm font-semibold ${
-                                                                            daysLeftRegular !==
-                                                                                null &&
-                                                                            daysLeftRegular <
-                                                                                0
-                                                                                ? 'text-red-900'
-                                                                                : daysLeftRegular !==
-                                                                                        null &&
-                                                                                    daysLeftRegular <=
-                                                                                        3
-                                                                                  ? 'text-orange-900'
-                                                                                  : 'text-yellow-900'
-                                                                        }`}
-                                                                    >
-                                                                        {formatDeadline(
-                                                                            taskResponseRegular.deadline,
-                                                                        )}
-                                                                    </p>
-                                                                    {daysLeftRegular !==
-                                                                        null && (
-                                                                        <p
-                                                                            className={`mt-1 text-xs font-medium ${
-                                                                                daysLeftRegular <
-                                                                                0
-                                                                                    ? 'text-red-700'
-                                                                                    : daysLeftRegular <=
-                                                                                        3
-                                                                                      ? 'text-orange-700'
-                                                                                      : 'text-yellow-700'
-                                                                            }`}
-                                                                        >
-                                                                            {daysLeftRegular <
-                                                                            0
-                                                                                ? `Terlambat ${Math.abs(daysLeftRegular)} hari`
-                                                                                : `${daysLeftRegular} hari lagi`}
-                                                                        </p>
-                                                                    )}
-                                                                    {typeof taskResponseRegular.extend_time ===
-                                                                        'number' &&
-                                                                        taskResponseRegular.extend_time >
-                                                                            0 && (
-                                                                            <p className="mt-1 text-xs text-orange-600">
-                                                                                Perpanjangan:{' '}
-                                                                                {
-                                                                                    taskResponseRegular.extend_time
-                                                                                }
-                                                                                x
-                                                                            </p>
-                                                                        )}
-                                                                </div>
-                                                                <button
-                                                                    onClick={() =>
-                                                                        orderId &&
-                                                                        setShowExtendModal(
-                                                                            {
-                                                                                orderId,
-                                                                                tahap: 'desain_final',
-                                                                                isMarketing: false,
-                                                                                taskResponse:
-                                                                                    taskResponseRegular,
-                                                                            },
-                                                                        )
-                                                                    }
-                                                                    className="rounded-md bg-orange-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-orange-600"
-                                                                >
-                                                                    Minta
-                                                                    Perpanjangan
-                                                                </button>
-                                                            </div>
+                                            return (
+                                                <tr key={moodboard.id} className="transition-colors hover:bg-slate-50/50">
+                                                    <td className="px-5 py-4 align-top">
+                                                        <div className="font-bold text-slate-900">{moodboard.order?.nama_project}</div>
+                                                        <div className="mt-1 text-xs text-slate-500">{moodboard.order?.company_name || '-'}</div>
+                                                        <div className="mt-0.5 text-[11px] font-bold text-slate-400">Customer: {moodboard.order?.customer_name}</div>
+                                                        <div className="mt-2 flex flex-col items-start gap-1">
+                                                            {moodboard.moodboard_final && (
+                                                                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap text-emerald-700 border border-emerald-200">
+                                                                    ✓ Final Approved
+                                                                </span>
+                                                            )}
+                                                            {moodboard.has_response_final && (
+                                                                <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap text-violet-700 border border-violet-200">
+                                                                    ✓ Responded
+                                                                </span>
+                                                            )}
                                                         </div>
-                                                    </div>
-                                                )}
-
-                                            {/* Deadline & Extend Button - MARKETING (Kepala Marketing only) */}
-                                            {isKepalaMarketing &&
-                                                taskResponseMarketing &&
-                                                taskResponseMarketing.status !==
-                                                    'selesai' && (
-                                                    <div className="mt-3">
-                                                        <div className="rounded-lg border border-purple-200 bg-purple-50 p-3">
-                                                            <div className="flex items-center justify-between gap-3">
-                                                                <div>
-                                                                    <p className="text-xs font-medium text-purple-800">
-                                                                        ⏰
-                                                                        Deadline
-                                                                        Desain
-                                                                        Final
-                                                                        (Marketing)
-                                                                    </p>
-                                                                    <p className="text-sm font-semibold text-purple-900">
-                                                                        {formatDeadline(
-                                                                            taskResponseMarketing.deadline,
-                                                                        )}
-                                                                    </p>
-                                                                    {daysLeftMarketing !==
-                                                                        null && (
-                                                                        <p className="mt-1 text-xs font-medium text-purple-700">
-                                                                            {daysLeftMarketing <
-                                                                            0
-                                                                                ? `Terlambat ${Math.abs(daysLeftMarketing)} hari`
-                                                                                : `${daysLeftMarketing} hari lagi`}
-                                                                        </p>
+                                                    </td>
+                                                    <td className="px-5 py-4 align-top">
+                                                        <div className="flex max-w-[240px] flex-col gap-2">
+                                                            {!isKepalaMarketing && taskResponseRegular && taskResponseRegular.status !== 'selesai' && (
+                                                                <div className={`rounded-lg p-2.5 border ${daysLeftRegular !== null && daysLeftRegular < 0 ? 'bg-red-50 border-red-200 text-red-700' : daysLeftRegular !== null && daysLeftRegular <= 3 ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-yellow-50 border-yellow-200 text-yellow-700'}`}>
+                                                                    <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+                                                                        {daysLeftRegular !== null && daysLeftRegular < 0 ? '⚠️ Terlewat' : '⏰ Deadline DF'}
+                                                                    </div>
+                                                                    <div className="mt-0.5 text-xs font-medium">{formatDeadline(taskResponseRegular.deadline)}</div>
+                                                                    {daysLeftRegular !== null && (
+                                                                        <div className="mt-1 text-[10px] font-medium">{daysLeftRegular < 0 ? `Terlambat ${Math.abs(daysLeftRegular)} hari` : `${daysLeftRegular} hari lagi`}</div>
                                                                     )}
-                                                                    {typeof taskResponseMarketing.extend_time ===
-                                                                        'number' &&
-                                                                        taskResponseMarketing.extend_time >
-                                                                            0 && (
-                                                                            <p className="mt-1 text-xs text-purple-600">
-                                                                                Perpanjangan:{' '}
-                                                                                {
-                                                                                    taskResponseMarketing.extend_time
-                                                                                }
-                                                                                x
-                                                                            </p>
-                                                                        )}
+                                                                    <div className="mt-2 flex items-center justify-between border-t border-black/10 pt-2">
+                                                                        {typeof taskResponseRegular.extend_time === 'number' && taskResponseRegular.extend_time > 0 ? (
+                                                                            <span className="text-[9px] font-bold opacity-80">Ext: {taskResponseRegular.extend_time}x</span>
+                                                                        ) : <span />}
+                                                                        <button onClick={() => setShowExtendModal({orderId: orderId!, tahap: 'desain_final', isMarketing: false, taskResponse: taskResponseRegular})} className={`rounded px-2 py-1 text-[9px] font-bold text-white transition-colors ${daysLeftRegular !== null && daysLeftRegular < 0 ? 'bg-red-600 hover:bg-red-700' : 'bg-orange-500 hover:bg-orange-600'}`}>Perpanjangan</button>
+                                                                    </div>
                                                                 </div>
-                                                                <button
-                                                                    onClick={() =>
-                                                                        orderId &&
-                                                                        setShowExtendModal(
-                                                                            {
-                                                                                orderId,
-                                                                                tahap: 'desain_final',
-                                                                                isMarketing: true,
-                                                                                taskResponse:
-                                                                                    taskResponseMarketing,
-                                                                            },
-                                                                        )
-                                                                    }
-                                                                    className="rounded-md bg-purple-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-purple-600"
-                                                                >
-                                                                    Minta
-                                                                    Perpanjangan
-                                                                </button>
-                                                            </div>
+                                                            )}
+                                                            {isKepalaMarketing && taskResponseMarketing && taskResponseMarketing.status !== 'selesai' && (
+                                                                <div className="rounded-lg border border-purple-200 bg-purple-50 p-2.5 text-purple-700">
+                                                                    <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">⏰ Deadline DF(Mkt)</div>
+                                                                    <div className="mt-0.5 text-xs font-medium">{formatDeadline(taskResponseMarketing.deadline)}</div>
+                                                                    {daysLeftMarketing !== null && (
+                                                                        <div className="mt-1 text-[10px] font-medium">{daysLeftMarketing < 0 ? `Terlambat ${Math.abs(daysLeftMarketing)} hari` : `${daysLeftMarketing} hari lagi`}</div>
+                                                                    )}
+                                                                    <div className="mt-2 flex items-center justify-between border-t border-purple-200 pt-2">
+                                                                        {typeof taskResponseMarketing.extend_time === 'number' && taskResponseMarketing.extend_time > 0 ? (
+                                                                            <span className="text-[9px] font-bold opacity-80">Ext: {taskResponseMarketing.extend_time}x</span>
+                                                                        ) : <span />}
+                                                                        <button onClick={() => setShowExtendModal({orderId: orderId!, tahap: 'desain_final', isMarketing: true, taskResponse: taskResponseMarketing})} className="rounded bg-purple-600 px-2 py-1 text-[9px] font-bold text-white transition-colors hover:bg-purple-700">Perpanjangan</button>
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    </div>
-                                                )}
-                                        </div>
-
-                                        {/* Response Info */}
-                                        {moodboard.has_response_final &&
-                                            moodboard.response_final_by && (
-                                                <div className="mt-3 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2">
-                                                    <p className="text-xs text-violet-700">
-                                                        <span className="font-semibold">
-                                                            Response oleh:
-                                                        </span>{' '}
-                                                        {
-                                                            moodboard.response_final_by
-                                                        }
-                                                        {moodboard.response_final_time && (
-                                                            <span className="ml-2">
-                                                                (
-                                                                {new Date(
-                                                                    moodboard.response_final_time,
-                                                                ).toLocaleDateString(
-                                                                    'id-ID',
-                                                                    {
-                                                                        day: 'numeric',
-                                                                        month: 'short',
-                                                                        year: 'numeric',
-                                                                        hour: '2-digit',
-                                                                        minute: '2-digit',
-                                                                    },
-                                                                )}
-                                                                )
-                                                            </span>
-                                                        )}
-                                                    </p>
-                                                </div>
-                                            )}
-
-                                        {/* Marketing Response Button - INDEPENDENT */}
-                                        {isKepalaMarketing &&
-                                            !moodboard.pm_response_final_time && (
-                                                <div className="mt-4">
-                                                    <button
-                                                        onClick={() =>
-                                                            handlePmResponseDesainFinal(
-                                                                moodboard.id,
-                                                            )
-                                                        }
-                                                        className="w-full rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:from-purple-600 hover:to-purple-700"
-                                                    >
-                                                        Marketing Response
-                                                    </button>
-                                                </div>
-                                            )}
-
-                                        {/* PM Response Final Badge */}
-                                        {moodboard.pm_response_final_time && (
-                                            <div className="mt-3 rounded-lg border border-purple-200 bg-purple-50 p-2">
-                                                <p className="text-xs font-semibold text-purple-900">
-                                                    ✓ Marketing Response (Desain
-                                                    Final)
-                                                </p>
-                                                <p className="text-xs text-purple-700">
-                                                    By:{' '}
-                                                    {
-                                                        moodboard.pm_response_final_by
-                                                    }
-                                                </p>
-                                                <p className="text-xs text-purple-700">
-                                                    {new Date(
-                                                        moodboard.pm_response_final_time,
-                                                    ).toLocaleDateString(
-                                                        'id-ID',
-                                                        {
-                                                            day: 'numeric',
-                                                            month: 'short',
-                                                            year: 'numeric',
-                                                            hour: '2-digit',
-                                                            minute: '2-digit',
-                                                        },
-                                                    )}
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        {/* Show Response Button if not responded yet */}
-                                        {isNotKepalaMarketing &&
-                                            !moodboard.has_response_final &&
-                                            !moodboard.moodboard_final && (
-                                                <div className="mb-4 rounded-lg border border-violet-200 bg-violet-50 p-4 text-center">
-                                                    <svg
-                                                        className="mx-auto mb-2 h-10 w-10 text-violet-300"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        viewBox="0 0 24 24"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            strokeWidth={1.5}
-                                                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                                                        />
-                                                    </svg>
-                                                    <p className="mb-1 text-sm font-medium text-violet-900">
-                                                        Project siap untuk
-                                                        desain final
-                                                    </p>
-                                                    <p className="mb-3 text-xs text-violet-700">
-                                                        Klik tombol Response
-                                                        untuk memulai proses
-                                                        desain final
-                                                    </p>
-                                                    <button
-                                                        onClick={() =>
-                                                            handleResponseFinal(
-                                                                moodboard,
-                                                            )
-                                                        }
-                                                        disabled={loading}
-                                                        className="rounded-lg bg-gradient-to-r from-violet-500 to-violet-600 px-6 py-2.5 text-sm font-semibold text-white transition-all hover:from-violet-600 hover:to-violet-700 disabled:opacity-50"
-                                                    >
-                                                        Response
-                                                    </button>
-                                                </div>
-                                            )}
-
-                                        {/* Final Files List - Only show if responded */}
-                                        {moodboard.has_response_final &&
-                                            moodboard.final_files.length >
-                                                0 && (
-                                                <div className="mb-4">
-                                                    <p className="mb-3 text-sm font-semibold text-stone-700">
-                                                        File Desain Final (
-                                                        {
-                                                            moodboard
-                                                                .final_files
-                                                                .length
-                                                        }
-                                                        ):
-                                                    </p>
-                                                    <div className="space-y-2">
-                                                        {moodboard.final_files.map(
-                                                            (file, idx) => (
-                                                                <div
-                                                                    key={
-                                                                        file.id
-                                                                    }
-                                                                    className="rounded-lg border border-stone-200 bg-stone-50 p-2.5"
-                                                                >
-                                                                    <div className="mb-2 flex items-center gap-2">
-                                                                        <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded bg-stone-200">
-                                                                            <img
-                                                                                src={
-                                                                                    file.url
-                                                                                }
-                                                                                alt={
-                                                                                    file.original_name
-                                                                                }
-                                                                                className="h-full w-full object-cover"
-                                                                            />
+                                                    </td>
+                                                    <td className="px-5 py-4 align-top">
+                                                        {moodboard.has_response_final && moodboard.final_files.length > 0 ? (
+                                                            <div className="space-y-2 max-w-[300px]">
+                                                                {moodboard.final_files.map((file, idx) => (
+                                                                    <div key={file.id} className="rounded-lg border border-stone-200 bg-stone-50 p-2 flex flex-col gap-2">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="h-8 w-8 flex-shrink-0 overflow-hidden rounded bg-stone-200">
+                                                                                <img src={file.url} alt={file.original_name} className="h-full w-full object-cover" />
+                                                                            </div>
+                                                                            <div className="min-w-0 flex-1">
+                                                                                <p className="truncate text-[10px] font-medium text-stone-900">#{idx + 1}: {file.original_name}</p>
+                                                                                {moodboard.moodboard_final === file.file_path && (
+                                                                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-medium text-emerald-600">Terpilih</span>
+                                                                                )}
+                                                                            </div>
                                                                         </div>
-                                                                        <div className="min-w-0 flex-1">
-                                                                            <p className="truncate text-xs font-medium text-stone-900">
-                                                                                #
-                                                                                {idx +
-                                                                                    1}
-                                                                                :{' '}
-                                                                                {
-                                                                                    file.original_name
-                                                                                }
-                                                                            </p>
-                                                                            {moodboard.moodboard_final ===
-                                                                                file.file_path && (
-                                                                                <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-emerald-600">
-                                                                                    <svg
-                                                                                        className="h-3 w-3"
-                                                                                        fill="none"
-                                                                                        stroke="currentColor"
-                                                                                        viewBox="0 0 24 24"
-                                                                                    >
-                                                                                        <path
-                                                                                            strokeLinecap="round"
-                                                                                            strokeLinejoin="round"
-                                                                                            strokeWidth={
-                                                                                                2
-                                                                                            }
-                                                                                            d="M5 13l4 4L19 7"
-                                                                                        />
-                                                                                    </svg>
-                                                                                    Terpilih
-                                                                                </span>
+                                                                        <div className="flex gap-1 flex-wrap">
+                                                                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="flex-1 rounded border border-blue-200 bg-blue-50 px-1 py-1 text-center text-[10px] font-medium text-blue-700 hover:bg-blue-100" title="Lihat">👁️ Lihat</a>
+                                                                            {!moodboard.moodboard_final && (
+                                                                                <button onClick={() => handleAcceptDesain(moodboard, file)} disabled={loading} className="flex-1 rounded bg-gradient-to-r from-emerald-500 to-emerald-600 px-1 py-1 text-[10px] font-medium text-white hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50" title="Terima">✓ Terima</button>
                                                                             )}
+                                                                            <button onClick={() => openReplaceModal(file)} disabled={loading} className="rounded border border-amber-200 bg-amber-50 px-1.5 py-1 text-[10px] text-amber-700 hover:bg-amber-100 disabled:opacity-50" title="Ganti">🔄</button>
+                                                                            <button onClick={() => handleDeleteFile(file)} disabled={loading} className="rounded border border-red-200 bg-red-50 px-1.5 py-1 text-[10px] text-red-700 hover:bg-red-100 disabled:opacity-50" title="Hapus">🗑️</button>
                                                                         </div>
                                                                     </div>
-                                                                    <div className="flex gap-1.5">
-                                                                        <a
-                                                                            href={
-                                                                                file.url
-                                                                            }
-                                                                            target="_blank"
-                                                                            rel="noopener noreferrer"
-                                                                            className="flex-1 rounded border border-blue-200 bg-blue-50 px-2 py-1.5 text-center text-xs font-medium text-blue-700 transition-all hover:bg-blue-100"
-                                                                        >
-                                                                            👁️
-                                                                            Lihat
-                                                                        </a>
-                                                                        {!moodboard.moodboard_final && (
-                                                                            <button
-                                                                                onClick={() =>
-                                                                                    handleAcceptDesain(
-                                                                                        moodboard,
-                                                                                        file,
-                                                                                    )
-                                                                                }
-                                                                                disabled={
-                                                                                    loading
-                                                                                }
-                                                                                className="flex-1 rounded bg-gradient-to-r from-emerald-500 to-emerald-600 px-2 py-1.5 text-xs font-medium text-white transition-all hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50"
-                                                                            >
-                                                                                ✓
-                                                                                Terima
-                                                                            </button>
-                                                                        )}
-                                                                        <button
-                                                                            onClick={() =>
-                                                                                openReplaceModal(
-                                                                                    file,
-                                                                                )
-                                                                            }
-                                                                            disabled={
-                                                                                loading
-                                                                            }
-                                                                            className="rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs font-medium text-amber-700 transition-all hover:bg-amber-100 disabled:opacity-50"
-                                                                            title="Ganti file"
-                                                                        >
-                                                                            🔄
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() =>
-                                                                                handleDeleteFile(
-                                                                                    file,
-                                                                                )
-                                                                            }
-                                                                            disabled={
-                                                                                loading
-                                                                            }
-                                                                            className="rounded border border-red-200 bg-red-50 px-2 py-1.5 text-xs font-medium text-red-700 transition-all hover:bg-red-100 disabled:opacity-50"
-                                                                            title="Hapus file"
-                                                                        >
-                                                                            🗑️
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            ),
+                                                                ))}
+                                                            </div>
+                                                        ) : moodboard.has_response_final ? (
+                                                            <span className="text-[11px] italic text-slate-400">Belum ada file final</span>
+                                                        ) : (
+                                                            <span className="text-[11px] italic text-slate-400">Menunggu respons</span>
                                                         )}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                        {/* Notes if any */}
-                                        {moodboard.revisi_final && (
-                                            <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 p-3">
-                                                <p className="mb-1 text-xs font-semibold text-orange-900">
-                                                    Catatan Revisi:
-                                                </p>
-                                                <p className="text-xs text-orange-700">
-                                                    {moodboard.revisi_final}
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        {/* Info jika sudah response tapi belum ada file */}
-                                        {moodboard.has_response_final &&
-                                            moodboard.final_files.length ===
-                                                0 &&
-                                            !moodboard.moodboard_final && (
-                                                <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-center">
-                                                    <svg
-                                                        className="mx-auto mb-2 h-10 w-10 text-blue-300"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        viewBox="0 0 24 24"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            strokeWidth={1.5}
-                                                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                                                        />
-                                                    </svg>
-                                                    <p className="mb-1 text-sm font-medium text-blue-900">
-                                                        Belum ada file desain
-                                                        final
-                                                    </p>
-                                                    <p className="text-xs text-blue-700">
-                                                        Upload file desain final
-                                                        untuk project ini
-                                                    </p>
-                                                </div>
-                                            )}
-
-                                        {/* Info setelah upload, sebelum approve */}
-                                        {moodboard.has_response_final &&
-                                            moodboard.final_files.length > 0 &&
-                                            !moodboard.moodboard_final && (
-                                                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                                                    <p className="mb-1 text-xs font-semibold text-amber-900">
-                                                        ⏳ Menunggu Approval
-                                                    </p>
-                                                    <p className="text-xs text-amber-700">
-                                                        Pilih salah satu file di
-                                                        atas dengan klik tombol
-                                                        "✓ Terima" untuk
-                                                        menyetujui desain final
-                                                    </p>
-                                                </div>
-                                            )}
-
-                                        {/* Action Buttons */}
-                                        {moodboard.has_response_final && (
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() =>
-                                                        openUploadModal(
-                                                            moodboard,
-                                                        )
-                                                    }
-                                                    disabled={loading}
-                                                    className="flex-1 rounded-lg bg-gradient-to-r from-indigo-500 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:from-indigo-600 hover:to-indigo-700 disabled:opacity-50"
-                                                >
-                                                    {moodboard.final_files
-                                                        .length > 0
-                                                        ? `+ Tambah File (${moodboard.final_files.length})`
-                                                        : 'Upload Desain Final'}
-                                                </button>
-                                                <button
-                                                    onClick={() =>
-                                                        openReviseModal(
-                                                            moodboard,
-                                                        )
-                                                    }
-                                                    disabled={loading}
-                                                    className="rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:from-orange-600 hover:to-orange-700 disabled:opacity-50"
-                                                >
-                                                    🔄 Revisi
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })
-                    )}
-                </div>
+                                                    </td>
+                                                    <td className="px-5 py-4 align-top">
+                                                        <div className="space-y-1.5">
+                                                            {moodboard.has_response_final && moodboard.response_final_by && (
+                                                                <div className="inline-flex max-w-fit flex-col items-start gap-0.5 rounded border border-violet-200 bg-violet-50 px-2 py-1.5 text-[10px] text-violet-700">
+                                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-violet-500">ResBy</span>
+                                                                    <div className="font-semibold">{moodboard.response_final_by}</div>
+                                                                    {moodboard.response_final_time && (
+                                                                        <div className="text-violet-500">{new Date(moodboard.response_final_time).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                            {moodboard.pm_response_final_time && (
+                                                                <div className="inline-flex max-w-fit flex-col items-start gap-0.5 rounded border border-purple-200 bg-purple-50 px-2 py-1.5 text-[10px] text-purple-700 mt-1">
+                                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-purple-500">PM ResBy</span>
+                                                                    <div className="font-semibold">{moodboard.pm_response_final_by}</div>
+                                                                    <div className="text-purple-500">{new Date(moodboard.pm_response_final_time).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                                                                </div>
+                                                            )}
+                                                            {moodboard.revisi_final && (
+                                                                <div className="mt-2 rounded border border-orange-200 bg-orange-50 p-2 max-w-[200px] whitespace-normal w-full overflow-hidden">
+                                                                    <p className="text-[9px] font-bold text-orange-900 mb-0.5">Catatan Revisi:</p>
+                                                                    <p className="text-[10px] text-orange-700 whitespace-pre-wrap break-words">{moodboard.revisi_final}</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-5 py-4 align-top text-right">
+                                                        <div className="flex flex-col items-end gap-1.5">
+                                                            {isKepalaMarketing && !moodboard.pm_response_final_time && (
+                                                                <button onClick={() => handlePmResponseDesainFinal(moodboard.id)} className="w-full rounded-md bg-purple-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition-colors hover:bg-purple-700 text-center mb-1">
+                                                                    Marketing Response
+                                                                </button>
+                                                            )}
+                                                            
+                                                            {isNotKepalaMarketing && !moodboard.has_response_final && !moodboard.moodboard_final && (
+                                                                <button onClick={() => handleResponseFinal(moodboard)} disabled={loading} className="w-full rounded-md bg-violet-600 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-violet-700 disabled:opacity-50 text-center">
+                                                                    Response Desain
+                                                                </button>
+                                                            )}
+                                                            
+                                                            {moodboard.has_response_final && (
+                                                                <>
+                                                                    <button onClick={() => openUploadModal(moodboard)} disabled={loading} className="w-full rounded-md bg-indigo-600 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50 text-center">
+                                                                        {moodboard.final_files.length > 0 ? `+ Tambah File` : 'Upload Desain'}
+                                                                    </button>
+                                                                    <button onClick={() => openReviseModal(moodboard)} disabled={loading} className="w-full rounded-md bg-orange-600 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-orange-700 disabled:opacity-50 text-center mt-1">
+                                                                        🔄 Revisi
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
 
                 {/* Upload Modal */}
                 {showUploadModal && selectedMoodboard && (
@@ -1082,8 +672,8 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                                         </h2>
                                         <p className="mt-0.5 text-xs text-indigo-100">
                                             {
-                                                selectedMoodboard.order
-                                                    .nama_project
+                                                selectedMoodboard?.order
+                                                    ?.nama_project
                                             }
                                         </p>
                                     </div>
@@ -1259,8 +849,8 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                                         </h2>
                                         <p className="mt-0.5 text-xs text-orange-100">
                                             {
-                                                selectedMoodboard.order
-                                                    .nama_project
+                                                selectedMoodboard?.order
+                                                    ?.nama_project
                                             }
                                         </p>
                                     </div>
@@ -1363,7 +953,7 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                                             Ganti File
                                         </h2>
                                         <p className="mt-0.5 text-xs text-amber-100">
-                                            {selectedFile.original_name}
+                                            {selectedFile?.original_name}
                                         </p>
                                     </div>
                                 </div>
@@ -1437,11 +1027,11 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                                                         </svg>
                                                     </div>
                                                     <p className="mb-0.5 text-xs font-medium text-stone-900">
-                                                        {replaceFile.name}
+                                                        {replaceFile?.name}
                                                     </p>
                                                     <p className="text-xs text-stone-500">
                                                         {(
-                                                            replaceFile.size /
+                                                            (replaceFile?.size || 0) /
                                                             1024 /
                                                             1024
                                                         ).toFixed(2)}{' '}
@@ -1509,10 +1099,10 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                 {/* Extend Modal */}
                 {showExtendModal && (
                     <ExtendModal
-                        orderId={showExtendModal.orderId}
-                        tahap={showExtendModal.tahap}
-                        taskResponse={showExtendModal.taskResponse}
-                        isMarketing={showExtendModal.isMarketing}
+                        orderId={showExtendModal?.orderId as number}
+                        tahap={showExtendModal?.tahap as 'cm_fee' | 'desain_final'}
+                        taskResponse={showExtendModal?.taskResponse as any}
+                        isMarketing={showExtendModal?.isMarketing as boolean}
                         onClose={() => setShowExtendModal(null)}
                     />
                 )}

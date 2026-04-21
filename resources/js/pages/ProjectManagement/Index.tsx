@@ -13,6 +13,7 @@ type Order = {
     sisa_hari: number | null;
     finishing_qc: number;
     install_qc: number;
+    created_at: string;
 };
 
 type FilterType = 'semua' | 'belum_mulai' | 'proses' | 'deadline' | 'selesai';
@@ -188,9 +189,14 @@ export default function Index({ orders }: { orders: Order[] }) {
                                                     <p className="text-sm font-medium text-gray-700 mb-1">
                                                         {order.company_name}
                                                     </p>
-                                                    <p className="text-xs text-gray-600">
-                                                        👤 {order.customer_name}
-                                                    </p>
+                                                    <div className="flex items-center gap-3">
+                                                        <p className="text-xs text-gray-600">
+                                                            👤 {order.customer_name}
+                                                        </p>
+                                                        <p className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                                                            📅 {order.created_at ? new Date(order.created_at).toLocaleDateString('id-ID') : '-'}
+                                                        </p>
+                                                    </div>
                                                 </div>
                                                 <div className="ml-4">
                                                     <div className={`flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br ${getProgressColor(order.progress)} shadow-lg transform group-hover:rotate-6 transition-transform duration-300`}>

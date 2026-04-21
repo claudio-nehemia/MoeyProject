@@ -278,7 +278,7 @@ class SurveyResultsController extends Controller
             'survey_id' => 'required|exists:survey_results,id',
             'feedback' => 'nullable|string',
             'layout_files' => 'nullable|array',
-            'layout_files.*' => 'file|mimes:pdf,jpg,jpeg,png,dwg,dxf|max:10240',
+            'layout_files.*' => 'file|mimes:pdf,jpg,jpeg,png,dwg,dxf,cad,skp|max:10240',
             'foto_lokasi_files' => 'nullable|array',
             'foto_lokasi_files.*' => 'file|mimes:jpg,jpeg,png|max:5120',
             // Backwards compatible single-file key
@@ -624,7 +624,7 @@ class SurveyResultsController extends Controller
         $validated = $request->validate([
             'feedback' => 'nullable|string',
             'layout_files' => 'nullable|array',
-            'layout_files.*' => 'file|mimes:pdf,jpg,jpeg,png,dwg,dxf',
+            'layout_files.*' => 'file|mimes:pdf,jpg,jpeg,png,dwg,dxf,cad,skp',
             'foto_lokasi_files' => 'nullable|array',
             'foto_lokasi_files.*' => 'file|mimes:jpg,jpeg,png',
             // Backwards compatible single-file key

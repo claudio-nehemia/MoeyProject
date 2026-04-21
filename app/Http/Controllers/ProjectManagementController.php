@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\Item;
 use Illuminate\Http\Request;
 use App\Models\StageEvidence;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\ItemPekerjaanProduk;
 use Illuminate\Support\Facades\Storage;
 use App\Models\PengajuanPerpanjanganTimeline;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\ProjectExport;
 
 class ProjectManagementController extends Controller
 {
@@ -67,6 +70,7 @@ class ProjectManagementController extends Controller
                     'sisa_hari'       => $sisaHari,
                     'finishing_qc'    => $finishingQcCount,
                     'install_qc'      => $installQcCount,
+                    'created_at'      => $order->created_at->format('Y-m-d H:i:s'),
                 ];
             });
 
@@ -729,5 +733,144 @@ class ProjectManagementController extends Controller
         $stepText = $tahapan[$nextStep - 1]['text'] ?? "Tahap $nextStep";
 
         return back()->with('success', "Pembayaran \"$stepText\" berhasil dibuka!");
+    }
+
+    public function exportPdf($id)
+    {
+        $data = $this->getReportData($id);
+        $pdf = PDF::loadView('pdf.project-management-report', $data);
+        $pdf->setPaper('a4', 'landscape');
+        
+        $filename = 'Progress-Report-' . str_replace(' ', '-', $data['order']->nama_project) . '-' . date('Ymd') . '.pdf';
+        return $pdf->download($filename);
+    }
+
+    public function exportExcel($id)
+    {
+        $data = $this->getReportData($id);
+        $filename = 'Progress-Report-' . str_replace(' ', '-', $data['order']->nama_project) . '-' . date('Ymd') . '.xlsx';
+        return Excel::download(new ProjectExport($data), $filename);
+    }
+
+    private function getReportData($id)
+    {
+        $order = Order::with([
+            'moodboard.itemPekerjaans.produks.produk',
+            'moodboard.itemPekerjaans.produks.jenisItems.items.item',
+            'moodboard.itemPekerjaans.kontrak',
+            'gambarKerja',
+        ])->findOrFail($id);
+
+        $kontrakInfo = null;
+        foreach ($order->moodboard->itemPekerjaans as $ip) {
+            if ($ip->kontrak) {
+                $k = $ip->kontrak;
+                $kontrakInfo = [
+                    'tanggal_mulai' => $k->tanggal_mulai ? $k->tanggal_mulai->format('d/m/Y') : '-',
+                    'durasi_kontrak' => $k->durasi_kontrak,
+                ];
+                break;
+            }
+        }
+
+        // Stage mapping from report to internal
+        $stageMapping = [
+            'Potong' => 'Potong',
+            'Rangkai' => 'Rangkai',
+            'Fin' => 'Finishing',
+            'Fin QC' => 'Finishing QC',
+            'Packing' => 'Packing',
+            'Kirim' => 'Pengiriman',
+            'Trap' => 'Trap',
+            'Instal' => 'Install',
+            'Ins QC' => 'Install QC',
+        ];
+
+        $internalStages = array_values($stageMapping);
+        $groupedProduks = [];
+
+        foreach ($order->moodboard->itemPekerjaans as $ip) {
+            $totalHargaItem = $ip->produks->sum('total_harga');
+            
+            foreach ($ip->produks as $produk) {
+                $room = $produk->nama_ruangan ?: 'Lain-lain';
+                
+                // Weight percentage within its item pekerjaan
+                $weight = $totalHargaItem > 0 ? ($produk->total_harga / $totalHargaItem) * 100 : 0;
+                
+                // Material summary
+                $materials = [];
+                foreach ($produk->jenisItems as $ji) {
+                    foreach ($ji->items as $item) {
+                        if ($item->keterangan_material) {
+                            $materials[] = $item->keterangan_material;
+                        } elseif ($item->item) {
+                            $materials[] = $item->item->nama_item;
+                        }
+                    }
+                }
+                $materialSummary = implode(', ', array_unique($materials));
+
+                // Reached stages
+                $reachedStages = [];
+                $currentFound = false;
+                $currentStage = $produk->current_stage;
+                
+                $tempInternalStages = $internalStages;
+                
+                // Iterate through internal stages to see which ones are reached
+                foreach ($tempInternalStages as $internalStage) {
+                    if (!$currentFound) {
+                        $reachedStages[$internalStage] = true;
+                        if ($currentStage === $internalStage) {
+                            $currentFound = true;
+                        }
+                    } else {
+                        $reachedStages[$internalStage] = false;
+                    }
+                }
+                
+                // If current_stage is null, nothing is reached
+                if (!$produk->current_stage) {
+                    foreach ($tempInternalStages as $internalStage) {
+                        $reachedStages[$internalStage] = false;
+                    }
+                }
+
+                $groupedProduks[$room][] = [
+                    'nama_produk' => $produk->produk->nama_produk,
+                    'quantity' => $produk->quantity,
+                    'weight_percentage' => $weight,
+                    'material_summary' => $materialSummary,
+                    'reached_stages' => $reachedStages,
+                    'has_bast' => $ip->has_bast,
+                ];
+            }
+        }
+
+        // Estimate target dates
+        $targets = [
+            '50' => '-',
+            '80' => '-',
+            '100' => '-',
+        ];
+
+        if ($order->moodboard->itemPekerjaans->first() && $order->moodboard->itemPekerjaans->first()->kontrak) {
+            $k = $order->moodboard->itemPekerjaans->first()->kontrak;
+            if ($k->tanggal_mulai && $k->durasi_kontrak) {
+                $startDate = \Carbon\Carbon::parse($k->tanggal_mulai);
+                $targets['50'] = $startDate->copy()->addDays($k->durasi_kontrak * 0.5)->format('d/m/Y');
+                $targets['80'] = $startDate->copy()->addDays($k->durasi_kontrak * 0.8)->format('d/m/Y');
+                $targets['100'] = $startDate->copy()->addDays($k->durasi_kontrak)->format('d/m/Y');
+            }
+        }
+
+        return [
+            'order' => $order,
+            'kontrakInfo' => $kontrakInfo,
+            'groupedProduks' => $groupedProduks,
+            'stageMapping' => $stageMapping,
+            'targets' => $targets,
+        ];
     }
 }

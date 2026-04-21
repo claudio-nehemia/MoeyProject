@@ -72,12 +72,13 @@ export default function Index({ moodboards }: Props) {
         {},
     );
     const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState('semua');
     // Dual task response state: { [orderId]: { regular?: TaskResponse, marketing?: TaskResponse } }
     const [taskResponses, setTaskResponses] = useState<
         Record<number, { regular?: TaskResponse; marketing?: TaskResponse }>
     >({});
     const [showExtendModal, setShowExtendModal] = useState<{
-        orderId: number;
+        orderId: number;    
         tahap: string;
         isMarketing: boolean;
         taskResponse: TaskResponse;
@@ -354,8 +355,24 @@ export default function Index({ moodboards }: Props) {
         return getFileExtension(filename) === 'pdf';
     };
 
-    // Filter moodboards based on search query
+    // Filter moodboards based on search query and status filter
     const filteredMoodboards = moodboards.filter((moodboard) => {
+        // Status filtering logic
+        const cf = moodboard.commitmentFee;
+        let meetsStatus = true;
+
+        if (statusFilter === 'pending_response') {
+            meetsStatus = !cf || !cf.response_time;
+        } else if (statusFilter === 'pending_payment') {
+            meetsStatus = cf?.payment_status === 'pending' && !cf?.payment_proof;
+        } else if (statusFilter === 'awaiting_verification') {
+            meetsStatus = cf?.payment_status === 'pending' && !!cf?.payment_proof;
+        } else if (statusFilter === 'completed') {
+            meetsStatus = cf?.payment_status === 'completed';
+        }
+
+        if (!meetsStatus) return false;
+
         if (!searchQuery) return true;
         const query = searchQuery.toLowerCase();
         return (
@@ -389,9 +406,9 @@ export default function Index({ moodboards }: Props) {
                             </p>
                         </div>
 
-                        {/* Search Bar */}
-                        <div className="mb-6">
-                            <div className="relative">
+                        {/* Filters */}
+                        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">
+                            <div className="relative flex-1">
                                 <svg
                                     className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400"
                                     fill="none"
@@ -415,691 +432,257 @@ export default function Index({ moodboards }: Props) {
                                     className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pr-4 pl-10 text-sm shadow-sm focus:border-gray-400 focus:ring-2 focus:ring-gray-200 focus:outline-none"
                                 />
                             </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-semibold text-stone-500 whitespace-nowrap">Status:</span>
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-gray-400 focus:ring-2 focus:ring-gray-200 focus:outline-none min-w-[180px]"
+                                >
+                                    <option value="semua">Semua Status</option>
+                                    <option value="pending_response">Belum Response</option>
+                                    <option value="pending_payment">Menunggu Pembayaran</option>
+                                    <option value="awaiting_verification">Awaiting Verification</option>
+                                    <option value="completed">Completed</option>
+                                </select>
+                            </div>
                         </div>
 
-                        <div className="space-y-3">
-                            {filteredMoodboards.length === 0 ? (
-                                <div className="rounded-lg bg-white p-8 text-center shadow-md">
-                                    <p className="text-gray-500">
-                                        {searchQuery
-                                            ? 'Tidak ada hasil yang sesuai dengan pencarian.'
-                                            : 'Tidak ada moodboard yang sudah approved.'}
-                                    </p>
-                                </div>
-                            ) : (
-                                filteredMoodboards.map((moodboard) => {
-                                    const orderId = moodboard.order?.id;
-                                    const taskResponseRegular = orderId
-                                        ? taskResponses[orderId]?.regular
-                                        : null;
-                                    const taskResponseMarketing = orderId
-                                        ? taskResponses[orderId]?.marketing
-                                        : null;
-                                    const daysLeftRegular =
-                                        taskResponseRegular?.deadline
-                                            ? calculateDaysLeft(
-                                                  taskResponseRegular.deadline,
-                                              )
-                                            : null;
-                                    const daysLeftMarketing =
-                                        taskResponseMarketing?.deadline
-                                            ? calculateDaysLeft(
-                                                  taskResponseMarketing.deadline,
-                                              )
-                                            : null;
-                                    const canShowResponseCommitmentFee =
-                                        !moodboard.commitmentFee ||
-                                        !moodboard.commitmentFee.response_time;
-                                    const isExpanded =
-                                        expandedCards[moodboard.id] || false;
+                        <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm">
+                            <table className="w-full whitespace-nowrap text-left text-sm">
+                                <thead className="border-b border-slate-200 bg-[#f8fafc] text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                    <tr>
+                                        <th className="px-5 py-4">Project / Client Info</th>
+                                        <th className="px-5 py-4">Files & Desain</th>
+                                        <th className="px-5 py-4">Deadline Info</th>
+                                        <th className="px-5 py-4">Fee Details</th>
+                                        <th className="px-5 py-4">Status & Response</th>
+                                        <th className="px-5 py-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 bg-white">
+                                    {filteredMoodboards.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={6} className="py-12 text-center text-gray-500">
+                                                {searchQuery
+                                                    ? 'Tidak ada hasil yang sesuai dengan pencarian.'
+                                                    : 'Tidak ada moodboard yang sudah approved.'}
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredMoodboards.map((moodboard) => {
+                                            const orderId = moodboard.order?.id;
+                                            const taskResponseRegular = orderId
+                                                ? taskResponses[orderId]?.regular
+                                                : null;
+                                            const taskResponseMarketing = orderId
+                                                ? taskResponses[orderId]?.marketing
+                                                : null;
+                                            const daysLeftRegular =
+                                                taskResponseRegular?.deadline
+                                                    ? calculateDaysLeft(
+                                                          taskResponseRegular.deadline,
+                                                      )
+                                                    : null;
+                                            const daysLeftMarketing =
+                                                taskResponseMarketing?.deadline
+                                                    ? calculateDaysLeft(
+                                                          taskResponseMarketing.deadline,
+                                                      )
+                                                    : null;
+                                            const canShowResponseCommitmentFee =
+                                                !moodboard.commitmentFee ||
+                                                !moodboard.commitmentFee.response_time;
 
-                                    return (
-                                        <div
-                                            key={moodboard.id}
-                                            className="rounded-lg border-t border-r border-b border-l-4 border-gray-200 border-l-blue-400 bg-gradient-to-br from-white to-blue-50/30 shadow-md transition-all hover:border-l-blue-500 hover:shadow-lg"
-                                        >
-                                            <div className="p-4">
-                                                {/* Compact Header */}
-                                                <div className="flex items-center justify-between gap-3">
-                                                    <div className="min-w-0 flex-1">
-                                                        <h3 className="truncate text-sm font-semibold text-gray-800">
-                                                            {
-                                                                moodboard.order
-                                                                    .nama_project
-                                                            }
-                                                        </h3>
-                                                        <p className="truncate text-xs text-gray-500">
-                                                            {
-                                                                moodboard.order
-                                                                    .customer_name
-                                                            }
-                                                            {moodboard.order
-                                                                .company_name &&
-                                                                ` • ${moodboard.order.company_name}`}
-                                                        </p>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-2">
-                                                        {moodboard.commitmentFee && (
-                                                            <span
-                                                                className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                                                    moodboard
-                                                                        .commitmentFee
-                                                                        .payment_status ===
-                                                                    'completed'
-                                                                        ? 'border border-green-200 bg-green-50 text-green-700'
-                                                                        : 'border border-yellow-200 bg-yellow-50 text-yellow-700'
-                                                                }`}
-                                                            >
-                                                                {moodboard
-                                                                    .commitmentFee
-                                                                    .payment_status ===
-                                                                'completed'
-                                                                    ? '✓ Completed'
-                                                                    : '⏳ Pending'}
-                                                            </span>
-                                                        )}
-
-                                                        <button
-                                                            onClick={() =>
-                                                                toggleCardExpansion(
-                                                                    moodboard.id,
-                                                                )
-                                                            }
-                                                            className="flex items-center gap-2 rounded-md bg-blue-100 px-3 py-2 text-blue-600 transition-colors hover:bg-blue-200"
-                                                        >
-                                                            <p className="text-xs">
-                                                                {isExpanded
-                                                                    ? 'Tutup Detail'
-                                                                    : 'Lihat Detail'}
-                                                            </p>
-
-                                                            <svg
-                                                                className={`h-4 w-4 transition-transform duration-300 ${
-                                                                    isExpanded
-                                                                        ? 'rotate-180'
-                                                                        : ''
-                                                                }`}
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={
-                                                                        2
-                                                                    }
-                                                                    d="M9 5l7 7-7 7"
-                                                                />
-                                                            </svg>
-                                                        </button>
-                                                    </div>
-                                                </div>
-
-                                                {/* Expanded Content */}
-                                                {isExpanded && (
-                                                    <div className="mt-4 space-y-4">
-                                                        {/* Project Details */}
-                                                        <div className="space-y-1 rounded-md border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50/50 p-3 text-xs text-gray-600">
-                                                            <p>
-                                                                <span className="font-medium text-gray-700">
-                                                                    Customer:
-                                                                </span>{' '}
-                                                                {
-                                                                    moodboard
-                                                                        .order
-                                                                        .customer_name
-                                                                }
-                                                            </p>
-                                                            {moodboard.order
-                                                                .company_name && (
-                                                                <p>
-                                                                    <span className="font-medium text-gray-700">
-                                                                        Company:
-                                                                    </span>{' '}
-                                                                    {
-                                                                        moodboard
-                                                                            .order
-                                                                            .company_name
-                                                                    }
-                                                                </p>
+                                            return (
+                                                <tr key={moodboard.id} className="transition-colors hover:bg-slate-50/50">
+                                                    <td className="px-5 py-4 align-top">
+                                                        <div className="font-bold text-slate-900">{moodboard.order.nama_project}</div>
+                                                        <div className="mt-1 text-xs text-slate-500">{moodboard.order.company_name || '-'}</div>
+                                                        <div className="mt-0.5 text-[11px] font-bold text-slate-400">{moodboard.order.customer_name}</div>
+                                                        <div className="mt-1 max-w-[200px] truncate whitespace-pre-wrap text-[11px] text-slate-400">{moodboard.order.alamat}</div>
+                                                    </td>
+                                                    <td className="px-5 py-4 align-top">
+                                                        <div className="space-y-2">
+                                                            {moodboard.moodboard_kasar ? (
+                                                                <div className="flex items-center gap-2">
+                                                                    <button onClick={() => handleImagePreview(`/storage/${moodboard.moodboard_kasar}`)} className="flex items-center gap-1 rounded border border-purple-200 bg-purple-50 px-2 py-1 text-xs font-semibold text-purple-600 transition-colors hover:text-purple-800" title="Moodboard Design">
+                                                                        🖼️ Preview Design
+                                                                    </button>
+                                                                    <a href={`/storage/${moodboard.moodboard_kasar}`} download className="text-slate-400 hover:text-slate-600" title="Download">⬇️</a>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-xs italic text-slate-400">No Design</div>
                                                             )}
-                                                            {moodboard.order
-                                                                .alamat && (
-                                                                <p>
-                                                                    <span className="font-medium text-gray-700">
-                                                                        Alamat:
-                                                                    </span>{' '}
-                                                                    {
-                                                                        moodboard
-                                                                            .order
-                                                                            .alamat
-                                                                    }
-                                                                </p>
+                                                            {moodboard.estimasi ? (
+                                                                <div className="flex items-center gap-2">
+                                                                    <button onClick={() => moodboard.estimasi && handleFilePreview(`/storage/${moodboard.estimasi.estimated_cost}`)} className="flex items-center gap-1 rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-600 transition-colors hover:text-blue-800" title="File Estimasi Biaya">
+                                                                        📄 File Estimasi
+                                                                    </button>
+                                                                    <a href={`/storage/${moodboard.estimasi.estimated_cost}`} download className="text-slate-400 hover:text-slate-600" title="Download">⬇️</a>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-xs italic text-slate-400">No Est</div>
                                                             )}
                                                         </div>
-
-                                                        {/* Task Response Deadline - REGULAR */}
-                                                        {!isKepalaMarketing &&
-                                                            taskResponseRegular &&
-                                                            taskResponseRegular.status !==
-                                                                'selesai' && (
-                                                                <div className="rounded-md border border-gray-300 bg-gray-50 p-2.5">
-                                                                    <div className="flex items-center justify-between gap-2">
-                                                                        <div className="flex-1">
-                                                                            <p className="text-xs font-medium text-gray-800">
-                                                                                ⏰
-                                                                                Deadline
-                                                                                Commitment
-                                                                                Fee
-                                                                            </p>
-                                                                            <p className="mt-0.5 text-xs text-gray-600">
-                                                                                {formatDeadline(
-                                                                                    taskResponseRegular.deadline,
-                                                                                )}
-                                                                            </p>
-                                                                            {daysLeftRegular !==
-                                                                                null && (
-                                                                                <p
-                                                                                    className={`mt-0.5 text-xs font-medium ${
-                                                                                        daysLeftRegular <
-                                                                                        0
-                                                                                            ? 'text-red-600'
-                                                                                            : daysLeftRegular <=
-                                                                                                3
-                                                                                              ? 'text-orange-600'
-                                                                                              : 'text-gray-600'
-                                                                                    }`}
-                                                                                >
-                                                                                    {daysLeftRegular <
-                                                                                    0
-                                                                                        ? `Terlambat ${Math.abs(daysLeftRegular)} hari`
-                                                                                        : `${daysLeftRegular} hari lagi`}
-                                                                                </p>
-                                                                            )}
-                                                                        </div>
-                                                                        <button
-                                                                            onClick={() =>
-                                                                                orderId &&
-                                                                                setShowExtendModal(
-                                                                                    {
-                                                                                        orderId,
-                                                                                        tahap: 'cm_fee',
-                                                                                        isMarketing: false,
-                                                                                        taskResponse:
-                                                                                            taskResponseRegular,
-                                                                                    },
-                                                                                )
-                                                                            }
-                                                                            className="rounded-md bg-gray-700 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-gray-800"
-                                                                        >
-                                                                            Perpanjangan
-                                                                        </button>
+                                                    </td>
+                                                    <td className="px-5 py-4 align-top">
+                                                        <div className="flex max-w-[240px] flex-col gap-2">
+                                                            {!isKepalaMarketing && taskResponseRegular && taskResponseRegular.status !== 'selesai' && (
+                                                                <div className={`rounded-lg p-2.5 border ${daysLeftRegular !== null && daysLeftRegular < 0 ? 'bg-red-50 border-red-200 text-red-700' : daysLeftRegular !== null && daysLeftRegular <= 3 ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-yellow-50 border-yellow-200 text-yellow-700'}`}>
+                                                                    <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">⏰ Deadline CF</div>
+                                                                    <div className="mt-0.5 text-xs font-medium">{formatDeadline(taskResponseRegular.deadline)}</div>
+                                                                    {daysLeftRegular !== null && (
+                                                                        <div className="mt-1 text-[10px] font-medium">{daysLeftRegular < 0 ? `Terlambat ${Math.abs(daysLeftRegular)} hari` : `${daysLeftRegular} hari lagi`}</div>
+                                                                    )}
+                                                                    <div className="mt-2 flex items-center justify-between border-t border-black/10 pt-2">
+                                                                        {typeof taskResponseRegular.extend_time === 'number' && taskResponseRegular.extend_time > 0 ? (
+                                                                            <span className="text-[9px] font-bold opacity-80">Ext: {taskResponseRegular.extend_time}x</span>
+                                                                        ) : <span />}
+                                                                        <button onClick={() => setShowExtendModal({orderId: orderId!, tahap: 'cm_fee', isMarketing: false, taskResponse: taskResponseRegular})} className={`rounded px-2 py-1 text-[9px] font-bold text-white transition-colors ${daysLeftRegular !== null && daysLeftRegular < 0 ? 'bg-red-600 hover:bg-red-700' : 'bg-orange-500 hover:bg-orange-600'} `}>Perpanjangan</button>
                                                                     </div>
                                                                 </div>
                                                             )}
-
-                                                        {/* Task Response Deadline - MARKETING */}
-                                                        {isKepalaMarketing &&
-                                                            taskResponseMarketing &&
-                                                            taskResponseMarketing.status !==
-                                                                'selesai' && (
-                                                                <div className="rounded-md border border-gray-300 bg-gray-50 p-2.5">
-                                                                    <div className="flex items-center justify-between gap-2">
-                                                                        <div className="flex-1">
-                                                                            <p className="text-xs font-medium text-gray-800">
-                                                                                ⏰
-                                                                                Deadline
-                                                                                CF
-                                                                                (Marketing)
-                                                                            </p>
-                                                                            <p className="mt-0.5 text-xs text-gray-600">
-                                                                                {formatDeadline(
-                                                                                    taskResponseMarketing.deadline,
-                                                                                )}
-                                                                            </p>
-                                                                            {daysLeftMarketing !==
-                                                                                null && (
-                                                                                <p
-                                                                                    className={`mt-0.5 text-xs font-medium ${
-                                                                                        daysLeftMarketing <
-                                                                                        0
-                                                                                            ? 'text-red-600'
-                                                                                            : daysLeftMarketing <=
-                                                                                                3
-                                                                                              ? 'text-orange-600'
-                                                                                              : 'text-gray-600'
-                                                                                    }`}
-                                                                                >
-                                                                                    {daysLeftMarketing <
-                                                                                    0
-                                                                                        ? `Terlambat ${Math.abs(daysLeftMarketing)} hari`
-                                                                                        : `${daysLeftMarketing} hari lagi`}
-                                                                                </p>
-                                                                            )}
-                                                                        </div>
-                                                                        <button
-                                                                            onClick={() =>
-                                                                                orderId &&
-                                                                                setShowExtendModal(
-                                                                                    {
-                                                                                        orderId,
-                                                                                        tahap: 'cm_fee',
-                                                                                        isMarketing: true,
-                                                                                        taskResponse:
-                                                                                            taskResponseMarketing,
-                                                                                    },
-                                                                                )
-                                                                            }
-                                                                            className="rounded-md bg-gray-700 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-gray-800"
-                                                                        >
-                                                                            Perpanjangan
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
-                                                        {/* Files Section - Vertical Layout */}
-                                                        <div className="space-y-2.5">
-                                                            {/* Moodboard File */}
-                                                            {moodboard.moodboard_kasar && (
-                                                                <div className="rounded-md border border-purple-200 bg-gradient-to-br from-white to-purple-50/40 p-3">
-                                                                    <div className="flex items-center justify-between gap-3">
-                                                                        <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                                                                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-purple-100">
-                                                                                <svg
-                                                                                    className="h-5 w-5 text-purple-600"
-                                                                                    fill="none"
-                                                                                    stroke="currentColor"
-                                                                                    viewBox="0 0 24 24"
-                                                                                >
-                                                                                    <path
-                                                                                        strokeLinecap="round"
-                                                                                        strokeLinejoin="round"
-                                                                                        strokeWidth={
-                                                                                            2
-                                                                                        }
-                                                                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                                                                    />
-                                                                                </svg>
-                                                                            </div>
-                                                                            <div className="min-w-0 flex-1">
-                                                                                <p className="truncate text-xs font-medium text-gray-800">
-                                                                                    Moodboard
-                                                                                    Design
-                                                                                </p>
-                                                                                <p className="text-xs text-gray-500">
-                                                                                    Klik
-                                                                                    preview
-                                                                                    atau
-                                                                                    download
-                                                                                </p>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="flex gap-1.5">
-                                                                            <button
-                                                                                onClick={() =>
-                                                                                    handleImagePreview(
-                                                                                        `/storage/${moodboard.moodboard_kasar}`,
-                                                                                    )
-                                                                                }
-                                                                                className="rounded-md bg-gray-100 p-2 text-gray-600 transition-colors hover:bg-gray-200"
-                                                                                title="Preview"
-                                                                            >
-                                                                                <svg
-                                                                                    className="h-4 w-4"
-                                                                                    fill="none"
-                                                                                    stroke="currentColor"
-                                                                                    viewBox="0 0 24 24"
-                                                                                >
-                                                                                    <path
-                                                                                        strokeLinecap="round"
-                                                                                        strokeLinejoin="round"
-                                                                                        strokeWidth={
-                                                                                            2
-                                                                                        }
-                                                                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                                                                    />
-                                                                                    <path
-                                                                                        strokeLinecap="round"
-                                                                                        strokeLinejoin="round"
-                                                                                        strokeWidth={
-                                                                                            2
-                                                                                        }
-                                                                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                                                                    />
-                                                                                </svg>
-                                                                            </button>
-                                                                            <a
-                                                                                href={`/storage/${moodboard.moodboard_kasar}`}
-                                                                                download
-                                                                                className="rounded-md bg-gray-100 p-2 text-gray-600 transition-colors hover:bg-gray-200"
-                                                                                title="Download"
-                                                                            >
-                                                                                <svg
-                                                                                    className="h-4 w-4"
-                                                                                    fill="none"
-                                                                                    stroke="currentColor"
-                                                                                    viewBox="0 0 24 24"
-                                                                                >
-                                                                                    <path
-                                                                                        strokeLinecap="round"
-                                                                                        strokeLinejoin="round"
-                                                                                        strokeWidth={
-                                                                                            2
-                                                                                        }
-                                                                                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                                                                                    />
-                                                                                </svg>
-                                                                            </a>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
-                                                            {/* Estimasi File */}
-                                                            {moodboard.estimasi && (
-                                                                <div className="rounded-md border border-blue-200 bg-gradient-to-br from-white to-blue-50/40 p-3">
-                                                                    <div className="flex items-center justify-between gap-3">
-                                                                        <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                                                                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-100">
-                                                                                <svg
-                                                                                    className="h-5 w-5 text-blue-600"
-                                                                                    fill="none"
-                                                                                    stroke="currentColor"
-                                                                                    viewBox="0 0 24 24"
-                                                                                >
-                                                                                    <path
-                                                                                        strokeLinecap="round"
-                                                                                        strokeLinejoin="round"
-                                                                                        strokeWidth={
-                                                                                            2
-                                                                                        }
-                                                                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                                                                    />
-                                                                                </svg>
-                                                                            </div>
-                                                                            <div className="min-w-0 flex-1">
-                                                                                <p className="truncate text-xs font-medium text-gray-800">
-                                                                                    File
-                                                                                    Estimasi
-                                                                                    Biaya
-                                                                                </p>
-                                                                                <p className="text-xs text-gray-500">
-                                                                                    {isPdfFile(
-                                                                                        moodboard
-                                                                                            .estimasi
-                                                                                            .estimated_cost,
-                                                                                    )
-                                                                                        ? 'PDF Document'
-                                                                                        : 'File Document'}
-                                                                                </p>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="flex gap-1.5">
-                                                                            <button
-                                                                                onClick={() =>
-                                                                                    moodboard.estimasi &&
-                                                                                    handleFilePreview(
-                                                                                        `/storage/${moodboard.estimasi.estimated_cost}`,
-                                                                                    )
-                                                                                }
-                                                                                className="rounded-md bg-gray-100 p-2 text-gray-600 transition-colors hover:bg-gray-200"
-                                                                                title="Preview"
-                                                                            >
-                                                                                <svg
-                                                                                    className="h-4 w-4"
-                                                                                    fill="none"
-                                                                                    stroke="currentColor"
-                                                                                    viewBox="0 0 24 24"
-                                                                                >
-                                                                                    <path
-                                                                                        strokeLinecap="round"
-                                                                                        strokeLinejoin="round"
-                                                                                        strokeWidth={
-                                                                                            2
-                                                                                        }
-                                                                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                                                                    />
-                                                                                    <path
-                                                                                        strokeLinecap="round"
-                                                                                        strokeLinejoin="round"
-                                                                                        strokeWidth={
-                                                                                            2
-                                                                                        }
-                                                                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                                                                    />
-                                                                                </svg>
-                                                                            </button>
-                                                                            <a
-                                                                                href={`/storage/${moodboard.estimasi.estimated_cost}`}
-                                                                                download
-                                                                                className="rounded-md bg-gray-100 p-2 text-gray-600 transition-colors hover:bg-gray-200"
-                                                                                title="Download"
-                                                                            >
-                                                                                <svg
-                                                                                    className="h-4 w-4"
-                                                                                    fill="none"
-                                                                                    stroke="currentColor"
-                                                                                    viewBox="0 0 24 24"
-                                                                                >
-                                                                                    <path
-                                                                                        strokeLinecap="round"
-                                                                                        strokeLinejoin="round"
-                                                                                        strokeWidth={
-                                                                                            2
-                                                                                        }
-                                                                                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                                                                                    />
-                                                                                </svg>
-                                                                            </a>
-                                                                        </div>
+                                                            {isKepalaMarketing && taskResponseMarketing && taskResponseMarketing.status !== 'selesai' && (
+                                                                <div className="rounded-lg border border-purple-200 bg-purple-50 p-2.5 text-purple-700">
+                                                                    <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">⏰ Deadline CF(Mkt)</div>
+                                                                    <div className="mt-0.5 text-xs font-medium">{formatDeadline(taskResponseMarketing.deadline)}</div>
+                                                                    {daysLeftMarketing !== null && (
+                                                                        <div className="mt-1 text-[10px] font-medium">{daysLeftMarketing < 0 ? `Terlambat ${Math.abs(daysLeftMarketing)} hari` : `${daysLeftMarketing} hari lagi`}</div>
+                                                                    )}
+                                                                    <div className="mt-2 flex items-center justify-between border-t border-purple-200 pt-2">
+                                                                        {typeof taskResponseMarketing.extend_time === 'number' && taskResponseMarketing.extend_time > 0 ? (
+                                                                            <span className="text-[9px] font-bold opacity-80">Ext: {taskResponseMarketing.extend_time}x</span>
+                                                                        ) : <span />}
+                                                                        <button onClick={() => setShowExtendModal({orderId: orderId!, tahap: 'cm_fee', isMarketing: true, taskResponse: taskResponseMarketing})} className="rounded bg-purple-600 px-2 py-1 text-[9px] font-bold text-white transition-colors hover:bg-purple-700">Perpanjangan</button>
                                                                     </div>
                                                                 </div>
                                                             )}
                                                         </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Commitment Fee Info */}
-                                                {moodboard.commitmentFee && (
-                                                    <div className="mt-2 rounded-md border border-indigo-200 bg-gradient-to-br from-indigo-50 to-blue-50/50 p-3">
-                                                        <div className="space-y-2 text-xs">
-                                                            <div className="grid grid-cols-2 gap-2">
-                                                                <div>
-                                                                    <p className="font-medium text-indigo-700">
-                                                                        Response
-                                                                        By
-                                                                    </p>
-                                                                    <p className="text-gray-900">
-                                                                        {
-                                                                            moodboard
-                                                                                .commitmentFee
-                                                                                ?.response_by
-                                                                        }
-                                                                    </p>
-                                                                </div>
-                                                                <div>
-                                                                    <p className="font-medium text-indigo-700">
-                                                                        Response
-                                                                        Time
-                                                                    </p>
-                                                                    <p className="text-gray-900">
-                                                                        {formatDate(
-                                                                            moodboard
-                                                                                .commitmentFee
-                                                                                ?.response_time,
-                                                                        )}
-                                                                    </p>
+                                                    </td>
+                                                    <td className="px-5 py-4 align-top">
+                                                        {moodboard.commitmentFee && moodboard.commitmentFee.total_fee !== null ? (
+                                                            <div>
+                                                                <div className="text-sm font-bold text-gray-900">{formatCurrency(moodboard.commitmentFee.total_fee)}</div>
+                                                                <div className="mt-1.5">
+                                                                    {moodboard.commitmentFee.payment_status === 'completed' ? (
+                                                                        <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200">✓ Completed</span>
+                                                                    ) : (
+                                                                        <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-semibold text-amber-700 border border-amber-200">⏳ Pending</span>
+                                                                    )}
                                                                 </div>
                                                             </div>
-                                                            {moodboard
-                                                                .commitmentFee
-                                                                ?.total_fee !==
-                                                                null && (
-                                                                <div className="border-t border-indigo-200 pt-2">
-                                                                    <p className="font-medium text-indigo-700">
-                                                                        Total
-                                                                        Fee
-                                                                    </p>
-                                                                    <p className="text-base font-bold text-gray-900">
-                                                                        {formatCurrency(
-                                                                            moodboard
-                                                                                .commitmentFee
-                                                                                ?.total_fee!,
-                                                                        )}
-                                                                    </p>
+                                                        ) : (
+                                                            <span className="text-xs italic text-slate-400">Total Fee: Belum Diisi</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-5 py-4 align-top">
+                                                        <div className="space-y-1.5">
+                                                            {moodboard.commitmentFee?.response_time ? (
+                                                                <div className="flex flex-col gap-1">
+                                                                    <div className="inline-flex max-w-fit flex-col items-start gap-0.5 rounded border border-indigo-200 bg-indigo-50 px-2 py-1.5 text-[10px] text-indigo-700">
+                                                                        <span className="text-[9px] font-bold uppercase tracking-wider text-indigo-500">ResBy</span>
+                                                                        <div className="font-semibold">{moodboard.commitmentFee.response_by}</div>
+                                                                        <div className="text-indigo-500">{formatDate(moodboard.commitmentFee.response_time)}</div>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="block text-[10px] italic text-slate-400">Belum Response</span>
+                                                            )}
+                                                            {moodboard.commitmentFee?.pm_response_time && (
+                                                                <div className="inline-flex max-w-fit flex-col items-start gap-0.5 rounded border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-[10px] text-emerald-700 mt-1">
+                                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-500">PM ResBy</span>
+                                                                    <div className="font-semibold">{moodboard.commitmentFee.pm_response_by}</div>
+                                                                    <div className="text-emerald-500">{formatDate(moodboard.commitmentFee.pm_response_time)}</div>
                                                                 </div>
                                                             )}
                                                         </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Marketing Response Button */}
-                                                {isKepalaMarketing &&
-                                                    !moodboard.commitmentFee
-                                                        ?.pm_response_time && (
-                                                        <button
-                                                            onClick={() => {
-                                                                handlePmResponse(
-                                                                    moodboard.id,
-                                                                );
-                                                            }}
-                                                            className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
-                                                        >
-                                                            Marketing Response
-                                                        </button>
-                                                    )}
-
-                                                {/* PM Response Badge */}
-                                                {moodboard.commitmentFee
-                                                    ?.pm_response_time && (
-                                                    <div className="mt-2 rounded-md border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50/50 p-2.5">
-                                                        <p className="text-xs font-medium text-green-700">
-                                                            ✓ PM Response
-                                                        </p>
-                                                        <p className="text-xs text-gray-600">
-                                                            By:{' '}
-                                                            {
-                                                                moodboard
-                                                                    .commitmentFee
-                                                                    ?.pm_response_by
-                                                            }
-                                                        </p>
-                                                        <p className="text-xs text-gray-600">
-                                                            {formatDate(
-                                                                moodboard
-                                                                    .commitmentFee
-                                                                    ?.pm_response_time,
+                                                    </td>
+                                                    <td className="px-5 py-4 align-top text-right">
+                                                        {isKepalaMarketing && !moodboard.commitmentFee?.pm_response_time && (
+                                                            <div className="mb-2">
+                                                                <button
+                                                                    onClick={() => handlePmResponse(moodboard.id)}
+                                                                    className="w-full rounded-md bg-indigo-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
+                                                                >
+                                                                    Marketing Response
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex flex-col items-end gap-1.5">
+                                                            {!isKepalaMarketing && canShowResponseCommitmentFee ? (
+                                                                <button
+                                                                    onClick={() => handleResponse(moodboard)}
+                                                                    className="rounded-md bg-gray-700 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-gray-800 w-full text-center"
+                                                                >
+                                                                    Response Commitment Fee
+                                                                </button>
+                                                            ) : moodboard.commitmentFee?.total_fee === null ? (
+                                                                <button
+                                                                    onClick={() => handleOpenFeeModal(moodboard)}
+                                                                    className="rounded-md bg-gray-700 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-gray-800 w-full text-center"
+                                                                >
+                                                                    Isi Total Fee
+                                                                </button>
+                                                            ) : moodboard.commitmentFee?.payment_status === 'pending' && !moodboard.commitmentFee?.payment_proof ? (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => handleOpenFeeModal(moodboard, true)}
+                                                                        className="rounded-md bg-gray-600 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-gray-700 w-full text-center"
+                                                                    >
+                                                                        Revisi Total Fee
+                                                                    </button>
+                                                                    <a
+                                                                        href={`/commitment-fee/${moodboard.commitmentFee?.id}/print`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="rounded-md bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-blue-700 w-full text-center"
+                                                                    >
+                                                                        Cetak CF
+                                                                    </a>
+                                                                    <button
+                                                                        onClick={() => handleOpenPaymentModal(moodboard)}
+                                                                        className="rounded-md bg-green-600 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-green-700 w-full text-center"
+                                                                    >
+                                                                        Upload Bukti Bayar
+                                                                    </button>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <a
+                                                                        href={`/commitment-fee/${moodboard.commitmentFee?.id}/print`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="rounded-md bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-blue-700 w-full text-center"
+                                                                    >
+                                                                        Cetak CF
+                                                                    </a>
+                                                                    <a
+                                                                        href={`/storage/${moodboard.commitmentFee?.payment_proof!}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="rounded-md bg-emerald-600 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-emerald-700 w-full text-center"
+                                                                    >
+                                                                        Download Bukti
+                                                                    </a>
+                                                                    {!isKepalaMarketing && (
+                                                                        <button
+                                                                            onClick={() => handleResetFee(moodboard)}
+                                                                            className="rounded-md bg-red-600 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-red-700 w-full text-center mt-1"
+                                                                        >
+                                                                            Reset & Revisi
+                                                                        </button>
+                                                                    )}
+                                                                </>
                                                             )}
-                                                        </p>
-                                                    </div>
-                                                )}
-
-                                                {/* Action Buttons */}
-                                                <div className="mt-4 flex flex-wrap gap-2">
-                                                    {!isKepalaMarketing &&
-                                                    canShowResponseCommitmentFee ? (
-                                                        <button
-                                                            onClick={() =>
-                                                                handleResponse(
-                                                                    moodboard,
-                                                                )
-                                                            }
-                                                            className="rounded-md bg-gray-700 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-800"
-                                                        >
-                                                            Response Commitment
-                                                            Fee
-                                                        </button>
-                                                    ) : moodboard.commitmentFee
-                                                          ?.total_fee ===
-                                                      null ? (
-                                                        <button
-                                                            onClick={() =>
-                                                                handleOpenFeeModal(
-                                                                    moodboard,
-                                                                )
-                                                            }
-                                                            className="rounded-md bg-gray-700 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-800"
-                                                        >
-                                                            Isi Total Fee
-                                                        </button>
-                                                    ) : moodboard.commitmentFee
-                                                          ?.payment_status ===
-                                                          'pending' &&
-                                                      !moodboard.commitmentFee
-                                                          ?.payment_proof ? (
-                                                        <>
-                                                            <button
-                                                                onClick={() =>
-                                                                    handleOpenFeeModal(
-                                                                        moodboard,
-                                                                        true,
-                                                                    )
-                                                                }
-                                                                className="rounded-md bg-gray-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-700"
-                                                            >
-                                                                Revisi Total Fee
-                                                            </button>
-
-                                                            <a
-                                                                href={`/commitment-fee/${moodboard.commitmentFee?.id}/print`}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="rounded-md bg-gray-700 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-800"
-                                                            >
-                                                                Cetak CF
-                                                            </a>
-
-                                                            <button
-                                                                onClick={() =>
-                                                                    handleOpenPaymentModal(
-                                                                        moodboard,
-                                                                    )
-                                                                }
-                                                                className="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-900"
-                                                            >
-                                                                Upload Bukti
-                                                                Bayar
-                                                            </button>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <a
-                                                                href={`/commitment-fee/${moodboard.commitmentFee?.id}/print`}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="rounded-md bg-gray-700 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-800"
-                                                            >
-                                                                Cetak CF
-                                                            </a>
-                                                            <a
-                                                                href={`/storage/${moodboard.commitmentFee?.payment_proof!}`}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="rounded-md bg-gray-700 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-800"
-                                                            >
-                                                                Download Bukti
-                                                            </a>
-                                                            <button
-                                                                onClick={() =>
-                                                                    handleResetFee(
-                                                                        moodboard,
-                                                                    )
-                                                                }
-                                                                className="rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-800"
-                                                            >
-                                                                Reset & Revisi
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>

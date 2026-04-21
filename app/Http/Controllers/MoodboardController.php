@@ -177,7 +177,7 @@ class MoodboardController extends Controller
             $validated = $request->validate([
                 'moodboard_id' => 'required|exists:moodboards,id',
                 'moodboard_kasar' => 'required|array',
-                'moodboard_kasar.*' => 'required|file|mimes:jpg,jpeg,png,pdf',
+                'moodboard_kasar.*' => 'required|file|mimes:jpg,jpeg,png,pdf,cad,dwg,dxf,skp',
             ]);
 
             Log::info('Validation passed');
@@ -306,7 +306,7 @@ class MoodboardController extends Controller
             }
 
             $validated = $request->validate([
-                'moodboard_final' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
+                'moodboard_final' => 'required|file|mimes:jpg,jpeg,png,pdf,cad,dwg,dxf,skp|max:10240',
             ]);
 
             Log::info('Validation passed');
@@ -420,7 +420,7 @@ class MoodboardController extends Controller
 
             $validated = $request->validate([
                 'moodboard_kasar' => 'nullable|array',
-                'moodboard_kasar.*' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
+                'moodboard_kasar.*' => 'required|file|mimes:jpg,jpeg,png,pdf,cad,dwg,dxf,skp|max:10240',
                 'delete_file_ids' => 'nullable|array',
                 'delete_file_ids.*' => 'exists:moodboard_files,id',
             ]);
@@ -541,7 +541,7 @@ class MoodboardController extends Controller
             Log::info('File ID: ' . $fileId);
 
             $validated = $request->validate([
-                'file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
+                'file' => 'required|file|mimes:jpg,jpeg,png,pdf,cad,dwg,dxf,skp|max:10240',
             ]);
 
             $oldFile = MoodboardFile::where('id', $fileId)
@@ -595,7 +595,7 @@ class MoodboardController extends Controller
         $moodboard = Moodboard::findOrFail($moodboardId);
         if ($moodboard->status === 'approved') {
             $validated = $request->validate([
-                'moodboard_final' => 'required|file|mimes:jpg,jpeg,png,pdf',
+                'moodboard_final' => 'required|file|mimes:jpg,jpeg,png,pdf,cad,dwg,dxf,skp',
             ]);
 
             if ($request->hasFile('moodboard_final')) {

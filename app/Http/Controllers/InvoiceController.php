@@ -192,6 +192,7 @@ class InvoiceController extends Controller
                     'response_by' => $responseBy,
                     'pm_response_time' => $pmResponseTime,
                     'pm_response_by' => $pmResponseBy,
+                    'has_signed_contract' => !empty($itemPekerjaan->kontrak?->signed_contract),
                 ];
             });
 

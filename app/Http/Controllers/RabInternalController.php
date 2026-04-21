@@ -16,6 +16,14 @@ use App\Models\ItemPekerjaanProduk;
 use Illuminate\Support\Facades\Log;
 use App\Services\NotificationService;
 use App\Models\ItemPekerjaanJenisItem;
+use App\Models\RabJasa;
+use App\Models\RabJasaProduk;
+use App\Models\RabVendor;
+use App\Models\RabVendorProduk;
+use App\Models\RabVendorAksesoris;
+use App\Models\RabKontrak;
+use App\Models\RabKontrakProduk;
+use App\Models\RabKontrakAksesoris;
 
 class RabInternalController extends Controller
 {
@@ -346,6 +354,9 @@ class RabInternalController extends Controller
             }
 
             DB::commit();
+
+            // Auto-generate/sync other RABs
+            $this->syncOtherRabs($validated['rab_internal_id']);
 
             return redirect()->route('rab-internal.index')
                 ->with('success', 'RAB Internal berhasil disimpan.');
@@ -693,6 +704,9 @@ class RabInternalController extends Controller
 
             DB::commit();
 
+            // Auto-generate/sync other RABs
+            $this->syncOtherRabs($rabInternalId);
+
             return redirect()->route('rab-internal.index')
                 ->with('success', 'RAB Internal berhasil diupdate.');
         } catch (\Exception $e) {
@@ -775,5 +789,198 @@ class RabInternalController extends Controller
 
         return redirect()->back()
             ->with('success', 'RAB berhasil di-submit! Semua RAB (Internal, Kontrak, Vendor, Jasa) telah ACC.');
+    }
+
+    private function syncOtherRabs($rabInternalId)
+    {
+        try {
+            $rabInternal = RabInternal::with(['rabProduks.rabAksesoris', 'itemPekerjaan'])->findOrFail($rabInternalId);
+            
+            $this->syncRabJasa($rabInternal);
+            $this->syncRabVendor($rabInternal);
+            $this->syncRabKontrak($rabInternal);
+            
+            Log::info("Auto-sync RABs for Internal RAB ID: {$rabInternalId} completed.");
+        } catch (\Exception $e) {
+            Log::error("Auto-sync RABs failed: " . $e->getMessage());
+            // We don't throw here to avoid failing the main request if auto-sync fails
+        }
+    }
+
+    private function syncRabJasa($rabInternal)
+    {
+        $itemPekerjaanId = $rabInternal->item_pekerjaan_id;
+        $rabJasa = RabJasa::firstOrCreate(
+            ['item_pekerjaan_id' => $itemPekerjaanId],
+            [
+                'response_by' => $rabInternal->response_by,
+                'response_time' => $rabInternal->response_time,
+            ]
+        );
+
+        $rabJasa->rabJasaProduks()->delete();
+
+        foreach ($rabInternal->rabProduks as $rabProduk) {
+            $itemPekerjaanProduk = ItemPekerjaanProduk::with('bahanBakus')
+                ->find($rabProduk->item_pekerjaan_produk_id);
+
+            $hargaJasa = $itemPekerjaanProduk->bahanBakus->sum('harga_jasa') ?: 0;
+            $hargaItemsOriginal = $rabProduk->harga_items_non_aksesoris;
+            $hargaSatuanJasa = ($hargaJasa + $hargaItemsOriginal) * $rabProduk->harga_dimensi;
+
+            RabJasaProduk::create([
+                'rab_jasa_id' => $rabJasa->id,
+                'item_pekerjaan_produk_id' => $rabProduk->item_pekerjaan_produk_id,
+                'harga_dasar' => $hargaJasa,
+                'harga_items_non_aksesoris' => $hargaItemsOriginal,
+                'harga_dimensi' => $rabProduk->harga_dimensi,
+                'harga_satuan' => $hargaSatuanJasa,
+                'harga_akhir' => $hargaSatuanJasa,
+            ]);
+        }
+    }
+
+    private function syncRabVendor($rabInternal)
+    {
+        $itemPekerjaanId = $rabInternal->item_pekerjaan_id;
+        $rabVendor = RabVendor::firstOrCreate(
+            ['item_pekerjaan_id' => $itemPekerjaanId],
+            [
+                'response_by' => $rabInternal->response_by,
+                'response_time' => $rabInternal->response_time,
+            ]
+        );
+
+        foreach ($rabVendor->rabVendorProduks as $produk) {
+            $produk->rabVendorAksesoris()->delete();
+        }
+        $rabVendor->rabVendorProduks()->delete();
+
+        foreach ($rabInternal->rabProduks as $rabProduk) {
+            $hargaDasarOriginal = $rabProduk->harga_dasar;
+            $hargaItemsOriginal = $rabProduk->harga_items_non_aksesoris;
+            $hargaSatuanVendor = ($hargaDasarOriginal + $hargaItemsOriginal) * $rabProduk->harga_dimensi;
+
+            $rabVendorProduk = RabVendorProduk::create([
+                'rab_vendor_id' => $rabVendor->id,
+                'item_pekerjaan_produk_id' => $rabProduk->item_pekerjaan_produk_id,
+                'harga_dasar' => $hargaDasarOriginal,
+                'harga_items_non_aksesoris' => $hargaItemsOriginal,
+                'harga_dimensi' => $rabProduk->harga_dimensi,
+                'harga_satuan' => $hargaSatuanVendor,
+                'harga_total_aksesoris' => 0,
+                'harga_akhir' => $hargaSatuanVendor,
+            ]);
+
+            $totalAksesoris = 0;
+            foreach ($rabProduk->rabAksesoris as $rabAksesoris) {
+                $itemPekerjaanItem = ItemPekerjaanItem::with('item')->find($rabAksesoris->item_pekerjaan_item_id);
+                $hargaSatuanAksOriginal = $itemPekerjaanItem->item->harga;
+                $hargaTotalOriginal = $hargaSatuanAksOriginal * $rabAksesoris->qty_aksesoris;
+
+                RabVendorAksesoris::create([
+                    'rab_vendor_produk_id' => $rabVendorProduk->id,
+                    'item_pekerjaan_item_id' => $rabAksesoris->item_pekerjaan_item_id,
+                    'harga_satuan_aksesoris' => $hargaSatuanAksOriginal,
+                    'qty_aksesoris' => $rabAksesoris->qty_aksesoris,
+                    'harga_total' => $hargaTotalOriginal,
+                ]);
+
+                $totalAksesoris += $hargaTotalOriginal;
+            }
+
+            $rabVendorProduk->update([
+                'harga_total_aksesoris' => $totalAksesoris,
+                'harga_akhir' => $hargaSatuanVendor + $totalAksesoris,
+            ]);
+        }
+    }
+
+    private function syncRabKontrak($rabInternal)
+    {
+        $itemPekerjaanId = $rabInternal->item_pekerjaan_id;
+        $rabKontrak = RabKontrak::firstOrCreate(
+            ['item_pekerjaan_id' => $itemPekerjaanId],
+            [
+                'response_by' => $rabInternal->response_by,
+                'response_time' => $rabInternal->response_time,
+            ]
+        );
+
+        foreach ($rabKontrak->rabKontrakProduks as $produk) {
+            $produk->rabKontrakAksesoris()->delete();
+        }
+        $rabKontrak->rabKontrakProduks()->delete();
+
+        foreach ($rabInternal->rabProduks as $rabProduk) {
+            $markupDivider = 1 - ($rabProduk->markup_satuan / 100);
+            $hargaDasarKontrak = $markupDivider > 0 ? $rabProduk->harga_dasar / $markupDivider : $rabProduk->harga_dasar;
+            $hargaItemsKontrak = $markupDivider > 0 ? $rabProduk->harga_items_non_aksesoris / $markupDivider : $rabProduk->harga_items_non_aksesoris;
+            
+            $hargaFinishingDalam = 0;
+            $hargaFinishingLuar = 0;
+            $itemPekerjaanProduk = ItemPekerjaanProduk::with(['jenisItems.jenisItem', 'jenisItems.items.item'])->find($rabProduk->item_pekerjaan_produk_id);
+            
+            foreach ($itemPekerjaanProduk->jenisItems as $jenisItem) {
+                $namaJenis = strtolower($jenisItem->jenisItem->nama_jenis_item);
+                if ($namaJenis === 'finishing dalam') {
+                    foreach ($jenisItem->items as $item) {
+                        $hargaOriginal = $item->item->harga * $item->quantity;
+                        $hargaFinishingDalam += $markupDivider > 0 ? $hargaOriginal / $markupDivider : $hargaOriginal;
+                    }
+                } elseif ($namaJenis === 'finishing luar') {
+                    foreach ($jenisItem->items as $item) {
+                        $hargaOriginal = $item->item->harga * $item->quantity;
+                        $hargaFinishingLuar += $markupDivider > 0 ? $hargaOriginal / $markupDivider : $hargaOriginal;
+                    }
+                }
+            }
+            
+            $hargaSatuanKontrak = ($hargaDasarKontrak + $hargaItemsKontrak) * $rabProduk->harga_dimensi;
+
+            $totalHargaAksesorisKontrak = 0;
+            $aksesorisData = [];
+            foreach ($rabProduk->rabAksesoris as $rabAksesoris) {
+                $hargaSatuanAksKontrak = $markupDivider > 0 
+                    ? $rabAksesoris->harga_satuan_aksesoris / $markupDivider 
+                    : $rabAksesoris->harga_satuan_aksesoris;
+                $hargaTotalAks = $hargaSatuanAksKontrak * $rabAksesoris->qty_aksesoris;
+                $totalHargaAksesorisKontrak += $hargaTotalAks;
+                
+                $aksesorisData[] = [
+                    'item_pekerjaan_item_id' => $rabAksesoris->item_pekerjaan_item_id,
+                    'harga_satuan_aksesoris' => $hargaSatuanAksKontrak,
+                    'qty_aksesoris' => $rabAksesoris->qty_aksesoris,
+                    'harga_total' => $hargaTotalAks,
+                ];
+            }
+
+            $diskonPerProduk = $rabProduk->diskon_per_produk ?? 0;
+            $hargaAkhirKontrak = ($hargaSatuanKontrak + $totalHargaAksesorisKontrak) - $diskonPerProduk;
+
+            $rabKontrakProduk = RabKontrakProduk::create([
+                'rab_kontrak_id' => $rabKontrak->id,
+                'item_pekerjaan_produk_id' => $rabProduk->item_pekerjaan_produk_id,
+                'harga_dasar' => $hargaDasarKontrak,
+                'harga_finishing_dalam' => $hargaFinishingDalam,
+                'harga_finishing_luar' => $hargaFinishingLuar,
+                'harga_items_non_aksesoris' => $hargaItemsKontrak,
+                'harga_dimensi' => $rabProduk->harga_dimensi,
+                'harga_satuan' => $hargaSatuanKontrak,
+                'harga_total_aksesoris' => $totalHargaAksesorisKontrak,
+                'diskon_per_produk' => $diskonPerProduk,
+                'harga_akhir' => $hargaAkhirKontrak,
+            ]);
+
+            foreach ($aksesorisData as $aks) {
+                RabKontrakAksesoris::create([
+                    'rab_kontrak_produk_id' => $rabKontrakProduk->id,
+                    'item_pekerjaan_item_id' => $aks['item_pekerjaan_item_id'],
+                    'harga_satuan_aksesoris' => $aks['harga_satuan_aksesoris'],
+                    'qty_aksesoris' => $aks['qty_aksesoris'],
+                    'harga_total' => $aks['harga_total'],
+                ]);
+            }
+        }
     }
 }

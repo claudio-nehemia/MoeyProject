@@ -42,14 +42,29 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props)
   const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
   const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: any } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('semua');
 
   const filteredOrders = useMemo(() =>
-    orders.filter(order =>
-      order.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
-    ),
-    [orders, searchQuery]
+    orders.filter(order => {
+      // Status filter
+      let meetsStatus = true;
+      if (statusFilter === 'pending_response') {
+        meetsStatus = !order.survey_response_time;
+      } else if (statusFilter === 'pending_schedule') {
+        meetsStatus = !!order.survey_response_time && !order.tanggal_survey;
+      } else if (statusFilter === 'scheduled') {
+        meetsStatus = !!order.tanggal_survey;
+      }
+
+      if (!meetsStatus) return false;
+
+      return (
+        order.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }),
+    [orders, searchQuery, statusFilter]
   );
 
   useEffect(() => {
@@ -171,9 +186,9 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props)
             Order yang perlu dijadwalkan survey
           </p>
 
-          {/* Search */}
-          <div className="mb-6">
-            <div className="relative">
+          {/* Filters */}
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                 <svg className="h-4 w-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -187,143 +202,147 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props)
                 className="block w-full rounded-lg border border-stone-200 bg-white py-2.5 pl-10 pr-4 text-sm text-stone-700 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
               />
             </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-stone-500 whitespace-nowrap">Status:</span>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 min-w-[180px]"
+              >
+                <option value="semua">Semua Status</option>
+                <option value="pending_response">Belum Response</option>
+                <option value="pending_schedule">Belum Dijadwalkan</option>
+                <option value="scheduled">Sudah Dijadwalkan</option>
+              </select>
+            </div>
           </div>
 
           {filteredOrders.length === 0 ? (
-            <div className="text-center py-12 text-stone-500">
-              Tidak ada order.
+            <div className="text-center py-12 text-stone-500 bg-white rounded-xl border border-stone-200">
+              Tidak ada order yang perlu dijadwalkan survey.
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredOrders.map(order => {
-                const hasResponse = !!order.survey_response_time;
-                const hasPmResponse = !!order.pm_survey_response_time;
-                const showScheduleButton = hasResponse;
-                const taskResponse = taskResponses[order.id];
+            <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm">
+                <table className="w-full whitespace-nowrap text-left text-sm">
+                    <thead className="border-b border-slate-200 bg-[#f8fafc] text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        <tr>
+                            <th className="px-5 py-4">Project / Client Info</th>
+                            <th className="px-5 py-4">Status Survey</th>
+                            <th className="px-5 py-4">Deadline Info</th>
+                            <th className="px-5 py-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                        {filteredOrders.map(order => {
+                            const hasResponse = !!order.survey_response_time;
+                            const hasPmResponse = !!order.pm_survey_response_time;
+                            const showScheduleButton = hasResponse;
+                            const taskResponse = taskResponses[order.id];
 
-                return (
-                  <div
-                    key={order.id}
-                    className="bg-white rounded-lg border p-4"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">
-                          {order.nama_project}
-                        </h3>
-                        <p className="text-sm text-stone-600">
-                          {order.company_name} • {order.customer_name}
-                        </p>
-                      </div>
-                    </div>
+                            return (
+                                <tr key={order.id} className="transition-colors hover:bg-slate-50/50">
+                                    {/* Project Info */}
+                                    <td className="px-5 py-4 align-top">
+                                        <div className="font-semibold text-slate-800 mb-1 max-w-[200px] whitespace-normal break-words leading-tight">
+                                            {order.nama_project}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-2">
+                                            <span className="truncate max-w-[150px] font-medium text-slate-700">{order.company_name}</span>
+                                            <span>•</span>
+                                            <span className="truncate max-w-[150px]">{order.customer_name}</span>
+                                        </div>
+                                        <div className="flex flex-col gap-1.5 mt-2">
+                                            {hasResponse && (
+                                                <div className="inline-flex flex-col gap-0.5 px-2 py-1.5 bg-green-50 border border-green-200 rounded max-w-fit">
+                                                    <span className="text-[9px] font-bold text-green-700 uppercase tracking-wider">✓ Response: {order.survey_response_by}</span>
+                                                    <span className="text-[10px] text-green-600">{formatDateTime(order.survey_response_time)}</span>
+                                                </div>
+                                            )}
+                                            {hasPmResponse && (
+                                                <div className="inline-flex flex-col gap-0.5 px-2 py-1.5 bg-blue-50 border border-blue-200 rounded max-w-fit mt-1">
+                                                    <span className="text-[9px] font-bold text-blue-700 uppercase tracking-wider">✓ PM Res: {order.pm_survey_response_by}</span>
+                                                    <span className="text-[10px] text-blue-600">{formatDateTime(order.pm_survey_response_time)}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </td>
 
-                    {/* RESPONSE STATUS */}
-                    <div className="space-y-2 mb-3">
-                      {/* Regular Response */}
-                      {hasResponse && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-green-100 text-green-800 font-medium">
-                            ✓ Response
-                          </span>
-                          <span className="text-stone-600">
-                            oleh <strong>{order.survey_response_by}</strong> pada{' '}
-                            {formatDateTime(order.survey_response_time)}
-                          </span>
-                        </div>
-                      )}
+                                    {/* Status Survey */}
+                                    <td className="px-5 py-4 align-top">
+                                        <div className="space-y-2">
+                                            {order.tanggal_survey ? (
+                                                <div className="max-w-[220px] rounded border border-indigo-200 bg-indigo-50 p-2 whitespace-normal">
+                                                    <div className="flex items-center gap-1 text-[11px] font-bold text-indigo-700 mb-1">
+                                                        <span>📅</span>
+                                                        <span>Dijadwalkan: {new Date(order.tanggal_survey).toLocaleDateString('id-ID')}</span>
+                                                    </div>
+                                                    <p className="text-[10px] text-indigo-600/80 leading-tight">
+                                                        <span className="font-semibold">Tim:</span> {order.survey_users.map(u => u.name).join(', ')}
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <span className="inline-flex rounded border border-stone-200 bg-stone-100 px-2 py-1 text-[10px] font-medium text-stone-500">
+                                                    Belum dijadwalkan
+                                                </span>
+                                            )}
+                                        </div>
+                                    </td>
 
-                      {/* PM Response */}
-                      {hasPmResponse && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-medium">
-                            ✓ Marketing Response
-                          </span>
-                          <span className="text-stone-600">
-                            oleh <strong>{order.pm_survey_response_by}</strong> pada{' '}
-                            {formatDateTime(order.pm_survey_response_time)}
-                          </span>
-                        </div>
-                      )}
+                                    {/* Deadline */}
+                                    <td className="px-5 py-4 align-top">
+                                        {taskResponse && taskResponse.status !== 'selesai' ? (
+                                            <div className="inline-flex max-w-[200px] flex-col items-start gap-1 rounded-md border border-yellow-200 bg-yellow-50 px-2 py-1.5 w-full">
+                                                <p className="text-[10px] font-bold text-yellow-800">Deadline Survey Schedule</p>
+                                                <p className="text-[11px] font-semibold text-yellow-900">{formatDeadline(taskResponse.deadline)}</p>
+                                                {taskResponse.extend_time > 0 && (
+                                                    <p className="bg-yellow-200 px-1 py-0.5 rounded text-[9px] font-bold text-yellow-800">Ext: {taskResponse.extend_time}x</p>
+                                                )}
+                                                <button
+                                                    onClick={() => setShowExtendModal({ orderId: order.id, tahap: 'survey_schedule', isMarketing: false, taskResponse })}
+                                                    className="mt-1 w-full rounded bg-orange-500 px-2 py-1 text-[10px] font-medium text-white transition hover:bg-orange-600 shadow-sm text-center"
+                                                >Minta Extend</button>
+                                            </div>
+                                        ) : (
+                                            <span className="text-[10px] text-stone-400 italic">Tidak ada deadline</span>
+                                        )}
+                                    </td>
 
-                      {/* Survey Schedule Status */}
-                      {order.tanggal_survey && (
-                        <div className="pt-2 border-t">
-                          <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-sm font-medium">
-                            📅 Survey dijadwalkan (
-                            {new Date(order.tanggal_survey).toLocaleDateString('id-ID')}
-                            )
-                          </div>
-                          <p className="text-xs text-stone-500 mt-1">
-                            Tim: {order.survey_users.map(u => u.name).join(', ')}
-                          </p>
-                        </div>
-                      )}
-                    </div>
+                                    {/* Actions */}
+                                    <td className="px-5 py-4 align-top text-right">
+                                        <div className="flex flex-col items-end gap-1.5">
+                                            {showScheduleButton && (
+                                                <button
+                                                    onClick={() => openModal(order)}
+                                                    className="w-full rounded-md bg-indigo-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-indigo-700 text-center"
+                                                >
+                                                    {order.tanggal_survey ? '📅 Edit Schedule' : '📅 Isi Tanggal Survey'}
+                                                </button>
+                                            )}
 
-                    {/* Deadline & Minta Perpanjangan - hanya setelah response */}
-                    {taskResponse &&
-                      taskResponse.status !== 'selesai' &&
-                      (
-                      <div className="mb-3">
-                        <div className="p-3 rounded border border-yellow-200 bg-yellow-50 flex items-center justify-between gap-3">
-                          <div>
-                            <p className="text-xs font-medium text-yellow-800">
-                              Deadline Survey Schedule
-                            </p>
-                            <p className="text-sm font-semibold text-yellow-900">
-                              {formatDeadline(taskResponse.deadline)}
-                            </p>
-                            {taskResponse.extend_time > 0 && (
-                              <p className="mt-1 text-xs text-orange-600">
-                                Perpanjangan: {taskResponse.extend_time}x
-                              </p>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => setShowExtendModal({ orderId: order.id, tahap: 'survey_schedule', isMarketing: false, taskResponse })}
-                            className="px-3 py-1.5 bg-orange-500 text-white rounded-md text-xs font-medium hover:bg-orange-600 transition-colors"
-                          >
-                            Minta Perpanjangan
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                                            {isKepalaMarketing && !hasPmResponse && (
+                                                <button
+                                                    onClick={() => handlePmResponse(order.id)}
+                                                    className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-blue-700 text-center mt-1"
+                                                >
+                                                    Marketing Response
+                                                </button>
+                                            )}
 
-                    {/* ACTION BUTTONS */}
-                    <div className="flex gap-2 flex-wrap">
-                      {/* Response Button - Always show if not yet responded */}
-                      {isNotKepalaMarketing && !hasResponse && (
-                        <button
-                          onClick={() => handleResponse(order.id)}
-                          className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700"
-                        >
-                          Response
-                        </button>
-                      )}
-
-                      {/* PM Response Button - Only for Kepala Marketing, show if not yet PM responded */}
-                      {isKepalaMarketing && !hasPmResponse && (
-                        <button
-                          onClick={() => handlePmResponse(order.id)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700"
-                        >
-                          Marketing Response
-                        </button>
-                      )}
-
-                      {/* Schedule Button - Only show after response */}
-                      {showScheduleButton && (
-                        <button
-                          onClick={() => openModal(order)}
-                          className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
-                        >
-                          {order.tanggal_survey ? 'Edit Schedule' : 'Isi Tanggal Survey'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                                            {isNotKepalaMarketing && !hasResponse && (
+                                                <button
+                                                    onClick={() => handleResponse(order.id)}
+                                                    className="w-full rounded-md bg-green-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-green-700 text-center mt-1"
+                                                >
+                                                    ✓ Response
+                                                </button>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
             </div>
           )}
         </div>

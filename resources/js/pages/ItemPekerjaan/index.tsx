@@ -244,7 +244,7 @@ function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: Props) {
                                     </svg>
                                 </div>
                                 <div>
-                                    <h1 className="text-3xl font-light text-stone-800" style={{ fontFamily: "'Playfair Display', serif" }}>
+                                    <h1 className="text-3xl font-bold tracking-tight text-slate-800" >
                                         Input Item Pekerjaan
                                     </h1>
                                     <p className="text-sm text-stone-500">
@@ -320,7 +320,7 @@ function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: Props) {
                                         <div className="border-b border-stone-100 bg-gradient-to-r from-purple-50 to-white p-6">
                                             <div className="flex items-start justify-between">
                                                 <div>
-                                                    <h3 className="text-xl font-semibold text-stone-800">
+                                                    <h3 className="text-xl font-semibold text-slate-800">
                                                         {moodboard.order.nama_project}
                                                     </h3>
                                                     <div className="mt-2 space-y-1 text-sm text-stone-600">

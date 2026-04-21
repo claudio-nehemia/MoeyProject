@@ -121,7 +121,7 @@ useEffect(() => {
                 <div className="mb-6">
                     <h1
                         className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-indigo-400 bg-clip-text text-transparent mb-2"
-                        style={{ fontFamily: "Playfair Display, serif" }}
+                        
                     >
                         Jenis Item Management
                     </h1>
@@ -157,7 +157,7 @@ useEffect(() => {
                                     </svg>
                                 </div>
                                 <div>
-                                    <h2 className="text-lg font-bold text-stone-800">
+                                    <h2 className="text-lg font-bold text-slate-800">
                                         All Item Types
                                     </h2>
                                     <p className="text-xs text-stone-500">
@@ -233,7 +233,7 @@ useEffect(() => {
                                                     {jenisItem.nama_jenis_item.charAt(0).toUpperCase()}
                                                 </div>
                                                 <div>
-                                                    <div className="text-sm font-semibold text-stone-800 hover:text-indigo-600 transition-colors">
+                                                    <div className="text-sm font-semibold text-slate-800 hover:text-indigo-600 transition-colors">
                                                         {jenisItem.nama_jenis_item}
                                                     </div>
                                                 </div>

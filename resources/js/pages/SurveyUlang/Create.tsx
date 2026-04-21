@@ -33,7 +33,7 @@ export default function Create({ order }: { order: Order }) {
     };
 
     // ---------------------
-    // FOTO HANDLER
+    // FILE HANDLER
     // ---------------------
     const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files) return;
@@ -133,26 +133,19 @@ export default function Create({ order }: { order: Order }) {
                             </div>
                         </div>
 
-                        {/* FOTO */}
+                        {/* FILE */}
                         <div>
-                            <label className="block font-medium mb-1 text-sm">Upload Foto</label>
+                            <label className="block font-medium mb-1 text-sm">Upload File</label>
                             <input
                                 type="file"
                                 multiple
-                                accept="image/*"
                                 onChange={handleFotoChange}
                                 className="border p-2 rounded-lg w-full"
                             />
 
                             {foto.length > 0 && (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
-                                    {foto.map((file, i) => (
-                                        <img
-                                            key={i}
-                                            src={URL.createObjectURL(file)}
-                                            className="w-full h-28 object-cover rounded-lg shadow"
-                                        />
-                                    ))}
+                                <div className="mt-2 text-xs text-stone-600">
+                                    {foto.length} file dipilih.
                                 </div>
                             )}
                         </div>

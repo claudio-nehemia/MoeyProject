@@ -128,7 +128,7 @@ class DesainFinalController extends Controller
             $validated = $request->validate([
                 'moodboard_id' => 'required|exists:moodboards,id',
                 'moodboard_final' => 'required|array',
-                'moodboard_final.*' => 'required|file|mimes:jpg,jpeg,png,pdf',
+                'moodboard_final.*' => 'required|file|mimes:jpg,jpeg,png,pdf,cad,dwg,dxf,skp',
             ]);
 
             Log::info('Validation passed');
@@ -393,7 +393,7 @@ class DesainFinalController extends Controller
             Log::info('Request data: ', $request->all());
 
             $validated = $request->validate([
-                'new_file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
+                'new_file' => 'required|file|mimes:jpg,jpeg,png,pdf,cad,dwg,dxf,skp|max:10240',
             ]);
 
             Log::info('Validation passed');

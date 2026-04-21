@@ -46,6 +46,18 @@ class LogController extends Controller
             $query->where('status', $request->status);
         }
 
+        // Search berdasarkan query (nama project atau nama user)
+        if ($request->has('search') && $request->search) {
+            $searchTerm = $request->search;
+            $query->where(function($q) use ($searchTerm) {
+                $q->whereHas('order', function($q) use ($searchTerm) {
+                    $q->where('nama_project', 'like', "%{$searchTerm}%");
+                })->orWhereHas('user', function($q) use ($searchTerm) {
+                    $q->where('name', 'like', "%{$searchTerm}%");
+                });
+            });
+        }
+
         // Sort by created_at desc
         $taskResponses = $query->orderBy('created_at', 'desc')->paginate(50);
 
@@ -97,6 +109,7 @@ class LogController extends Controller
                 'order_id' => $request->order_id,
                 'tahap' => $request->tahap,
                 'status' => $request->status,
+                'search' => $request->search,
             ],
         ]);
     }

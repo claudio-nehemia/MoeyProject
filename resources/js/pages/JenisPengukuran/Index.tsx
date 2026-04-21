@@ -157,7 +157,7 @@ export default function Index({ jenisPengukuran }: Props) {
                 <div className="mb-6">
                     <h1
                         className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-yellow-400 bg-clip-text text-transparent mb-2"
-                        style={{ fontFamily: "Playfair Display, serif" }}
+                        
                     >
                         Jenis Pengukuran
                     </h1>
@@ -193,7 +193,7 @@ export default function Index({ jenisPengukuran }: Props) {
                                     </svg>
                                 </div>
                                 <div>
-                                    <h2 className="text-lg font-bold text-stone-800">
+                                    <h2 className="text-lg font-bold text-slate-800">
                                         All Measurement Types
                                     </h2>
                                     <p className="text-xs text-stone-500">
@@ -273,7 +273,7 @@ export default function Index({ jenisPengukuran }: Props) {
                                                         0
                                                     ).toUpperCase()}
                                                 </div>
-                                                <div className="text-sm font-semibold text-stone-800 hover:text-yellow-600 transition-colors">
+                                                <div className="text-sm font-semibold text-slate-800 hover:text-yellow-600 transition-colors">
                                                     {item.nama_pengukuran}
                                                 </div>
                                             </Link>
