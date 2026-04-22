@@ -722,8 +722,6 @@ export default function Index({ notifications, unreadCount }: Props) {
                                 <div>
                                     <h1
                                         className="text-2xl font-bold text-slate-800"
-                                        style={{,
-                                        }}
                                     >
                                         Notifikasi
                                     </h1>

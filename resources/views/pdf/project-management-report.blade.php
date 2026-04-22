@@ -231,7 +231,7 @@
     </table>
 
     <div class="footer">
-        Dicetak pada: {{ now()->format('d/m/Y H:i') }} &nbsp;|&nbsp; Moey Backend Admin System
+        Dicetak pada: {{ now()->format('d/m/Y H:i') }} &nbsp;|&nbsp; Moey Living Group
     </div>
 </body>
 </html>
