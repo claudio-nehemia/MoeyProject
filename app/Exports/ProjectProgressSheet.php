@@ -100,7 +100,7 @@ class ProjectProgressSheet implements FromArray, WithStyles, WithColumnWidths, W
         $this->rowMeta[] = ['type' => 'blank'];
 
         // ─── Rows 4-6: Info header ───────────────────────────────────────
-        $gambarKerjaDate = $order->gambarKerja->approved_time
+        $gambarKerjaDate = $order->gambarKerja?->approved_time
             ? $order->gambarKerja->approved_time->format('d/m/Y')
             : '-';
 

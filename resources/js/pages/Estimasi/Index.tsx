@@ -63,6 +63,7 @@ interface TaskResponse {
     tahap: string;
     extend_time?: number;
     is_marketing?: number;
+    update_data_time?: string | null;
 }
 
 const statusLabels: Record<string, string> = {
@@ -485,7 +486,10 @@ export default function EstimasiIndex({ moodboards }: Props) {
                                                                         <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-widest italic leading-none">Management Repository</h4>
                                                                         <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-tighter">Setiap file desain kasar harus memiliki file estimasi yang sesuai</p>
                                                                     </div>
-                                                                    {taskResponsesData?.regular && taskResponsesData?.regular?.status !== 'selesai' && (
+                                                                    {taskResponsesData?.regular && 
+                                                                     taskResponsesData?.regular?.status !== 'selesai' && 
+                                                                     taskResponsesData?.regular?.status !== 'telat_submit' && 
+                                                                     !taskResponsesData?.regular?.update_data_time && (
                                                                         <button
                                                                             onClick={() => setShowExtendModal({
                                                                                 orderId: order.id,

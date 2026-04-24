@@ -42,6 +42,7 @@ interface TaskResponse {
     tahap: string;
     extend_time?: number;
     is_marketing?: number;
+    update_data_time?: string | null;
 }
 function Index({ itemPekerjaans }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
@@ -287,7 +288,10 @@ function Index({ itemPekerjaans }: Props) {
                                                                     {itemPekerjaan.order.nama_project}
                                                                 </div>
                                                                 {/* Task Response Deadline - REGULAR */}
-                                                                {!isKepalaMarketing && taskResponseRegular && taskResponseRegular.status !== 'selesai' && (
+                                                                {!isKepalaMarketing && taskResponseRegular && 
+                                                                 taskResponseRegular.status !== 'selesai' && 
+                                                                 taskResponseRegular.status !== 'telat_submit' && 
+                                                                 !taskResponseRegular.update_data_time && (
                                                                     <div className="mt-2">
                                                                         <div className={`p-2 rounded border text-xs ${
                                                                             daysLeftRegular !== null && daysLeftRegular < 0 
@@ -341,7 +345,10 @@ function Index({ itemPekerjaans }: Props) {
                                                                     </div>
                                                                 )}
                                                                 {/* Task Response Deadline - MARKETING (Kepala Marketing only) */}
-                                                                {isKepalaMarketing && taskResponseMarketing && taskResponseMarketing.status !== 'selesai' && (
+                                                                {isKepalaMarketing && taskResponseMarketing && 
+                                                                 taskResponseMarketing.status !== 'selesai' && 
+                                                                 taskResponseMarketing.status !== 'telat_submit' && 
+                                                                 !taskResponseMarketing.update_data_time && (
                                                                     <div className="mt-2">
                                                                         <div className="p-2 rounded border text-xs bg-purple-50 border-purple-200">
                                                                             <div className="flex justify-between items-center gap-2">

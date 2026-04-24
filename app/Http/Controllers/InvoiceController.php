@@ -192,7 +192,7 @@ class InvoiceController extends Controller
                     'response_by' => $responseBy,
                     'pm_response_time' => $pmResponseTime,
                     'pm_response_by' => $pmResponseBy,
-                    'has_signed_contract' => !empty($itemPekerjaan->kontrak?->signed_contract),
+                    'has_signed_contract' => !empty($itemPekerjaan->kontrak?->signed_contract_path),
                 ];
             });
 
@@ -222,6 +222,13 @@ class InvoiceController extends Controller
 
         if (!$itemPekerjaan->kontrak) {
             return back()->with('error', 'Kontrak belum dibuat.');
+        }
+
+        // Check if invoice has been responded first
+        $firstInvoice = $itemPekerjaan->invoices->firstWhere('termin_step', 1);
+        $hasResponse = $firstInvoice && $firstInvoice->response_time;
+        if (!$hasResponse) {
+            return back()->with('error', 'Invoice harus di-response terlebih dahulu sebelum generate.');
         }
 
         $termin = $itemPekerjaan->kontrak->termin;
@@ -744,6 +751,8 @@ class InvoiceController extends Controller
             ];
         });
 
+        $kopPath = public_path('kop-moey.jpeg');
+
         $data = [
             'invoice' => $invoice,
             'produks' => $produks,
@@ -751,6 +760,7 @@ class InvoiceController extends Controller
             'paymentSummary' => $paymentSummary,
             'terminInfo' => $terminInfo,
             'allInvoices' => $allInvoices,
+            'kopPath' => file_exists($kopPath) ? $kopPath : null,
         ];
 
         $pdf = Pdf::loadView('pdf.invoice', $data);

@@ -2,7 +2,7 @@ import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import { Head, Link, router } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { Eye, Edit2, Trash2 } from 'lucide-react';
+import { Eye, Edit2, Trash2, FileDown } from 'lucide-react';
 
 interface User {
     id: number;
@@ -247,15 +247,31 @@ export default function Index({ orders }: Props) {
                                     Track and manage all project orders
                                 </p>
                             </div>
-                            <Link
-                                href="/order/create"
-                                className="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-700"
-                            >
-                                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd"></path>
-                                </svg>
-                                Create Order
-                            </Link>
+                            <div className="flex items-center gap-2">
+                                <a
+                                    href="/order-export-pdf"
+                                    className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3 py-2.5 text-sm font-semibold text-rose-600 shadow-sm transition-all hover:bg-rose-50 hover:border-rose-300"
+                                >
+                                    <FileDown size={16} />
+                                    PDF
+                                </a>
+                                <a
+                                    href="/order-export-excel"
+                                    className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 py-2.5 text-sm font-semibold text-emerald-600 shadow-sm transition-all hover:bg-emerald-50 hover:border-emerald-300"
+                                >
+                                    <FileDown size={16} />
+                                    Excel
+                                </a>
+                                <Link
+                                    href="/order/create"
+                                    className="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-700"
+                                >
+                                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd"></path>
+                                    </svg>
+                                    Create Order
+                                </Link>
+                            </div>
                         </div>
                     </div>
 

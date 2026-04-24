@@ -118,6 +118,7 @@ class TaskResponseController extends Controller
             'deadline' => $taskResponse->deadline ? $taskResponse->deadline->toIso8601String() : null,
             'extend_time' => (int) ($taskResponse->extend_time ?? 0),
             'is_marketing' => (int) ($taskResponse->is_marketing ?? 0),
+            'update_data_time' => $taskResponse->update_data_time ? $taskResponse->update_data_time->toIso8601String() : null,
         ]);
     }
 

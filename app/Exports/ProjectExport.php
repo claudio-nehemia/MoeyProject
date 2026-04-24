@@ -15,8 +15,25 @@ class ProjectExport implements WithMultipleSheets
 
     public function sheets(): array
     {
-        return [
+        $sheets = [
             new ProjectProgressSheet($this->data),
         ];
+
+        // Add evidence sheet if there are any stage evidences
+        $hasEvidence = false;
+        foreach ($this->data['groupedProduks'] as $produks) {
+            foreach ($produks as $produk) {
+                if (!empty($produk['stage_evidences'])) {
+                    $hasEvidence = true;
+                    break 2;
+                }
+            }
+        }
+
+        if ($hasEvidence) {
+            $sheets[] = new ProjectEvidenceSheet($this->data);
+        }
+
+        return $sheets;
     }
 }

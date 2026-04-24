@@ -25,6 +25,13 @@ interface Order {
   survey_users: SurveyUser[];
 }
 
+interface TaskResponse {
+  status: string;
+  deadline: string | null;
+  extend_time: number;
+  update_data_time?: string | null;
+}
+
 interface Props {
   orders: Order[];
   surveyUsers: SurveyUser[];
@@ -39,8 +46,8 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [tanggalSurvey, setTanggalSurvey] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
-  const [taskResponses, setTaskResponses] = useState<Record<number, any>>({});
-  const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: any } | null>(null);
+  const [taskResponses, setTaskResponses] = useState<Record<number, TaskResponse>>({});
+  const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: TaskResponse } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('semua');
 
@@ -290,7 +297,10 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing }: Props)
 
                                     {/* Deadline */}
                                     <td className="px-5 py-4 align-top">
-                                        {taskResponse && taskResponse.status !== 'selesai' ? (
+                                        {taskResponse && 
+                                         taskResponse.status !== 'selesai' && 
+                                         taskResponse.status !== 'telat_submit' && 
+                                         !taskResponse.update_data_time ? (
                                             <div className="inline-flex max-w-[200px] flex-col items-start gap-1 rounded-md border border-yellow-200 bg-yellow-50 px-2 py-1.5 w-full">
                                                 <p className="text-[10px] font-bold text-yellow-800">Deadline Survey Schedule</p>
                                                 <p className="text-[11px] font-semibold text-yellow-900">{formatDeadline(taskResponse.deadline)}</p>

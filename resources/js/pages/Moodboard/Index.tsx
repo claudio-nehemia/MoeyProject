@@ -64,6 +64,7 @@ interface TaskResponse {
     deadline: string | null;
     extend_time: number;
     is_marketing?: number;
+    update_data_time?: string | null;
 }
 
 interface Props {
@@ -403,7 +404,7 @@ export default function Index({ orders }: Props) {
     };
 
     const renderDeadlineSection = (task: TaskResponse | undefined, orderId: number, tahap: string, isMarketing: boolean) => {
-        if (!task || task.status === 'selesai') return null;
+        if (!task || task.status === 'selesai' || task.status === 'telat_submit' || task.update_data_time) return null;
         return (
             <div className={`mb-3 p-2 ${isMarketing ? 'bg-purple-50 border border-purple-200' : 'bg-yellow-50 border border-yellow-200'} rounded text-xs`}>
                 <div className="flex justify-between items-center">
@@ -645,7 +646,10 @@ export default function Index({ orders }: Props) {
                                                                         <p className="text-sm text-slate-500 mt-1">Review detail desain dari tim designer untuk project ini</p>
                                                                     </div>
                                                                     <div className="flex items-center gap-3">
-                                                                        {taskResponses[order.id]?.regular && taskResponses[order.id]?.regular?.status !== 'selesai' && (
+                                                                        {taskResponses[order.id]?.regular && 
+                                                                         taskResponses[order.id]?.regular?.status !== 'selesai' && 
+                                                                         taskResponses[order.id]?.regular?.status !== 'telat_submit' && 
+                                                                         !taskResponses[order.id]?.regular?.update_data_time && (
                                                                             <button
                                                                                 onClick={() => setShowExtendModal({
                                                                                     orderId: order.id,

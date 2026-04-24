@@ -11,6 +11,9 @@ use Illuminate\Http\Request;
 use App\Models\JenisInterior;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Storage;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\OrderExport;
 
 class OrderController extends Controller
 {
@@ -353,5 +356,50 @@ class OrderController extends Controller
         $order->delete();
 
         return redirect()->back()->with('success', 'Order deleted successfully.');
+    }
+
+    /**
+     * Export orders as PDF
+     */
+    public function exportPdf()
+    {
+        $user = auth()->user();
+        $orders = Order::with('users', 'jenisInterior')
+            ->visibleToUser($user)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $statusCounts = [
+            'pending' => $orders->where('project_status', 'pending')->count(),
+            'in_progress' => $orders->where('project_status', 'in_progress')->count(),
+            'completed' => $orders->where('project_status', 'completed')->count(),
+        ];
+
+        $data = [
+            'orders' => $orders,
+            'totalOrders' => $orders->count(),
+            'statusCounts' => $statusCounts,
+        ];
+
+        $pdf = PDF::loadView('pdf.order-report', $data);
+        $pdf->setPaper('a4', 'landscape');
+
+        $filename = 'Order-Report-' . date('Ymd') . '.pdf';
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Export orders as Excel
+     */
+    public function exportExcel()
+    {
+        $user = auth()->user();
+        $orders = Order::with('users', 'jenisInterior')
+            ->visibleToUser($user)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $filename = 'Order-Report-' . date('Ymd') . '.xlsx';
+        return Excel::download(new OrderExport($orders), $filename);
     }
 }

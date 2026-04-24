@@ -314,33 +314,72 @@ class PmResponseController extends Controller
         $itemPekerjaan = ItemPekerjaan::findOrFail($id);
         if ($check = $this->checkOriginalKepalaMarketing($itemPekerjaan->moodboard->order))
             return $check;
-        if (!$itemPekerjaan) {
-            ItemPekerjaan::create([
-                'moodboard_id' => $itemPekerjaan->moodboard_id,
-                'response_by' => auth()->user()->name,
-                'response_time' => now(),
-            ]);
-        } else {
-            $this->recordResponse($itemPekerjaan);
-        }
 
-        $taskresponse = TaskResponse::where('order_id', ItemPekerjaan::findOrFail($id)->moodboard->order->id)
+        $this->recordResponse($itemPekerjaan);
+
+        $taskresponse = TaskResponse::where('order_id', $itemPekerjaan->moodboard->order->id)
             ->where('tahap', 'item_pekerjaan')
             ->where('is_marketing', true)
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->first();
+
         if ($taskresponse) {
+            $status = $taskresponse->isOverdue() ? 'telat_submit' : 'selesai';
             $taskresponse->update([
                 'response_time' => now(),
-                'status' => 'selesai',
+                'update_data_time' => now(),
+                'status' => $status,
                 'user_id' => auth()->user()->id,
             ]);
-            \Log::info('Associated TaskResponse ID: ' . $taskresponse->id . ' response_time updated.');
+            \Log::info('Associated TaskResponse ID: ' . $taskresponse->id . ' updated.');
         } else {
-            \Log::info('No associated TaskResponse found for Order ID: ' . ItemPekerjaan::findOrFail($id)->moodboard->order->id);
+            \Log::info('No associated TaskResponse found for Order ID: ' . $itemPekerjaan->moodboard->order->id);
         }
+        return back()->with('success', 'PM Response berhasil dicatat untuk Item Pekerjaan.');
+    }
+
+    public function itemPekerjaanByMoodboard($id)
+    {
+        if ($check = $this->checkPm())
+            return $check;
+
+        $moodboard = Moodboard::findOrFail($id);
+        if ($check = $this->checkOriginalKepalaMarketing($moodboard->order))
+            return $check;
+
+        $itemPekerjaan = $moodboard->itemPekerjaan;
+
+        if (!$itemPekerjaan) {
+            $itemPekerjaan = ItemPekerjaan::create([
+                'moodboard_id' => $moodboard->id,
+                'pm_response_time' => now(),
+                'pm_response_by' => auth()->user()->name,
+            ]);
+        } else {
+            $this->recordResponse($itemPekerjaan);
+        }
+
+        $taskresponse = TaskResponse::where('order_id', $moodboard->order->id)
+            ->where('tahap', 'item_pekerjaan')
+            ->where('is_marketing', true)
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($taskresponse) {
+            $status = $taskresponse->isOverdue() ? 'telat_submit' : 'selesai';
+            $taskresponse->update([
+                'response_time' => now(),
+                'update_data_time' => now(),
+                'status' => $status,
+                'user_id' => auth()->user()->id,
+            ]);
+            \Log::info('Associated TaskResponse ID: ' . $taskresponse->id . ' updated.');
+        }
+
         return back()->with('success', 'PM Response berhasil dicatat untuk Item Pekerjaan.');
     }
 

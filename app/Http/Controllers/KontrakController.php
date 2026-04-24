@@ -251,7 +251,7 @@ class KontrakController extends Controller
         $fee = $itemPekerjaan->moodboard->commitmentFee;
 
         // path kop surat
-        $kopPath = public_path('kop-moey.png');
+        $kopPath = public_path('kop-moey.jpeg');
 
         $contractData = [
             // ======================================
@@ -396,6 +396,12 @@ class KontrakController extends Controller
 
         $notificationService = new NotificationService();
         $notificationService->sendInvoiceRequestNotification($kontrak->itemPekerjaan->moodboard->order);
+
+        // Update project_status to 'deal' when signed contract is uploaded
+        $order = $kontrak->itemPekerjaan->moodboard->order;
+        if ($order->project_status !== 'deal') {
+            $order->update(['project_status' => 'deal']);
+        }
 
         return back()->with('success', 'Kontrak yang sudah ditandatangani berhasil diupload!');
     }

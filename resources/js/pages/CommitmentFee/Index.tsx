@@ -52,6 +52,7 @@ interface TaskResponse {
     tahap: string;
     extend_time?: number;
     is_marketing?: number;
+    update_data_time?: string | null;
 }
 
 export default function Index({ moodboards }: Props) {
@@ -528,7 +529,10 @@ export default function Index({ moodboards }: Props) {
                                                     </td>
                                                     <td className="px-5 py-4 align-top">
                                                         <div className="flex max-w-[240px] flex-col gap-2">
-                                                            {!isKepalaMarketing && taskResponseRegular && taskResponseRegular.status !== 'selesai' && (
+                                                            {!isKepalaMarketing && taskResponseRegular && 
+                                                             taskResponseRegular.status !== 'selesai' && 
+                                                             taskResponseRegular.status !== 'telat_submit' && 
+                                                             !taskResponseRegular.update_data_time && (
                                                                 <div className={`rounded-lg p-2.5 border ${daysLeftRegular !== null && daysLeftRegular < 0 ? 'bg-red-50 border-red-200 text-red-700' : daysLeftRegular !== null && daysLeftRegular <= 3 ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-yellow-50 border-yellow-200 text-yellow-700'}`}>
                                                                     <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">⏰ Deadline CF</div>
                                                                     <div className="mt-0.5 text-xs font-medium">{formatDeadline(taskResponseRegular.deadline)}</div>
@@ -543,7 +547,10 @@ export default function Index({ moodboards }: Props) {
                                                                     </div>
                                                                 </div>
                                                             )}
-                                                            {isKepalaMarketing && taskResponseMarketing && taskResponseMarketing.status !== 'selesai' && (
+                                                            {isKepalaMarketing && taskResponseMarketing && 
+                                                             taskResponseMarketing.status !== 'selesai' && 
+                                                             taskResponseMarketing.status !== 'telat_submit' && 
+                                                             !taskResponseMarketing.update_data_time && (
                                                                 <div className="rounded-lg border border-purple-200 bg-purple-50 p-2.5 text-purple-700">
                                                                     <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">⏰ Deadline CF(Mkt)</div>
                                                                     <div className="mt-0.5 text-xs font-medium">{formatDeadline(taskResponseMarketing.deadline)}</div>

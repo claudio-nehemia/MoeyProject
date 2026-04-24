@@ -210,6 +210,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('permission:order.edit')->put('order/{order}', [OrderController::class, 'update'])->name('order.update');
     Route::middleware('permission:order.show')->get('order/{order}', [OrderController::class, 'show'])->name('order.show');
     Route::middleware('permission:order.delete')->delete('order/{order}', [OrderController::class, 'destroy'])->name('order.destroy');
+    Route::middleware('permission:order.index')->get('order-export-pdf', [OrderController::class, 'exportPdf'])->name('order.export-pdf');
+    Route::middleware('permission:order.index')->get('order-export-excel', [OrderController::class, 'exportExcel'])->name('order.export-excel');
 
     // SURVEY RESULTS ROUTES
     Route::middleware(['permission:survey-results.index'])->group(function () {

@@ -578,7 +578,10 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                 <div className="space-y-3 min-w-[280px]">
                                                                     {/* Task Response Deadline & Extend Button */}
                                                                     {/* Task Response Deadline - REGULAR */}
-                                                                    {isNotKepalaMarketing && taskResponses[orderId]?.regular && taskResponses[orderId]?.regular.status !== 'selesai' && (
+                                                                    {isNotKepalaMarketing && taskResponses[orderId]?.regular && 
+                                                                     taskResponses[orderId]?.regular.status !== 'selesai' && 
+                                                                     taskResponses[orderId]?.regular.status !== 'telat_submit' && 
+                                                                     !taskResponses[orderId]?.regular.update_data_time && (
                                                                         <div className="mb-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                                                                             <div className="flex justify-between items-center">
                                                                                 <div>
@@ -599,7 +602,10 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                         </div>
                                                                     )}
                                                                     {/* Task Response Deadline - MARKETING (Kepala Marketing only) */}
-                                                                    {isKepalaMarketing && taskResponses[orderId]?.marketing && taskResponses[orderId]?.marketing.status !== 'selesai' && (
+                                                                    {isKepalaMarketing && taskResponses[orderId]?.marketing && 
+                                                                     taskResponses[orderId]?.marketing.status !== 'selesai' && 
+                                                                     taskResponses[orderId]?.marketing.status !== 'telat_submit' && 
+                                                                     !taskResponses[orderId]?.marketing.update_data_time && (
                                                                         <div className="mb-3 p-4 bg-purple-50 border border-purple-200 rounded-lg">
                                                                             <div className="flex justify-between items-center">
                                                                                 <div>

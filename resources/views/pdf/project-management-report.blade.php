@@ -123,6 +123,57 @@
         .qty-col  { width: 28px; }
         .sat-col  { width: 32px; }
         .bobot-col{ width: 42px; font-weight: bold; color: #1e40af; }
+
+        /* Photo evidence styles */
+        .evidence-section {
+            page-break-inside: avoid;
+            margin-top: 20px;
+            margin-bottom: 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 12px;
+            background-color: #fafbfc;
+        }
+        .evidence-title {
+            font-size: 11px;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #3b82f6;
+        }
+        .evidence-stage-title {
+            font-size: 9px;
+            font-weight: bold;
+            color: #3b82f6;
+            margin: 8px 0 6px 0;
+            padding: 3px 8px;
+            background-color: #eff6ff;
+            border-radius: 3px;
+            display: inline-block;
+        }
+        .evidence-grid {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .evidence-grid td {
+            border: none;
+            padding: 4px;
+            vertical-align: top;
+            text-align: center;
+        }
+        .evidence-img {
+            width: 120px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+        }
+        .evidence-caption {
+            font-size: 7px;
+            color: #64748b;
+            margin-top: 2px;
+        }
     </style>
 </head>
 <body>
@@ -143,7 +194,7 @@
         </tr>
         <tr>
             <td class="bg-grey">Approval Gambar Kerja</td>
-            <td>{{ $order->gambarKerja->approved_time ? $order->gambarKerja->approved_time->format('d/m/Y') : '-' }}</td>
+            <td>{{ $order->gambarKerja?->approved_time ? $order->gambarKerja->approved_time->format('d/m/Y') : '-' }}</td>
             <td class="bg-pink"></td>
             <td class="bg-grey">Target Progres 80%</td>
             <td>{{ $targets['80'] ?? '-' }}</td>
@@ -229,6 +280,82 @@
             @endforeach
         </tbody>
     </table>
+
+    {{-- Stage Evidence Photos Section --}}
+    @php $hasAnyEvidence = false; @endphp
+    @foreach($groupedProduks as $roomName => $produks)
+        @foreach($produks as $produk)
+            @if(!empty($produk['stage_evidences']))
+                @php $hasAnyEvidence = true; @endphp
+            @endif
+        @endforeach
+    @endforeach
+
+    @if($hasAnyEvidence)
+        <div style="page-break-before: always;"></div>
+        <div style="margin-bottom: 10px; border-bottom: 2px solid #1e293b; padding-bottom: 6px;">
+            <h2 style="margin: 0; color: #1e293b; font-size: 14px; letter-spacing: 1px;">DOKUMENTASI TAHAPAN PRODUKSI</h2>
+            <p style="margin: 2px 0; color: #64748b; font-size: 9px;">{{ $order->nama_project }} &mdash; {{ $order->company_name }}</p>
+        </div>
+
+        @foreach($groupedProduks as $roomName => $produks)
+            @php $roomHasEvidence = false; @endphp
+            @foreach($produks as $produk)
+                @if(!empty($produk['stage_evidences']))
+                    @php $roomHasEvidence = true; @endphp
+                @endif
+            @endforeach
+
+            @if($roomHasEvidence)
+                <div style="background-color: #3b82f6; color: #fff; font-weight: bold; padding: 5px 10px; margin-top: 10px; border-radius: 4px; font-size: 10px;">
+                    {{ $roomName }}
+                </div>
+
+                @foreach($produks as $produk)
+                    @if(!empty($produk['stage_evidences']))
+                        <div class="evidence-section">
+                            <div class="evidence-title">
+                                📦 {{ $produk['nama_produk'] }} (Qty: {{ $produk['quantity'] }})
+                            </div>
+
+                            @foreach($stageMapping as $shortName => $internalName)
+                                @if(isset($produk['stage_evidences'][$internalName]))
+                                    <div class="evidence-stage-title">{{ $shortName }} — {{ $internalName }}</div>
+                                    <table class="evidence-grid">
+                                        <tr>
+                                            @foreach($produk['stage_evidences'][$internalName] as $idx => $evidence)
+                                                <td style="width: 130px;">
+                                                    @php
+                                                        $imgPath = storage_path('app/public/' . $evidence['path']);
+                                                    @endphp
+                                                    @if(file_exists($imgPath))
+                                                        <img src="{{ $imgPath }}" class="evidence-img" />
+                                                    @else
+                                                        <div style="width:120px;height:90px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:7px;color:#94a3b8;">Foto tidak ditemukan</div>
+                                                    @endif
+                                                    <div class="evidence-caption">
+                                                        {{ $evidence['uploaded_by'] }}<br/>
+                                                        {{ $evidence['created_at'] }}
+                                                        @if($evidence['notes'])
+                                                            <br/><em>{{ Str::limit($evidence['notes'], 40) }}</em>
+                                                        @endif
+                                                    </div>
+                                                </td>
+                                                {{-- Max 5 per row --}}
+                                                @if(($idx + 1) % 5 === 0 && ($idx + 1) < count($produk['stage_evidences'][$internalName]))
+                                                    </tr><tr>
+                                                @endif
+                                            @endforeach
+                                        </tr>
+                                    </table>
+                                @endif
+                            @endforeach
+                        </div>
+                    @endif
+                @endforeach
+            @endif
+        @endforeach
+    @endif
 
     <div class="footer">
         Dicetak pada: {{ now()->format('d/m/Y H:i') }} &nbsp;|&nbsp; Moey Living Group

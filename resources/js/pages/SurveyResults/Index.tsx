@@ -47,6 +47,7 @@ interface TaskResponse {
     deadline: string | null;
     extend_time: number;
     is_marketing?: number;
+    update_data_time?: string | null;
 }
 
 export default function Index({ surveys }: Props) {
@@ -305,7 +306,7 @@ export default function Index({ surveys }: Props) {
     if (!mounted) return null;
 
     const renderCompactDeadlineSection = (task: TaskResponse | undefined, orderId: number, tahap: string, isMarketing: boolean) => {
-        if (!task || task.status === 'selesai') return null;
+        if (!task || task.status === 'selesai' || task.status === 'telat_submit' || task.update_data_time) return null;
         return (
             <div className={`mt-1 flex flex-col gap-1 rounded border p-1.5 ${isMarketing ? 'border-purple-200 bg-purple-50' : 'border-yellow-200 bg-yellow-50'}`}>
                 <div className="flex items-center justify-between gap-2">

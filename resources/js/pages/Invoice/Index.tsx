@@ -53,6 +53,13 @@ interface StepInvoice {
     paid_at: string | null;
 }
 
+interface TaskResponse {
+    status: string;
+    deadline: string | null;
+    extend_time: number;
+    update_data_time?: string | null;
+}
+
 interface StepInfo {
     step: number;
     text: string;
@@ -82,6 +89,7 @@ interface ItemPekerjaan {
     is_fully_paid: boolean;
     response_time: string | null;
     response_by: string | null;
+    pm_response_time: string | null;
     pm_response_by: string | null;
     has_signed_contract?: boolean;
 }
@@ -548,6 +556,8 @@ export default function Index({ itemPekerjaans }: Props) {
                                             {/* Task Response Deadline & Minta Perpanjangan - hanya setelah response */}
                                             {taskResponse &&
                                                 taskResponse.status !== 'selesai' &&
+                                                taskResponse.status !== 'telat_submit' &&
+                                                !taskResponse.update_data_time &&
                                                 (
                                                 <div className="mt-4 mb-4 p-3 rounded-lg border border-amber-200 bg-amber-50">
                                                     <div className="flex items-center justify-between gap-3">
@@ -731,9 +741,9 @@ export default function Index({ itemPekerjaans }: Props) {
                                                                 {/* Status Badge */}
                                                                 {getStepStatusBadge(step)}
 
-                                                                {/* Action Button */}
-                                                                {/* Show Generate button if: no invoice OR invoice exists but total_amount = 0 or invoice_number is empty */}
-                                                                {(step.can_pay && !step.invoice) || (step.invoice && (!step.invoice.total_amount || step.invoice.total_amount === 0 || !step.invoice.invoice_number)) ? (
+                                                                {/* Action Button - only show if responded */}
+                                                                {/* Show Generate button if: responded AND (no invoice OR invoice exists but total_amount = 0 or invoice_number is empty) */}
+                                                                {item.response_time && ((step.can_pay && !step.invoice) || (step.invoice && (!step.invoice.total_amount || step.invoice.total_amount === 0 || !step.invoice.invoice_number))) ? (
                                                                     <button
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();

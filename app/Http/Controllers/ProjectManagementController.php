@@ -398,7 +398,7 @@ class ProjectManagementController extends Controller
             }
         }
         
-        $kopPath = public_path('kop-moey.png');
+        $kopPath = public_path('kop-moey.jpeg');
 
         $companyName = "PT. Moey Jaya Abadi";
         $companyAddress = "Tangerang";
@@ -757,6 +757,7 @@ class ProjectManagementController extends Controller
         $order = Order::with([
             'moodboard.itemPekerjaans.produks.produk',
             'moodboard.itemPekerjaans.produks.jenisItems.items.item',
+            'moodboard.itemPekerjaans.produks.stageEvidences',
             'moodboard.itemPekerjaans.kontrak',
             'gambarKerja',
         ])->findOrFail($id);
@@ -837,6 +838,17 @@ class ProjectManagementController extends Controller
                     }
                 }
 
+                // Collect stage evidences grouped by stage
+                $stagePhotos = [];
+                foreach ($produk->stageEvidences as $evidence) {
+                    $stagePhotos[$evidence->stage][] = [
+                        'path' => $evidence->evidence_path,
+                        'notes' => $evidence->notes,
+                        'uploaded_by' => $evidence->uploaded_by,
+                        'created_at' => $evidence->created_at->format('d/m/Y H:i'),
+                    ];
+                }
+
                 $groupedProduks[$room][] = [
                     'nama_produk' => $produk->produk->nama_produk,
                     'quantity' => $produk->quantity,
@@ -844,6 +856,7 @@ class ProjectManagementController extends Controller
                     'material_summary' => $materialSummary,
                     'reached_stages' => $reachedStages,
                     'has_bast' => $ip->has_bast,
+                    'stage_evidences' => $stagePhotos,
                 ];
             }
         }

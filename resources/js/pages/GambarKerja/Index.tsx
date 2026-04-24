@@ -443,7 +443,7 @@ export default function GambarKerjaIndex({ items }: Props) {
                                             {/* Deadline */}
                                             <td className="px-5 py-4 align-top">
                                                 <div className="space-y-2">
-                                                    {!isKepalaMarketing && taskResponse && taskResponse.status !== 'selesai' && (
+                                                    {!isKepalaMarketing && taskResponse && taskResponse.status !== 'selesai' && taskResponse.status !== 'telat_submit' && !taskResponse.update_data_time && (
                                                         <div className="inline-flex max-w-[200px] flex-col items-start gap-1 rounded-md border border-yellow-200 bg-yellow-50 px-2 py-1.5 w-full">
                                                             <p className="text-[10px] font-bold text-yellow-800">Deadline Gambar Kerja</p>
                                                             <p className="text-[11px] font-semibold text-yellow-900">{formatDeadline(taskResponse.deadline)}</p>
@@ -457,7 +457,7 @@ export default function GambarKerjaIndex({ items }: Props) {
                                                         </div>
                                                     )}
 
-                                                    {isKepalaMarketing && marketingTaskResponse && marketingTaskResponse.status !== 'selesai' && (
+                                                    {isKepalaMarketing && marketingTaskResponse && marketingTaskResponse.status !== 'selesai' && marketingTaskResponse.status !== 'telat_submit' && !marketingTaskResponse.update_data_time && (
                                                         <div className="inline-flex max-w-[200px] flex-col items-start gap-1 rounded-md border border-purple-200 bg-purple-50 px-2 py-1.5 w-full mt-1">
                                                             <p className="text-[10px] font-bold text-purple-800">Deadline (Marketing)</p>
                                                             <p className="text-[11px] font-semibold text-purple-900">{formatDeadline(marketingTaskResponse.deadline)}</p>

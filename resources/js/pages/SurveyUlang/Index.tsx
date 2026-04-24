@@ -34,6 +34,7 @@ interface TaskResponse {
     deadline: string | null;
     extend_time: number;
     is_marketing?: number;
+    update_data_time?: string | null;
 }
 
 export default function Index({ surveys }: Props) {
@@ -361,7 +362,7 @@ export default function Index({ surveys }: Props) {
 
                                             <td className="px-5 py-4 align-top">
                                                 <div className="space-y-2">
-                                                    {isNotKepalaMarketing && taskResponseRegular && taskResponseRegular.status !== 'selesai' && taskResponseRegular.status !== 'menunggu_response' && (
+                                                    {isNotKepalaMarketing && taskResponseRegular && taskResponseRegular.status !== 'selesai' && taskResponseRegular.status !== 'telat_submit' && !taskResponseRegular.update_data_time && taskResponseRegular.status !== 'menunggu_response' && (
                                                         <div className="inline-flex max-w-[200px] flex-col items-start gap-1 rounded-md border border-yellow-200 bg-yellow-50 px-2 py-1.5 w-full">
                                                             <p className="text-[10px] font-bold text-yellow-800">Deadline Survey</p>
                                                             <p className="text-[11px] font-semibold text-yellow-900">{formatDeadline(taskResponseRegular.deadline)}</p>
@@ -375,7 +376,7 @@ export default function Index({ surveys }: Props) {
                                                         </div>
                                                     )}
 
-                                                    {isKepalaMarketing && taskResponseMarketing && taskResponseMarketing.status !== 'selesai' && taskResponseMarketing.status !== 'menunggu_response' && (
+                                                    {isKepalaMarketing && taskResponseMarketing && taskResponseMarketing.status !== 'selesai' && taskResponseMarketing.status !== 'telat_submit' && !taskResponseMarketing.update_data_time && taskResponseMarketing.status !== 'menunggu_response' && (
                                                         <div className="inline-flex max-w-[200px] flex-col items-start gap-1 rounded-md border border-purple-200 bg-purple-50 px-2 py-1.5 w-full">
                                                             <p className="text-[10px] font-bold text-purple-800">Deadline (Marketing)</p>
                                                             <p className="text-[11px] font-semibold text-purple-900">{formatDeadline(taskResponseMarketing.deadline)}</p>

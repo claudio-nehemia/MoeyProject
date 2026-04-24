@@ -388,7 +388,7 @@ export default function Index({ orders }: Props) {
                                     </div>
 
                                     {/* Deadline & Minta Perpanjangan - regular */}
-                                    {!isKepalaMarketing && taskResponses[order.id]?.regular && taskResponses[order.id].regular.status !== 'selesai' && (
+                                    {!isKepalaMarketing && taskResponses[order.id]?.regular && taskResponses[order.id].regular.status !== 'selesai' && taskResponses[order.id].regular.status !== 'telat_submit' && !taskResponses[order.id].regular.update_data_time && (
                                         <div className="mt-3">
                                             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between gap-3">
                                                 <div>
@@ -414,7 +414,7 @@ export default function Index({ orders }: Props) {
                                         </div>
                                     )}
                                     {/* Deadline & Minta Perpanjangan - marketing (khusus Kepala Marketing) */}
-                                    {isKepalaMarketing && taskResponses[order.id]?.marketing && taskResponses[order.id].marketing.status !== 'selesai' && (
+                                    {isKepalaMarketing && taskResponses[order.id]?.marketing && taskResponses[order.id].marketing.status !== 'selesai' && taskResponses[order.id].marketing.status !== 'telat_submit' && !taskResponses[order.id].marketing.update_data_time && (
                                         <div className="mt-3">
                                             <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg flex items-center justify-between gap-3">
                                                 <div>

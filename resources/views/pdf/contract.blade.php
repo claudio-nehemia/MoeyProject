@@ -287,36 +287,34 @@
     @endif
     <hr class="kop-divider">
 
-    <ol start="4">
-      <li>PARA PIHAK melakukan komunikasi ketika project berjalan hanya melalui WhatsApp Grup project, komunikasi selain di WhatsApp Grup tersebut dianggap tidak berlaku.</li>
-      <li>PIHAK KEDUA tidak bisa mengajukan keluhan atas segala bentuk pekerjaan yang sudah sesuai dengan gambar kerja yang sudah disepakati PARA PIHAK.</li>
-      <li>PIHAK PERTAMA tidak diperkenankan meninggalkan barang–barang yang tidak ada kaitannya dengan pelaksanaan pekerjaan interior.</li>
-      <li>PIHAK PERTAMA tidak bertanggung jawab atas hilang atau rusaknya barang–barang pada Pasal 3 Point 6, kecuali ada surat tanda terima yang disepakati PARA PIHAK.</li>
-      <li>Apabila dalam pelaksanaan pekerjaan interior melakukan kesalahan untuk area atau barang–barang yang tidak bisa terprediksi atau terlihat, maka biaya itu akan ditanggung oleh PARA PIHAK.</li>
+    <ol start="6">
+      <li>PIHAK PERTAMA tidak diperkenankan meninggalkan barang-barang yang tidak ada kaitannya dengan pelaksanaan pekerjaan interior.</li>
+      <li>PIHAK PERTAMA tidak bertanggung jawab atas hilang atau rusaknya barang - barang dilokasi tempat pekerjaan, kecuali ada surat tanda terima yang disepakati PARA PIHAK.</li>
+      <li>Apabila dalam pelaksanaan pekerjaan interior melakukan kesalahan untuk area atau barang - barang yang tidak bisa terprediksi atau terlihat, maka biaya itu akan ditanggung oleh PARA PIHAK.</li>
       <li>Pekerjaan diluar kontrak atau jenis penawaran sifatnya adalah bantuan dari PIHAK PERTAMA.</li>
-      <li>Batas toleransi pembuatan interior adalah ±5 cm, untuk mengantisipasi kemiringan dinding dan lantai lokasi project, toleransi tersebut tidak mempengaruhi biaya pembuatan interior.</li>
+      <li>Batas Toleransi Pembuatan interior adalah 5 cm, untuk mengantisipasi kemiringan dinding dan lantai lokasi project, toleransi tersebut tidak mempengaruhi biaya pembuatan interior.</li>
       <li>Contoh atau katalog material diluar yang kami berikan, akan dikenakan biaya sesuai dengan biaya material yang diminta.</li>
       <li>Perubahan <em>Material Finishing</em> yang sudah kami rekomendasikan di Form Approval, akan dikenakan biaya dan dengan pembayaran secara tunai.</li>
-      <li>Segala biaya Fitout atau ijin lokasi project yang membutuhkan biaya dibebankan kepada PIHAK KEDUA dan untuk pembuatan ataupun koordinasi dokumen akan dibantu oleh PIHAK PERTAMA.</li>
+      <li>Segala biaya Fitout atau ijin lokasi proyek yang membutuhkan biaya di bebankan kepada PIHAK KEDUA dan untuk pembuatan ataupun koordinasi dokumen akan dibantu oleh PIHAK PERTAMA.</li>
     </ol>
 
-    <div class="article">Pasal 3<br>JANGKA WAKTU PELAKSANAAN</div>
-        <ol>
-            <li>Pelaksanaan dimulai setelah perjanjian ditandatangani, gambar kerja disetujui dan area siap digunakan.</li>
-            <li>Pekerjaan harus selesai 100% paling lambat 65 hari kerja setelah dimulai.</li>
-            <li>Waktu penyelesaian tidak dapat dirubah kecuali keadaan memaksa.</li>
-            <li>Masa kontrak tidak termasuk komplain, pekerjaan free, dan pekerjaan tambah.</li>
-            <li>Masa kontrak berjalan normal jika:
-                <ol type="a">
-                    <li>Down Payment telah dibayar.</li>
-                    <li>Gambar kerja disetujui melalui grup WhatsApp.</li>
-                    <li>Pembayaran progress maksimal 7 hari setelah invoice.</li>
-                    <li>Tidak ada perubahan design/dimensi/spesifikasi.</li>
-                    <li>Tidak ada pihak lain yang menghambat instalasi.</li>
-                </ol>
-            </li>
-            <li>Jika poin 5 tidak terpenuhi, masa kontrak dihitung ulang kecuali PIHAK KEDUA mengajukan banding tertulis.</li>
-        </ol>
+    <div class="article">Pasal 3<br>HAK DAN KEWAJIBAN</div>
+
+    <b>HAK DAN KEWAJIBAN PIHAK PERTAMA</b>
+    <ol>
+        <li>Apabila batas waktu penyelesaian pekerjaan (penyerahan pertama) sebagaimana yang telah ditentukan tidak dapat dipenuhi maka, PIHAK PERTAMA harus segera melaporkan pada PIHAK KEDUA sebab-sebab keterlambatan penyelesaian pekerjaan tersebut dan PIHAK PERTAMA akan mengajuan perpanjangan masa kontrak.</li>
+        <li>Atas keterlambatan, PIHAK PERTAMA dikenakan denda maksimal 3% dari nilai kontrak setelah mencapai 45 (Empat puluh lima) hari keterlambatan.</li>
+        <li>PIHAK PERTAMA berhak mendapat kenyamanan dilokasi kerja yang berkaitan dengan lingkungan atau perizinan dilingkungan.</li>
+        <li>PIHAK PERTAMA berhak mengganti material sesuai atau setara dengan material yang sudah disetujui, jika material tersebut sudah discontinue atau sulit ditemukan dipasaran atau berlaku pekerjaan kurang dan wajib diterima PIHAK KEDUA.</li>
+    </ol>
+
+    <b>HAK DAN KEWAJIBAN PIHAK KEDUA</b>
+    <ol>
+        <li>PIHAK KEDUA bertanggung jawab atas lingkungan yang kondusif atau yang berkaitan dengan izin lingkungan.</li>
+        <li>Jika PIHAK KEDUA dalam melakukan pembayaran terjadi keterlambatan, akan dikenakan denda sebesar maksimal 3% (tiga persen) dari kontrak yang harus dibayarkan setelah mencapai 45 (Empat puluh lima) hari keterlambatan.</li>
+        <li>PIHAK KEDUA berhak mendapatkan garansi aksesoris selama 1 (satu) tahun sejak berita acara serah terima ditanda tangani.</li>
+        <li>PIHAK KEDUA berhak mengajukan keluhan apabila pekerjaan yang dilaksanakan PIHAK PERTAMA tidak sesuai design dan gambar kerja.</li>
+    </ol>
 </div>
 
 <div class="page-break"></div>
@@ -328,87 +326,87 @@
     @endif
     <hr class="kop-divider">
 
-    <div class="article">Pasal 4<br>PENYERAHAN PEKERJAAN</div>
-        <ol>
-            <li>Setelah pekerjaan selesai, PIHAK PERTAMA dapat meminta penyerahan pekerjaan secara tertulis.</li>
-            <li>PIHAK KEDUA wajib mengeluarkan Berita Acara Penyerahan berdasarkan pemeriksaan penyelesaian pekerjaan.</li>
-        </ol>
+    <div class="article">Pasal 4<br>JANGKA WAKTU PELAKSANAAN</div>
+    <ol>
+        <li>Pelaksanaan pada Pasal 2 diatas dimulai setelah Surat Perjanjian ini ditandatangani oleh kedua belah pihak, Gambar kerja & Persetujuan Material sudah disetujui oleh PIHAK KEDUA dan area kerja dinyatakan sudah siap oleh PARA PIHAK.</li>
+        <li>Terhitung pelaksanaan pekerjaan dimulai H+7, setelah Gambar kerja & tanda tangan approval material oleh PIHAK KEDUA.</li>
+        <li>Pelaksanaan pekerjaan, harus sudah selesai 100% paling lambat 90 (Sembilah Puluh Hari Kerja) setelah pekerjaan dimulai ( sesuai poin pertama ).</li>
+        <li>Waktu penyelesaian tersebut tidak dapat dirubah oleh PIHAK KEDUA kecuali dalam keadaan memaksa.</li>
+        <li>Masa kontrak adalah diluar penyelesaian keluhan/complaint, pekerjaan free dan pekerjaan tambah.</li>
+        <li>Masa kontrak berjalan berjalan normal sesuai dengan pasal 4 point 2 apabila :
+            <ol type="a">
+                <li>Sudah ada pembayaran Down payment (DP).</li>
+                <li>Gambar kerja sudah disetujui oleh PARA PIHAK melalui grup WhastApp.</li>
+                <li>Pembayaran dilakukan maksimal 3 (hari) hari sejak invoice diterbitkan.</li>
+                <li>Tidak ada perubahan design, dimensi, spesifikasi dan lain lain yang tercantum di dalam gambar kerja yang telah disetujui.</li>
+                <li>Tidak ada pekerjaan pihak lain yang menghambat proses instalasi dilapangan.</li>
+            </ol>
+        </li>
+    </ol>
 
-        <div class="article">Pasal 5<br>NILAI KONTRAK DAN PERUBAHAN NILAI</div>
-        <ol>
-            <li>Nilai kontrak adalah sebesar Rp. {{ number_format($contractData['nominal_kontrak'], 0, ',', '.') }},- (Harga belum termasuk PPN).</li>
-            <li>Jika ada pengurangan/penambahan item pekerjaan, cukup tanda tangan perwakilan PIHAK PERTAMA pada bagian yang dirubah.</li>
-        </ol>
+    <div class="article">Pasal 5<br>Spesifikasi Material Umum</div>
+    <ol>
+        <li>Standar Material Finishing :
+            <ol type="a">
+                <li>Finishing Luar HPL, PVC, Cat Duco dan melamin.</li>
+                <li>Finishing dalam untuk kabinet menggunakan melamin putih. Selain melamin putih akan disesuaikan dengan dokumen penawaran.</li>
+            </ol>
+        </li>
+        <li>Dimensi Material Finishing ;
+            <ol type="a">
+                <li>Ukuran dimensi 240 cm x 120 cm, selain ukuran dimensi 240 cm x 120 cm, menggunakan sambungan material.</li>
+                <li>Finishing pinggiran panel, pintu, pintu kabinet menggunakan PVC edging dengan maximal lebar 4 cm, jika melebihi ukuran tersebut, maka menggunakan HPL.</li>
+            </ol>
+        </li>
+        <li>Pembuatan panel dinding menggunakan material multiplek 9 mm dengan rangka 18 mm dengan material Finishing HPL Maksimal ketinggian 2,4 meter. Selain ukuran tersebut menggunakan sambungan Finishing HPL.</li>
+        <li>Pembuatan kabinet menggunakan material kombinasi ukuran sesuai dengan fungsi dan kebutuhan, mulai dari 18 mm, 15 mm, 12 mm, 9 mm, 6 mm dan 3 mm.</li>
+    </ol>
 
-        <div class="article">Pasal 6<br>CARA PEMBAYARAN</div>
-        <ol>
-            <li>Pembayaran I: 50% sebagai Down Payment.</li>
-            <li>Pembayaran II: 40%, dibayar maksimal 3 hari setelah pengiriman barang.</li>
-            <li>Pembayaran III: 10%, dibayar maksimal 3 hari setelah serah terima.</li>
-            <li>Pembayaran di luar rekening resmi pada invoice tidak menjadi tanggung jawab PIHAK PERTAMA.</li>
-        </ol>
-
-        <div class="article">Pasal 7<br>KEADAAN MEMAKSA</div>
-        <ol>
-            <li>Jika terjadi keadaan memaksa, PIHAK PERTAMA dapat mengajukan perpanjangan waktu.</li>
-            <li>Jika PIHAK KEDUA mengubah desain/spesifikasi/menambah pekerjaan, jadwal lama gugur dan dibuat jadwal baru.</li>
-            <li>Jika tidak ada kesepakatan, masa kontrak otomatis ditambah 1x masa kontrak sebelumnya.</li>
-        </ol>
-
-        <div class="article">Pasal 8<br>HAK DAN KEWAJIBAN</div>
-
-        <b>Hak & Kewajiban PIHAK PERTAMA</b>
-        <ol>
-            <li>Jika penyelesaian terlambat, PIHAK PERTAMA wajib memberi laporan alasan keterlambatan.</li>
-            <li>Jika terlambat > 45 hari, dikenakan denda max 3% dari nilai kontrak.</li>
-            <li>Berhak mendapat kenyamanan lokasi kerja terkait lingkungan/perizinan.</li>
-            <li>Berhak mengganti material setara jika material discontinue/sulit ditemukan.</li>
-        </ol>
-
-        <b>Hak & Kewajiban PIHAK KEDUA</b>
-        <ol>
-            <li>Bertanggung jawab atas izin lingkungan dan kondusivitas lokasi.</li>
-            <li>Jika pembayaran terlambat >45 hari, denda max 3% dari nilai kontrak.</li>
-            <li>Berhak garansi aksesoris 1 tahun sejak serah terima.</li>
-            <li>Berhak mengajukan keluhan jika pekerjaan tidak sesuai gambar kerja.</li>
-        </ol>
-
+    <div class="article">Pasal 6<br>NILAI KONTRAK DAN PERUBAHAN NILAI KONTRAK</div>
+    <ol>
+        <li>Nilai kontrak adalah sebesar Rp. {{ number_format($contractData['nominal_kontrak'], 0, ',', '.') }},- (Harga tidak termasuk PPN).</li>
+        <li>Apabila ada perubahan nilai kontrak karena ada pengurangan atau penambahan item pekerjaan yang tercantum di penawaran atau berdasarkan negosiasi harga, maka perwakilan dari PIHAK PERTAMA (Direktur atau Marketing) cukup tanda tangan di perubahan yang dimaksud & dinyatakan sah berlaku.</li>
+    </ol>
 </div>
 
-{{-- <div class="page-break"></div> --}}
+<div class="page-break"></div>
 
 <!-- ================= Page 5 ================= -->
-{{-- <div class="page">
+<div class="page">
     @if(file_exists($kopPath))
         <img src="{{ $kopPath }}" class="kop-surat" alt="kop surat">
     @endif
     <hr class="kop-divider">
 
-    <div class="article">Pasal 7<br>KEADAAN MEMAKSA</div>
-        <ol>
-            <li>Jika terjadi keadaan memaksa, PIHAK PERTAMA dapat mengajukan perpanjangan waktu.</li>
-            <li>Jika PIHAK KEDUA mengubah desain/spesifikasi/menambah pekerjaan, jadwal lama gugur dan dibuat jadwal baru.</li>
-            <li>Jika tidak ada kesepakatan, masa kontrak otomatis ditambah 1x masa kontrak sebelumnya.</li>
-        </ol>
+    <div class="article">Pasal 7<br>CARA PEMBAYARAN</div>
+    <p>Pembayaran dilaksanakan sesuai termin pembayaran dan sesuai dengan prestasi pekerjaan yang telah disepakati dalam proses terhadap kontrak dengan ketentuan sebagai berikut :</p>
+    <ol>
+        <li>Pembayaran I (Pertama) sebesar 50% dari nilai kontrak yang berlaku sebagai Down Payment.</li>
+        <li>Pembayaran II (Kedua) sebesar 40% dari nilai kontrak, dibayarkan paling lambat 3 (tiga) hari setelah pengiriman barang.</li>
+        <li>Pembayaran III (Ketiga) sebesar 10% dari nilai kontrak yang akan dibayarkan paling lambat 3 (tiga) hari setelah serah terima.</li>
+        <li>Jika ada penambahan pekerjaan/adendum, maka pembayaran nilai pekerjaan tambah dibayarkan lunas (tanpa termin pembayaran), sebelum pekerjaan tambah dimulai.</li>
+        <li>Segala bentuk pembayaran yang dilakukan diluar rekening yang tercantum di invoice, PIHAK PERTAMA tidak bertanggung jawab.</li>
+    </ol>
 
-        <div class="article">Pasal 8<br>HAK DAN KEWAJIBAN</div>
+    <div class="article">Pasal 8<br>PENYERAHAN PEKERJAAN</div>
+    <ol>
+        <li>Setelah seluruh pekerjaan diselesaikan, PIHAK PERTAMA dapat meminta secara tertulis untuk melaksanakan Penyerahan Pekerjaan</li>
+        <li>PIHAK KEDUA, berdasarkan Berita Acara Pemeriksaan Penyelesaian Pekerjaan wajib menyetujui/tanda tangan Berita Acara penyerahan pekerjaan.</li>
+    </ol>
 
-        <b>Hak & Kewajiban PIHAK PERTAMA</b>
-        <ol>
-            <li>Jika penyelesaian terlambat, PIHAK PERTAMA wajib memberi laporan alasan keterlambatan.</li>
-            <li>Jika terlambat > 45 hari, dikenakan denda max 3% dari nilai kontrak.</li>
-            <li>Berhak mendapat kenyamanan lokasi kerja terkait lingkungan/perizinan.</li>
-            <li>Berhak mengganti material setara jika material discontinue/sulit ditemukan.</li>
-        </ol>
+    <div class="article">Pasal 9<br>KEADAAN MEMAKSA</div>
+    <ol>
+        <li>Bila dalam waktu pelaksanaan pekerjaan terjadi keadaan memaksa maka PIHAK PERTAMA dapat mengajukan permohonan perpanjangan waktu penyelesaian pekerjaan seperti yang telah ditetapkan dan dianggap berlaku.</li>
+        <li>Apabila PIHAK KEDUA mengajukan perubahan design, dimensi, spesifikasi dan lain lain atau penambahan pekerjaan di tengah kontrak ini berlangsung, maka jadwal penyelesaian di kontrak ini dianggap batal dan akan disepakati jadwal baru yang ditanda tangani PARA PIHAK.</li>
+        <li>Apabali tidak ada kesepakatan dalam masa kontrak, maka masa kontrak dengan tanpa persetujuan, menambah 1x (satu) kali Masa kontrak sesuai dengan masa kontrak yang telah di sepakati.</li>
+    </ol>
 
-        <b>Hak & Kewajiban PIHAK KEDUA</b>
-        <ol>
-            <li>Bertanggung jawab atas izin lingkungan dan kondusivitas lokasi.</li>
-            <li>Jika pembayaran terlambat >45 hari, denda max 3% dari nilai kontrak.</li>
-            <li>Berhak garansi aksesoris 1 tahun sejak serah terima.</li>
-            <li>Berhak mengajukan keluhan jika pekerjaan tidak sesuai gambar kerja.</li>
-        </ol>
-</div> --}}
+    <div class="article">Pasal 10<br>PENYELESAIAN SENGKETA</div>
+    <ol>
+        <li>Bila terjadi sengketa antara kedua belah pihak diutamakan penyelesaiannya secara musyawarah.</li>
+        <li>Jika musyawarah tidak ada penyelesaian maka semua sengketa yang timbul dari perjanjian ini, akan diselesaikan oleh kedua belah pihak yang mewakili tempat kedudukan hukum yang sah dan tidak berubah di Kantor Pegadilan Negeri di Kota Tangerang.</li>
+    </ol>
+</div>
 
 <div class="page-break"></div>
 
@@ -419,39 +417,28 @@
     @endif
     <hr class="kop-divider">
 
-    <div class="article">Pasal 9<br>SENGKETA ARBITRASI</div>
-        <ol>
-            <li>Penyelesaian sengketa diutamakan dengan musyawarah.</li>
-            <li>Jika tidak tercapai, sengketa diselesaikan di Pengadilan Negeri Kota Tangerang.</li>
-        </ol>
-
-        <div class="article">Pasal 10<br>PENUTUP</div>
-        <p>
-            Perjanjian ini dibuat dan ditandatangani oleh kedua belah pihak pada hari, tanggal, bulan dan tahun tersebut di atas.
-            Perjanjian dibuat dalam 2 rangkap bermeterai cukup dan memiliki kekuatan hukum yang sama.
-        </p>
+    <div class="article">Pasal 11<br>PENUTUP</div>
+    <p>
+        Demikian Surat Perjanjian pelaksanaan pekerjaan ini dibuat dan ditandatangani oleh kedua belah pihak pada hari, tanggal, bulan dan tahun tersebut diatas.
+        <br><br>
+        Demikian perjanjian ini dibuat dalam rangkap 2 (dua), masing-masing bermeterai cukup dan mempunyai kekuatan hukum yang sama.
+    </p>
 
     <div style="margin-top:36px;">
         <table class="two-col" style="border:0;">
             <tr>
-                {{-- <td style="width:60%;">
-                    <div>PIHAK PERTAMA,<br/><br/><br/>
-                        <div class="signature">
-                            <p style="margin-bottom: 100px;">Hormat Kami,<br><strong>{{$companyName}}</strong></p>
-                            <p><strong>{{ $direkturName }}</strong><br>{{$jabatanDirektur}}</p>
-                        </div>
-                    </div> --}}
-                    <div>PIHAK PERTAMA,<p>Hormat Kami,<br><strong>{{$companyName}}</strong></p><br/><br/></br>
-                        <div class="signature">
-                            <strong>{{ $direkturName }}</strong><br>{{$jabatanDirektur}}
-                        </div>
+                <td style="width:50%; text-align: center;">
+                    <div>PIHAK PERTAMA</div>
+                    <div style="height: 100px;"></div>
+                    <div class="signature" style="margin-top: 0;">
+                        <strong>{{ $direkturName }}</strong>
                     </div>
                 </td>
-                <td style="width:40%;">
-                    <div>PIHAK KEDUA,<br/></br></br><p><br><strong></strong></p><br/><br/>
-                        <div class="signature">
-                            <strong>{{ $contractData['customer_name'] }}</strong><br/>
-                        </div>
+                <td style="width:50%; text-align: center;">
+                    <div>PIHAK KEDUA</div>
+                    <div style="height: 100px;"></div>
+                    <div class="signature" style="margin-top: 0;">
+                        <strong>{{ $contractData['customer_name'] }}</strong>
                     </div>
                 </td>
             </tr>
