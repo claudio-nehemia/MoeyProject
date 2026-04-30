@@ -369,6 +369,15 @@ export default function ApprovalRabIndex({ items }: Props) {
                                                             ✏️ Edit & Isi Keterangan
                                                         </button>
 
+                                                        <a
+                                                            href={`/approval-material/${row.id}/export-pdf`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="w-full rounded-md bg-red-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-red-700 text-center inline-block"
+                                                        >
+                                                            📄 Export PDF
+                                                        </a>
+
                                                         {isKepalaMarketing && !row.pm_approval_rab_response_time && (
                                                             <button
                                                                 onClick={() => handlePmResponse(row.id)}

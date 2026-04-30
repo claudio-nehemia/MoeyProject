@@ -12,6 +12,15 @@ class ItemPekerjaanItem extends Model
         'quantity',
         'notes',
         'keterangan_material',
+        'kode_material',
+        'brand_spek',
+        'area',
+        'foto',
+    ];
+
+    protected $casts = [
+        'kode_material' => 'array',
+        'brand_spek' => 'array',
     ];
 
     public function itemPekerjaanJenisItem()

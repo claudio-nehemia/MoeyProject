@@ -9,6 +9,8 @@ use App\Models\ItemPekerjaan;
 use App\Models\ItemPekerjaanItem;
 use App\Services\NotificationService;
 use App\Models\ItemPekerjaanProdukBahanBaku;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Storage;
 
 class ApprovalRabController extends Controller
 {
@@ -127,6 +129,10 @@ class ApprovalRabController extends Controller
                         'jenis_item' => $jenis->jenisItem->nama_jenis_item,
                         'quantity' => $item->quantity,
                         'keterangan_material' => $item->keterangan_material,
+                        'kode_material' => $item->kode_material ?? [],
+                        'brand_spek' => $item->brand_spek ?? [],
+                        'area' => $item->area,
+                        'foto' => $item->foto ? Storage::url($item->foto) : null,
 
                         // 🔥 list dropdown
                         'available_items' => $jenis->jenisItem->items->map(fn($i) => [
@@ -149,6 +155,10 @@ class ApprovalRabController extends Controller
                     'harga_dasar' => $bahan->harga_dasar,
                     'harga_jasa' => $bahan->harga_jasa,
                     'keterangan_bahan_baku' => $bahan->keterangan_bahan_baku,
+                    'kode_material' => $bahan->kode_material ?? [],
+                    'brand_spek' => $bahan->brand_spek ?? [],
+                    'area' => $bahan->area,
+                    'foto' => $bahan->foto ? Storage::url($bahan->foto) : null,
                 ])
             )
             ->values();
@@ -178,24 +188,56 @@ class ApprovalRabController extends Controller
             'items.*.id' => 'required|exists:item_pekerjaan_items,id',
             'items.*.item_id' => 'required|exists:items,id',
             'items.*.keterangan_material' => 'nullable|string|max:1000',
+            'items.*.kode_material' => 'nullable|array',
+            'items.*.kode_material.*' => 'nullable|string|max:255',
+            'items.*.brand_spek' => 'nullable|array',
+            'items.*.brand_spek.*' => 'nullable|string|max:255',
+            'items.*.area' => 'nullable|string|max:500',
+            'items.*.foto' => 'nullable|file|image|max:10240',
             'bahan_bakus' => 'nullable|array',
             'bahan_bakus.*.id' => 'required|exists:item_pekerjaan_produk_bahan_bakus,id',
             'bahan_bakus.*.keterangan_bahan_baku' => 'nullable|string|max:1000',
+            'bahan_bakus.*.kode_material' => 'nullable|array',
+            'bahan_bakus.*.kode_material.*' => 'nullable|string|max:255',
+            'bahan_bakus.*.brand_spek' => 'nullable|array',
+            'bahan_bakus.*.brand_spek.*' => 'nullable|string|max:255',
+            'bahan_bakus.*.area' => 'nullable|string|max:500',
+            'bahan_bakus.*.foto' => 'nullable|file|image|max:10240',
         ]);
 
-        foreach ($validated['items'] as $row) {
-            ItemPekerjaanItem::where('id', $row['id'])->update([
+        foreach ($validated['items'] as $index => $row) {
+            $dataToUpdate = [
                 'item_id' => $row['item_id'],
                 'keterangan_material' => $row['keterangan_material'],
-            ]);
+                'kode_material' => $row['kode_material'] ?? null,
+                'brand_spek' => $row['brand_spek'] ?? null,
+                'area' => $row['area'] ?? null,
+            ];
+
+            if ($request->hasFile("items.{$index}.foto")) {
+                $path = $request->file("items.{$index}.foto")->store('approval-material', 'public');
+                $dataToUpdate['foto'] = $path;
+            }
+
+            ItemPekerjaanItem::where('id', $row['id'])->update($dataToUpdate);
         }
 
         // Update bahan baku jika ada
         if (isset($validated['bahan_bakus'])) {
-            foreach ($validated['bahan_bakus'] as $bahan) {
-                ItemPekerjaanProdukBahanBaku::where('id', $bahan['id'])->update([
+            foreach ($validated['bahan_bakus'] as $index => $bahan) {
+                $dataToUpdate = [
                     'keterangan_bahan_baku' => $bahan['keterangan_bahan_baku'],
-                ]);
+                    'kode_material' => $bahan['kode_material'] ?? null,
+                    'brand_spek' => $bahan['brand_spek'] ?? null,
+                    'area' => $bahan['area'] ?? null,
+                ];
+
+                if ($request->hasFile("bahan_bakus.{$index}.foto")) {
+                    $path = $request->file("bahan_bakus.{$index}.foto")->store('approval-material', 'public');
+                    $dataToUpdate['foto'] = $path;
+                }
+
+                ItemPekerjaanProdukBahanBaku::where('id', $bahan['id'])->update($dataToUpdate);
             }
         }
 
@@ -307,4 +349,70 @@ class ApprovalRabController extends Controller
             ->with('success', 'RAB berhasil Diresponses.');
     }
 
+    /**
+     * ======================================================
+     * EXPORT PDF - Approval Material
+     * ======================================================
+     */
+    public function exportPdf($itemPekerjaanId)
+    {
+        $itemPekerjaan = ItemPekerjaan::with([
+            'moodboard.order',
+            'produks.produk',
+            'produks.jenisItems.items.item',
+            'produks.jenisItems.jenisItem',
+            'produks.bahanBakus.item',
+        ])->findOrFail($itemPekerjaanId);
+
+        $order = $itemPekerjaan->moodboard->order;
+
+        // Flatten items (finishing & aksesoris)
+        $finishingItems = $itemPekerjaan->produks
+            ->flatMap(
+                fn($produk) =>
+                $produk->jenisItems->flatMap(
+                    fn($jenis) =>
+                    $jenis->items->map(fn($item) => (object) [
+                        'item_name' => $item->item->nama_item,
+                        'jenis_item' => $jenis->jenisItem->nama_jenis_item,
+                        'brand_spek' => $item->brand_spek ?? [],
+                        'kode_material' => $item->kode_material ?? [],
+                        'area' => $item->area ?? '-',
+                        'keterangan_material' => $item->keterangan_material ?? '',
+                        'foto' => $item->foto,
+                    ])
+                )
+            )
+            ->values();
+
+        // Flatten bahan baku
+        $bahanBakuItems = $itemPekerjaan->produks
+            ->flatMap(
+                fn($produk) =>
+                $produk->bahanBakus->map(fn($bahan) => (object) [
+                    'item_name' => $bahan->item->nama_item,
+                    'brand_spek' => $bahan->brand_spek ?? [],
+                    'kode_material' => $bahan->kode_material ?? [],
+                    'area' => $bahan->area ?? '-',
+                    'keterangan_material' => $bahan->keterangan_bahan_baku ?? '',
+                    'foto' => $bahan->foto,
+                ])
+            )
+            ->values();
+
+        $data = [
+            'owner' => $order->customer_name,
+            'project' => $order->nama_project,
+            'lokasi' => $order->alamat ?? '-',
+            'tanggal' => now()->translatedFormat('d F Y'),
+            'bahanBakuItems' => $bahanBakuItems,
+            'finishingItems' => $finishingItems,
+        ];
+
+        $pdf = Pdf::loadView('pdf.approval-material', $data);
+        $pdf->setPaper('A4', 'landscape');
+
+        $filename = 'Approval_Material_' . str_replace(' ', '_', $order->nama_project) . '.pdf';
+        return $pdf->stream($filename);
+    }
 }

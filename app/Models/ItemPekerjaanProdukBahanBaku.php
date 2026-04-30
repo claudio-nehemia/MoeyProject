@@ -12,11 +12,17 @@ class ItemPekerjaanProdukBahanBaku extends Model
         'harga_dasar',
         'harga_jasa',
         'keterangan_bahan_baku',
+        'kode_material',
+        'brand_spek',
+        'area',
+        'foto',
     ];
 
     protected $casts = [
         'harga_dasar' => 'decimal:2',
         'harga_jasa' => 'decimal:2',
+        'kode_material' => 'array',
+        'brand_spek' => 'array',
     ];
 
     public function itemPekerjaanProduk()

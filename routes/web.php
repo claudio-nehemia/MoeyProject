@@ -601,6 +601,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('responses');
         Route::put('/approval-material/bulk-update', [ApprovalRabController::class, 'bulkUpdate'])
             ->middleware('permission:approval-material.update');
+        Route::get('/{itemPekerjaan}/export-pdf', [ApprovalRabController::class, 'exportPdf'])
+            ->middleware('permission:approval-material.index')
+            ->name('export-pdf');
     });
 
     // PM Response Routes
