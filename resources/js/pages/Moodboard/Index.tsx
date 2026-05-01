@@ -271,6 +271,10 @@ export default function Index({ orders }: Props) {
         });
     };
 
+    const isActiveTaskResponse = (task?: TaskResponse) => {
+        return !!task && task.status !== 'selesai' && task.status !== 'telat_submit' && !task.update_data_time;
+    };
+
     const openCreateMoodboard = (order: Order) => {
         router.post(`/moodboard/response/${order.id}`, {}, {
             preserveScroll: true,
@@ -502,6 +506,19 @@ export default function Index({ orders }: Props) {
                                         const moodboard = order.moodboard;
                                         const status = getMoodboardStatus(moodboard);
                                         const isExpanded = expandedCards.has(order.id);
+                                        const regularTask = taskResponses[order.id]?.regular;
+                                        const marketingTask = taskResponses[order.id]?.marketing;
+                                        const activeTask = isKepalaMarketing
+                                            ? (isActiveTaskResponse(marketingTask)
+                                                ? marketingTask
+                                                : isActiveTaskResponse(regularTask)
+                                                    ? regularTask
+                                                    : undefined)
+                                            : (isActiveTaskResponse(regularTask)
+                                                ? regularTask
+                                                : isActiveTaskResponse(marketingTask)
+                                                    ? marketingTask
+                                                    : undefined);
 
                                         return (
                                             <Fragment key={order.id}>
@@ -518,17 +535,23 @@ export default function Index({ orders }: Props) {
 
                                                     {/* Deadline */}
                                                     <td className="px-5 py-3.5">
-                                                        <div className="text-xs text-slate-600 font-medium">
-                                                            {formatDeadline(taskResponses[order.id]?.regular?.deadline || taskResponses[order.id]?.marketing?.deadline)}
-                                                        </div>
-                                                        <div className="flex items-center gap-1.5 mt-1.5">
-                                                            <span className="text-[10px] text-slate-400 font-bold">7 HARI</span>
-                                                            {(taskResponses[order.id]?.regular?.extend_time! > 0 || taskResponses[order.id]?.marketing?.extend_time! > 0) && (
-                                                                <span className="px-1.5 py-0.5 bg-violet-50 text-violet-600 text-[9px] font-bold rounded border border-violet-100 uppercase tracking-tighter">
-                                                                    {Math.max(taskResponses[order.id]?.regular?.extend_time || 0, taskResponses[order.id]?.marketing?.extend_time || 0)}x Ext
-                                                                </span>
-                                                            )}
-                                                        </div>
+                                                        {activeTask ? (
+                                                            <>
+                                                                <div className="text-xs text-slate-600 font-medium">
+                                                                    {formatDeadline(activeTask.deadline)}
+                                                                </div>
+                                                                <div className="flex items-center gap-1.5 mt-1.5">
+                                                                    <span className="text-[10px] text-slate-400 font-bold">7 HARI</span>
+                                                                    {typeof activeTask.extend_time === 'number' && activeTask.extend_time > 0 && (
+                                                                        <span className="px-1.5 py-0.5 bg-violet-50 text-violet-600 text-[9px] font-bold rounded border border-violet-100 uppercase tracking-tighter">
+                                                                            {activeTask.extend_time}x Ext
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-[10px] text-slate-400 italic">Tidak ada deadline</span>
+                                                        )}
                                                     </td>
 
                                                     {/* Files */}

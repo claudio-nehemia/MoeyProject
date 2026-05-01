@@ -50,6 +50,7 @@ interface TaskResponse {
     status: string;
     deadline: string | null;
     extend_time: number;
+    update_data_time?: string | null;
 }
 
 interface Props {
@@ -195,7 +196,7 @@ export default function MoodboardModal({
                 {/* Content */}
                 <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
                     {/* DEADLINE & EXTEND BUTTON - DI MODAL UPLOAD KASAR (TEMPAT 2) */}
-                    {mode === 'upload-kasar' && taskResponse && taskResponse.status !== 'selesai' && (
+                    {mode === 'upload-kasar' && taskResponse && taskResponse.status !== 'selesai' && taskResponse.status !== 'telat_submit' && !taskResponse.update_data_time && (
                         <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
                             <div className="flex justify-between items-center">
                                 <div>

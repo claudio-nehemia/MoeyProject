@@ -277,6 +277,10 @@ export default function EstimasiIndex({ moodboards }: Props) {
         });
     };
 
+    const isActiveTaskResponse = (task?: TaskResponse) => {
+        return !!task && task.status !== 'selesai' && task.status !== 'telat_submit' && !task.update_data_time;
+    };
+
     const toggleExpand = (moodboardId: number) => {
         setExpandedCards((prev) => {
             const newSet = new Set(prev);
@@ -371,7 +375,19 @@ export default function EstimasiIndex({ moodboards }: Props) {
                                         if (!order) return null;
 
                                         const taskResponsesData = taskResponses[order.id];
-                                        const deadline = taskResponsesData?.regular?.deadline || taskResponsesData?.marketing?.deadline;
+                                        const regularTask = taskResponsesData?.regular;
+                                        const marketingTask = taskResponsesData?.marketing;
+                                        const activeTask = isKepalaMarketing
+                                            ? (isActiveTaskResponse(marketingTask)
+                                                ? marketingTask
+                                                : isActiveTaskResponse(regularTask)
+                                                    ? regularTask
+                                                    : undefined)
+                                            : (isActiveTaskResponse(regularTask)
+                                                ? regularTask
+                                                : isActiveTaskResponse(marketingTask)
+                                                    ? marketingTask
+                                                    : undefined);
                                         
                                         const totalFiles = moodboard.kasar_files.length;
                                         const uploadedFiles = moodboard.kasar_files.filter(f => f.estimasi_file).length;
@@ -391,15 +407,21 @@ export default function EstimasiIndex({ moodboards }: Props) {
 
                                                     {/* Deadline */}
                                                     <td className="px-5 py-4">
-                                                        <div className="text-xs text-slate-600 font-bold whitespace-nowrap">
-                                                            {formatDeadline(deadline)}
-                                                        </div>
-                                                        {taskResponsesData?.regular?.extend_time! > 0 && (
-                                                            <div className="mt-1 flex items-center gap-1">
-                                                                <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 text-[9px] font-bold rounded border border-indigo-100 uppercase italic">
-                                                                    {taskResponsesData.regular?.extend_time}x Ext
-                                                                </span>
-                                                            </div>
+                                                        {activeTask ? (
+                                                            <>
+                                                                <div className="text-xs text-slate-600 font-bold whitespace-nowrap">
+                                                                    {formatDeadline(activeTask.deadline)}
+                                                                </div>
+                                                                {typeof activeTask.extend_time === 'number' && activeTask.extend_time > 0 && (
+                                                                    <div className="mt-1 flex items-center gap-1">
+                                                                        <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 text-[9px] font-bold rounded border border-indigo-100 uppercase italic">
+                                                                            {activeTask.extend_time}x Ext
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-[10px] text-slate-400 italic">Tidak ada deadline</span>
                                                         )}
                                                     </td>
 

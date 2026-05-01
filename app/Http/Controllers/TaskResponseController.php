@@ -95,11 +95,10 @@ class TaskResponseController extends Controller
                 });
             }
         }
-        // Pick the most relevant record if duplicates exist.
+        // Pick the most recently updated record if duplicates exist.
         $taskResponse = $query
-            ->orderByRaw("CASE WHEN status = 'selesai' THEN 1 ELSE 0 END")
-            ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
+            ->orderByDesc('extend_time')
             ->orderByDesc('id')
             ->first();
 
