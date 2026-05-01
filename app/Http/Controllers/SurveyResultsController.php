@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Services\ImageService;
 
 class SurveyResultsController extends Controller
 {
@@ -89,7 +90,7 @@ class SurveyResultsController extends Controller
             ->visibleToUser($user)
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(function ($order) use ($user) {
+            ->map(function (Order $order) use ($user) {
                 $surveyResult = $order->surveyResults;
 
                 $canMarketingResponse = false;
@@ -321,9 +322,9 @@ class SurveyResultsController extends Controller
                         \Log::info("[Survey Store] Uploading layout file #{$index}: {$fileName}");
                         
                         if (in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png'])) {
-                            $result = image_service()->saveImageWithThumbnail($file, 'survey_layouts', 2000, 85, 500, 70);
+                            $result = app(ImageService::class)->saveImageWithThumbnail($file, 'survey_layouts', 2000, 85, 500, 70);
                         } else {
-                            $result = image_service()->saveRawFile($file, 'survey_layouts');
+                            $result = app(ImageService::class)->saveRawFile($file, 'survey_layouts');
                         }
                         
                         $layoutFilesPaths[] = $result;
@@ -364,7 +365,7 @@ class SurveyResultsController extends Controller
                         $fileName = $file->getClientOriginalName();
                         \Log::info("[Survey Store] Uploading photo #{$index}: {$fileName}");
                         
-                        $result = image_service()->saveImageWithThumbnail($file, 'survey_photos', 1600, 80, 400, 70);
+                        $result = app(ImageService::class)->saveImageWithThumbnail($file, 'survey_photos', 1600, 80, 400, 70);
                         $fotoLokasiFilesPaths[] = $result;
                         
                         \Log::info("[Survey Store] Photo #{$index} uploaded successfully: {$result['path']}");
@@ -424,7 +425,7 @@ class SurveyResultsController extends Controller
                         $fileName = $file->getClientOriginalName();
                         \Log::info("[Survey Store] Uploading MOM file #{$index}: {$fileName}");
 
-                        $result = image_service()->saveRawFile($file, 'mom_files');
+                        $result = app(ImageService::class)->saveRawFile($file, 'mom_files');
                         $uploadedMomFiles[] = $result;
                         $existingMomFiles[] = $result;
 
@@ -666,9 +667,9 @@ class SurveyResultsController extends Controller
                         \Log::info("[Survey Update] Uploading layout file #{$index}: {$fileName}");
                         
                         if (in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png'])) {
-                            $result = image_service()->saveImageWithThumbnail($file, 'survey_layouts', 2000, 85, 500, 70);
+                            $result = app(ImageService::class)->saveImageWithThumbnail($file, 'survey_layouts', 2000, 85, 500, 70);
                         } else {
-                            $result = image_service()->saveRawFile($file, 'survey_layouts');
+                            $result = app(ImageService::class)->saveRawFile($file, 'survey_layouts');
                         }
                         
                         $newLayoutFiles[] = $result;
@@ -709,7 +710,7 @@ class SurveyResultsController extends Controller
                         $fileName = $file->getClientOriginalName();
                         \Log::info("[Survey Update] Uploading photo #{$index}: {$fileName}");
                         
-                        $result = image_service()->saveImageWithThumbnail($file, 'survey_photos', 1600, 80, 400, 70);
+                        $result = app(ImageService::class)->saveImageWithThumbnail($file, 'survey_photos', 1600, 80, 400, 70);
                         $newFotoFiles[] = $result;
                         $existingFotoFiles[] = $result;
                         
@@ -769,7 +770,7 @@ class SurveyResultsController extends Controller
                         $fileName = $file->getClientOriginalName();
                         \Log::info("[Survey Update] Uploading MOM file #{$index}: {$fileName}");
 
-                        $result = image_service()->saveRawFile($file, 'mom_files');
+                        $result = app(ImageService::class)->saveRawFile($file, 'mom_files');
                         $uploadedMomFiles[] = $result;
                         $existingMomFiles[] = $result;
 
@@ -1068,7 +1069,9 @@ class SurveyResultsController extends Controller
             abort_unless($path && Storage::disk('public')->exists($path), 404);
 
             $name = $files[$index]['original_name'] ?? basename($path);
-            return Storage::disk('public')->download($path, $name);
+            /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+            $disk = Storage::disk('public');
+            return $disk->download($path, $name);
         }
 
         if ($type === 'foto') {
@@ -1079,12 +1082,14 @@ class SurveyResultsController extends Controller
             abort_unless($path && Storage::disk('public')->exists($path), 404);
 
             $name = $files[$index]['original_name'] ?? basename($path);
-            return Storage::disk('public')->download($path, $name);
+            /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+            $disk = Storage::disk('public');
+            return $disk->download($path, $name);
         }
 
         if ($type === 'mom') {
             $order = $surveyResult->order;
-            abort_unless($order, 404);
+            abort_unless($order !== null, 404);
 
             $momFiles = $this->normalizeMomFilesForOrder($order);
             abort_unless(isset($momFiles[$index]), 404);
@@ -1093,7 +1098,9 @@ class SurveyResultsController extends Controller
             abort_unless($path && Storage::disk('public')->exists($path), 404);
 
             $name = $momFiles[$index]['original_name'] ?? basename($path);
-            return Storage::disk('public')->download($path, $name);
+            /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+            $disk = Storage::disk('public');
+            return $disk->download($path, $name);
         }
 
         abort(404);

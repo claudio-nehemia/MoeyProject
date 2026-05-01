@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\OrderExport;
+use App\Services\ImageService;
 
 class OrderController extends Controller
 {
@@ -114,7 +115,7 @@ class OrderController extends Controller
 
         // Handle file upload
         if ($request->hasFile('mom_file')) {
-            $result = image_service()->saveRawFile($request->file('mom_file'), 'mom_files');
+            $result = app(ImageService::class)->saveRawFile($request->file('mom_file'), 'mom_files');
             $validated['mom_file'] = $result['path'];
             $validated['mom_files'] = [$result];
             \Log::info('MOM file uploaded:', ['file' => $validated['mom_file'], 'original_name' => $result['original_name'] ?? null]);
@@ -278,7 +279,7 @@ class OrderController extends Controller
             }
 
             // Store new file
-            $result = image_service()->saveRawFile($request->file('mom_file'), 'mom_files');
+            $result = app(ImageService::class)->saveRawFile($request->file('mom_file'), 'mom_files');
             $validated['mom_file'] = $result['path'];
             $validated['mom_files'] = [$result];
             \Log::info('New MOM file uploaded:', ['file' => $validated['mom_file'], 'original_name' => $result['original_name'] ?? null]);
