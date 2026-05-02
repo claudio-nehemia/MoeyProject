@@ -29,8 +29,12 @@ class SurveyScheduleController extends Controller
         })->select('id', 'name', 'email')->get();
 
         $orders = Order::with(['surveyUsers:id,name'])
-            ->whereNotNull('payment_status')
-            ->whereRaw("LOWER(payment_status) LIKE '%dp%'")
+            ->where(function ($query) {
+                $query->whereRaw("LOWER(payment_status) LIKE '%dp%'")
+                    ->orWhereNotNull('tanggal_survey')
+                    ->orWhereNotNull('survey_response_time')
+                    ->orWhereNotNull('pm_survey_response_time');
+            })
             ->orderBy('created_at', 'desc')
 
             ->get()

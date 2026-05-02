@@ -888,28 +888,39 @@ class InvoiceController extends Controller
         try {
             $itemPekerjaan = ItemPekerjaan::with(['invoices', 'moodboard.order'])->findOrFail($itemPekerjaanId);
 
-            // Find invoice termin 1
-            $invoice = $itemPekerjaan->invoices->firstWhere('termin_step', 1);
+            // Find invoice termin 1, fallback to legacy records without termin_step
+            $invoice = $itemPekerjaan->invoices->firstWhere('termin_step', 1)
+                ?? $itemPekerjaan->invoices->firstWhere('termin_step', null);
 
-            // prevent duplicate response
-            if ($invoice && $invoice->response_time) {
+            // prevent duplicate response (only if already bound to termin 1)
+            if ($invoice && $invoice->response_time && (int) $invoice->termin_step === 1) {
                 return back()->with('info', 'Invoice sudah di-response.');
             }
 
             DB::transaction(function () use ($invoice, $itemPekerjaan) {
+                $responseTime = $invoice?->response_time ?? now();
+                $responseBy = $invoice?->response_by ?? auth()->user()->name;
+
                 // Update invoice termin 1 if exists
                 if ($invoice) {
-                    $invoice->update([
-                        'response_time' => now(),
-                        'response_by' => auth()->user()->name,
-                    ]);
+                    $updates = [
+                        'response_time' => $responseTime,
+                        'response_by' => $responseBy,
+                    ];
+
+                    if (empty($invoice->termin_step)) {
+                        $updates['termin_step'] = 1;
+                    }
+
+                    $invoice->update($updates);
                 } else {
-                    // Create invoice termin 1 with total_amount = 0
+                    // Create invoice termin 1 with response info
                     Invoice::create([
                         'item_pekerjaan_id' => $itemPekerjaan->id,
                         'rab_kontrak_id' => $itemPekerjaan->rabKontrak->id,
-                        'response_time' => now(),
-                        'response_by' => auth()->user()->name,
+                        'termin_step' => 1,
+                        'response_time' => $responseTime,
+                        'response_by' => $responseBy,
                     ]);
                 }
                 // If invoice doesn't exist, only update TaskResponse

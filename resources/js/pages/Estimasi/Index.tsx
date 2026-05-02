@@ -486,12 +486,10 @@ export default function EstimasiIndex({ moodboards }: Props) {
                                                             {!moodboard.estimasi && isNotKepalaMarketing && (
                                                                 <button
                                                                     onClick={(e) => { e.stopPropagation(); handleResponseEstimasi(moodboard); }}
-                                                                    className="p-1.5 hover:bg-indigo-50 hover:text-indigo-500 rounded-lg transition-all"
-                                                                    title="Input Estimasi"
+                                                                    className="rounded-md bg-indigo-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
+                                                                    title="Response"
                                                                 >
-                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                                                    </svg>
+                                                                    Response
                                                                 </button>
                                                             )}
                                                         </div>

@@ -28,7 +28,12 @@ class MoodboardController extends Controller
         $orders = Order::with(['moodboard.estimasi', 'moodboard.itemPekerjaan', 'moodboard.commitmentFee', 'moodboard.kasarFiles.estimasiFile', 'moodboard.finalFiles', 'jenisInterior', 'users.role'])
             ->visibleToUser($user)
             ->orderBy('created_at', 'desc')
-            ->where('tahapan_proyek', 'moodboard') // Only orders with in_progress status
+            ->where(function ($query) {
+                $query->where('tahapan_proyek', 'moodboard')
+                    ->orWhereHas('moodboard', function ($moodboardQuery) {
+                        $moodboardQuery->where('status', 'approved');
+                    });
+            })
             ->get()
             ->map(function ($order) {
                 return [
