@@ -4,138 +4,101 @@
     <meta charset="utf-8">
     <title>Invoice - {{ $invoice->invoice_number }}</title>
     <style>
+        /* 1. Global Page Settings (Absolute Units for DomPDF) */
         @page {
-            margin: 1.5cm;
+            margin-top: 140pt;
+            margin-bottom: 50pt;
+            margin-left: 70pt;
+            margin-right: 70pt;
         }
 
+        /* 2. Fixed Header (Kop Surat) */
+        #header {
+            position: fixed;
+            top: -120pt;
+            left: 0pt;
+            right: 0pt;
+            height: 120pt;
+            text-align: center;
+        }
+
+        /* 3. Typography & Body */
         body {
-            font-family: 'Times New Roman', Times, serif;
+            margin: 0;
+            padding: 0;
+            font-family: "Times New Roman", Times, serif;
             font-size: 11pt;
-            line-height: 1.3;
+            line-height: 1.4;
             color: #000;
         }
 
-        .page-break {
-            page-break-after: always;
+        .kop-img {
+            width: 450pt;
+            height: auto;
         }
 
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        .text-justify { text-align: justify; }
-        .font-bold { font-weight: bold; }
+        /* 4. Utilities */
+        .page-break { page-break-before: always; }
+        .no-break { page-break-inside: avoid; }
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .justify { text-align: justify; }
+        .bold { font-weight: bold; }
         .underline { text-decoration: underline; }
 
-        .kop-surat { display:block; width:100%; max-width: 100%; height:auto; margin-bottom:6px; }
-        hr.kop-divider { border:0; border-top:1px solid #d0d0d0; margin:8px 0 12px 0; }
-
-        /* Cover Letter Styles */
-        .letter-header {
-            margin-bottom: 20px;
+        /* Tabel Dasar */
+        table { width: 100%; border-collapse: collapse; }
+        td { vertical-align: top; padding: 2pt 0; }
+        
+        .fee-table { border: 1px solid #000; margin-top: 15pt; }
+        .fee-table th, .fee-table td { border: 1px solid #000; padding: 8pt; text-align: left; }
+        
+        .box-nominal { 
+            border: 1px solid #000; 
+            padding: 10pt; 
+            font-weight: bold; 
+            width: 180pt; 
+            text-align: center;
+            background-color: #f9f9f9;
         }
 
-        .letter-body {
-            margin-top: 30px;
-        }
-
-        .signature-block {
-            margin-top: 50px;
-            float: right;
-            width: 250px;
-            page-break-inside: avoid;
-        }
-
-        /* Kwitansi Styles */
-        .kwitansi-container {
-            border: 1px solid #000;
-            padding: 20px;
-            position: relative;
-        }
-
-        .kwitansi-header {
-            font-size: 14pt;
-            margin-bottom: 20px;
-        }
-
-        .kwitansi-row {
-            margin-bottom: 15px;
-            display: block;
-            clear: both;
-        }
-
-        .kwitansi-label {
-            float: left;
-            width: 150px;
-            font-style: italic;
-        }
-
-        .kwitansi-colon {
-            float: left;
-            width: 20px;
-        }
-
-        .kwitansi-value {
-            float: left;
-            width: 450px;
-            border-bottom: 1px dotted #000;
-            min-height: 20px;
-        }
-
-        .kwitansi-amount-box {
-            border: 1px solid #000;
-            padding: 10px;
-            font-size: 14pt;
-            font-weight: bold;
-            display: inline-block;
-            margin-top: 20px;
-        }
-
-        /* Invoice Styles */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        table, th, td {
-            border: 1px solid black;
-        }
-
-        th {
-            background-color: #f2f2f2;
-            padding: 8px;
-        }
-
-        td {
-            padding: 8px;
-        }
-
-        .no-border table, .no-border th, .no-border td {
-            border: none;
-        }
-
-        .bank-info {
-            margin-top: 30px;
-        }
-
-        .stamp-area {
-            position: relative;
-            height: 100px;
-        }
-
-        .stamp-img {
-            position: absolute;
-            top: -20px;
-            left: 0;
-            width: 150px;
-            opacity: 0.8;
-        }
     </style>
 </head>
 <body>
+
     @php
-        function getRomanMonth($month) {
-            $romans = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
-            return $romans[intval($month)];
+        // Helper Fungsi Terbilang (Indonesian)
+        if (!function_exists('penyebut')) {
+            function penyebut($nilai) {
+                $nilai = abs($nilai);
+                $huruf = array("", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas");
+                $temp = "";
+                if ($nilai < 12) { $temp = " ". $huruf[$nilai]; }
+                else if ($nilai < 20) { $temp = penyebut($nilai - 10). " Belas"; }
+                else if ($nilai < 100) { $temp = penyebut($nilai/10)." Puluh". penyebut($nilai % 10); }
+                else if ($nilai < 200) { $temp = " Seratus" . penyebut($nilai - 100); }
+                else if ($nilai < 1000) { $temp = penyebut($nilai/100) . " Ratus" . penyebut($nilai % 100); }
+                else if ($nilai < 2000) { $temp = " Seribu" . penyebut($nilai - 1000); }
+                else if ($nilai < 1000000) { $temp = penyebut($nilai/1000) . " Ribu" . penyebut($nilai % 1000); }
+                else if ($nilai < 1000000000) { $temp = penyebut($nilai/1000000) . " Juta" . penyebut($nilai % 1000000); }
+                else if ($nilai < 1000000000000) { $temp = penyebut($nilai/1000000000) . " Milyar" . penyebut(fmod($nilai,1000000000)); }
+                return $temp;
+            }
+        }
+
+        if (!function_exists('terbilang')) {
+            function terbilang($nilai) {
+                if($nilai<0) { $hasil = "Minus ". trim(penyebut($nilai)); }
+                else { $hasil = trim(penyebut($nilai)); }     		
+                return $hasil . " Rupiah";
+            }
+        }
+
+        if (!function_exists('getRomanMonth')) {
+            function getRomanMonth($month) {
+                $romans = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+                return $romans[intval($month)];
+            }
         }
 
         $date = \Carbon\Carbon::parse($invoice->created_at);
@@ -150,224 +113,198 @@
         $nomorKWT = "{$sequence}/MJA/KWT/{$romanMonth}/{$year}";
         $nomorINV = "{$sequence}/MJA/INV/{$romanMonth}/{$year}";
         
-        $terbilangTotal = trim(terbilang($totalAmount)) . " Rupiah";
-        $terbilangKontrak = trim(terbilang($paymentSummary['harga_kontrak'])) . " Rupiah";
+        $terbilangTotal = terbilang($totalAmount);
+        $terbilangKontrak = terbilang($paymentSummary['harga_kontrak']);
+
+        $terminText = $invoice->termin_text; // e.g. "DP", "Termin 2", "Pelunasan"
+        $customerName = $invoice->itemPekerjaan->moodboard->order->customer_name;
+        $projectName = $invoice->itemPekerjaan->moodboard->order->project_name ?? "Project Interior";
     @endphp
 
-    <!-- PAGE 1: SURAT PENGAJUAN PEMBAYARAN -->
-    <div class="page-break">
+    <!-- Header Fixed (Kop Surat) -->
+    <div id="header">
         @if(isset($kopPath) && file_exists($kopPath))
-            <img src="{{ $kopPath }}" class="kop-surat" alt="kop surat">
+            <img src="{{ $kopPath }}" class="kop-img">
+        @else
+            <div style="color: red; border: 1px solid red; padding: 10pt;">[ KOP SURAT TIDAK DITEMUKAN ]</div>
         @endif
-        <hr class="kop-divider">
+    </div>
 
-        <div class="text-right">
-            Tangerang, {{ $day }} {{ $monthName }} {{ $year }}
-        </div>
-
-        <div class="letter-header">
-            <table class="no-border" style="width: 100%; border: none;">
-                <tr style="border: none;">
-                    <td style="width: 80px; border: none; padding: 0;">Nomor</td>
-                    <td style="width: 20px; border: none; padding: 0;">:</td>
-                    <td style="border: none; padding: 0;">{{ $nomorPDP }}</td>
-                </tr>
-                <tr style="border: none;">
-                    <td style="border: none; padding: 0;">Hal</td>
-                    <td style="border: none; padding: 0;">:</td>
-                    <td style="border: none; padding: 0;" class="font-bold">Pengajuan Pembayaran {{ $invoice->termin_text }}</td>
-                </tr>
-            </table>
-        </div>
-
-        <div class="letter-body">
-            <p class="font-bold">Kepada Yth,</p>
-            <p class="font-bold" style="margin: 0;">{{ $invoice->itemPekerjaan->moodboard->order->customer_name }}</p>
-            <p style="margin: 0;">Di {{ $invoice->itemPekerjaan->moodboard->order->company_name }}</p>
-
-            <p style="margin-top: 30px;">Dengan Hormat,</p>
-            <p class="text-justify">
-                Sehubungan dengan <span class="font-bold">Pelaksanaan Pekerjaan Interior Rumah Tinggal</span> yang sudah selesai dilaksanakan, bersama ini Kami bermaksud mengajukan <span class="font-bold">Permohonan Pembayaran {{ $invoice->termin_text }}</span> sebesar <span class="font-bold">Rp. {{ number_format($totalAmount, 0, ',', '.') }},- ({{ $terbilangTotal }})</span>, dari jumlah harga yang disetujui yaitu <span class="font-bold">Rp. {{ number_format($paymentSummary['harga_kontrak'], 0, ',', '.') }},- ({{ $terbilangKontrak }})</span>.
-            </p>
-
-            <p>Berikut ini Kami lampirkan <span class="font-bold">Invoice {{ $invoice->termin_text }}</span>.</p>
-            <p>Demikian Kami sampaikan, atas perhatian dan kerjasama Bapak, Kami ucapkan terima kasih.</p>
-        </div>
-
-        <table class="no-border" style="width: 100%; border: none; margin-top: 50px;">
-            <tr style="border: none;">
-                <td style="border: none; width: 60%;"></td>
-                <td style="border: none; width: 40%; text-align: left;">
-                    <p style="margin: 0;">Hormat Kami,</p>
-                    <p class="font-bold" style="margin: 0;">PT. Moey Jaya Abadi</p>
-                    <div style="height: 80px;"></div>
-                    <p class="font-bold" style="margin: 0;">Aniq Arifuddin</p>
-                    <p style="margin: 0;">Direktur</p>
-                </td>
-            </tr>
+    <!-- ======================================================
+         HALAMAN 1: SURAT PENGAJUAN PEMBAYARAN
+         ====================================================== -->
+    <div class="justify">
+        <table width="100%">
+            <tr><td align="right">Tangerang, {{ $day }} {{ $monthName }} {{ $year }}</td></tr>
         </table>
-    </div>
 
-    <!-- PAGE 2: KWITANSI -->
-    <div class="page-break">
-        @if(isset($kopPath) && file_exists($kopPath))
-            <img src="{{ $kopPath }}" class="kop-surat" alt="kop surat">
-        @endif
-        <hr class="kop-divider">
-
-        <div class="kwitansi-container">
-            <div class="text-center">
-                <span class="kwitansi-header font-bold underline">KWITANSI</span><br>
-                <span>No. {{ $nomorKWT }}</span>
-            </div>
-
-            <div class="letter-body">
-                <div class="kwitansi-row">
-                    <div class="kwitansi-label">Sudah terima dari</div>
-                    <div class="kwitansi-colon">:</div>
-                    <div class="kwitansi-value font-bold">{{ $invoice->itemPekerjaan->moodboard->order->customer_name }}</div>
-                </div>
-
-                <div class="kwitansi-row">
-                    <div class="kwitansi-label">Uang Sebesar</div>
-                    <div class="kwitansi-colon">:</div>
-                    <div class="kwitansi-value" style="background: repeating-linear-gradient(45deg, #f0f0f0, #f0f0f0 10px, #ffffff 10px, #ffffff 20px); padding: 5px;">
-                        <span class="font-bold">" {{ $terbilangTotal }} "</span>
-                    </div>
-                </div>
-
-                <div class="kwitansi-row">
-                    <div class="kwitansi-label">Untuk Pembayaran</div>
-                    <div class="kwitansi-colon">:</div>
-                    <div class="kwitansi-value font-bold">{{ $invoice->termin_text }} Project Interior Rumah Tinggal</div>
-                </div>
-            </div>
-
-            <table class="no-border" style="width: 100%; border: none; margin-top: 40px;">
-                <tr style="border: none;">
-                    <td style="border: none; width: 50%; vertical-align: top;">
-                        <div class="kwitansi-amount-box">
-                            Rp {{ number_format($totalAmount, 0, ',', '.') }},-
-                        </div>
-                    </td>
-                    <td style="border: none; width: 50%; text-align: left; vertical-align: top;">
-                        <p style="margin: 0;">Tangerang, {{ $day }} {{ $monthName }} {{ $year }}</p>
-                        <div class="stamp-area">
-                            <!-- stamp image placeholder -->
-                        </div>
-                        <p style="margin-bottom: 0;">Nama : <span class="font-bold">Aniq Arifuddin</span></p>
-                        <p style="margin-top: 0;">Jabatan : <span class="font-bold">Direktur Utama</span></p>
-                    </td>
-                </tr>
-            </table>
-        </div>
-    </div>
-
-    <!-- PAGE 3: INVOICE -->
-    <div>
-        @if(isset($kopPath) && file_exists($kopPath))
-            <img src="{{ $kopPath }}" class="kop-surat" alt="kop surat">
-        @endif
-        <hr class="kop-divider">
-
-        <div class="text-center">
-            <span class="kwitansi-header font-bold underline">INVOICE</span><br>
-            <span>No. {{ $nomorINV }}</span>
-        </div>
-
-        <div class="text-right" style="margin-top: -40px;">
-            Tangerang, {{ $day }} {{ $monthName }} {{ $year }}
-        </div>
-
-        <div style="margin-top: 40px;">
-            <table class="no-border" style="width: 100%; border: none;">
-                <tr style="border: none;">
-                    <td style="width: 80px; border: none; padding: 2px;">Kepada</td>
-                    <td style="width: 20px; border: none; padding: 2px;">:</td>
-                    <td style="border: none; padding: 2px;">{{ $invoice->itemPekerjaan->moodboard->order->customer_name }}</td>
-                </tr>
-                <tr style="border: none;">
-                    <td style="border: none; padding: 2px;">Hal</td>
-                    <td style="border: none; padding: 2px;">:</td>
-                    <td style="border: none; padding: 2px;">Pelaksanaan Project Interior Rumah Tinggal</td>
-                </tr>
+        <div style="margin-top: 10pt;">
+            <table width="100%">
+                <tr><td width="60">Nomor</td><td width="15">:</td><td>{{ $nomorPDP }}</td></tr>
+                <tr><td>Hal</td><td>:</td><td>Pengajuan Pembayaran {{ $terminText }}</td></tr>
             </table>
         </div>
 
-        <table>
+        <div style="margin-top: 20pt;">
+            <strong>Kepada Yth,</strong><br/>
+            <strong>{{ $customerName }}</strong><br/>
+            Di {{ $invoice->itemPekerjaan->moodboard->order->company_name ?? 'Tempat' }}
+        </div>
+
+        <p style="margin-top: 20pt;">Dengan Hormat,</p>
+
+        <p class="justify">
+            Sehubungan dengan rencana Kerjasama Pelaksanaan Project Interior <strong>{{ $projectName }}</strong>, bersama ini Kami bermaksud mengajukan permohonan pembayaran {{ $terminText }} sebesar <strong>Rp. {{ number_format($totalAmount, 0, ',', '.') }},- ({{ $terbilangTotal }})</strong> dari jumlah harga yang disetujui yaitu <strong>Rp. {{ number_format($paymentSummary['harga_kontrak'], 0, ',', '.') }},- ({{ $terbilangKontrak }})</strong>.
+        </p>
+
+        <p>Berikut ini Kami lampirkan Kwitansi, Quotation, Invoice dan Kelengkapan Administrasi.</p>
+        
+        <p>Demikian Kami sampaikan, atas perhatian dan kerjasama {{ $customerName }}, Kami ucapkan terima kasih.</p>
+
+        <div style="margin-top: 30pt;">
+            Hormat Kami,<br/>
+            <strong>PT. Moey Living Indonesia</strong>
+            <div style="height: 50pt;"></div>
+            <strong>Aniq Arifuddin</strong><br/>
+            Direktur
+        </div>
+    </div>
+
+    <!-- ======================================================
+         HALAMAN 2: INVOICE
+         ====================================================== -->
+    <div class="page-break justify">
+        <h2 class="center underline">INVOICE</h2>
+        <p class="center" style="margin-top: -10pt;">No. {{ $nomorINV }}</p>
+
+        <div style="margin-top: 20pt;">
+            <table width="100%">
+                <tr><td width="80">Kepada</td><td width="15">:</td><td><strong>{{ $customerName }}</strong></td></tr>
+                <tr><td>Hal</td><td>:</td><td>Pelaksanaan Project Interior {{ $projectName }}</td></tr>
+            </table>
+        </div>
+
+        <table class="fee-table" style="margin-top: 10pt;">
             <thead>
                 <tr>
-                    <th class="text-center" style="width: 70%;">Uraian</th>
-                    <th class="text-center" style="width: 30%;">Jumlah</th>
+                    <th class="text-center" style="width: 70%;">URAIAN</th>
+                    <th class="text-center" style="width: 30%;">JUMLAH</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td class="font-bold">Total Pembuatan Interior</td>
-                    <td class="text-right">Rp {{ number_format($paymentSummary['harga_kontrak'], 0, ',', '.') }}</td>
+                    <td class="bold">Total Pembuatan Interior</td>
+                    <td class="right">Rp {{ number_format($paymentSummary['harga_kontrak'], 0, ',', '.') }}</td>
                 </tr>
                 <tr>
-                    <td class="font-bold">Commitment Fee</td>
-                    <td class="text-right">Rp {{ number_format($paymentSummary['commitment_fee'], 0, ',', '.') }}</td>
+                    <td>Commitment Fee</td>
+                    <td class="right">Rp {{ number_format($paymentSummary['commitment_fee'], 0, ',', '.') }}</td>
                 </tr>
                 <tr style="background-color: #f2f2f2;">
-                    <td class="font-bold">- Total</td>
-                    <td class="text-right font-bold">Rp {{ number_format($paymentSummary['harga_kontrak'] - $paymentSummary['commitment_fee'], 0, ',', '.') }}</td>
+                    <td class="bold">- Total</td>
+                    <td class="right bold">Rp {{ number_format($paymentSummary['harga_kontrak'] - $paymentSummary['commitment_fee'], 0, ',', '.') }}</td>
                 </tr>
                 
                 @foreach($allInvoices as $inv)
                     <tr>
                         <td>- {{ $inv['termin_text'] }}, Pembayaran {{ $inv['termin_persentase'] }}%</td>
-                        <td class="text-right">Rp {{ number_format($inv['total_amount'], 0, ',', '.') }}</td>
+                        <td class="right">Rp {{ number_format($inv['total_amount'], 0, ',', '.') }}</td>
                     </tr>
                 @endforeach
 
                 <tr style="background-color: #f2f2f2;">
-                    <td class="text-center font-bold">
-                        Jumlah Tagihan {{ $invoice->termin_text }}, Rp. {{ number_format($totalAmount, 0, ',', '.') }},-
+                    <td class="center bold" colspan="2" style="padding: 5pt;">
+                        Jumlah Tagihan {{ $terminText }}, Rp. {{ number_format($totalAmount, 0, ',', '.') }},-
                     </td>
-                    <td class="text-center font-bold"></td>
                 </tr>
             </tbody>
         </table>
 
-        <div class="text-center font-bold" style="border: 1px solid #000; border-top: none; padding: 10px;">
-            " {{ $terbilangTotal }} "
+        <div class="center bold" style="border: 1px solid #000; border-top: none; padding: 5pt; background-color: #e8e8e8; font-size: 10pt;">
+            " {{ strtoupper($terbilangTotal) }} "
         </div>
 
-        <div class="bank-info">
-            <p class="font-bold underline" style="margin-bottom: 5px;">Pembayaran ditransfer melalui rekening:</p>
-            <table class="no-border" style="border: none;">
-                <tr style="border: none;">
-                    <td style="width: 100px; border: none; padding: 2px;">Bank</td>
-                    <td style="width: 20px; border: none; padding: 2px;">:</td>
-                    <td style="border: none; padding: 2px;" class="font-bold">Mandiri</td>
-                </tr>
-                <tr style="border: none;">
-                    <td style="border: none; padding: 2px;">No. Rekening</td>
-                    <td style="border: none; padding: 2px;">:</td>
-                    <td style="border: none; padding: 2px;" class="font-bold">1550007495610</td>
-                </tr>
-                <tr style="border: none;">
-                    <td style="border: none; padding: 2px;">Atas Nama</td>
-                    <td style="border: none; padding: 2px;">:</td>
-                    <td style="border: none; padding: 2px;" class="font-bold">PT. Moey Jaya Abadi</td>
+        <div class="no-break">
+            <div style="margin-top: 10pt;">
+                <p>Pembayaran ditransfer melalui rekening :</p>
+                <table style="margin-top: -5pt;">
+                    <tr><td width="100">Bank</td><td width="15">:</td><td><strong>MANDIRI</strong></td></tr>
+                    <tr><td>No Rekening</td><td>:</td><td><strong>1550007495610</strong></td></tr>
+                    <tr><td>Atas Nama</td><td>:</td><td><strong>PT. MOEY LIVING INDONESIA</strong></td></tr>
+                </table>
+            </div>
+
+            <table width="100%" style="margin-top: 15pt;">
+                <tr>
+                    <td width="60%"></td>
+                    <td align="center">
+                        Hormat Kami,<br/>
+                        <strong>PT. Moey Living Indonesia</strong>
+                        <div style="height: 45pt;"></div>
+                        <strong><u>Aniq Arifuddin</u></strong><br/>
+                        Direktur
+                    </td>
                 </tr>
             </table>
         </div>
+    </div>
 
-        <table class="no-border" style="width: 100%; border: none; margin-top: 50px;">
-            <tr style="border: none;">
-                <td style="border: none; width: 60%;"></td>
-                <td style="border: none; width: 40%; text-align: left;">
-                    <p style="margin: 0;">Hormat Kami,</p>
-                    <p class="font-bold" style="margin: 0;">PT. Moey Jaya Abadi</p>
-                    <div style="height: 80px;"></div>
-                    <p class="font-bold" style="margin: 0;">Aniq Arifuddin</p>
-                    <p style="margin: 0;">Direktur</p>
+    <!-- ======================================================
+         HALAMAN 3: KWITANSI (STYLE BARU)
+         ====================================================== -->
+    <div class="page-break">
+        <h2 class="center underline"><u>KWITANSI</u></h2>
+        <p class="center" style="margin-top: -10pt;">No. {{ $nomorKWT }}</p>
+
+        <table width="100%" style="margin-top: 30pt;">
+            <tr>
+                <td width="140" style="font-style: italic;">Sudah terima dari</td>
+                <td width="15">:</td>
+                <td style="font-size: 12pt;">{{ $customerName }}</td>
+            </tr>
+            <tr>
+                <td style="font-style: italic; padding-top: 15pt;">Uang Sebesar</td>
+                <td style="padding-top: 15pt;">:</td>
+                <td style="padding-top: 15pt;">
+                    <div style="background-color: #e8e8e8; border-top: 2px solid #333; border-bottom: 2px solid #333; padding: 12pt; text-align: center;">
+                        <strong style="font-size: 13pt; letter-spacing: 0.5pt;">
+                            " Rp. {{ number_format($totalAmount, 0, ',', '.') }},- ( {{ strtoupper($terbilangTotal) }} ) "
+                        </strong>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td style="font-style: italic; padding-top: 15pt;">Untuk Pembayaran</td>
+                <td style="padding-top: 15pt;">:</td>
+                <td style="padding-top: 15pt;">{{ $terminText }} untuk Pelaksanaan Project Interior {{ $projectName }}</td>
+            </tr>
+        </table>
+
+        <table width="100%" style="margin-top: 50pt;">
+            <tr>
+                <td width="50%" style="vertical-align: bottom;">
+                    <div style="border: 2px solid #000; padding: 10pt; background-color: #f9f9f9; width: 180pt;">
+                        <table width="100%">
+                            <tr>
+                                <td width="30" style="font-size: 16pt;">Rp</td>
+                                <td align="center" style="font-size: 16pt; font-weight: bold; border-bottom: 1px solid #000;">
+                                    {{ number_format($totalAmount, 0, ',', '.') }},-
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </td>
+                <td align="center">
+                    Tangerang, {{ $day }} {{ $monthName }} {{ $year }}<br/><br/>
+                    <strong>Hormat Kami,</strong><br/>
+                    <strong>PT. Moey Living Indonesia</strong>
+                    <div style="height: 60pt;"></div>
+                    <strong><u>Aniq Arifuddin</u></strong><br/>
+                    Direktur
                 </td>
             </tr>
         </table>
     </div>
+
 </body>
 </html>

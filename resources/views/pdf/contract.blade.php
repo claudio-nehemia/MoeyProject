@@ -4,592 +4,512 @@
     <meta charset="utf-8">
     <title>Perjanjian Kerjasama</title>
     <style>
-        /* Basic reset */
-        html,body{margin:0;padding:0;font-family:"Times New Roman", serif;color:#000;}
-        body{font-size:14px;line-height:1.6;}
-
-        /* page wrapper */
-        .page {
-            padding: 30px 45px;
-            box-sizing: border-box;
-            /* width: 100%; */
+        /* 1. Global Page Settings (Absolute Units for DomPDF) */
+        @page {
+            margin-top: 140pt;
+            margin-bottom: 50pt;
+            margin-left: 70pt;
+            margin-right: 70pt;
         }
 
-        .page-break { page-break-after: always; }
+        /* 2. Fixed Header (Kop Surat) */
+        #header {
+            position: fixed;
+            top: -120pt;
+            left: 0pt;
+            right: 0pt;
+            height: 120pt;
+            text-align: center;
+        }
 
-        /* Kop surat (full width) */
-        .kop-surat { display:block; width:100%; height:auto; margin-bottom:6px; }
+        /* 3. Typography & Body */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Times New Roman", Times, serif;
+            font-size: 11pt; /* Sedikit dikecilkan agar muat banyak teks */
+            line-height: 1.4;
+            color: #000;
+        }
 
-        hr.kop-divider { border:0; border-top:1px solid #d0d0d0; margin:8px 0 12px 0; }
+        .kop-img {
+            width: 450pt;
+            height: auto;
+        }
 
-        /* alignment */
-        .right { text-align: right; }
+        /* 4. Utilities */
+        .page-break { page-break-before: always; }
+        .no-break { page-break-inside: avoid; }
         .center { text-align: center; }
+        .right { text-align: right; }
+        .justify { text-align: justify; }
         .bold { font-weight: bold; }
+        .underline { text-decoration: underline; }
 
-        /* simple tables */
-        table { width:100%; border-collapse: collapse; margin-bottom:8px; }
-        td { vertical-align: top; padding: 3px 6px; }
-        th { padding: 6px; border:1px solid #000; background:#f3f3f3; }
+        /* Judul Pasal */
+        .article-title {
+            font-weight: bold;
+            text-align: center;
+            margin: 15pt 0 8pt 0;
+            text-transform: uppercase;
+            text-decoration: underline;
+        }
 
-        /* small info table */
-        .info-table td:first-child { width:120px; font-weight:600; }
+        /* Isi Pasal */
+        .article-content {
+            text-align: justify;
+            margin-bottom: 10pt;
+        }
 
-        /* invoice style table (with borders) */
-        .invoice-table { border-collapse: collapse; width:100%; margin-bottom:16px; }
-        .invoice-table th, .invoice-table td { border:1px solid #000; padding:8px; font-size:13px; }
-        .invoice-table th { text-align:center; font-weight:700; }
+        /* Tabel Dasar */
+        table { width: 100%; border-collapse: collapse; }
+        td { vertical-align: top; padding: 2pt 0; }
+        
+        /* Indentasi List */
+        .list-item { padding-left: 20pt; position: relative; }
+        .list-number { position: absolute; left: 0; width: 20pt; }
 
-        /* article/section headings */
-        .article { font-weight:bold; margin:18px 0 8px 0; text-align: center;}
-
-        /* signature */
-        .signature { margin-top:28px; }
-        .signature .sign-block { width:220px; text-align:left; }
-        .signature img { width:140px; height:auto; display:block; margin-top:12px; }
-
-        /* nominal box for kwitansi */
-        .nominal-box { border:1px solid #000; width:180px; height:36px; line-height:36px; text-align:center; display:inline-block; }
-
-        /* lists */
-        ol { margin:6px 0 6px 18px; }
-        ul { margin:6px 0 6px 18px; }
-
-        /* small helper to not use float/flex */
-        .two-col { width:100%; }
-        .two-col td { vertical-align: top; }
-
-        /* avoid absolute positioning for DOMPDF stability */
-
-        /* css comitmennt fee */
-        body.commitmentfee {
-        font-family: "Times New Roman", serif;
-        font-size: 14px;
-        margin: 0;
-    }
-
-    .page-commitmentfee {
-        padding: 35px 45px;
-        box-sizing: border-box;
-    }
-
-    .page-break-commitmentfee {
-        page-break-after: always;
-    }
-
-    .center-commitmentfee { text-align: center; }
-    .right-commitmentfee  { text-align: right; }
-
-    .header-table-commitmentfee {
-        width: 100%;
-        border-bottom: 1.5px solid #cfcfcf;
-        margin-bottom: 20px;
-    }
-
-    .header-table-commitmentfee td {
-        vertical-align: middle;
-        padding-bottom: 5px;
-    }
-
-    .header-logo-commitmentfee {
-        width: 180px;
-    }
-
-    .header-title-commitmentfee {
-        text-align: right;
-        font-size: 14px;
-    }
-
-    table.commitmentfee {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    table.commitmentfee td {
-        padding: 4px 2px;
-        vertical-align: top;
-    }
-
-    table.commitmentfee th {
-        padding: 6px;
-        border: 1px solid #000;
-    }
-
-    .red-bar-commitmentfee {
-        width: 100%;
-        height: 20px;
-        background: #be1e2d;
-        margin: 20px 0;
-    }
-
-    .invoice-table-commitmentfee {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .invoice-table-commitmentfee th,
-    .invoice-table-commitmentfee td {
-        border: 1px solid #000 !important;
-        padding: 6px;
-        font-size: 14px;
-    }
-
-    .signature-commitmentfee img {
-        width: 120px;
-        margin: 5px 0;
-    }
-
-    .kwitansi-footer-commitmentfee {
-        margin-top: 20px;
-    }
-
-    .nominal-box-commitmentfee {
-        border: 1px solid #000;
-        width: 180px;
-        height: 35px;
-        text-align: center;
-        line-height: 35px;
-        display: inline-block;
-    }
-
-    .signature-box-commitmentfee {
-        width: 200px;
-        text-align: center;
-        float: right;
-        margin-bottom: 15px;
-    }
-
-    .kop-surat-commitmentfee {
-        width: 100%;
-        max-width: 100%;
-        height: auto;
-        display: block;
-        margin: 0;
-    }
     </style>
 </head>
 <body>
 
-<!-- ================= Page 1 — Surat Penawaran ================= -->
-<div class="page">
-    {{-- Kop --}}
-    @if(file_exists($kopPath))
-        <img src="{{ $kopPath }}" class="kop-surat" alt="kop surat">
-    @endif
-    <hr class="kop-divider">
-
-    <div class="right">{{ $contractData['tanggal'] }}</div>
-
-    <div style="margin-top:10px;">
-        <div>No : {{ $contractData['nomor'] }}</div>
-        <div>Hal : Penawaran Kerjasama Project Interior</div>
-        <div>Lamp : 1 Berkas Perjanjian Kerjasama</div>
+    <!-- Header Fixed -->
+    <div id="header">
+        @if(file_exists($kopPath))
+            <img src="{{ $kopPath }}" class="kop-img">
+        @else
+            <div style="color: red; border: 1px solid red; padding: 10pt;">[ KOP SURAT TIDAK DITEMUKAN ]</div>
+        @endif
     </div>
 
-    <div style="margin-top:18px;">
-        Kepada Yth,<br/>
-        <strong>{{ $contractData['customer_name'] }}</strong><br/>
-        Di {{ $contractData['alamat'] }}
-    </div>
-
-    <div style="margin-top:16px;">
-        Dengan hormat,
-    </div>
-
-    <div style="margin-top:8px; text-align:justify; text-indent:36px;">
-        Bersama surat ini kami bermaksud memperkenalkan perusahaan kami <strong>{{ $companyName }}</strong> yang beralamat di {{ $companyAddress }}.
-    </div>
-
-    <div style="margin-top:8px; text-align:justify; text-indent:36px;">
-        Kami adalah perusahaan yang bergerak di bidang interior dan telah bekerjasama dengan berbagai perusahaan. Berdasarkan pertemuan sebelumnya, <strong>{{ $contractData['customer_name'] }}</strong> saat ini membutuhkan jasa pembuatan interior untuk project <strong>{{ $contractData['project']['nama'] }}</strong>.
-    </div>
-
-    <div style="margin-top:8px; text-align:justify; text-indent:36px;">
-        Sehubungan dengan hal tersebut kami bermaksud mengajukan penawaran untuk menjadi kontraktor pembuatan interior dengan kualitas bahan terjamin, harga bersaing dan bergaransi.
-    </div>
-
-    <div style="margin-top:12px;">
-        Demikian surat penawaran ini kami buat. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.
-    </div>
-
-    <div class="signature">
-        <p style="margin-bottom: 100px;">Hormat Kami,<br><strong>{{$companyName}}</strong></p>
-        <p><strong>{{ $direkturName }}</strong><br>{{$jabatanDirektur}}</p>
-    </div>
-</div>
-
-<div class="page-break"></div>
-
-<!-- ================= Page 2 — Perjanjian (awal) ================= -->
-<div class="page">
-    @if(file_exists($kopPath))
-        <img src="{{ $kopPath }}" class="kop-surat" alt="kop surat">
-    @endif
-    <hr class="kop-divider">
-
-    <div class="center" style="margin-top:8px; margin-bottom:8px;">
-        <span style="font-size:16px; font-weight:bold;">PERJANJIAN KERJASAMA</span><br/>
-        <span style="font-size:13px;">{{$companyName}}</span><br/>
-        <span style="font-size:12px;">Nomor : {{ $contractData['nomor_kontrak'] }}</span>
-    </div>
-
-    <div style="margin-top:12px; text-align:justify;">
-        Perjanjian ini dibuat dan ditandatangani pada hari ini, antara pihak-pihak berikut:
-    </div>
-
-    {{-- Pihak --}}
-    <table class="info-table" style="margin-top:8px;">
-        <tr><td><b>1. Nama</b></td><td>: {{ $direkturName }}</td></tr>
-        <tr><td>Jabatan</td><td>: {{$jabatanDirektur}}</td></tr>
-        <tr><td>Alamat</td><td>: {{ $companyAddress }}</td></tr>
-    </table>
-
-    <p style="margin-top:8px; text-align:justify;">
-        Dalam hal ini bertindak untuk dan atas nama PT. Moey Jaya Abadi (selanjutnya disebut <strong>PIHAK PERTAMA</strong>).
-    </p>
-
-    <table class="info-table" style="margin-top:8px;">
-        <tr><td><b>2. Nama</b></td><td>: {{ $contractData['customer_name'] }}</td></tr>
-        <tr><td>Alamat</td><td>: {{ $contractData['alamat'] }}</td></tr>
-    </table>
-
-    <p style="margin-top:8px; text-align:justify;">
-        Dalam hal ini bertindak untuk dan atas nama sendiri (selanjutnya disebut <strong>PIHAK KEDUA</strong>).
-    </p>
-
-    <div class="article">Pasal 1<br>RUANG LINGKUP KERJASAMA</div>
-        <ol>
-            <li>PIHAK PERTAMA melaksanakan pekerjaan atas dasar dokumen kontrak yang terdiri dari:
-                <ol type="a">
-                    <li>Surat Penawaran beserta lampirannya.</li>
-                    <li>Surat Kontrak.</li>
-                    <li>Spesifikasi yang dicantumkan di penawaran.</li>
-                    <li>Gambar kerja.</li>
-                </ol>
-            </li>
-            <li>PIHAK KEDUA memberikan pekerjaan Pelaksanaan Jasa Interior.</li>
-        </ol>
-
-        <div class="article">Pasal 2<br>PELAKSANAAN PEKERJAAN</div>
-        <ol>
-            <li>Wajib menyediakan tenaga kerja yang cukup serta mempunyai keahlian sesuai dengan bidangnya.</li>
-            <li>Tidak dibenarkan menyimpan material di area di luar lingkup kerja.</li>
-            <li>Tidak dibenarkan meninggalkan sampah di area kerja ketika pekerjaan selesai.</li>
-        </ol>
-</div>
-
-<div class="page-break"></div>
-
-<!-- ================= Page 3 ================= -->
-<div class="page">
-    @if(file_exists($kopPath))
-        <img src="{{ $kopPath }}" class="kop-surat" alt="kop surat"
-    @endif
-    <hr class="kop-divider">
-
-    <ol start="6">
-      <li>PIHAK PERTAMA tidak diperkenankan meninggalkan barang-barang yang tidak ada kaitannya dengan pelaksanaan pekerjaan interior.</li>
-      <li>PIHAK PERTAMA tidak bertanggung jawab atas hilang atau rusaknya barang - barang dilokasi tempat pekerjaan, kecuali ada surat tanda terima yang disepakati PARA PIHAK.</li>
-      <li>Apabila dalam pelaksanaan pekerjaan interior melakukan kesalahan untuk area atau barang - barang yang tidak bisa terprediksi atau terlihat, maka biaya itu akan ditanggung oleh PARA PIHAK.</li>
-      <li>Pekerjaan diluar kontrak atau jenis penawaran sifatnya adalah bantuan dari PIHAK PERTAMA.</li>
-      <li>Batas Toleransi Pembuatan interior adalah 5 cm, untuk mengantisipasi kemiringan dinding dan lantai lokasi project, toleransi tersebut tidak mempengaruhi biaya pembuatan interior.</li>
-      <li>Contoh atau katalog material diluar yang kami berikan, akan dikenakan biaya sesuai dengan biaya material yang diminta.</li>
-      <li>Perubahan <em>Material Finishing</em> yang sudah kami rekomendasikan di Form Approval, akan dikenakan biaya dan dengan pembayaran secara tunai.</li>
-      <li>Segala biaya Fitout atau ijin lokasi proyek yang membutuhkan biaya di bebankan kepada PIHAK KEDUA dan untuk pembuatan ataupun koordinasi dokumen akan dibantu oleh PIHAK PERTAMA.</li>
-    </ol>
-
-    <div class="article">Pasal 3<br>HAK DAN KEWAJIBAN</div>
-
-    <b>HAK DAN KEWAJIBAN PIHAK PERTAMA</b>
-    <ol>
-        <li>Apabila batas waktu penyelesaian pekerjaan (penyerahan pertama) sebagaimana yang telah ditentukan tidak dapat dipenuhi maka, PIHAK PERTAMA harus segera melaporkan pada PIHAK KEDUA sebab-sebab keterlambatan penyelesaian pekerjaan tersebut dan PIHAK PERTAMA akan mengajuan perpanjangan masa kontrak.</li>
-        <li>Atas keterlambatan, PIHAK PERTAMA dikenakan denda maksimal 3% dari nilai kontrak setelah mencapai 45 (Empat puluh lima) hari keterlambatan.</li>
-        <li>PIHAK PERTAMA berhak mendapat kenyamanan dilokasi kerja yang berkaitan dengan lingkungan atau perizinan dilingkungan.</li>
-        <li>PIHAK PERTAMA berhak mengganti material sesuai atau setara dengan material yang sudah disetujui, jika material tersebut sudah discontinue atau sulit ditemukan dipasaran atau berlaku pekerjaan kurang dan wajib diterima PIHAK KEDUA.</li>
-    </ol>
-
-    <b>HAK DAN KEWAJIBAN PIHAK KEDUA</b>
-    <ol>
-        <li>PIHAK KEDUA bertanggung jawab atas lingkungan yang kondusif atau yang berkaitan dengan izin lingkungan.</li>
-        <li>Jika PIHAK KEDUA dalam melakukan pembayaran terjadi keterlambatan, akan dikenakan denda sebesar maksimal 3% (tiga persen) dari kontrak yang harus dibayarkan setelah mencapai 45 (Empat puluh lima) hari keterlambatan.</li>
-        <li>PIHAK KEDUA berhak mendapatkan garansi aksesoris selama 1 (satu) tahun sejak berita acara serah terima ditanda tangani.</li>
-        <li>PIHAK KEDUA berhak mengajukan keluhan apabila pekerjaan yang dilaksanakan PIHAK PERTAMA tidak sesuai design dan gambar kerja.</li>
-    </ol>
-</div>
-
-<div class="page-break"></div>
-
-<!-- ================= Page 4 ================= -->
-<div class="page">
-    @if(file_exists($kopPath))
-        <img src="{{ $kopPath }}" class="kop-surat" alt="kop surat">
-    @endif
-    <hr class="kop-divider">
-
-    <div class="article">Pasal 4<br>JANGKA WAKTU PELAKSANAAN</div>
-    <ol>
-        <li>Pelaksanaan pada Pasal 2 diatas dimulai setelah Surat Perjanjian ini ditandatangani oleh kedua belah pihak, Gambar kerja & Persetujuan Material sudah disetujui oleh PIHAK KEDUA dan area kerja dinyatakan sudah siap oleh PARA PIHAK.</li>
-        <li>Terhitung pelaksanaan pekerjaan dimulai H+7, setelah Gambar kerja & tanda tangan approval material oleh PIHAK KEDUA.</li>
-        <li>Pelaksanaan pekerjaan, harus sudah selesai 100% paling lambat 90 (Sembilah Puluh Hari Kerja) setelah pekerjaan dimulai ( sesuai poin pertama ).</li>
-        <li>Waktu penyelesaian tersebut tidak dapat dirubah oleh PIHAK KEDUA kecuali dalam keadaan memaksa.</li>
-        <li>Masa kontrak adalah diluar penyelesaian keluhan/complaint, pekerjaan free dan pekerjaan tambah.</li>
-        <li>Masa kontrak berjalan berjalan normal sesuai dengan pasal 4 point 2 apabila :
-            <ol type="a">
-                <li>Sudah ada pembayaran Down payment (DP).</li>
-                <li>Gambar kerja sudah disetujui oleh PARA PIHAK melalui grup WhastApp.</li>
-                <li>Pembayaran dilakukan maksimal 3 (hari) hari sejak invoice diterbitkan.</li>
-                <li>Tidak ada perubahan design, dimensi, spesifikasi dan lain lain yang tercantum di dalam gambar kerja yang telah disetujui.</li>
-                <li>Tidak ada pekerjaan pihak lain yang menghambat proses instalasi dilapangan.</li>
-            </ol>
-        </li>
-    </ol>
-
-    <div class="article">Pasal 5<br>Spesifikasi Material Umum</div>
-    <ol>
-        <li>Standar Material Finishing :
-            <ol type="a">
-                <li>Finishing Luar HPL, PVC, Cat Duco dan melamin.</li>
-                <li>Finishing dalam untuk kabinet menggunakan melamin putih. Selain melamin putih akan disesuaikan dengan dokumen penawaran.</li>
-            </ol>
-        </li>
-        <li>Dimensi Material Finishing ;
-            <ol type="a">
-                <li>Ukuran dimensi 240 cm x 120 cm, selain ukuran dimensi 240 cm x 120 cm, menggunakan sambungan material.</li>
-                <li>Finishing pinggiran panel, pintu, pintu kabinet menggunakan PVC edging dengan maximal lebar 4 cm, jika melebihi ukuran tersebut, maka menggunakan HPL.</li>
-            </ol>
-        </li>
-        <li>Pembuatan panel dinding menggunakan material multiplek 9 mm dengan rangka 18 mm dengan material Finishing HPL Maksimal ketinggian 2,4 meter. Selain ukuran tersebut menggunakan sambungan Finishing HPL.</li>
-        <li>Pembuatan kabinet menggunakan material kombinasi ukuran sesuai dengan fungsi dan kebutuhan, mulai dari 18 mm, 15 mm, 12 mm, 9 mm, 6 mm dan 3 mm.</li>
-    </ol>
-
-    <div class="article">Pasal 6<br>NILAI KONTRAK DAN PERUBAHAN NILAI KONTRAK</div>
-    <ol>
-        <li>Nilai kontrak adalah sebesar Rp. {{ number_format($contractData['nominal_kontrak'], 0, ',', '.') }},- (Harga tidak termasuk PPN).</li>
-        <li>Apabila ada perubahan nilai kontrak karena ada pengurangan atau penambahan item pekerjaan yang tercantum di penawaran atau berdasarkan negosiasi harga, maka perwakilan dari PIHAK PERTAMA (Direktur atau Marketing) cukup tanda tangan di perubahan yang dimaksud & dinyatakan sah berlaku.</li>
-    </ol>
-</div>
-
-<div class="page-break"></div>
-
-<!-- ================= Page 5 ================= -->
-<div class="page">
-    @if(file_exists($kopPath))
-        <img src="{{ $kopPath }}" class="kop-surat" alt="kop surat">
-    @endif
-    <hr class="kop-divider">
-
-    <div class="article">Pasal 7<br>CARA PEMBAYARAN</div>
-    <p>Pembayaran dilaksanakan sesuai termin pembayaran dan sesuai dengan prestasi pekerjaan yang telah disepakati dalam proses terhadap kontrak dengan ketentuan sebagai berikut :</p>
-    <ol>
-        <li>Pembayaran I (Pertama) sebesar 50% dari nilai kontrak yang berlaku sebagai Down Payment.</li>
-        <li>Pembayaran II (Kedua) sebesar 40% dari nilai kontrak, dibayarkan paling lambat 3 (tiga) hari setelah pengiriman barang.</li>
-        <li>Pembayaran III (Ketiga) sebesar 10% dari nilai kontrak yang akan dibayarkan paling lambat 3 (tiga) hari setelah serah terima.</li>
-        <li>Jika ada penambahan pekerjaan/adendum, maka pembayaran nilai pekerjaan tambah dibayarkan lunas (tanpa termin pembayaran), sebelum pekerjaan tambah dimulai.</li>
-        <li>Segala bentuk pembayaran yang dilakukan diluar rekening yang tercantum di invoice, PIHAK PERTAMA tidak bertanggung jawab.</li>
-    </ol>
-
-    <div class="article">Pasal 8<br>PENYERAHAN PEKERJAAN</div>
-    <ol>
-        <li>Setelah seluruh pekerjaan diselesaikan, PIHAK PERTAMA dapat meminta secara tertulis untuk melaksanakan Penyerahan Pekerjaan</li>
-        <li>PIHAK KEDUA, berdasarkan Berita Acara Pemeriksaan Penyelesaian Pekerjaan wajib menyetujui/tanda tangan Berita Acara penyerahan pekerjaan.</li>
-    </ol>
-
-    <div class="article">Pasal 9<br>KEADAAN MEMAKSA</div>
-    <ol>
-        <li>Bila dalam waktu pelaksanaan pekerjaan terjadi keadaan memaksa maka PIHAK PERTAMA dapat mengajukan permohonan perpanjangan waktu penyelesaian pekerjaan seperti yang telah ditetapkan dan dianggap berlaku.</li>
-        <li>Apabila PIHAK KEDUA mengajukan perubahan design, dimensi, spesifikasi dan lain lain atau penambahan pekerjaan di tengah kontrak ini berlangsung, maka jadwal penyelesaian di kontrak ini dianggap batal dan akan disepakati jadwal baru yang ditanda tangani PARA PIHAK.</li>
-        <li>Apabali tidak ada kesepakatan dalam masa kontrak, maka masa kontrak dengan tanpa persetujuan, menambah 1x (satu) kali Masa kontrak sesuai dengan masa kontrak yang telah di sepakati.</li>
-    </ol>
-
-    <div class="article">Pasal 10<br>PENYELESAIAN SENGKETA</div>
-    <ol>
-        <li>Bila terjadi sengketa antara kedua belah pihak diutamakan penyelesaiannya secara musyawarah.</li>
-        <li>Jika musyawarah tidak ada penyelesaian maka semua sengketa yang timbul dari perjanjian ini, akan diselesaikan oleh kedua belah pihak yang mewakili tempat kedudukan hukum yang sah dan tidak berubah di Kantor Pegadilan Negeri di Kota Tangerang.</li>
-    </ol>
-</div>
-
-<div class="page-break"></div>
-
-<!-- ================= Page 6 — Penutup & Tanda Tangan ================= -->
-<div class="page">
-    @if(file_exists($kopPath))
-        <img src="{{ $kopPath }}" class="kop-surat" alt="kop surat">
-    @endif
-    <hr class="kop-divider">
-
-    <div class="article">Pasal 11<br>PENUTUP</div>
-    <p>
-        Demikian Surat Perjanjian pelaksanaan pekerjaan ini dibuat dan ditandatangani oleh kedua belah pihak pada hari, tanggal, bulan dan tahun tersebut diatas.
-        <br><br>
-        Demikian perjanjian ini dibuat dalam rangkap 2 (dua), masing-masing bermeterai cukup dan mempunyai kekuatan hukum yang sama.
-    </p>
-
-    <div style="margin-top:36px;">
-        <table class="two-col" style="border:0;">
+    <!-- ======================================================
+         HALAMAN 1: SURAT PENAWARAN
+         ====================================================== -->
+    <div class="justify">
+        <table width="100%">
             <tr>
-                <td style="width:50%; text-align: center;">
-                    <div>PIHAK PERTAMA</div>
-                    <div style="height: 100px;"></div>
-                    <div class="signature" style="margin-top: 0;">
-                        <strong>{{ $direkturName }}</strong>
+                <td align="right">Tangerang, {{ $contractData['tanggal'] }}</td>
+            </tr>
+        </table>
+
+        <div style="margin-top: 10pt;">
+            <table width="100%">
+                <tr><td width="60">No</td><td width="15">:</td><td>{{ $contractData['nomor'] }}</td></tr>
+                <tr><td>Lamp</td><td>:</td><td>1 Berkas Perjanjian Kerjasama Project Interior {{ $contractData['project']['nama'] }}</td></tr>
+            </table>
+        </div>
+
+        <div style="margin-top: 20pt;">
+            <strong>Kepada Yth,</strong><br/>
+            <strong>{{ $contractData['customer_name'] }}</strong><br/>
+            Di {{ $contractData['alamat'] }}
+        </div>
+
+        <p style="margin-top: 20pt;">Dengan Hormat,</p>
+
+        <p>
+            Bersama surat ini kami bermaksud memperkenalkan perusahaan kami <strong>{{ $companyName }}</strong> yang beralamat di <strong>Ruko Arcadia Blok B 6, Jl Kelapa Lilin Utara II No 6, Kelapa Dua-Tangerang</strong>.
+        </p>
+
+        <p>
+            Kami adalah perusahaan yang bergerak di bidang Interior dan telah bekerjasama dengan berbagai perusahaan ternama di Jakarta dan kota-kota besar lainnya di Indonesia.
+        </p>
+
+        <p>
+            Berdasarkan pertemuan yang sudah kita lakukan sebelumnya, <strong>{{ $contractData['customer_name'] }}</strong> saat ini sedang membutukan jasa pembuatan interior untuk ;
+        </p>
+
+        {{-- Checkboxes using Table Layout --}}
+        @php
+            $jenisInterior = strtolower($kontrak->itemPekerjaan->moodboard->order->jenisInterior->nama_interior ?? '');
+            $isRumah = str_contains($jenisInterior, 'rumah');
+            $isHotel = str_contains($jenisInterior, 'hotel');
+            $isKitchen = str_contains($jenisInterior, 'kitchen');
+            $isApartemen = str_contains($jenisInterior, 'apartemen');
+            $isResto = str_contains($jenisInterior, 'restauran');
+            $isKantor = str_contains($jenisInterior, 'kantor');
+            $isBooth = str_contains($jenisInterior, 'booth');
+            $isOthers = !$isRumah && !$isApartemen && !$isKantor && !$isHotel && !$isResto && !$isBooth && !$isKitchen;
+        @endphp
+
+        <table width="100%" style="margin-top: 10pt;">
+            <tr>
+                <td width="33%">( {!! $isRumah ? 'V' : '&nbsp;&nbsp;' !!} ) Rumah Tinggal</td>
+                <td width="33%">( {!! $isHotel ? 'V' : '&nbsp;&nbsp;' !!} ) Hotel</td>
+                <td width="33%">( {!! $isKitchen ? 'V' : '&nbsp;&nbsp;' !!} ) Kitchen Set</td>
+            </tr>
+            <tr>
+                <td>( {!! $isApartemen ? 'V' : '&nbsp;&nbsp;' !!} ) Apartemen</td>
+                <td>( {!! $isResto ? 'V' : '&nbsp;&nbsp;' !!} ) Restaurant/Café</td>
+                <td>( {!! $isOthers ? 'V' : '&nbsp;&nbsp;' !!} ) Others</td>
+            </tr>
+            <tr>
+                <td>( {!! $isKantor ? 'V' : '&nbsp;&nbsp;' !!} ) Kantor</td>
+                <td>( {!! $isBooth ? 'V' : '&nbsp;&nbsp;' !!} ) Booth</td>
+                <td></td>
+            </tr>
+        </table>
+
+        <p style="margin-top: 20pt;">
+            Sehubungan dengan hal tersebut kami bermaksud mengajukan penawaran untuk menjadi kotraktor pembuatan interior dengan kualitas bahan terjamin, harga bersaing dan bergaransi.
+        </p>
+
+        <p>
+            Besar Harapan kami, penawaran ini dapat diwujudkan dalam bentuk kerjasama. Berikut kami lampirkan dokumen Perjanjian kerjasama, invoice dan kwitansi.
+        </p>
+
+        <p>
+            Demikian surat penawaran ini kami buat, atas perhatian dan kerjasama baiknya kami sampaikan ucapakan terimakasih.
+        </p>
+
+        <div style="margin-top: 25pt;">
+            Hormat Kami,<br/>
+            <strong>{{ $companyName }}</strong>
+            <div style="height: 50pt;"></div>
+            <strong>{{ $direkturName }}</strong><br/>
+            Direktur
+        </div>
+    </div>
+
+    <!-- ======================================================
+         HALAMAN 2: PKS
+         ====================================================== -->
+    <div class="page-break">
+        <div class="center bold">
+            <span style="font-size: 13pt;">PERJANJIAN KERJASAMA (PKS)</span><br/>
+            <span style="font-size: 13pt;">{{ strtoupper($companyName) }}</span><br/>
+            <span>Nomor : {{ $contractData['nomor_kontrak'] }}</span>
+        </div>
+
+        <p class="justify" style="margin-top: 20pt;">
+            Perjanjian Kerjasama ("selanjutnya disebut Perjanjian") ini dibuat dan ditandatangani pada hari ini <strong>{{ $contractData['hari_ini'] }}</strong>, 
+            tanggal <strong>({{ $contractData['tgl_angka'] }} (Tanggal {{ $contractData['tgl_terbilang'] }}, Bulan {{ $contractData['bln_terbilang'] }}, Tahun {{ $contractData['thn_terbilang'] }})</strong>, kami yang bertanda tangan dibawah ini :
+        </p>
+
+        <table style="margin-top: 15pt;">
+            <tr><td width="80">1. Nama</td><td width="15">:</td><td><strong>{{ $direkturName }}</strong></td></tr>
+            <tr><td>&nbsp;&nbsp;&nbsp;Jabatan</td><td>:</td><td>Direktur {{ $companyName }}</td></tr>
+            <tr><td>&nbsp;&nbsp;&nbsp;Alamat</td><td>:</td><td>Ruko Arcadia Blok B 6, Jl Kelapa Lilin Utara II No 6, Kelapa Dua-Tangerang.</td></tr>
+        </table>
+        <p class="justify">Dalam hal ini bertindak untuk dan atas nama <strong>{{ $companyName }}</strong>, Perseroan Terbatas yang didirikan menurut Hukum lndonesia, selanjutnya disebut sebagai <strong>PIHAK PERTAMA</strong> :</p>
+
+        <table style="margin-top: 15pt;">
+            <tr><td width="80">2. Nama</td><td width="15">:</td><td><strong>{{ $contractData['customer_name'] }}</strong></td></tr>
+            @if(isset($contractData['nik']))
+            <tr><td>&nbsp;&nbsp;&nbsp;NIK</td><td>:</td><td>{{ $contractData['nik'] }}</td></tr>
+            @endif
+            <tr><td>&nbsp;&nbsp;&nbsp;Alamat</td><td>:</td><td>{{ $contractData['alamat'] }}</td></tr>
+        </table>
+        <p class="justify">Dalam hal ini bertindak untuk dan atas nama sendiri, selanjutnya dalam perjanjian ini disebut sebagai <strong>PIHAK KEDUA</strong>.</p>
+
+        <div class="article-title">Pasal 1<br/>RUANG LINGKUP KERIASAMA</div>
+        <div class="article-content">
+            1. PIHAK PERTAMA melaksanakan pekerjaan atas dasar dokumen kontrak yang terdiri dari dokumen dokumen sebagai berikut :<br/>
+            &nbsp;&nbsp;&nbsp;1.1. Surat Perjanjian Kontrak & Penawaran beserta lampirannya.<br/>
+            &nbsp;&nbsp;&nbsp;1.2. Spesifikasi yang dicantumkan di penawaran.<br/>
+            &nbsp;&nbsp;&nbsp;1.3. Gambar kerja<br/>
+            2. PIHAK KEDUA memberikan pekerjaan Pelaksanaan Jasa Interior.
+        </div>
+
+        <div class="article-title">Pasal 2<br/>PELAKSANAAN PEKERJAAN</div>
+        <div class="article-content">
+            Untuk melaksanakan pekerjaan tersebut dalam Pasal 2 kontrak ini, PIHAK PERTAMA :<br/>
+            1. Wajib menyediakan tenaga kerja yang cukup serta mempunyai keahlian sesuai dengan bidangnya.<br/>
+            2. Tidak dibenarkan menyimpan material di area di luar lingkup kerja.<br/>
+            3. Tidak dibenarkan meninggalkan sampah di area kerja ketika pekerjaan selesai.<br/>
+            4. PARA PIHAK melakukan komunikasi ketika project berjalan hanya melalui WhatApp Group Project, komunikasi selain di WhatApp Grup tersebut dianggap tidak berlaku.<br/>
+            5. PIHAK KEDUA tidak bisa mengajukan keluhan atas segala bentuk pekerjaan yang sudah sesuai dengan Gambar kerja yang sudah disepakati PARA PIHAK.<br/>
+            6. PIHAK PERTAMA tidak diperkenankan meninggalkan barang–barang yang tidak ada kaitannya dengan pelaksanaan pekerjaan interior.<br/>
+            7. PIHAK PERTAMA tidak bertanggung jawab atas hilang atau rusaknya barang – barang dilokasi tempat pekerjaan, kecuali ada surat tanda terima yang disepakati PARA PIHAK.<br/>
+            8. Apabila dalam pelaksanaan pekerjaan interior melakukan kesalahan untuk area atau barang – barang yang tidak bisa terprediksi atau terlihat, maka biaya itu akan ditanggung oleh PARA PIHAK.<br/>
+            9. Pekerjaan diluar kontrak atau jenis penawaran sifatnya adalah bantuan dari PIHAK PERTAMA.<br/>
+            10. Batas Toleransi Pembuatan interior adalah 5 cm, untuk mengantisipasi kemiringan dinding dan lantai lokasi project, toleransi tersebut tidak mempengaruhi biaya pembuatan interior.<br/>
+            11. Contoh atau katalog material diluar yang kami berikan, akan dikenakan biaya sesuai dengan biaya material yang diminta.<br/>
+            12. Perubahan Material Finishing yang sudah kami rekomendasikan di Form Approval, akan dikenakan biaya dan dengan pembayaran secara tunai.<br/>
+            13. Segala biaya Fitout atau ijin lokasi proyek yang membutuhkan biaya di bebankan kepada PIHAK KEDUA dan untuk pembuatan ataupun koordinasi dokumen akan dibantu oleh PIHAK PERTAMA.
+        </div>
+
+        <div class="article-title">Pasal 3<br/>HAK DAN KEWAJIBAN</div>
+        <div class="article-content">
+            <strong>HAK DAN KEWAJIBAN PIHAK PERTAMA</strong><br/>
+            1. Apabila batas waktu penyelesaian pekerjaan (penyerahan pertama) sebagaimana yang telah ditentukan tidak dapat dipenuhi maka, PIHAK PERTAMA harus segera melaporkan pada PIHAK KEDUA sebab-sebab keterlambatan penyelesaian pekerjaan terebut dan PIHAK PERTAMA akan mengajuan perpanjangan masa kontrak.<br/>
+            2. Atas keterlambatan, PIHAK PERTAMA dikenakan denda maksimal 3% dari nilai kontrak setelah mencapai 45 (Empat puluh lima) hari keterlambatan.<br/>
+            3. PIHAK PERTAMA berhak mendapat kenyamanan dilokasi kerja yang berkaitan dengan lingkungan atau perizinan dilingkunangan.<br/>
+            4. PIHAK PERTAMA berhak mengganti material sesuai atau setara dengan material yang sudah disetujui, jika material tersebut sudah discontinue atau sulit ditemukan dipasaran atau berlaku pekerjaan kurang dan wajib diterima PIHAK KEDUA.<br/><br/>
+            <strong>HAK DAN KEWAJIBAN PIHAK KEDUA</strong><br/>
+            1. PIHAK KEDUA bertanggung jawab atas lingkungan yang kondusif atau yang berkaitan dengan izin lingkungan.<br/>
+            2. Jika PIHAK KEDUA dalam melakukan pembayaran terjadi keterlambatan, akan dikenakan denda sebesar maksimal 3% (tiga persen) dari kontrak yang harus dibayarkan setelah mencapai 45 (Empat puluh lima) hari keterlambatan.<br/>
+            3. PIHAK KEDUA berhak mendapatkan garansi aksesoris selama 1 (satu) tahun sejak berita acara serah terima ditanda tangani.<br/>
+            4. PIHAK KEDUA berhak mengajukan keluhan apabila pekerjaan yang dilaksanakan PIHAK PERTAMA tidak sesuai design dan gambar kerja.
+        </div>
+
+        <div class="article-title">Pasal 4<br/>JANGKA WAKTU PELAKSANAAN</div>
+        <div class="article-content">
+            1. Pelaksanaan pada Pasal 2 diatas dimulai setelah Surat Perjanjian ini ditandatangani oleh kedua belah pihak, Gambar kerja & Persetujuan Material sudah disetujui oleh PIHAK KEDUA dan area kerja dinyatakan sudah siap oleh PARA PIHAK.<br/>
+            2. Terhitung pelaksanaan pekerjaan dimulai H+7, setelah Gambar kerja & tanda tangan approval material oleh PIHAK KEDUA.<br/>
+            3. Pelaksanaan pekerjaan, harus sudah selesai 100% paling lambat 90 (Sembilah Puluh Hari Kerja) setelah pekerjaan dimulai ( sesuai poin pertama ).<br/>
+            4. Waktu penyelesaian tersebut tidak dapat dirubah oleh PIHAK KEDUA kecuali dalam keadaan memaksa.<br/>
+            5. Masa kontrak adalah diluar penyelesaian keluhan/complaint, pekerjaan free dan pekerjaan tambah.<br/>
+            6. Masa kontrak berjalan berjalan normal sesuai dengan pasal 4 point 2 apabila :<br/>
+            &nbsp;&nbsp;&nbsp;a. Sudah ada pembayaran Down payment (DP).<br/>
+            &nbsp;&nbsp;&nbsp;b. Gambar kerja sudah di setujui oleh PARA PIHAK melalui grup WhastApp.<br/>
+            &nbsp;&nbsp;&nbsp;c. Pembayaran dilakukan maksimal 3 (hari) hari sejak invoice diterbitkan.<br/>
+            &nbsp;&nbsp;&nbsp;d. Tidak ada perubahan design, dimensi, spesifikasi dan lain lain yang tercantum di dalam gambar kerja yang telah disetujui.<br/>
+            &nbsp;&nbsp;&nbsp;e. Tidak ada pekerjaan pihak lain yang menghambat proses instalasi dilapangan.
+        </div>
+
+        <div class="article-title">Pasal 5<br/>Spesifikasi Material Umum</div>
+        <div class="article-content">
+            1. Standar Material Finishing ;<br/>
+            &nbsp;&nbsp;&nbsp;a. Finishing Luar HPL, PVC, Cat Duco dan melamin.<br/>
+            &nbsp;&nbsp;&nbsp;b. Finishing dalam untuk kabinet menggunakan melamin putih. Selain melamin putih akan disesuaikan dengan dokumen penawaran.<br/>
+            2. Dimensi Material Finishing ;<br/>
+            &nbsp;&nbsp;&nbsp;a. Ukuran dimensi 240 cm x 120 cm, selain ukuran dimensi 240 cm x 120 cm, menggunakan sambungan material.<br/>
+            &nbsp;&nbsp;&nbsp;b. Finishing pinggiran panel, pintu, pintu kabinet menggunakan PVC edging dengan maximal lebar 4 cm, jika melebihi ukuran tersebut, maka menggunakan HPL.<br/>
+            3. Pembuatan panel dinding menggunakan material multiplek 9 mm dengan rangka 18 mm dengan material Finishing HPL Maksimal ketinggian 2,4 meter. Selain ukuran tersebut menggunakan sambungan Finishing HPL.<br/>
+            4. Pembuatan kabinet menggunakan material kombinasi ukuran sesuai dengan fungsi dan kebutuhan, mulai dari 18 mm, 15 mm, 12 mm, 9 mm, 6 mm dan 3 mm.
+        </div>
+
+        <div class="no-break">
+            <div class="article-title">Pasal 6<br/>NILAI KONTRAK DAN PERUBAHAN NILAI KONTRAK</div>
+            <div class="article-content">
+                1. Nilai kontrak adalah sebesar <strong>Rp. {{ number_format($contractData['nominal_kontrak'], 0, ',', '.') }},- ({{ $contractData['nominal_terbilang'] }})</strong>. Harga tidak termasuk PPN.<br/>
+                2. Apabila ada perubahan nilai kontrak karena ada pengurangan atau penambahan item pekerjaan yang tercantum di penawaran atau berdasarkan negosiasi harga, maka perwakilan dari PIHAK PERTAMA (Direktur atau Marketing) cukup tanda tangan di perubahan yang dimaksud & dinyatakan sah berlaku.
+            </div>
+        </div>
+
+        <div class="no-break">
+            <div class="article-title">Pasal 7<br/>CARA PEMBAYARAN</div>
+            <div class="article-content">
+                Pembayaran dilaksanakan sesuai termin pembayaran dan sesuai dengan prestasi pekerjaan yang telah disepakati dalam proses terhadap kontrak dengan ketentuan sebagai berikut :<br/>
+                @if($kontrak->termin && $kontrak->termin->tahapan)
+                    @foreach($kontrak->termin->tahapan as $idx => $tahap)
+                        {{ $idx + 1 }}. Pembayaran ke-{{ $idx + 1 }} sebesar {{ $tahap['persentase'] }}% dari nilai kontrak ({{ $tahap['text'] }}).<br/>
+                    @endforeach
+                @else
+                    1. Pembayaran I (Pertama) sebesar 50% dari nilai kontrak yang berlaku sebagai Down Payment.<br/>
+                    2. Pembayaran II (Kedua) sebesar 40% dari nilai kontrak, dibayarkan paling lambat 3 (tiga) hari setelah pengiriman barang.<br/>
+                    3. Pembayaran III (Ketiga) sebesar 10 % dari nilai kontrak yang akan dibayarkan paling lambat 3 (tiga) hari setelah serah terima.<br/>
+                @endif
+                4. Jika ada penambahan pekerjaan/adendum, maka pembayaran nilai pekerjaan tambah dibayarkan lunas (tanpa termin pembayaran), sebelum pekerjaan tambah dimulai.<br/>
+                5. Segala bentuk pembayaran yang dilakukan diluar rekening yang tercantum di invoice, PIHAK PERTAMA tidak bertanggung jawab.
+            </div>
+        </div>
+
+        <div class="article-title">Pasal 8<br/>PENYERAHAN PEKERJAAN</div>
+        <div class="article-content">
+            1. Setelah seluruh pekerjaan diselesaikan, PIHAK PERTAMA dapat meminta secara tertulis untuk melaksanakan Penyerahan Pekerjaan<br/>
+            2. PIHAK KEDUA, berdasarkan Berita Acara Pemeriksaan Penyelesaian Pekerjaan wajib menyetujui/tanda tangan Berita Acara penyerahan pekerjaan .
+        </div>
+
+        <div class="article-title">Pasal 9<br/>KEADAAN MEMAKSA</div>
+        <div class="article-content">
+            1. Bila dalam waktu pelaksanaan pekerjaan terjadi keadaan memaksa maka PIHAK PERTAMA dapat mengajukan permohonan perpanjangan waktu penyelesaian pekerjaan seperti yang telah ditetapkan dan dianggap berlaku.<br/>
+            2. Apabila PIHAK KEDUA mengajukan perubahan design, dimensi, spesifikasi dan lain lain atau penambahan pekerjaan di tengah kontrak ini berlangsung, maka jadwal penyelesaian di kontrak ini dianggap batal dan akan disepakati jadwal baru yang ditanda tangani PARA PIHAK.<br/>
+            3. Apabali tidak ada kesepakatan dalam masa kontrak, maka masa kontrak dengan tanpa persetujuan, menambah 1x (satu) kali Masa kontrak sesuai dengan masa kontrak yang telah di sepakati.
+        </div>
+
+        <div class="article-title">Pasal 10<br/>PENYELESAIAN SENGKETA</div>
+        <div class="article-content">
+            1. Bila terjadi sengketa antara kedua belah pihak diutamakan penyelesaiannya secara musyawarah.<br/>
+            2. Jika musyawarah tidak ada penyelesaian maka semua sengketa yang timbul dari perjanjian ini, akan diselesaikan oleh kedua belah pihak yang mewakili tempat kedudukan hukum yang sah dan tidak berubah di Kantor Pegadilan Negeri di Kota Tangerang.
+        </div>
+
+        <div class="no-break">
+            <div class="article-title">Pasal 11<br/>PENUTUP</div>
+            <div class="article-content">
+                Demikian Surat Perjanjian pelaksanaan pekerjaan ini dibuat dan ditandatangani oleh kedua belah pihak pada hari, tanggal, bulan dan tahun tersebut diatas.<br/>
+                Demikian perjanjian ini dibuat dalam rangkap 2 (dua), masing-masing bermeterai cukup dan mempunyai kekuatan hukum yang sama.
+            </div>
+
+            <table width="100%" style="margin-top: 50pt;">
+                <tr>
+                    <td align="center">
+                        PIHAK PERTAMA
+                        <div style="height: 60pt;"></div>
+                        <strong>{{ $direkturName }}</strong><br/>
+                        Direktur
+                    </td>
+                    <td align="center">
+                        PIHAK KEDUA
+                        <div style="height: 60pt;"></div>
+                        <strong>{{ $contractData['customer_name'] }}</strong>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    <!-- ======================================================
+         HALAMAN 3: SURAT PENGAJUAN DP (DINAMIS)
+         ====================================================== -->
+    @php
+        // Helper Fungsi Terbilang (Indonesian)
+        if (!function_exists('penyebut')) {
+            function penyebut($nilai) {
+                $nilai = abs($nilai);
+                $huruf = array("", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas");
+                $temp = "";
+                if ($nilai < 12) { $temp = " ". $huruf[$nilai]; }
+                else if ($nilai < 20) { $temp = penyebut($nilai - 10). " Belas"; }
+                else if ($nilai < 100) { $temp = penyebut($nilai/10)." Puluh". penyebut($nilai % 10); }
+                else if ($nilai < 200) { $temp = " Seratus" . penyebut($nilai - 100); }
+                else if ($nilai < 1000) { $temp = penyebut($nilai/100) . " Ratus" . penyebut($nilai % 100); }
+                else if ($nilai < 2000) { $temp = " Seribu" . penyebut($nilai - 1000); }
+                else if ($nilai < 1000000) { $temp = penyebut($nilai/1000) . " Ribu" . penyebut($nilai % 1000); }
+                else if ($nilai < 1000000000) { $temp = penyebut($nilai/1000000) . " Juta" . penyebut($nilai % 1000000); }
+                else if ($nilai < 1000000000000) { $temp = penyebut($nilai/1000000000) . " Milyar" . penyebut(fmod($nilai,1000000000)); }
+                return $temp;
+            }
+        }
+
+        if (!function_exists('terbilang')) {
+            function terbilang($nilai) {
+                if($nilai<0) { $hasil = "Minus ". trim(penyebut($nilai)); }
+                else { $hasil = trim(penyebut($nilai)); }     		
+                return $hasil . " Rupiah";
+            }
+        }
+
+        $dpPersentase = 50;
+        $dpText = 'DP 50%';
+        if($kontrak->termin && $kontrak->termin->tahapan && count($kontrak->termin->tahapan) > 0) {
+            $dpPersentase = $kontrak->termin->tahapan[0]['persentase'];
+            $dpText = $kontrak->termin->tahapan[0]['text'] ?? ('DP ' . $dpPersentase . '%');
+        }
+        $dpNominal = ($contractData['nominal_kontrak'] * $dpPersentase) / 100;
+        $dpTerbilangValue = terbilang($dpNominal);
+        $totalTerbilangValue = terbilang($contractData['nominal_kontrak']);
+    @endphp
+
+    <div class="page-break justify">
+        <table width="100%">
+            <tr><td align="right">Tangerang, {{ $contractData['tanggal'] }}</td></tr>
+        </table>
+
+        <div style="margin-top: 10pt;">
+            <table width="100%">
+                <tr><td width="60">Nomor</td><td width="15">:</td><td>{{ $contractData['nomor_surat_fee'] }}</td></tr>
+                <tr><td>Hal</td><td>:</td><td>Pengajuan {{ $dpText }}</td></tr>
+            </table>
+        </div>
+
+        <div style="margin-top: 20pt;">
+            <strong>Kepada Yth,</strong><br/>
+            <strong>{{ $contractData['customer_name'] }}</strong><br/>
+            Di {{ $contractData['alamat'] }}
+        </div>
+
+        <p style="margin-top: 20pt;">Dengan Hormat,</p>
+
+        <p class="justify">
+            Sehubungan dengan rencana Kerjasama Pelaksanaan Project Interior <strong>{{ $contractData['project']['nama'] }}</strong>, bersama ini Kami bermaksud mengajukan permohonan pembayaran {{ $dpText }} sebesar <strong>Rp. {{ number_format($dpNominal, 0, ',', '.') }},- ({{ $dpTerbilangValue }})</strong> dari jumlah harga yang disetujui yaitu <strong>Rp. {{ number_format($contractData['nominal_kontrak'], 0, ',', '.') }},- ({{ $totalTerbilangValue }})</strong>.
+        </p>
+
+        <p>Berikut ini Kami lampirkan Kwitansi, Quotation, Invoice dan Kelengkapan Administrasi.</p>
+        
+        <p>Demikian Kami sampaikan, atas perhatian dan kerjasama {{ $contractData['customer_name'] }}, Kami ucapkan terima kasih.</p>
+
+        <div style="margin-top: 30pt;">
+            Hormat Kami,<br/>
+            <strong>{{ $companyName }}</strong>
+            <div style="height: 50pt;"></div>
+            <strong>{{ $direkturName }}</strong><br/>
+            Direktur
+        </div>
+    </div>
+
+    <!-- ======================================================
+         HALAMAN 4: INVOICE
+         ====================================================== -->
+    <div class="page-break justify">
+        <h2 class="center underline">INVOICE</h2>
+        <p>No. {{ $contractData['nomor_invoice_fee'] }}</p>
+
+        <div style="margin-top: 20pt;">
+            <table width="100%">
+                <tr><td width="80">Kepada</td><td width="15">:</td><td><strong>{{ $contractData['customer_name'] }}</strong></td></tr>
+                <tr><td>Hal</td><td>:</td><td>Pelaksanaan Project Interior {{ $contractData['project']['nama'] }}</td></tr>
+            </table>
+        </div>
+
+        <p style="margin-top: 40pt;">Pembayaran ditransfer melalui rekening :</p>
+        <table>
+            <tr><td width="100">Bank</td><td width="15">:</td><td><strong>{{ strtoupper($nameBank) }}</strong></td></tr>
+            <tr><td>No Rekening</td><td>:</td><td><strong>{{ $norekBank }}</strong></td></tr>
+            <tr><td>Atas Nama</td><td>:</td><td><strong>PT. MOEY LIVING INDONESIA</strong></td></tr>
+        </table>
+        
+        <div style="margin-top: 60pt;">
+            <table width="100%">
+                <tr>
+                    <td width="60%"></td>
+                    <td align="center">
+                        Hormat Kami,<br/>
+                        <strong>{{ $companyName }}</strong>
+                        <div style="height: 50pt;"></div>
+                        <strong>{{ $direkturName }}</strong><br/>
+                        Direktur
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- ======================================================
+         HALAMAN 5: KWITANSI (STYLE BARU)
+         ====================================================== -->
+    <div class="page-break">
+        <h2 class="center underline"><u>KWITANSI</u></h2>
+        <p class="center" style="margin-top: -10pt;">No. {{ $contractData['nomor_kwitansi_fee'] }}</p>
+
+        <table width="100%" style="margin-top: 30pt;">
+            <tr>
+                <td width="140" style="font-style: italic;">Sudah terima dari</td>
+                <td width="15">:</td>
+                <td style="font-size: 12pt;">{{ $contractData['customer_name'] }}</td>
+            </tr>
+            <tr>
+                <td style="font-style: italic; padding-top: 15pt;">Uang Sebesar</td>
+                <td style="padding-top: 15pt;">:</td>
+                <td style="padding-top: 15pt;">
+                    <div style="background-color: #e8e8e8; border-top: 2px solid #333; border-bottom: 2px solid #333; padding: 12pt; text-align: center;">
+                        <strong style="font-size: 13pt; letter-spacing: 0.5pt;">
+                            " Rp. {{ number_format($dpNominal, 0, ',', '.') }},- ( {{ strtoupper($dpTerbilangValue) }} ) "
+                        </strong>
                     </div>
                 </td>
-                <td style="width:50%; text-align: center;">
-                    <div>PIHAK KEDUA</div>
-                    <div style="height: 100px;"></div>
-                    <div class="signature" style="margin-top: 0;">
-                        <strong>{{ $contractData['customer_name'] }}</strong>
+            </tr>
+            <tr>
+                <td style="font-style: italic; padding-top: 15pt;">Untuk Pembayaran</td>
+                <td style="padding-top: 15pt;">:</td>
+                <td style="padding-top: 15pt;">{{ $dpText }} untuk Pelaksanaan Project Interior {{ $contractData['project']['nama'] }}</td>
+            </tr>
+        </table>
+
+        <table width="100%" style="margin-top: 50pt;">
+            <tr>
+                <td width="50%" style="vertical-align: bottom;">
+                    <div style="border: 2px solid #000; padding: 10pt; background-color: #f9f9f9; width: 180pt;">
+                        <table width="100%">
+                            <tr>
+                                <td width="30" style="font-size: 16pt;">Rp</td>
+                                <td align="center" style="font-size: 16pt; font-weight: bold; border-bottom: 1px solid #000;">
+                                    {{ number_format($dpNominal, 0, ',', '.') }},-
+                                </td>
+                            </tr>
+                        </table>
                     </div>
+                </td>
+                <td align="center">
+                    Tangerang, {{ $contractData['today'] ?? $contractData['tanggal'] }}<br/><br/>
+                    <strong>Hormat Kami,</strong><br/>
+                    <strong>{{ $companyName }}</strong>
+                    <div style="height: 60pt;"></div>
+                    <strong><u>{{ $direkturName }}</u></strong><br/>
+                    Direktur
                 </td>
             </tr>
         </table>
     </div>
-</div>
-
-<div class="page-break"></div>
-<!-- ================= Page Comitment Fee ================= -->
-
-<!-- =======================
-     HALAMAN 1 — SURAT COMMITMENT FEE
-======================= -->
-<div class="page-commitmentfee page-break-commitmentfee">
-
-    <!-- Header -->
-    @if(file_exists($kopPath))
-        <img src="{{ $kopPath }}" class="kop-surat-commitmentfee" alt="kop surat">
-    @endif
-
-    <p class="right-commitmentfee">{{$companyAddress}}, {{ $contractData['today'] }}</p>
-
-    <p>No: {{ $contractData['nomor_surat_fee'] }}<br>
-       Hal: Pengajuan Harga Kontrak Project Interior</p>
-
-    <p>Kepada Yth,<br>
-       <strong>{{ $contractData['customer_name'] }}</strong><br>
-       Di {{ $contractData['alamat'] }}</p>
-
-    <p>Dengan hormat,</p>
-
-    <p>
-        Sehubungan dengan rencana pelaksanaan project interior
-        <strong>{{ $contractData['project']['nama'] }}</strong>, kami mengajukan
-        <strong>Harga Kontrak sebesar Rp {{ number_format($contractData['nominal_kontrak'], 0, ',', '.') }},-</strong>.
-    </p>
-
-    <p>
-        Harga Kontrak ini merupakan nilai total keseluruhan RAB kontrak untuk pelaksanaan project interior sesuai dengan spesifikasi yang telah disepakati.
-    </p>
-
-    <p>Pembayaran dapat dilakukan melalui rekening berikut:</p>
-
-    <table class="commitmentfee">
-        <tr><td width="120">Bank</td><td>: {{$nameBank}}</td></tr>
-        <tr><td>No. Rekening</td><td>: {{$norekBank}}</td></tr>
-        <tr><td>Atas Nama</td><td>: {{$atasNamaBank}}</td></tr>
-    </table>
-
-    <p>
-        Demikian surat ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.
-    </p>
-
-    <div class="signature">
-        <p style="margin-bottom: 100px;">Hormat Kami,<br><strong>{{$companyName}}</strong></p>
-        <p><strong>{{ $direkturName }}</strong><br>{{$jabatanDirektur}}</p>
-    </div>
-
-</div>
-
-
-<!-- =======================
-     HALAMAN 2 — INVOICE COMMITMENT FEE
-======================= -->
-<div class="page-commitmentfee page-break-commitmentfee">
-
-    @if(file_exists($kopPath))
-        <img src="{{ $kopPath }}" class="kop-surat-commitmentfee" alt="kop surat">
-    @endif
-
-    <h2 class="center-commitmentfee">INVOICE</h2>
-
-    <p>No: {{ $contractData['nomor_invoice_fee'] }}</p>
-    <p class="right-commitmentfee">{{$companyAddress}}, {{ $contractData['today'] }}</p>
-
-    <p>
-        Kepada : <strong>{{ $contractData['customer_name'] }}</strong><br>
-        Hal : Pembayaran Harga Kontrak Interior
-    </p>
-
-    <table class="invoice-table-commitmentfee">
-        <thead>
-            <tr>
-                <th>URAIAN</th>
-                <th>JUMLAH</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>Total Pembayaran Harga Kontrak</td>
-                <td>Rp {{ number_format($contractData['nominal_kontrak'], 0, ',', '.') }}</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <p><strong>Pembayaran melalui:</strong></p>
-
-    <table class="commitmentfee">
-        <tr><td width="120">Bank</td><td>: {{$nameBank}}</td></tr>
-        <tr><td>No. Rekening</td><td>: {{$norekBank}}</td></tr>
-        <tr><td>Atas Nama</td><td>: {{$atasNamaBank}}</td></tr>
-    </table>
-
-    <div class="signature">
-        <p style="margin-bottom: 100px;">Hormat Kami,<br><strong>{{$companyName}}</strong></p>
-        <p><strong>{{ $direkturName }}</strong><br>{{$jabatanDirektur}}</p>
-    </div>
-
-</div>
-
-{{-- <div class="page-break-commitmentfee"></div> --}}
-
-<!-- =======================
-     HALAMAN 3 — KWITANSI COMMITMENT FEE
-======================= -->
-<div class="page-commitmentfee">
-
-    @if(file_exists($kopPath))
-        <img src="{{ $kopPath }}" class="kop-surat-commitmentfee" alt="kop surat">
-    @endif
-
-    <h3 class="center-commitmentfee">KWITANSI</h3>
-    <p class="center-commitmentfee">No: {{ $contractData['nomor_kwitansi_fee'] }}</p>
-
-    <table class="commitmentfee">
-        <tr>
-            <td width="150">Sudah terima dari</td>
-            <td>: <strong>{{ $contractData['customer_name'] }}</strong></td>
-        </tr>
-        <tr>
-            <td>Uang Sebesar</td>
-            <td>: <strong>Rp {{ number_format($contractData['nominal_kontrak'], 0, ',', '.') }},-</strong></td>
-        </tr>
-        <tr>
-            <td>Untuk Pembayaran</td>
-            <td>: Harga Kontrak Desain Interior</td>
-        </tr>
-    </table>
-
-    <div class="kwitansi-footer-commitmentfee">
-        <div class="nominal-box-commitmentfee">Rp {{ number_format($contractData['nominal_kontrak'], 0, ',', '.') }},-</div>
-
-        <div class="signature">
-            <p style="margin-bottom: 100px;">Hormat Kami,<br><strong>{{$companyName}}</strong></p>
-            <p><strong>{{ $direkturName }}</strong><br>{{$jabatanDirektur}}</p>
-        </div>
-
-        <div style="clear: both;"></div>
-    </div>
-
-</div>
 
 </body>
 </html>

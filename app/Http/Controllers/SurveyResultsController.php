@@ -92,7 +92,7 @@ class SurveyResultsController extends Controller
             ->get()
             ->map(function (Order $order) use ($user) {
                 $surveyResult = $order->surveyResults;
-
+ 
                 $canMarketingResponse = false;
                 if ($user && $user->role && $user->role->nama_role === 'Kepala Marketing') {
                     $canMarketingResponse = $order->users()

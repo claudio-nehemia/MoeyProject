@@ -13,6 +13,12 @@ use Illuminate\Support\Facades\Storage;
 
 class KontrakController extends Controller
 {
+    private function getRomanMonth($month)
+    {
+        $romans = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+        return $romans[intval($month)];
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -269,9 +275,15 @@ class KontrakController extends Controller
             // ======================================
             'nominal_kontrak' => $kontrak->harga_kontrak,
             'tanggal' => now()->format('d F Y'),
-            'nomor' => 'PNW-' . $kontrak->id,
-            'nomor_kontrak' => 'KTR-' . $kontrak->id,
-            'today' => now()->format('d F Y'),
+            'nomor' => str_pad($kontrak->id, 3, '0', STR_PAD_LEFT) . '/MJA/PNW/' . $this->getRomanMonth(now()->format('m')) . '/' . now()->format('Y'),
+            'nomor_kontrak' => str_pad($kontrak->id, 3, '0', STR_PAD_LEFT) . '/MJA/KTK/' . $this->getRomanMonth(now()->format('m')) . '/' . now()->format('Y'),
+            'today' => now()->translatedFormat('d F Y'),
+            'hari_ini' => now()->translatedFormat('l'),
+            'tgl_angka' => now()->format('d-m-Y'),
+            'tgl_terbilang' => terbilang(now()->format('d')),
+            'bln_terbilang' => now()->translatedFormat('F'),
+            'thn_terbilang' => terbilang(now()->format('Y')),
+            'nominal_terbilang' => terbilang($kontrak->harga_kontrak) . ' Rupiah',
 
             // ======================================
             // COMMITMENT FEE DATA
@@ -284,10 +296,10 @@ class KontrakController extends Controller
         ];
 
         // company moey
-        $companyName = "PT. Moey Jaya Abadi";
-        $companyAddress = "Tangerang";
-        $direkturName = "Aniq Infanuddin";
-        $jabatanDirektur = "Direktur Utama";
+        $companyName = "PT Moey Living Indonesia";
+        $companyAddress = "Ruko Arcadia Blok B 6, Jl Kelapa Lilin Utara II No 6, Kelapa Dua-Tangerang";
+        $direkturName = "Aniq Irfanuddin Yusuf";
+        $jabatanDirektur = "Direktur";
         $nameBank = "Mandiri";
         $norekBank = "1550007495610";
         $atasNamaBank = "PT. Moey Jaya Abadi";
