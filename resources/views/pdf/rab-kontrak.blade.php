@@ -171,7 +171,7 @@
     <!-- Header -->
     <div class="kop-surat">
         <div class="kop-logo">
-            <img src="{{ public_path('kop-moey.png') }}" alt="MOEY Logo">
+            <img src="{{ public_path('kop-moey.jpeg') }}" alt="MOEY Logo">
         </div>
         <div class="kop-judul">
             <div class="judul-utama">RANCANGAN ANGGARAN BIAYA KONTRAK</div>

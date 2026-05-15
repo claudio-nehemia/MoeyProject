@@ -267,7 +267,7 @@
     <div class="kop-surat">
         <!-- LOGO -->
         <div class="kop-logo">
-            <img src="{{ public_path('kop-moey.png') }}" alt="MOEY Logo">
+            <img src="{{ public_path('kop-moey.jpeg') }}" alt="MOEY Logo">
         </div>
 
         <!-- JUDUL -->

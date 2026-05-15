@@ -302,7 +302,7 @@ class KontrakController extends Controller
         $jabatanDirektur = "Direktur";
         $nameBank = "Mandiri";
         $norekBank = "1550007495610";
-        $atasNamaBank = "PT. Moey Jaya Abadi";
+        $atasNamaBank = "PT. Moey Living Indonesia";
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.contract', [
             'kontrak' => $kontrak,

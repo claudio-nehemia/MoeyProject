@@ -352,7 +352,7 @@ class CommitmentFeeController extends Controller
             'alamat' => $order->alamat ?? '-',
             'projectName' => $order->nama_project,
 
-            'companyName' => "PT. Moey Jaya Abadi",
+            'companyName' => "PT. Moey Living Indonesia",
             'companyAddress' => "Tangerang",
             'direkturName' => "Aniq Infanuddin",
             'jabatanDirektur' => "Direktur Utama",
@@ -366,9 +366,9 @@ class CommitmentFeeController extends Controller
 
             'nameBank' => "Mandiri",
             'norekBank' => "1550007495610",
-            'atasNamaBank' => "PT. Moey Jaya Abadi",
+            'atasNamaBank' => "PT. Moey Living Indonesia",
 
-            'logoUrl' => public_path('assets/logo.png'),
+            'logoUrl' => public_path('kop-moey.jpeg'),
             'signatureUrl' => public_path('assets/signature.png'),
             'stampUrl' => public_path('assets/stamp.png'),
         ];

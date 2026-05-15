@@ -126,7 +126,6 @@
 
         /* Photo evidence styles */
         .evidence-section {
-            page-break-inside: avoid;
             margin-top: 20px;
             margin-bottom: 16px;
             border: 1px solid #e2e8f0;
@@ -141,6 +140,7 @@
             margin-bottom: 10px;
             padding-bottom: 6px;
             border-bottom: 2px solid #3b82f6;
+            page-break-after: avoid;
         }
         .evidence-stage-title {
             font-size: 9px;
@@ -151,6 +151,7 @@
             background-color: #eff6ff;
             border-radius: 3px;
             display: inline-block;
+            page-break-after: avoid;
         }
         .evidence-grid {
             width: 100%;
@@ -292,8 +293,7 @@
     @endforeach
 
     @if($hasAnyEvidence)
-        <div style="page-break-before: always;"></div>
-        <div style="margin-bottom: 10px; border-bottom: 2px solid #1e293b; padding-bottom: 6px;">
+        <div style="page-break-before: always; margin-bottom: 10px; border-bottom: 2px solid #1e293b; padding-bottom: 6px;">
             <h2 style="margin: 0; color: #1e293b; font-size: 14px; letter-spacing: 1px;">DOKUMENTASI TAHAPAN PRODUKSI</h2>
             <p style="margin: 2px 0; color: #64748b; font-size: 9px;">{{ $order->nama_project }} &mdash; {{ $order->company_name }}</p>
         </div>

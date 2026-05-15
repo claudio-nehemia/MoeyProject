@@ -400,7 +400,7 @@ class ProjectManagementController extends Controller
         
         $kopPath = public_path('kop-moey.jpeg');
 
-        $companyName = "PT. Moey Jaya Abadi";
+        $companyName = "PT. Moey Living Indonesia";
         $companyAddress = "Tangerang";
         $direkturName = "Aniq Infanuddin";
 

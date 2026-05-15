@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use App\Services\NotificationService;
 use App\Http\Controllers\WorkplanItemController;
+use App\Models\Invoice;
 
 class NotificationApiController extends Controller
 {
@@ -210,11 +211,16 @@ class NotificationApiController extends Controller
                 ->where('user_id', auth()->id())
                 ->with([
                     'order.surveyResults',
+                    'order.surveyUlang',
                     'order.moodboard.commitmentFee',
                     'order.moodboard.estimasi',
+                    'order.moodboard.itemPekerjaans.produks.workplanItems',
                     'order.itemPekerjaans.rabInternal',
                     'order.itemPekerjaans.kontrak',
+                    'order.itemPekerjaans.invoices',
+                    'order.itemPekerjaans.rabKontrak',
                     'order.gambarKerja',
+                    'order.estimasi',
                 ])
                 ->firstOrFail();
 
@@ -308,20 +314,21 @@ class NotificationApiController extends Controller
     // Handler methods
     private function handleSurveyRequest($order)
     {
-        if ($order->surveyResults) {
-            return [
-                'success' => true,
-                'message' => 'Survey already exists',
-                'action' => 'view',
-                'data' => ['order_id' => $order->id],
-            ];
+        $survey = $order->surveyResults;
+        if ($survey) {
+            if (!$survey->response_time) {
+                $survey->update([
+                    'response_time' => now(),
+                    'response_by' => auth()->user()->name ?? 'Admin',
+                ]);
+            }
+        } else {
+            SurveyResults::create([
+                'order_id' => $order->id,
+                'response_time' => now(),
+                'response_by' => auth()->user()->name ?? 'Admin',
+            ]);
         }
-
-        SurveyResults::create([
-            'order_id' => $order->id,
-            'response_time' => now(),
-            'response_by' => auth()->user()->name ?? 'Admin',
-        ]);
 
         $order->update([
             'tahapan_proyek' => 'survey',
@@ -342,19 +349,19 @@ class NotificationApiController extends Controller
     private function handleMoodboardRequest($order)
     {
         if ($order->moodboard) {
-            return [
-                'success' => true,
-                'message' => 'Moodboard already exists',
-                'action' => 'view',
-                'data' => ['order_id' => $order->id],
-            ];
+            if (!$order->moodboard->response_time) {
+                $order->moodboard->update([
+                    'response_time' => now(),
+                    'response_by' => auth()->user()->name ?? 'Admin',
+                ]);
+            }
+        } else {
+            Moodboard::create([
+                'order_id' => $order->id,
+                'response_time' => now(),
+                'response_by' => auth()->user()->name ?? 'Admin',
+            ]);
         }
-
-        Moodboard::create([
-            'order_id' => $order->id,
-            'response_time' => now(),
-            'response_by' => auth()->user()->name ?? 'Admin',
-        ]);
 
         $order->update(['tahapan_proyek' => 'moodboard']);
 
@@ -372,29 +379,28 @@ class NotificationApiController extends Controller
     private function handleEstimasiRequest($order)
     {
         if ($order->estimasi) {
-            return [
-                'success' => true,
-                'message' => 'Estimasi already exists',
-                'action' => 'view',
-                'data' => ['order_id' => $order->id],
-            ];
+            if (!$order->estimasi->response_time) {
+                $order->estimasi->update([
+                    'response_by' => auth()->user()->name,
+                    'response_time' => now(),
+                ]);
+            }
+        } else {
+            if (!$order->moodboard) {
+                return [
+                    'success' => false,
+                    'message' => 'Moodboard not found for this order',
+                ];
+            }
+
+            Estimasi::create([
+                'moodboard_id' => $order->moodboard->id,
+                'response_by' => auth()->user()->name,
+                'response_time' => now(),
+            ]);
         }
 
-        if (!$order->moodboard) {
-            return [
-                'success' => false,
-                'message' => 'Moodboard not found for this order',
-            ];
-        }
-
-        Estimasi::create([
-            'moodboard_id' => $order->moodboard->id,
-            'response_by' => auth()->user()->name,
-            'response_time' => now(),
-        ]);
-
-        $order->update(['tahapan_proyek' => 'estimasi']);
-
+        // Web does NOT update tahapan_proyek for estimasi
         // Update TaskResponse
         $this->updateTaskResponse($order->id, 'estimasi', 6, false);
 
@@ -426,20 +432,20 @@ class NotificationApiController extends Controller
         }
 
         if ($order->moodboard->commitmentFee) {
-            return [
-                'success' => true,
-                'message' => 'Commitment fee already exists',
-                'action' => 'view',
-                'data' => ['order_id' => $order->id],
-            ];
+            if (!$order->moodboard->commitmentFee->response_time) {
+                $order->moodboard->commitmentFee->update([
+                    'response_by' => auth()->user()->name,
+                    'response_time' => now(),
+                ]);
+            }
+        } else {
+            CommitmentFee::create([
+                'moodboard_id' => $order->moodboard->id,
+                'response_by' => auth()->user()->name,
+                'response_time' => now(),
+                'payment_status' => 'pending',
+            ]);
         }
-
-        CommitmentFee::create([
-            'moodboard_id' => $order->moodboard->id,
-            'response_by' => auth()->user()->name,
-            'response_time' => now(),
-            'payment_status' => 'pending',
-        ]);
 
         $order->update(['tahapan_proyek' => 'cm_fee']);
 
@@ -492,11 +498,21 @@ class NotificationApiController extends Controller
 
     private function handleItemPekerjaanRequest($order)
     {
-        ItemPekerjaan::create([
-            'moodboard_id' => $order->moodboard->id,
-            'response_by' => auth()->user()->name,
-            'response_time' => now(),
-        ]);
+        $existingItem = $order->itemPekerjaans->first() ?? null;
+        if ($existingItem) {
+            if (!$existingItem->response_time) {
+                $existingItem->update([
+                    'response_by' => auth()->user()->name,
+                    'response_time' => now(),
+                ]);
+            }
+        } else {
+            ItemPekerjaan::create([
+                'moodboard_id' => $order->moodboard->id,
+                'response_by' => auth()->user()->name,
+                'response_time' => now(),
+            ]);
+        }
 
         // Update TaskResponse
         $this->updateTaskResponse($order->id, 'item_pekerjaan', 6, false);
@@ -511,20 +527,28 @@ class NotificationApiController extends Controller
 
     private function handleRabInternalRequest($order)
     {
-        $itemPekerjaan = $order->itemPekerjaans->first();
-
-        if (!$itemPekerjaan) {
+        if (!$order->itemPekerjaans || $order->itemPekerjaans->isEmpty()) {
             return [
                 'success' => false,
-                'message' => 'Item pekerjaan not found',
+                'message' => 'Item pekerjaan belum ada untuk order ini.',
             ];
         }
 
-        RabInternal::create([
-            'item_pekerjaan_id' => $itemPekerjaan->id,
-            'response_by' => auth()->user()->name,
-            'response_time' => now(),
-        ]);
+        $existingRab = $order->itemPekerjaans->first()?->rabInternal;
+        if ($existingRab) {
+            if (!$existingRab->response_time) {
+                $existingRab->update([
+                    'response_by' => auth()->user()->name,
+                    'response_time' => now(),
+                ]);
+            }
+        } else {
+            RabInternal::create([
+                'item_pekerjaan_id' => $order->itemPekerjaans->first()->id,
+                'response_by' => auth()->user()->name,
+                'response_time' => now(),
+            ]);
+        }
 
         $order->update(['tahapan_proyek' => 'rab']);
 
@@ -545,24 +569,24 @@ class NotificationApiController extends Controller
         if (!$itemPekerjaan) {
             return [
                 'success' => false,
-                'message' => 'Item pekerjaan not found',
+                'message' => 'Item pekerjaan belum ada untuk order ini.',
             ];
         }
 
         if ($itemPekerjaan->kontrak) {
-            return [
-                'success' => true,
-                'message' => 'Kontrak already exists',
-                'action' => 'view',
-                'data' => ['order_id' => $order->id],
-            ];
+            if (!$itemPekerjaan->kontrak->response_time) {
+                $itemPekerjaan->kontrak->update([
+                    'response_time' => now(),
+                    'response_by' => auth()->user()->name,
+                ]);
+            }
+        } else {
+            Kontrak::create([
+                'item_pekerjaan_id' => $itemPekerjaan->id,
+                'response_time' => now(),
+                'response_by' => auth()->user()->name,
+            ]);
         }
-
-        Kontrak::create([
-            'item_pekerjaan_id' => $itemPekerjaan->id,
-            'response_time' => now(),
-            'response_by' => auth()->user()->name,
-        ]);
 
         $order->update(['tahapan_proyek' => 'kontrak']);
 
@@ -578,10 +602,84 @@ class NotificationApiController extends Controller
 
     private function handleInvoiceRequest($order)
     {
+        $itemPekerjaan = $order->itemPekerjaans->first() ?? null;
+        if (!$itemPekerjaan) {
+            return [
+                'success' => false,
+                'message' => 'Item pekerjaan belum ada untuk order ini.',
+            ];
+        }
+
+        // Check if invoice already exists and has response
+        $invoice = $itemPekerjaan->invoices()->first() ?? null;
+        if ($invoice && $invoice->response_time) {
+            return [
+                'success' => true,
+                'message' => 'Invoice untuk order ini sudah di-respond.',
+                'action' => 'view',
+                'data' => ['order_id' => $order->id],
+            ];
+        }
+
+        // Update response info if invoice exists, or create new
+        if ($invoice) {
+            $invoice->update([
+                'response_time' => now(),
+                'response_by' => auth()->user()->name,
+            ]);
+        } else {
+            Invoice::create([
+                'item_pekerjaan_id' => $itemPekerjaan->id,
+                'rab_kontrak_id' => $itemPekerjaan->rabKontrak->id ?? null,
+                'response_time' => now(),
+                'response_by' => auth()->user()->name,
+            ]);
+        }
+
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'invoice')
+            ->where(function ($q) {
+                $q->where('is_marketing', false)->orWhereNull('is_marketing');
+            })
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'status' => 'menunggu_input',
+                'response_time' => now(),
+                'response_by' => auth()->user()->name,
+                'response_at' => now(),
+            ]);
+        } elseif ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'status' => 'telat',
+            ]);
+        }
+
+        if (!$taskResponse) {
+            TaskResponse::create([
+                'order_id' => $order->id,
+                'user_id' => null,
+                'tahap' => 'invoice',
+                'start_time' => now(),
+                'deadline' => now()->addDays(6),
+                'duration' => 6,
+                'duration_actual' => 6,
+                'extend_time' => 0,
+                'status' => 'menunggu_input',
+                'response_time' => now(),
+                'response_by' => auth()->user()->name,
+                'response_at' => now(),
+            ]);
+        }
+
         return [
             'success' => true,
-            'message' => 'Please manage Invoice for this order',
-            'action' => 'view',
+            'message' => 'Response recorded. Please manage Invoice for this order.',
+            'action' => 'create',
             'data' => ['order_id' => $order->id],
         ];
     }
@@ -617,21 +715,19 @@ class NotificationApiController extends Controller
     {
         // Check if survey ulang already exists
         if ($order->surveyUlang) {
-            return [
-                'success' => true,
-                'message' => 'Survey ulang already exists',
-                'action' => 'view',
-                'data' => ['order_id' => $order->id],
-            ];
+            if (!$order->surveyUlang->response_time) {
+                $order->surveyUlang->update([
+                    'response_time' => now(),
+                    'response_by' => auth()->user()->name ?? 'Admin',
+                ]);
+            }
+        } else {
+            SurveyUlang::create([
+                'order_id' => $order->id,
+                'response_time' => now(),
+                'response_by' => auth()->user()->name ?? 'Admin',
+            ]);
         }
-
-        // Create empty survey ulang record with response info
-        // User will fill in details (catatan, foto, temuan) later via store
-        SurveyUlang::create([
-            'order_id' => $order->id,
-            'response_time' => now(),
-            'response_by' => auth()->user()->name ?? 'Admin',
-        ]);
 
         $order->update(['tahapan_proyek' => 'survey_ulang']);
 
@@ -686,9 +782,36 @@ class NotificationApiController extends Controller
 
     private function handleApprovalMaterialRequest($order)
     {
+        if (!$order->itemPekerjaans || $order->itemPekerjaans->isEmpty()) {
+            return [
+                'success' => false,
+                'message' => 'Item pekerjaan belum ada untuk order ini.',
+            ];
+        }
+
+        $itemPekerjaan = $order->itemPekerjaans->first();
+
+        // Check if already responded
+        if ($itemPekerjaan->approval_rab_response_by) {
+            return [
+                'success' => true,
+                'message' => 'Approval material sudah pernah direspon.',
+                'action' => 'view',
+                'data' => ['order_id' => $order->id],
+            ];
+        }
+
+        // Update response record
+        $itemPekerjaan->update([
+            'approval_rab_response_time' => now(),
+            'approval_rab_response_by' => auth()->user()->name,
+        ]);
+
+        $this->updateTaskResponse($order->id, 'approval_material', 6, false);
+
         return [
             'success' => true,
-            'message' => 'Please manage Approval Material for this order',
+            'message' => 'Response berhasil dicatat. Silakan kelola approval material.',
             'action' => 'view',
             'data' => ['order_id' => $order->id],
         ];
@@ -932,7 +1055,8 @@ class NotificationApiController extends Controller
                     'pm_survey_response_by' => $pmName,
                 ]);
 
-                $this->markMarketingTaskResponseDone($order->id, 'survey');
+                // Web uses tahap 'survey_schedule' - match it
+                $this->markMarketingTaskResponseDone($order->id, 'survey_schedule');
 
                 Log::info("Survey Schedule PM Response recorded");
                 return [
@@ -997,21 +1121,157 @@ class NotificationApiController extends Controller
 
             case Notification::TYPE_KONTRAK_REQUEST:
                 \Log::info("Checking kontrak");
-                if ($order->itemPekerjaans && $order->itemPekerjaans->isNotEmpty()) {
-                    $kontrak = $order->itemPekerjaans->first()?->kontrak;
-                    \Log::info("Kontrak: " . ($kontrak ? 'exists' : 'not found'));
-                    if ($kontrak) {
-                        $kontrak->update([
+                $itemPekerjaan = $order->itemPekerjaans->first() ?? null;
+                if (!$itemPekerjaan) {
+                    return [
+                        'success' => false,
+                        'message' => 'Item pekerjaan belum ada untuk order ini.',
+                    ];
+                }
+
+                if ($itemPekerjaan->kontrak) {
+                    $itemPekerjaan->kontrak->update([
+                        'pm_response_time' => $pmTime,
+                        'pm_response_by' => $pmName,
+                    ]);
+                } else {
+                    Kontrak::create([
+                        'item_pekerjaan_id' => $itemPekerjaan->id,
+                        'pm_response_time' => $pmTime,
+                        'pm_response_by' => $pmName,
+                    ]);
+                }
+
+                $this->markMarketingTaskResponseDone($order->id, 'kontrak');
+                return [
+                    'success' => true,
+                    'message' => 'PM Response recorded successfully for Kontrak.',
+                ];
+                break;
+
+            case Notification::TYPE_RAB_INTERNAL_REQUEST:
+                \Log::info("Checking RAB Internal for PM response");
+                $itemPekerjaan = $order->itemPekerjaans->first() ?? null;
+                if ($itemPekerjaan) {
+                    if ($itemPekerjaan->rabInternal) {
+                        $itemPekerjaan->rabInternal->update([
                             'pm_response_time' => $pmTime,
                             'pm_response_by' => $pmName,
                         ]);
-                        $this->markMarketingTaskResponseDone($order->id, 'kontrak');
-                        return [
-                            'success' => true,
-                            'message' => 'PM Response recorded successfully for Kontrak.',
-                        ];
+                    } else {
+                        RabInternal::create([
+                            'item_pekerjaan_id' => $itemPekerjaan->id,
+                            'pm_response_time' => $pmTime,
+                            'pm_response_by' => $pmName,
+                        ]);
                     }
                 }
+
+                $taskResponse = TaskResponse::where('order_id', $order->id)
+                    ->where('tahap', 'rab_internal')
+                    ->where('is_marketing', true)
+                    ->orderByDesc('extend_time')
+                    ->orderByDesc('updated_at')
+                    ->orderByDesc('id')
+                    ->first();
+
+                if (!$taskResponse) {
+                    $taskResponse = TaskResponse::create([
+                        'order_id' => $order->id,
+                        'user_id' => null,
+                        'tahap' => 'rab_internal',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3),
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                        'is_marketing' => true,
+                    ]);
+                }
+
+                $taskResponse->update([
+                    'response_time' => now(),
+                    'status' => 'selesai',
+                    'user_id' => auth()->id(),
+                ]);
+
+                return [
+                    'success' => true,
+                    'message' => 'PM Response recorded successfully for RAB Internal.',
+                ];
+                break;
+
+            case Notification::TYPE_INVOICE_REQUEST:
+                \Log::info("Checking Invoice for PM response");
+                $itemPekerjaan = $order->itemPekerjaans->first() ?? null;
+                if ($itemPekerjaan) {
+                    $invoice = $itemPekerjaan->invoices?->sortBy('termin_step')->first();
+                    if ($invoice) {
+                        $invoice->update([
+                            'pm_response_time' => $pmTime,
+                            'pm_response_by' => $pmName,
+                        ]);
+                    } else {
+                        Invoice::create([
+                            'item_pekerjaan_id' => $itemPekerjaan->id,
+                            'rab_kontrak_id' => $itemPekerjaan->rabKontrak->id ?? null,
+                            'pm_response_time' => $pmTime,
+                            'pm_response_by' => $pmName,
+                        ]);
+                    }
+                }
+
+                $taskResponse = TaskResponse::where('order_id', $order->id)
+                    ->where('tahap', 'invoice')
+                    ->where('is_marketing', true)
+                    ->orderByDesc('extend_time')
+                    ->orderByDesc('updated_at')
+                    ->orderByDesc('id')
+                    ->first();
+
+                if (!$taskResponse) {
+                    $taskResponse = TaskResponse::create([
+                        'order_id' => $order->id,
+                        'user_id' => null,
+                        'tahap' => 'invoice',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3),
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                        'is_marketing' => true,
+                    ]);
+                }
+
+                $taskResponse->update([
+                    'response_time' => now(),
+                    'status' => 'selesai',
+                    'user_id' => auth()->id(),
+                ]);
+
+                return [
+                    'success' => true,
+                    'message' => 'PM Response recorded successfully for Invoice.',
+                ];
+                break;
+
+            case Notification::TYPE_APPROVAL_MATERIAL_REQUEST:
+                \Log::info("Checking Approval Material for PM response");
+                $itemPekerjaan = $order->itemPekerjaans->first() ?? null;
+                if ($itemPekerjaan) {
+                    $itemPekerjaan->update([
+                        'pm_approval_rab_response_time' => $pmTime,
+                        'pm_approval_rab_response_by' => $pmName,
+                    ]);
+                }
+
+                $this->markMarketingTaskResponseDone($order->id, 'approval_material');
+                return [
+                    'success' => true,
+                    'message' => 'PM Response recorded successfully for Approval Material.',
+                ];
                 break;
 
             case Notification::TYPE_SURVEY_REQUEST:

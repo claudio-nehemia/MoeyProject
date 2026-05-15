@@ -122,8 +122,8 @@
 <body>
     <div class="container">
         <!-- Kop Surat -->
-        @if('kop-moey.png')
-            <img src="kop-moey.png" class="kop-surat" alt="Kop Surat PT. Moey Jaya Abadi">
+        @if(file_exists(public_path('kop-moey.jpeg')))
+            <img src="{{ public_path('kop-moey.jpeg') }}" class="kop-surat" alt="Kop Surat PT. Moey Living Indonesia">
         @endif
         
         <!-- Header Title -->

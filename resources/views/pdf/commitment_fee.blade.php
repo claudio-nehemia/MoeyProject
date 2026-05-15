@@ -122,7 +122,7 @@
 <div class="page page-break">
 
     <!-- Header -->
-    <img src="{{ public_path('kop-moey.png') }}" class="kop-surat">
+    <img src="{{ $logoUrl }}" class="kop-surat">
 
     <p class="right">{{$companyAddress}}, {{ $today }}</p>
 
@@ -172,7 +172,7 @@
 ======================= -->
 <div class="page page-break">
 
-    <img src="{{ public_path('kop-moey.png') }}" class="kop-surat">
+    <img src="{{ $logoUrl }}" class="kop-surat">
 
     {{-- <div class="red-bar"></div> --}}
 
@@ -225,7 +225,7 @@
 ======================= -->
 <div class="page">
 
-    <img src="{{ public_path('kop-moey.png') }}" class="kop-surat">
+    <img src="{{ $logoUrl }}" class="kop-surat">
 
     {{-- <div class="red-bar"></div> --}}
 
