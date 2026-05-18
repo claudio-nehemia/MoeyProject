@@ -1,13 +1,7 @@
-@if(isset($isWord) && $isWord)
 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-@else
-<!DOCTYPE html>
-<html>
-@endif
 <head>
     <meta charset="utf-8">
     <title>Perjanjian Kerjasama</title>
-    @if(isset($isWord) && $isWord)
     <!--[if gte mso 9]>
     <xml>
      <w:WordDocument>
@@ -17,23 +11,17 @@
      </w:WordDocument>
     </xml>
     <![endif]-->
-    @endif
     <style>
-        /* 1. Global Page Settings */
-        @if(isset($isWord) && $isWord)
         @page Section1 {
-            size: 595.3pt 841.9pt; /* A4 size */
-            margin: 1.0in 1.0in 1.0in 1.0in; /* Standard margins */
-            mso-header-margin: .5in;
-            mso-footer-margin: .5in;
+            size: 595.3pt 841.9pt;
+            margin: 0.8in 0.8in 0.8in 0.8in;
+            mso-header: h1;
+            mso-header-margin: .2in;
+            mso-footer-margin: .2in;
             mso-paper-source: 0;
         }
-        div.Section1 {
-            page: Section1;
-        }
-        #header {
-            display: none;
-        }
+        div.Section1 { page: Section1; }
+
         body {
             font-family: "Times New Roman", Times, serif;
             font-size: 11pt;
@@ -43,48 +31,9 @@
             padding: 0;
             mso-line-height-rule: exactly;
         }
+
         p { margin: 0 0 8pt 0; }
-        .kop-img-word {
-            width: 450pt;
-            height: auto;
-            display: block;
-            margin: 0 auto 20px auto;
-        }
-        @else
-        @page {
-            margin-top: 140pt;
-            margin-bottom: 50pt;
-            margin-left: 70pt;
-            margin-right: 70pt;
-        }
 
-        /* 2. Fixed Header (Kop Surat) */
-        #header {
-            position: fixed;
-            top: -120pt;
-            left: 0pt;
-            right: 0pt;
-            height: 120pt;
-            text-align: center;
-        }
-
-        /* 3. Typography & Body */
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: "Times New Roman", Times, serif;
-            font-size: 11pt;
-            line-height: 1.4;
-            color: #000;
-        }
-        @endif
-
-        .kop-img {
-            width: 450pt;
-            height: auto;
-        }
-
-        /* 4. Utilities */
         .page-break { page-break-before: always; mso-page-break-before: always; }
         .no-break { page-break-inside: avoid; }
         .center { text-align: center; }
@@ -93,7 +42,6 @@
         .bold { font-weight: bold; }
         .underline { text-decoration: underline; }
 
-        /* Judul Pasal */
         .article-title {
             font-weight: bold;
             text-align: center;
@@ -102,48 +50,35 @@
             text-decoration: underline;
         }
 
-        /* Isi Pasal */
         .article-content {
             text-align: justify;
             margin-bottom: 10pt;
         }
 
-        /* Tabel Dasar */
-        table { width: 100%; border-collapse: collapse; page-break-inside: avoid; border: none; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
-        td { vertical-align: top; padding: 2pt 0; border: none; }
-        
-        /* Indentasi List */
-        .list-item { padding-left: 20pt; position: relative; }
-        .list-number { position: absolute; left: 0; width: 20pt; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border: none;
+            border-spacing: 0;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+            page-break-inside: avoid;
+        }
 
+        td { vertical-align: top; padding: 2pt 0; border: none; }
     </style>
 </head>
 <body>
-@if(isset($isWord) && $isWord)
+<div style="mso-element:header" id="h1">
+    @if(!empty($kopPath))
+        <p style="margin:0; text-align:center;">
+            <img src="{{ $kopPath }}" alt="Kop" style="width: 450pt; height: auto;">
+        </p>
+    @endif
+</div>
+
 <div class="Section1">
-@endif
-
-    <!-- Header Fixed -->
-    @if(!isset($isWord) || !$isWord)
-        <div id="header">
-            @if(file_exists($kopPath))
-                <img src="{{ $kopPath }}" class="kop-img">
-            @else
-                <div style="color: red; border: 1px solid red; padding: 10pt;">[ KOP SURAT TIDAK DITEMUKAN ]</div>
-            @endif
-        </div>
-    @endif
-
-    <!-- ======================================================
-         HALAMAN 1: SURAT PENAWARAN
-         ====================================================== -->
-    @if(isset($isWord) && $isWord)
-        <div style="text-align: center; margin-bottom: 20px;">
-            @if(!empty($kopPath))
-                <img src="{{ $kopPath }}" class="kop-img-word" width="600" style="width: 450pt; max-width: 100%; height: auto;">
-            @endif
-        </div>
-    @endif
+    <!-- HALAMAN 1: SURAT PENAWARAN -->
     <div class="justify">
         <table width="100%">
             <tr>
@@ -178,7 +113,6 @@
             Berdasarkan pertemuan yang sudah kita lakukan sebelumnya, <strong>{{ $contractData['customer_name'] }}</strong> saat ini sedang membutukan jasa pembuatan interior untuk ;
         </p>
 
-        {{-- Checkboxes using Table Layout --}}
         @php
             $jenisInterior = strtolower($kontrak->itemPekerjaan->moodboard->order->jenisInterior->nama_interior ?? '');
             $isRumah = str_contains($jenisInterior, 'rumah');
@@ -230,17 +164,8 @@
         </div>
     </div>
 
-    <!-- ======================================================
-         HALAMAN 2: PKS
-         ====================================================== -->
+    <!-- HALAMAN 2: PKS -->
     <div class="page-break">
-        @if(isset($isWord) && $isWord)
-            <div style="text-align: center; margin-bottom: 20px;">
-                @if(!empty($kopPath))
-                    <img src="{{ $kopPath }}" class="kop-img-word" width="600" style="width: 450pt; max-width: 100%; height: auto;">
-                @endif
-            </div>
-        @endif
         <div class="center bold">
             <span style="font-size: 13pt;">PERJANJIAN KERJASAMA (PKS)</span><br/>
             <span style="font-size: 13pt;">{{ strtoupper($companyName) }}</span><br/>
@@ -248,7 +173,7 @@
         </div>
 
         <p class="justify" style="margin-top: 20pt;">
-            Perjanjian Kerjasama ("selanjutnya disebut Perjanjian") ini dibuat dan ditandatangani pada hari ini <strong>{{ $contractData['hari_ini'] }}</strong>, 
+            Perjanjian Kerjasama ("selanjutnya disebut Perjanjian") ini dibuat dan ditandatangani pada hari ini <strong>{{ $contractData['hari_ini'] }}</strong>,
             tanggal <strong>({{ $contractData['tgl_angka'] }} (Tanggal {{ $contractData['tgl_terbilang'] }}, Bulan {{ $contractData['bln_terbilang'] }}, Tahun {{ $contractData['thn_terbilang'] }})</strong>, kami yang bertanda tangan dibawah ini :
         </p>
 
@@ -405,11 +330,9 @@
             </table>
         </div>
     </div>
-    <!-- ======================================================
-         HALAMAN 3: SURAT PENGAJUAN DP (DINAMIS)
-         ====================================================== -->
+
+    <!-- HALAMAN 3: SURAT PENGAJUAN DP (DINAMIS) -->
     @php
-        // Helper Fungsi Terbilang (Indonesian)
         if (!function_exists('penyebut')) {
             function penyebut($nilai) {
                 $nilai = abs($nilai);
@@ -431,7 +354,7 @@
         if (!function_exists('terbilang')) {
             function terbilang($nilai) {
                 if($nilai<0) { $hasil = "Minus ". trim(penyebut($nilai)); }
-                else { $hasil = trim(penyebut($nilai)); }     		
+                else { $hasil = trim(penyebut($nilai)); }
                 return $hasil . " Rupiah";
             }
         }
@@ -448,13 +371,6 @@
     @endphp
 
     <div class="page-break justify">
-        @if(isset($isWord) && $isWord)
-            <div style="text-align: center; margin-bottom: 20px;">
-                @if(!empty($kopPath))
-                    <img src="{{ $kopPath }}" class="kop-img-word" width="600" style="width: 450pt; max-width: 100%; height: auto;">
-                @endif
-            </div>
-        @endif
         <table width="100%">
             <tr><td align="right">Tangerang, {{ $contractData['tanggal'] }}</td></tr>
         </table>
@@ -479,7 +395,7 @@
         </p>
 
         <p>Berikut ini Kami lampirkan Kwitansi, Quotation, Invoice dan Kelengkapan Administrasi.</p>
-        
+
         <p>Demikian Kami sampaikan, atas perhatian dan kerjasama {{ $contractData['customer_name'] }}, Kami ucapkan terima kasih.</p>
 
         <div style="margin-top: 30pt;">
@@ -491,17 +407,8 @@
         </div>
     </div>
 
-    <!-- ======================================================
-         HALAMAN 4: INVOICE
-         ====================================================== -->
+    <!-- HALAMAN 4: INVOICE -->
     <div class="page-break justify">
-        @if(isset($isWord) && $isWord)
-            <div style="text-align: center; margin-bottom: 20px;">
-                @if(!empty($kopPath))
-                    <img src="{{ $kopPath }}" class="kop-img-word" width="600" style="width: 450pt; max-width: 100%; height: auto;">
-                @endif
-            </div>
-        @endif
         <h2 class="center underline">INVOICE</h2>
         <p>No. {{ $contractData['nomor_invoice_fee'] }}</p>
 
@@ -518,7 +425,7 @@
             <tr><td>No Rekening</td><td>:</td><td><strong>{{ $norekBank }}</strong></td></tr>
             <tr><td>Atas Nama</td><td>:</td><td><strong>PT. MOEY LIVING INDONESIA</strong></td></tr>
         </table>
-        
+
         <div style="margin-top: 60pt;">
             <table width="100%">
                 <tr>
@@ -535,17 +442,8 @@
         </div>
     </div>
 
-    <!-- ======================================================
-         HALAMAN 5: KWITANSI (STYLE BARU)
-         ====================================================== -->
+    <!-- HALAMAN 5: KWITANSI (STYLE BARU) -->
     <div class="page-break">
-        @if(isset($isWord) && $isWord)
-            <div style="text-align: center; margin-bottom: 20px;">
-                @if(!empty($kopPath))
-                    <img src="{{ $kopPath }}" class="kop-img-word" width="600" style="width: 450pt; max-width: 100%; height: auto;">
-                @endif
-            </div>
-        @endif
         <h2 class="center underline"><u>KWITANSI</u></h2>
         <p class="center" style="margin-top: -10pt;">No. {{ $contractData['nomor_kwitansi_fee'] }}</p>
 
@@ -598,9 +496,6 @@
             </tr>
         </table>
     </div>
-
-@if(isset($isWord) && $isWord)
 </div>
-@endif
 </body>
 </html>

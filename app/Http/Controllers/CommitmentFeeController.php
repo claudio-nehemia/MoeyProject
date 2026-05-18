@@ -11,6 +11,9 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Log;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpWord\IOFactory;
+use PhpOffice\PhpWord\PhpWord;
+use PhpOffice\PhpWord\SimpleType\Jc;
 
 class CommitmentFeeController extends Controller
 {
@@ -377,6 +380,210 @@ class CommitmentFeeController extends Controller
             ->setPaper('A4', 'portrait');
 
         return $pdf->stream('Commitment Fee - ' . $order->nama_project . '.pdf');
+    }
+
+    public function exportWord($id)
+    {
+        $fee = CommitmentFee::with('moodboard.order')->findOrFail($id);
+        $order = $fee->moodboard->order;
+
+        // Semua variabel untuk view
+        $data = [
+            'customerName' => $order->customer_name,
+            'alamat' => $order->alamat ?? '-',
+            'projectName' => $order->nama_project,
+
+            'companyName' => "PT. Moey Living Indonesia",
+            'companyAddress' => "Tangerang",
+            'direkturName' => "Aniq Infanuddin",
+            'jabatanDirektur' => "Direktur Utama",
+
+            'nominal' => number_format($fee->total_fee, 0, ',', '.'),
+            'today' => now()->format('d F Y'),
+
+            'nomor_surat' => "SPC-" . now()->format('Ymd') . "-" . $fee->id,
+            'nomor_invoice' => "INV-" . now()->format('Ymd') . "-" . $fee->id,
+            'nomor_kwitansi' => "KW-" . now()->format('Ymd') . "-" . $fee->id,
+
+            'nameBank' => "Mandiri",
+            'norekBank' => "1550007495610",
+            'atasNamaBank' => "PT. Moey Living Indonesia",
+        ];
+
+        $logoPath = public_path('kop-moey.jpeg');
+            $phpWord = $this->buildCommitmentFeeWord($data, $logoPath);
+
+        $filename = 'Commitment-Fee-' . str_replace(' ', '-', $order->nama_project) . '.docx';
+            $writer = IOFactory::createWriter($phpWord, 'Word2007');
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'commitment_fee_');
+        $tempFile = $tempPath . '.docx';
+        rename($tempPath, $tempFile);
+            $writer->save($tempFile);
+
+            return response()->download($tempFile, $filename, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            ])->deleteFileAfterSend(true);
+    }
+
+    private function buildCommitmentFeeWord(array $data, string $logoPath): PhpWord
+    {
+        $phpWord = new PhpWord();
+        $phpWord->setDefaultFontName('Times New Roman');
+        $phpWord->setDefaultFontSize(11);
+
+        $section = $phpWord->addSection([
+            'marginTop' => 1440,
+            'marginBottom' => 1440,
+            'marginLeft' => 1440,
+            'marginRight' => 1440,
+        ]);
+
+        if (file_exists($logoPath)) {
+                    $header = $section->addHeader();
+                    $header->addImage($logoPath, [
+                'width' => 320,
+                        'alignment' => Jc::CENTER,
+                    ]);
+                }
+
+        $this->addRightAlignedText($section, $data['companyAddress'] . ', ' . $data['today']);
+        $section->addTextBreak(1);
+
+        $section->addText('No: ' . $data['nomor_surat']);
+        $section->addText('Hal: Pengajuan Commitment Fee Project Interior');
+        $section->addTextBreak(1);
+
+        $section->addText('Kepada Yth,');
+        $section->addText($data['customerName'], ['bold' => true]);
+        $section->addText('Di ' . $data['alamat']);
+        $section->addTextBreak(1);
+
+        $section->addText('Dengan hormat,');
+        $section->addText(
+            'Sehubungan dengan rencana pelaksanaan project interior ' . $data['projectName'] .
+            ', kami mengajukan Commitment Fee sebesar Rp ' . $data['nominal'] . ',-.'
+        );
+        $section->addText(
+            'Commitment Fee ini sebagai tanda keseriusan dan komitmen awal, serta akan diperhitungkan ' .
+            'pada nilai kontrak setelah project disetujui.'
+        );
+        $section->addTextBreak(1);
+
+        $section->addText('Pembayaran dapat dilakukan melalui rekening berikut:');
+        $this->addKeyValueTable($section, [
+            ['Bank', $data['nameBank']],
+            ['No. Rekening', $data['norekBank']],
+            ['Atas Nama', $data['atasNamaBank']],
+        ]);
+        $section->addTextBreak(1);
+
+        $section->addText('Demikian surat ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.');
+        $section->addTextBreak(1);
+        $section->addText('Hormat Kami,');
+        $section->addText($data['companyName'], ['bold' => true]);
+        $section->addTextBreak(2);
+        $section->addText($data['direkturName'], ['bold' => true]);
+        $section->addText($data['jabatanDirektur']);
+
+        $section->addPageBreak();
+
+        $section->addText('INVOICE', ['bold' => true], ['alignment' => Jc::CENTER]);
+        $this->addTwoColumnRow($section, 'No: ' . $data['nomor_invoice'], $data['companyAddress'] . ', ' . $data['today']);
+        $section->addTextBreak(1);
+
+        $this->addKeyValueTable($section, [
+            ['Kepada', $data['customerName']],
+            ['Di', $data['alamat']],
+            ['Hal', 'Pembayaran Commitment Fee Interior'],
+        ]);
+        $section->addTextBreak(1);
+
+        $invoiceTable = $section->addTable([
+            'borderSize' => 6,
+            'borderColor' => '000000',
+            'cellMargin' => 50,
+        ]);
+        $invoiceTable->addRow();
+        $invoiceTable->addCell(6500)->addText('URAIAN', ['bold' => true]);
+        $invoiceTable->addCell(2500)->addText('JUMLAH', ['bold' => true]);
+        $invoiceTable->addRow();
+        $invoiceTable->addCell(6500)->addText('Total Pembayaran Commitment Fee');
+        $invoiceTable->addCell(2500)->addText('Rp. ' . $data['nominal']);
+
+        $section->addTextBreak(1);
+        $section->addText('Pembayaran melalui:', ['bold' => true]);
+        $this->addKeyValueTable($section, [
+            ['Bank', $data['nameBank']],
+            ['No. Rekening', $data['norekBank']],
+            ['Atas Nama', $data['atasNamaBank']],
+        ]);
+
+        $section->addTextBreak(2);
+        $section->addText('Hormat Kami,');
+        $section->addText($data['companyName'], ['bold' => true]);
+        $section->addTextBreak(3);
+        $section->addText($data['direkturName'], ['bold' => true]);
+        $section->addText($data['jabatanDirektur']);
+
+        $section->addPageBreak();
+
+        $section->addText('KWITANSI', ['bold' => true], ['alignment' => Jc::CENTER]);
+        $section->addText('No. ' . $data['nomor_kwitansi'], [], ['alignment' => Jc::CENTER]);
+        $section->addTextBreak(1);
+
+        $this->addKeyValueTable($section, [
+            ['Sudah terima dari', $data['customerName']],
+            ['Uang Sebesar', 'Rp ' . $data['nominal'] . ',-'],
+            ['Untuk Pembayaran', 'Commitment Fee Desain Interior'],
+        ]);
+
+        $section->addTextBreak(1);
+        $footerTable = $section->addTable([
+            'cellMargin' => 50,
+        ]);
+        $footerTable->addRow();
+        $leftCell = $footerTable->addCell(4000, [
+            'borderSize' => 6,
+            'borderColor' => '000000',
+        ]);
+        $leftCell->addText('Rp ' . $data['nominal'] . ',-', ['bold' => true], ['alignment' => Jc::CENTER]);
+        $rightCell = $footerTable->addCell(5000);
+        $rightCell->addText($data['companyAddress'] . ', ' . $data['today'], [], ['alignment' => Jc::CENTER]);
+        $rightCell->addTextBreak(2);
+        $rightCell->addText($data['direkturName'], ['bold' => true], ['alignment' => Jc::CENTER]);
+        $rightCell->addText('Direktur Utama', [], ['alignment' => Jc::CENTER]);
+
+        return $phpWord;
+    }
+
+    private function addKeyValueTable($section, array $rows): void
+    {
+        $table = $section->addTable([
+            'cellMargin' => 50,
+        ]);
+
+        foreach ($rows as $row) {
+            $table->addRow();
+            $table->addCell(2000)->addText($row[0]);
+            $table->addCell(200)->addText(':');
+            $table->addCell(6500)->addText($row[1]);
+        }
+    }
+
+    private function addRightAlignedText($section, string $text): void
+    {
+        $section->addText($text, [], ['alignment' => Jc::END]);
+    }
+
+    private function addTwoColumnRow($section, string $left, string $right): void
+    {
+        $table = $section->addTable([
+            'cellMargin' => 50,
+        ]);
+        $table->addRow();
+        $table->addCell(4500)->addText($left);
+        $table->addCell(4500)->addText($right, [], ['alignment' => Jc::END]);
     }
 
     /**

@@ -1,10 +1,58 @@
+@if(isset($isWord) && $isWord)
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+@else
 <!DOCTYPE html>
 <html>
+@endif
 <head>
     <meta charset="utf-8">
     <title>Commitment Fee PDF</title>
+    @if(isset($isWord) && $isWord)
+    <!--[if gte mso 9]>
+    <xml>
+     <w:WordDocument>
+      <w:View>Print</w:View>
+      <w:Zoom>100</w:Zoom>
+      <w:DoNotOptimizeForBrowser/>
+     </w:WordDocument>
+    </xml>
+    <![endif]-->
+    @endif
 
     <style>
+        @if(isset($isWord) && $isWord)
+        @page Section1 {
+            size: 595.3pt 841.9pt; /* A4 size */
+            margin: 0.5in 0.6in 0.5in 0.6in; /* Matches PDF padding */
+            mso-header-margin: .3in;
+            mso-footer-margin: .3in;
+            mso-paper-source: 0;
+        }
+        div.Section1 {
+            page: Section1;
+        }
+        body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 11pt;
+            margin: 0;
+            padding: 0;
+            mso-line-height-rule: exactly;
+        }
+        .kop-surat {
+            width: 450pt;
+            height: auto;
+            display: block;
+            margin: 0 auto 15px auto;
+        }
+        .page {
+            padding: 0;
+            box-sizing: border-box;
+        }
+        .page-break {
+            page-break-before: always;
+            mso-page-break-before: always;
+        }
+        @else
         body {
             font-family: "Times New Roman", serif;
             font-size: 14px;
@@ -16,10 +64,17 @@
             padding: 35px 45px;
             box-sizing: border-box;
         }
-
+        .kop-surat {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0;
+        }
         .page-break {
             page-break-after: always;
         }
+        @endif
 
         .center { text-align: center; }
         .right  { text-align: right; }
@@ -48,16 +103,21 @@
         table {
             width: 100%;
             border-collapse: collapse;
+            border: none;
+            border-spacing: 0;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
         }
 
         table td {
             padding: 4px 2px;
             vertical-align: top;
+            border: none;
         }
 
         table th {
             padding: 6px;
-            border: 1px solid #000;
+            border: none;
         }
 
         /* Red bar fix */
@@ -86,9 +146,36 @@
             margin: 5px 0;
         }
 
-        .kwitansi-footer {
-            margin-top: 20px;
+        p { margin: 0 0 8pt 0; }
+
+        .signature-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            border: none;
         }
+
+        .signature-table td { padding: 0; }
+
+        .signature-spacer { height: 70pt; }
+        .signature-spacer-small { height: 60pt; }
+
+        .kwitansi-footer { margin-top: 20px; }
+
+        .kwitansi-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            border: none;
+        }
+
+        .kwitansi-table td {
+            padding: 0;
+            vertical-align: top;
+        }
+
+        .kwitansi-nominal { width: 50%; }
+        .kwitansi-signature { width: 50%; text-align: center; }
 
         .nominal-box {
             border: 1px solid #000;
@@ -102,27 +189,27 @@
         .signature-box {
             width: 200px;
             text-align: center;
-            float: right;
+            float: none;
+            display: inline-block;
         }
 
-        .kop-surat {
-            width: 100%;
-            max-width: 100%;
-            height: auto;
-            display: block;
-            margin: 0;
-        }
+        /* Kop surat for non-Word is handled in first block */
     </style>
 </head>
 <body>
+@if(isset($isWord) && $isWord)
+<div class="Section1">
+@endif
 
 <!-- =======================
      HALAMAN 1 — SURAT
 ======================= -->
-<div class="page page-break">
+<div class="@if(isset($isWord) && $isWord) justify @else page page-break @endif">
 
     <!-- Header -->
-    <img src="{{ $logoUrl }}" class="kop-surat">
+    @if(!empty($logoUrl))
+        <img src="{{ $logoUrl }}" class="kop-surat" @if(isset($isWord) && $isWord) width="600" style="width: 450pt; max-width: 100%; height: auto;" @endif>
+    @endif
 
     <p class="right">{{$companyAddress}}, {{ $today }}</p>
 
@@ -159,20 +246,28 @@
     </p>
 
     <div class="signature">
-        <p style="margin-bottom: 100px;">Hormat Kami,<br><strong>{{$companyName}}</strong></p>
-        <p><strong>{{ $direkturName }}</strong><br>{{$jabatanDirektur}}</p>
+        <table class="signature-table">
+            <tr>
+                <td>Hormat Kami,<br><strong>{{$companyName}}</strong></td>
+            </tr>
+            <tr>
+                <td class="signature-spacer"></td>
+            </tr>
+            <tr>
+                <td><strong>{{ $direkturName }}</strong><br>{{$jabatanDirektur}}</td>
+            </tr>
+        </table>
     </div>
 
 </div>
 
 
 
-<!-- =======================
-     HALAMAN 2 — INVOICE
-======================= -->
-<div class="page page-break">
+<div class="@if(isset($isWord) && $isWord) page-break @else page page-break @endif">
 
-    <img src="{{ $logoUrl }}" class="kop-surat">
+    @if(!empty($logoUrl))
+        <img src="{{ $logoUrl }}" class="kop-surat" @if(isset($isWord) && $isWord) width="600" style="width: 450pt; max-width: 100%; height: auto;" @endif>
+    @endif
 
     {{-- <div class="red-bar"></div> --}}
 
@@ -212,20 +307,28 @@
     </table>
 
     <div class="signature">
-        <p style="margin-bottom: 100px;">Hormat Kami,<br><strong>{{$companyName}}</strong></p>
-        <p><strong>{{ $direkturName }}</strong><br>{{$jabatanDirektur}}</p>
+        <table class="signature-table">
+            <tr>
+                <td>Hormat Kami,<br><strong>{{$companyName}}</strong></td>
+            </tr>
+            <tr>
+                <td class="signature-spacer"></td>
+            </tr>
+            <tr>
+                <td><strong>{{ $direkturName }}</strong><br>{{$jabatanDirektur}}</td>
+            </tr>
+        </table>
     </div>
 
 </div>
 
 
 
-<!-- =======================
-     HALAMAN 3 — KWITANSI
-======================= -->
-<div class="page">
+<div class="@if(isset($isWord) && $isWord) page-break @else page page-break @endif">
 
-    <img src="{{ $logoUrl }}" class="kop-surat">
+    @if(!empty($logoUrl))
+        <img src="{{ $logoUrl }}" class="kop-surat" @if(isset($isWord) && $isWord) width="600" style="width: 450pt; max-width: 100%; height: auto;" @endif>
+    @endif
 
     {{-- <div class="red-bar"></div> --}}
 
@@ -248,17 +351,26 @@
     </table>
 
     <div class="kwitansi-footer">
-        <div class="nominal-box">Rp {{ $nominal }},-</div>
-
-        <div class="signature-box">
-            <p style="margin-bottom: 100px;">{{$companyAddress}}, {{ $today }}</p>
-            <p><strong>{{ $direkturName }}</strong><br>Direktur Utama</p>
-        </div>
-
-        <div style="clear: both;"></div>
+        <table class="kwitansi-table">
+            <tr>
+                <td class="kwitansi-nominal" style="vertical-align: bottom;">
+                    <div class="nominal-box">Rp {{ $nominal }},-</div>
+                </td>
+                <td class="kwitansi-signature">
+                    <div class="signature-box">
+                        <p style="margin: 0;">{{$companyAddress}}, {{ $today }}</p>
+                        <div class="signature-spacer-small"></div>
+                        <p style="margin: 0;"><strong>{{ $direkturName }}</strong><br>Direktur Utama</p>
+                    </div>
+                </td>
+            </tr>
+        </table>
     </div>
 
 </div>
 
+@if(isset($isWord) && $isWord)
+</div>
+@endif
 </body>
 </html>

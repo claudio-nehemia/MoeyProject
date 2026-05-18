@@ -519,6 +519,13 @@ export default function Detail({
                                         Export PDF
                                     </a>
                                     <a
+                                        href={`/project-management/${order.id}/export-word`}
+                                        className="inline-flex transform items-center rounded-xl border-2 border-blue-500 bg-blue-50 px-5 py-3 text-sm font-semibold text-blue-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-blue-100 hover:shadow-lg"
+                                    >
+                                        <span className="mr-2">📝</span>
+                                        Export Word
+                                    </a>
+                                    <a
                                         href={`/project-management/${order.id}/export-excel`}
                                         className="inline-flex transform items-center rounded-xl border-2 border-emerald-500 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-emerald-100 hover:shadow-lg"
                                     >

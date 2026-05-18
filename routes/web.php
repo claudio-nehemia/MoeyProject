@@ -211,6 +211,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('permission:order.show')->get('order/{order}', [OrderController::class, 'show'])->name('order.show');
     Route::middleware('permission:order.delete')->delete('order/{order}', [OrderController::class, 'destroy'])->name('order.destroy');
     Route::middleware('permission:order.index')->get('order-export-pdf', [OrderController::class, 'exportPdf'])->name('order.export-pdf');
+    Route::middleware('permission:order.index')->get('order-export-word', [OrderController::class, 'exportWord'])->name('order.export-word');
     Route::middleware('permission:order.index')->get('order-export-excel', [OrderController::class, 'exportExcel'])->name('order.export-excel');
 
     // SURVEY RESULTS ROUTES
@@ -304,6 +305,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:commitment-fee.edit')->name('commitment-fee.reset-fee');
         Route::get('commitment-fee/{id}/print', [CommitmentFeeController::class, 'print'])
             ->name('commitment-fee.print');
+        Route::get('commitment-fee/{id}/export-word', [CommitmentFeeController::class, 'exportWord'])
+            ->name('commitment-fee.word');
     });
 
 
@@ -420,6 +423,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('permission:kontrak.edit')->post('kontrak/response', [KontrakController::class, 'response'])->name('kontrak.response');
     Route::middleware('permission:kontrak.delete')->delete('kontrak/{kontrak}', [KontrakController::class, 'destroy'])->name('kontrak.destroy');
     Route::middleware('permission:kontrak.show')->get('kontrak/{kontrak}/print', [KontrakController::class, 'print'])->name('kontrak.print');
+    Route::middleware('permission:kontrak.show')->get('kontrak/{kontrak}/export-word', [KontrakController::class, 'exportWord'])->name('kontrak.word');
 
     // Signed Contract Routes
     Route::middleware('permission:kontrak.edit')->post('kontrak/{kontrak}/upload-signed', [KontrakController::class, 'uploadSignedContract'])->name('kontrak.upload-signed');
@@ -467,6 +471,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:project-management.response-perpanjangan');
         Route::get('/project-management/{id}/export-pdf', [ProjectManagementController::class, 'exportPdf'])
             ->name('project-management.export-pdf');
+        Route::get('/project-management/{id}/export-word', [ProjectManagementController::class, 'exportWord'])
+            ->name('project-management.export-word');
         Route::get('/project-management/{id}/export-excel', [ProjectManagementController::class, 'exportExcel'])
             ->name('project-management.export-excel');
     });
@@ -482,6 +488,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/workplan/{order}', [WorkplanItemController::class, 'update'])->name('workplan.update');
         Route::post('/workplan/{workplan}/update-status', [WorkplanItemController::class, 'updateStatus'])->name('workplan.update.status');
         Route::get('/workplan/export/{orderId}', [WorkplanItemController::class, 'export'])->name('workplan.export');
+        Route::get('/workplan/export-word/{orderId}', [WorkplanItemController::class, 'exportWord'])->name('workplan.export-word');
     });
 
     // SUERVEY ULANG
@@ -536,9 +543,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // PDF ROUTES
     Route::middleware(['permission:pdf.export'])->group(function () {
         Route::get('/rab-jasa/{id}/pdf', [RabJasaController::class, 'exportPdf'])->name('rab-jasa.pdf');
+        Route::get('/rab-jasa/{id}/word', [RabJasaController::class, 'exportWord'])->name('rab-jasa.word');
         Route::get('/rab-kontrak/{id}/pdf', [RabKontrakController::class, 'exportPdf'])->name('rab-kontrak.pdf');
+        Route::get('/rab-kontrak/{id}/word', [RabKontrakController::class, 'exportWord'])->name('rab-kontrak.word');
         Route::get('/rab-vendor/{id}/pdf', [RabVendorController::class, 'exportPdf'])->name('rab-vendor.pdf');
+        Route::get('/rab-vendor/{id}/word', [RabVendorController::class, 'exportWord'])->name('rab-vendor.word');
         Route::get('/invoice/{id}/export-pdf', [InvoiceController::class, 'exportPdf'])->name('invoice.pdf');
+        Route::get('/invoice/{id}/export-word', [InvoiceController::class, 'exportWord'])->name('invoice.word');
     });
 
     Route::prefix('survey-schedule')->name('survey-schedule.')->group(function () {
@@ -604,6 +615,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/{itemPekerjaan}/export-pdf', [ApprovalRabController::class, 'exportPdf'])
             ->middleware('permission:approval-material.index')
             ->name('export-pdf');
+        Route::get('/{itemPekerjaan}/export-word', [ApprovalRabController::class, 'exportWord'])
+            ->middleware('permission:approval-material.index')
+            ->name('export-word');
     });
 
     // PM Response Routes

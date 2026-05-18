@@ -213,6 +213,31 @@ class RabVendorController extends Controller
 
     public function exportPdf($rabVendorId)
     {
+        $data = $this->getExportData($rabVendorId);
+
+        $pdf = Pdf::loadView('pdf.rab-vendor', $data)->setPaper('a4', 'landscape');
+
+        $filename = 'RAB-Vendor-' . $data['rabVendor']->itemPekerjaan->moodboard->order->nama_project . '-' . date('YmdHis') . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Export RAB Vendor as Word
+     */
+    public function exportWord($rabVendorId)
+    {
+        $data = $this->getExportData($rabVendorId);
+        $html = view('pdf.rab-vendor', $data)->render();
+        $filename = 'RAB-Vendor-' . $data['rabVendor']->itemPekerjaan->moodboard->order->nama_project . '-' . date('YmdHis') . '.doc';
+
+        return response($html)
+            ->header('Content-Type', 'application/vnd.ms-word')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    }
+
+    private function getExportData($rabVendorId)
+    {
         $rabVendor = RabVendor::with([
             'itemPekerjaan.moodboard.order',
             'rabVendorProduks.itemPekerjaanProduk.produk',
@@ -225,7 +250,7 @@ class RabVendorController extends Controller
         $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
         $bahanBakuJenisItem = JenisItem::where('nama_jenis_item', 'Bahan Baku')->first();
 
-        // Prepare data for PDF
+        // Prepare data for export
         $produks = $rabVendor->rabVendorProduks->map(function ($rabProduk) use ($aksesorisJenisItem, $bahanBakuJenisItem) {
 
             // Get bahan baku names from selected bahan baku
@@ -295,8 +320,7 @@ class RabVendorController extends Controller
         // Calculate total semua produk
         $totalSemuaProduk = $produks->sum('harga_akhir');
 
-        // FINAL PDF DATA
-        $data = [
+        return [
             'rabVendor' => $rabVendor,
             'id' => $rabVendor->id,
             'response_by' => $rabVendor->response_by,
@@ -309,13 +333,6 @@ class RabVendorController extends Controller
             'produks' => $produks,
             'totalSemuaProduk' => $totalSemuaProduk,
         ];
-
-        $pdf = Pdf::loadView('pdf.rab-vendor', $data)->setPaper('a4', 'landscape');
-
-        $filename = 'RAB-Vendor-' . $rabVendor->itemPekerjaan->moodboard->order->nama_project . '-' . date('YmdHis') . '.pdf';
-
-        return $pdf->download($filename);
-
     }
 
     public function destroy($rabVendorId)

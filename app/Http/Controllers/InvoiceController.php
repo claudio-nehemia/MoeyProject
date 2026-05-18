@@ -635,6 +635,38 @@ class InvoiceController extends Controller
 
     public function exportPdf($invoiceId)
     {
+        $data = $this->getExportData($invoiceId);
+
+        $pdf = Pdf::loadView('pdf.invoice', $data);
+        $pdf->setPaper('a4', 'portrait');
+        $safeInvoiceNumber = str_replace(['/', '\\'], '-', $data['invoice']->invoice_number);
+
+        $filename = 'Invoice-' . $safeInvoiceNumber . '-Tahap' . $data['invoice']->termin_step . '-' . date('YmdHis') . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Export Invoice as Word
+     */
+    public function exportWord($invoiceId)
+    {
+        $data = $this->getExportData($invoiceId);
+        $data['isWord'] = true;
+        if (isset($data['kopPath']) && file_exists($data['kopPath'])) {
+            $data['kopPath'] = 'data:image/jpeg;base64,' . base64_encode(file_get_contents($data['kopPath']));
+        }
+        $html = view('pdf.invoice', $data)->render();
+        $safeInvoiceNumber = str_replace(['/', '\\'], '-', $data['invoice']->invoice_number);
+        $filename = 'Invoice-' . $safeInvoiceNumber . '-Tahap' . $data['invoice']->termin_step . '-' . date('YmdHis') . '.doc';
+
+        return response($html)
+            ->header('Content-Type', 'application/vnd.ms-word')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    }
+
+    private function getExportData($invoiceId)
+    {
         $invoice = Invoice::with([
             'itemPekerjaan.moodboard.order',
             'itemPekerjaan.moodboard.commitmentFee',
@@ -701,7 +733,7 @@ class InvoiceController extends Controller
             'total_steps' => $totalSteps,
         ];
 
-        // Prepare data for PDF
+        // Prepare data for export
         $produks = $invoice->rabKontrak->rabKontrakProduks->map(function ($rabProduk) use ($aksesorisJenisItem) {
             // NON AKSESORIS
             $jenisItemsList = [];
@@ -753,7 +785,7 @@ class InvoiceController extends Controller
 
         $kopPath = public_path('kop-moey.jpeg');
 
-        $data = [
+        return [
             'invoice' => $invoice,
             'produks' => $produks,
             'totalAmount' => (float) $invoice->total_amount,
@@ -762,14 +794,6 @@ class InvoiceController extends Controller
             'allInvoices' => $allInvoices,
             'kopPath' => file_exists($kopPath) ? $kopPath : null,
         ];
-
-        $pdf = Pdf::loadView('pdf.invoice', $data);
-        $pdf->setPaper('a4', 'portrait');
-        $safeInvoiceNumber = str_replace(['/', '\\'], '-', $invoice->invoice_number);
-
-        $filename = 'Invoice-' . $safeInvoiceNumber . '-Tahap' . $invoice->termin_step . '-' . date('YmdHis') . '.pdf';
-
-        return $pdf->download($filename);
     }
 
     /**

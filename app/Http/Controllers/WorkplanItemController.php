@@ -593,4 +593,27 @@ class WorkplanItemController extends Controller
             'workplan_' . $order->nama_project . '_' . now()->format('Ymd_His') . '.xlsx'
         );
     }
+
+    /**
+     * Export workplan as Word
+     */
+    public function exportWord($orderId)
+    {
+        $order = Order::with([
+            'moodboard.itemPekerjaans.produks.produk',
+            'moodboard.itemPekerjaans.produks.workplanItems',
+            'moodboard.itemPekerjaans.invoices',
+        ])
+        ->whereHas('moodboard.itemPekerjaans.invoices', function ($q) {
+            $q->whereNotNull('paid_at')->where('termin_step', '>=', 1);
+        })
+        ->findOrFail($orderId);
+
+        $html = view('pdf.workplan', ['order' => $order])->render();
+        $filename = 'Workplan-' . str_replace(' ', '-', $order->nama_project) . '-' . date('Ymd') . '.doc';
+
+        return response($html)
+            ->header('Content-Type', 'application/vnd.ms-word')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    }
 }

@@ -187,6 +187,32 @@ class RabJasaController extends Controller
 
     public function exportPdf($rabJasaId)
     {
+        $data = $this->getExportData($rabJasaId);
+
+        $pdf = PDF::loadView('pdf.rab-jasa', $data);
+        $pdf->setPaper('a4', 'landscape');
+
+        $filename = 'RAB-Jasa-' . $data['rabJasa']->itemPekerjaan->moodboard->order->nama_project . '-' . date('YmdHis') . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Export RAB Jasa as Word
+     */
+    public function exportWord($rabJasaId)
+    {
+        $data = $this->getExportData($rabJasaId);
+        $html = view('pdf.rab-jasa', $data)->render();
+        $filename = 'RAB-Jasa-' . $data['rabJasa']->itemPekerjaan->moodboard->order->nama_project . '-' . date('YmdHis') . '.doc';
+
+        return response($html)
+            ->header('Content-Type', 'application/vnd.ms-word')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    }
+
+    private function getExportData($rabJasaId)
+    {
         $rabJasa = RabJasa::with([
             'itemPekerjaan.moodboard.order',
             'rabJasaProduks.itemPekerjaanProduk.produk',
@@ -248,18 +274,11 @@ class RabJasaController extends Controller
 
         $totalSemuaProduk = $produks->sum('harga_akhir');
 
-        $data = [
+        return [
             'rabJasa' => $rabJasa,
             'produks' => $produks,
             'totalSemuaProduk' => $totalSemuaProduk,
         ];
-
-        $pdf = PDF::loadView('pdf.rab-jasa', $data);
-        $pdf->setPaper('a4', 'landscape');
-
-        $filename = 'RAB-Jasa-' . $rabJasa->itemPekerjaan->moodboard->order->nama_project . '-' . date('YmdHis') . '.pdf';
-
-        return $pdf->download($filename);
     }
 
     public function destroy($rabJasaId)

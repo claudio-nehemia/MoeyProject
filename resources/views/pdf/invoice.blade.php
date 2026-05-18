@@ -1,10 +1,54 @@
+@if(isset($isWord) && $isWord)
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+@else
 <!DOCTYPE html>
 <html>
+@endif
 <head>
     <meta charset="utf-8">
     <title>Invoice - {{ $invoice->invoice_number }}</title>
+    @if(isset($isWord) && $isWord)
+    <!--[if gte mso 9]>
+    <xml>
+     <w:WordDocument>
+      <w:View>Print</w:View>
+      <w:Zoom>100</w:Zoom>
+      <w:DoNotOptimizeForBrowser/>
+     </w:WordDocument>
+    </xml>
+    <![endif]-->
+    @endif
     <style>
-        /* 1. Global Page Settings (Absolute Units for DomPDF) */
+        /* 1. Global Page Settings */
+        @if(isset($isWord) && $isWord)
+        @page Section1 {
+            size: 595.3pt 841.9pt; /* A4 size */
+            margin: 1.0in 1.0in 1.0in 1.0in; /* Standard margins */
+            mso-header-margin: .5in;
+            mso-footer-margin: .5in;
+            mso-paper-source: 0;
+        }
+        div.Section1 {
+            page: Section1;
+        }
+        #header {
+            display: none;
+        }
+        body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+        .kop-img-word {
+            width: 450pt;
+            height: auto;
+            display: block;
+            margin: 0 auto 20px auto;
+        }
+        @else
         @page {
             margin-top: 140pt;
             margin-bottom: 50pt;
@@ -31,6 +75,7 @@
             line-height: 1.4;
             color: #000;
         }
+        @endif
 
         .kop-img {
             width: 450pt;
@@ -65,6 +110,9 @@
     </style>
 </head>
 <body>
+@if(isset($isWord) && $isWord)
+<div class="Section1">
+@endif
 
     @php
         // Helper Fungsi Terbilang (Indonesian)
@@ -133,6 +181,11 @@
     <!-- ======================================================
          HALAMAN 1: SURAT PENGAJUAN PEMBAYARAN
          ====================================================== -->
+    @if(isset($isWord) && $isWord)
+        <div style="text-align: center; margin-bottom: 20px;">
+            <img src="{{ $kopPath }}" class="kop-img-word" width="600" style="width: 450pt; max-width: 100%; height: auto;">
+        </div>
+    @endif
     <div class="justify">
         <table width="100%">
             <tr><td align="right">Tangerang, {{ $day }} {{ $monthName }} {{ $year }}</td></tr>
@@ -174,6 +227,11 @@
          HALAMAN 2: INVOICE
          ====================================================== -->
     <div class="page-break justify">
+        @if(isset($isWord) && $isWord)
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src="{{ $kopPath }}" class="kop-img-word" width="600" style="width: 450pt; max-width: 100%; height: auto;">
+            </div>
+        @endif
         <h2 class="center underline">INVOICE</h2>
         <p class="center" style="margin-top: -10pt;">No. {{ $nomorINV }}</p>
 
@@ -253,6 +311,11 @@
          HALAMAN 3: KWITANSI (STYLE BARU)
          ====================================================== -->
     <div class="page-break">
+        @if(isset($isWord) && $isWord)
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src="{{ $kopPath }}" class="kop-img-word" width="600" style="width: 450pt; max-width: 100%; height: auto;">
+            </div>
+        @endif
         <h2 class="center underline"><u>KWITANSI</u></h2>
         <p class="center" style="margin-top: -10pt;">No. {{ $nomorKWT }}</p>
 
@@ -306,5 +369,8 @@
         </table>
     </div>
 
+@if(isset($isWord) && $isWord)
+</div>
+@endif
 </body>
 </html>

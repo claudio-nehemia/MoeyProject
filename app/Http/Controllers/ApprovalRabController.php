@@ -356,6 +356,31 @@ class ApprovalRabController extends Controller
      */
     public function exportPdf($itemPekerjaanId)
     {
+        $data = $this->getExportData($itemPekerjaanId);
+
+        $pdf = Pdf::loadView('pdf.approval-material', $data);
+        $pdf->setPaper('A4', 'landscape');
+
+        $filename = 'Approval_Material_' . str_replace(' ', '_', $data['project']) . '.pdf';
+        return $pdf->stream($filename);
+    }
+
+    /**
+     * Export Approval Material as Word
+     */
+    public function exportWord($itemPekerjaanId)
+    {
+        $data = $this->getExportData($itemPekerjaanId);
+        $html = view('pdf.approval-material', $data)->render();
+        $filename = 'Approval_Material_' . str_replace(' ', '_', $data['project']) . '.doc';
+
+        return response($html)
+            ->header('Content-Type', 'application/vnd.ms-word')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    }
+
+    private function getExportData($itemPekerjaanId)
+    {
         $itemPekerjaan = ItemPekerjaan::with([
             'moodboard.order',
             'produks.produk',
@@ -400,7 +425,7 @@ class ApprovalRabController extends Controller
             )
             ->values();
 
-        $data = [
+        return [
             'owner' => $order->customer_name,
             'project' => $order->nama_project,
             'lokasi' => $order->alamat ?? '-',
@@ -408,11 +433,5 @@ class ApprovalRabController extends Controller
             'bahanBakuItems' => $bahanBakuItems,
             'finishingItems' => $finishingItems,
         ];
-
-        $pdf = Pdf::loadView('pdf.approval-material', $data);
-        $pdf->setPaper('A4', 'landscape');
-
-        $filename = 'Approval_Material_' . str_replace(' ', '_', $order->nama_project) . '.pdf';
-        return $pdf->stream($filename);
     }
 }

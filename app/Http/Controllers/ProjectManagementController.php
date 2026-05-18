@@ -745,6 +745,20 @@ class ProjectManagementController extends Controller
         return $pdf->download($filename);
     }
 
+    /**
+     * Export project management as Word
+     */
+    public function exportWord($id)
+    {
+        $data = $this->getReportData($id);
+        $html = view('pdf.project-management-report', $data)->render();
+        $filename = 'Progress-Report-' . str_replace(' ', '-', $data['order']->nama_project) . '-' . date('Ymd') . '.doc';
+
+        return response($html)
+            ->header('Content-Type', 'application/vnd.ms-word')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    }
+
     public function exportExcel($id)
     {
         $data = $this->getReportData($id);

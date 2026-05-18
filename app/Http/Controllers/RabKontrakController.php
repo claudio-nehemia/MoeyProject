@@ -262,6 +262,32 @@ class RabKontrakController extends Controller
 
     public function exportPdf($rabKontrakId)
     {
+        $data = $this->getExportData($rabKontrakId);
+
+        $pdf = PDF::loadView('pdf.rab-kontrak', $data);
+        $pdf->setPaper('a4', 'landscape');
+
+        $filename = 'RAB-Kontrak-' . $data['rabKontrak']->itemPekerjaan->moodboard->order->nama_project . '-' . date('YmdHis') . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Export RAB Kontrak as Word
+     */
+    public function exportWord($rabKontrakId)
+    {
+        $data = $this->getExportData($rabKontrakId);
+        $html = view('pdf.rab-kontrak', $data)->render();
+        $filename = 'RAB-Kontrak-' . $data['rabKontrak']->itemPekerjaan->moodboard->order->nama_project . '-' . date('YmdHis') . '.doc';
+
+        return response($html)
+            ->header('Content-Type', 'application/vnd.ms-word')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    }
+
+    private function getExportData($rabKontrakId)
+    {
         $rabKontrak = RabKontrak::with([
             'itemPekerjaan.moodboard.order',
             'itemPekerjaan.rabInternal.rabProduks',
@@ -352,18 +378,11 @@ class RabKontrakController extends Controller
 
         $totalSemuaProduk = $produks->sum('harga_akhir');
 
-        $data = [
+        return [
             'rabKontrak' => $rabKontrak,
             'produks' => $produks,
             'totalSemuaProduk' => $totalSemuaProduk,
         ];
-
-        $pdf = PDF::loadView('pdf.rab-kontrak', $data);
-        $pdf->setPaper('a4', 'landscape');
-
-        $filename = 'RAB-Kontrak-' . $rabKontrak->itemPekerjaan->moodboard->order->nama_project . '-' . date('YmdHis') . '.pdf';
-
-        return $pdf->download($filename);
     }
 
     public function destroy($rabKontrakId)
