@@ -326,6 +326,7 @@ class KontrakController extends Controller
     public function exportWord($kontrakId)
     {
         try {
+            \PhpOffice\PhpWord\Settings::setOutputEscapingEnabled(true);
             $kontrak = Kontrak::with([
                 'itemPekerjaan.moodboard.order',
                 'itemPekerjaan.moodboard.commitmentFee',
@@ -421,6 +422,10 @@ class KontrakController extends Controller
                 'file_size' => filesize($tempFile),
             ]);
 
+            if (ob_get_length()) {
+                ob_end_clean();
+            }
+
             return response()->download($tempFile, $filename, [
                 'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             ])->deleteFileAfterSend(true);
@@ -453,10 +458,10 @@ class KontrakController extends Controller
         $contractData = $this->sanitizeContractData($contractData);
 
         $section = $phpWord->addSection([
-            'marginTop' => 1440,
-            'marginBottom' => 1440,
-            'marginLeft' => 1440,
-            'marginRight' => 1440,
+            'marginTop' => 720,
+            'marginBottom' => 720,
+            'marginLeft' => 1134,
+            'marginRight' => 1134,
         ]);
 
         // ===== FIX #4: Better image handling =====
@@ -466,8 +471,7 @@ class KontrakController extends Controller
                 if ($imageInfo !== false) {
                     $header = $section->addHeader();
                     $header->addImage($logoPath, [
-                        'width' => 300,
-                        'height' => 80,
+                        'width' => 460,
                         'alignment' => Jc::CENTER,
                     ]);
                 }
@@ -477,18 +481,15 @@ class KontrakController extends Controller
         }
 
         $this->addRightAlignedText($section, 'Tangerang, ' . ($contractData['tanggal'] ?? ''));
-        $section->addTextBreak(1);
 
         $this->addKeyValueTable($section, [
             ['No', $contractData['nomor'] ?? ''],
             ['Lamp', '1 Berkas Perjanjian Kerjasama Project Interior ' . ($contractData['project']['nama'] ?? '')],
         ]);
-        $section->addTextBreak(1);
 
         $section->addText('Kepada Yth,');
         $section->addText($contractData['customer_name'] ?? '', ['bold' => true]);
         $section->addText('Di ' . ($contractData['alamat'] ?? '-'));
-        $section->addTextBreak(1);
 
         $section->addText('Dengan Hormat,');
 
@@ -536,10 +537,10 @@ class KontrakController extends Controller
         $section->addText('Besar Harapan kami, penawaran ini dapat diwujudkan dalam bentuk kerjasama. Berikut kami lampirkan dokumen Perjanjian kerjasama, invoice dan kwitansi.');
         $section->addText('Demikian surat penawaran ini kami buat, atas perhatian dan kerjasama baiknya kami sampaikan ucapakan terimakasih.');
 
-        $section->addTextBreak(2);
+        $section->addTextBreak(1);
         $section->addText('Hormat Kami,');
         $section->addText($companyName, ['bold' => true]);
-        $section->addTextBreak(3);
+        $section->addTextBreak(1);
         $section->addText($direkturName, ['bold' => true]);
         $section->addText($jabatanDirektur);
 
@@ -703,19 +704,18 @@ class KontrakController extends Controller
         $this->addArticleTitle($section, 'Pasal 11', 'PENUTUP');
         $section->addText('Demikian Surat Perjanjian pelaksanaan pekerjaan ini dibuat dan ditandatangani oleh kedua belah pihak pada hari, tanggal, bulan dan tahun tersebut diatas.');
         $section->addText('Demikian perjanjian ini dibuat dalam rangkap 2 (dua), masing-masing bermeterai cukup dan mempunyai kekuatan hukum yang sama.');
-        $section->addTextBreak(2);
 
         $signatureTable = $section->addTable(['cellMargin' => 50]);
         $signatureTable->addRow();
         $leftSig = $signatureTable->addCell(4500);
         $leftSig->addText('PIHAK PERTAMA', ['bold' => true], ['alignment' => Jc::CENTER]);
-        $leftSig->addTextBreak(3);
+        $leftSig->addTextBreak(2);
         $leftSig->addText($direkturName, ['bold' => true], ['alignment' => Jc::CENTER]);
         $leftSig->addText($jabatanDirektur, [], ['alignment' => Jc::CENTER]);
 
         $rightSig = $signatureTable->addCell(4500);
         $rightSig->addText('PIHAK KEDUA', ['bold' => true], ['alignment' => Jc::CENTER]);
-        $rightSig->addTextBreak(3);
+        $rightSig->addTextBreak(2);
         $rightSig->addText($contractData['customer_name'] ?? '', ['bold' => true], ['alignment' => Jc::CENTER]);
 
         $section->addPageBreak();

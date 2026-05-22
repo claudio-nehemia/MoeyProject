@@ -411,7 +411,8 @@ class CommitmentFeeController extends Controller
         ];
 
         $logoPath = public_path('kop-moey.jpeg');
-            $phpWord = $this->buildCommitmentFeeWord($data, $logoPath);
+        \PhpOffice\PhpWord\Settings::setOutputEscapingEnabled(true);
+        $phpWord = $this->buildCommitmentFeeWord($data, $logoPath);
 
         $filename = 'Commitment-Fee-' . str_replace(' ', '-', $order->nama_project) . '.docx';
             $writer = IOFactory::createWriter($phpWord, 'Word2007');
@@ -419,11 +420,15 @@ class CommitmentFeeController extends Controller
         $tempPath = tempnam(sys_get_temp_dir(), 'commitment_fee_');
         $tempFile = $tempPath . '.docx';
         rename($tempPath, $tempFile);
-            $writer->save($tempFile);
+        $writer->save($tempFile);
 
-            return response()->download($tempFile, $filename, [
-                'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            ])->deleteFileAfterSend(true);
+        if (ob_get_length()) {
+            ob_end_clean();
+        }
+
+        return response()->download($tempFile, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ])->deleteFileAfterSend(true);
     }
 
     private function buildCommitmentFeeWord(array $data, string $logoPath): PhpWord
@@ -433,22 +438,21 @@ class CommitmentFeeController extends Controller
         $phpWord->setDefaultFontSize(11);
 
         $section = $phpWord->addSection([
-            'marginTop' => 1440,
-            'marginBottom' => 1440,
-            'marginLeft' => 1440,
-            'marginRight' => 1440,
+            'marginTop' => 720,
+            'marginBottom' => 720,
+            'marginLeft' => 1134,
+            'marginRight' => 1134,
         ]);
 
         if (file_exists($logoPath)) {
-                    $header = $section->addHeader();
-                    $header->addImage($logoPath, [
-                'width' => 320,
-                        'alignment' => Jc::CENTER,
-                    ]);
+            $header = $section->addHeader();
+            $header->addImage($logoPath, [
+                'width' => 460,
+                'alignment' => Jc::CENTER,
+            ]);
                 }
 
         $this->addRightAlignedText($section, $data['companyAddress'] . ', ' . $data['today']);
-        $section->addTextBreak(1);
 
         $section->addText('No: ' . $data['nomor_surat']);
         $section->addText('Hal: Pengajuan Commitment Fee Project Interior');
@@ -457,7 +461,6 @@ class CommitmentFeeController extends Controller
         $section->addText('Kepada Yth,');
         $section->addText($data['customerName'], ['bold' => true]);
         $section->addText('Di ' . $data['alamat']);
-        $section->addTextBreak(1);
 
         $section->addText('Dengan hormat,');
         $section->addText(
@@ -479,10 +482,10 @@ class CommitmentFeeController extends Controller
         $section->addTextBreak(1);
 
         $section->addText('Demikian surat ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.');
-        $section->addTextBreak(1);
+
         $section->addText('Hormat Kami,');
         $section->addText($data['companyName'], ['bold' => true]);
-        $section->addTextBreak(2);
+        $section->addTextBreak(1);
         $section->addText($data['direkturName'], ['bold' => true]);
         $section->addText($data['jabatanDirektur']);
 
