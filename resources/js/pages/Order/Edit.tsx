@@ -2,6 +2,7 @@ import { useState, FormEventHandler, useEffect } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import AlertError from '@/components/alert-error';
 
 interface User {
     id: number;
@@ -252,6 +253,12 @@ export default function Edit({ order, marketings, drafters, desainers, jenisInte
                     {/* Form Container */}
                     <div className={`bg-white rounded-2xl shadow-lg border border-stone-200 p-8 ${mounted ? 'fadeInUp' : 'opacity-0'}`} style={{ animationDelay: '0.1s' }}>
                         <form onSubmit={handleSubmit} className="space-y-8">
+                            {Object.keys(errors).length > 0 && (
+                                <AlertError
+                                    errors={Object.values(errors)}
+                                    title="Terdapat beberapa kesalahan pengisian form"
+                                />
+                            )}
                             {/* Section 1: Project Information */}
                             <div>
                                 <h2 className="text-lg font-semibold text-stone-800 mb-5 flex items-center gap-2">
@@ -326,6 +333,9 @@ export default function Edit({ order, marketings, drafters, desainers, jenisInte
                                             className="w-full px-4 py-2.5 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
                                             placeholder="Enter unit number"
                                         />
+                                        {errors.nomor_unit && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.nomor_unit}</p>
+                                        )}
                                     </div>
 
                                     {/* Phone Number */}

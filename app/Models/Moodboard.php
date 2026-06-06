@@ -17,7 +17,7 @@ class Moodboard extends Model
         'status',
         'notes',
         'revisi_final',
-        'pm_response_time',
+        'pm_response_time', 
         'pm_response_by',
         'pm_response_final_time',
         'pm_response_final_by',

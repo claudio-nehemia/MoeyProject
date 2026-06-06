@@ -1,6 +1,7 @@
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import Modal from '@/components/Modal';
+import AlertError from '@/components/alert-error';
 import { Head, router, useForm } from '@inertiajs/react';
 import { FormEventHandler, useEffect, useState } from 'react';
 
@@ -365,6 +366,12 @@ export default function Create({
                         style={{ animationDelay: '0.1s' }}
                     >
                         <form onSubmit={handleSubmit} className="space-y-8">
+                            {Object.keys(errors).length > 0 && (
+                                <AlertError
+                                    errors={Object.values(errors)}
+                                    title="Terdapat beberapa kesalahan pengisian form"
+                                />
+                            )}
                             {/* Section 1: Project Information */}
                             <div>
                                 <h2 className="mb-5 flex items-center gap-2 text-lg font-semibold text-stone-800">
@@ -501,6 +508,11 @@ export default function Create({
                                             className="w-full rounded-lg border border-stone-300 px-4 py-2.5 transition-all outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500"
                                             placeholder="Enter unit number"
                                         />
+                                        {errors.nomor_unit && (
+                                            <p className="mt-1 text-xs text-red-500">
+                                                {errors.nomor_unit}
+                                            </p>
+                                        )}
                                     </div>
 
                                     {/* Phone Number */}
