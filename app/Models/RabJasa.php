@@ -26,6 +26,6 @@ class RabJasa extends Model
 
     public function rabJasaProduks()
     {
-        return $this->hasMany(RabJasaProduk::class);
+        return $this->hasMany(RabJasaProduk::class)->orderBy('item_pekerjaan_produk_id', 'asc');
     }
 }

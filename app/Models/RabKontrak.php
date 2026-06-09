@@ -19,6 +19,6 @@ class RabKontrak extends Model
 
     public function rabKontrakProduks()
     {
-        return $this->hasMany(RabKontrakProduk::class);
+        return $this->hasMany(RabKontrakProduk::class)->orderBy('item_pekerjaan_produk_id', 'asc');
     }
 }

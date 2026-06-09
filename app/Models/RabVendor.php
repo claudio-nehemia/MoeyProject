@@ -26,6 +26,6 @@ class RabVendor extends Model
 
     public function rabVendorProduks()
     {
-        return $this->hasMany(RabVendorProduk::class);
+        return $this->hasMany(RabVendorProduk::class)->orderBy('item_pekerjaan_produk_id', 'asc');
     }
 }

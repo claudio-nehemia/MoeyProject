@@ -24,6 +24,9 @@ use App\Models\RabVendorAksesoris;
 use App\Models\RabKontrak;
 use App\Models\RabKontrakProduk;
 use App\Models\RabKontrakAksesoris;
+use App\Exports\RabInternalExport;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 
 class RabInternalController extends Controller
 {
@@ -789,6 +792,105 @@ class RabInternalController extends Controller
 
         return redirect()->back()
             ->with('success', 'RAB berhasil di-submit! Semua RAB (Internal, Kontrak, Vendor, Jasa) telah ACC.');
+    }
+
+    public function exportPdf($rabInternalId)
+    {
+        $data = $this->getExportData($rabInternalId);
+
+        $pdf = Pdf::loadView('pdf.rab-internal', $data);
+        $pdf->setPaper('a4', 'landscape');
+
+        $filename = 'RAB-Internal-' . str_replace(' ', '-', $data['rabInternal']->itemPekerjaan->moodboard->order->nama_project) . '-' . date('YmdHis') . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    public function exportExcel($rabInternalId)
+    {
+        $data = $this->getExportData($rabInternalId);
+        $filename = 'RAB-Internal-' . str_replace(' ', '-', $data['rabInternal']->itemPekerjaan->moodboard->order->nama_project) . '-' . date('YmdHis') . '.xlsx';
+
+        return Excel::download(new RabInternalExport($data), $filename);
+    }
+
+    private function getExportData($rabInternalId)
+    {
+        $rabInternal = RabInternal::with([
+            'itemPekerjaan.moodboard.order',
+            'rabProduks.itemPekerjaanProduk.produk.bahanBakus',
+            'rabProduks.itemPekerjaanProduk.bahanBakus.item',
+            'rabProduks.itemPekerjaanProduk.jenisItems.jenisItem',
+            'rabProduks.itemPekerjaanProduk.jenisItems.items.item',
+            'rabProduks.rabAksesoris'
+        ])->findOrFail($rabInternalId);
+
+        $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
+        $bahanBakuJenisItem = JenisItem::where('nama_jenis_item', 'Bahan Baku')->first();
+
+        $produks = $rabInternal->rabProduks->map(function ($rabProduk) use ($aksesorisJenisItem, $bahanBakuJenisItem) {
+            $selectedBahanBakus = $rabProduk->itemPekerjaanProduk->bahanBakus;
+            $bahanBakuNames = $selectedBahanBakus->map(fn($bb) => $bb->item->nama_item)->toArray();
+
+            $jenisItemsList = [];
+            foreach ($rabProduk->itemPekerjaanProduk->jenisItems as $jenisItem) {
+                if ($jenisItem->jenis_item_id !== $aksesorisJenisItem?->id && $jenisItem->jenis_item_id !== $bahanBakuJenisItem?->id) {
+                    $itemsList = [];
+                    foreach ($jenisItem->items as $item) {
+                        $itemsList[] = [
+                            'nama_item' => $item->item->nama_item,
+                            'harga_satuan' => $item->item->harga,
+                            'qty' => $item->quantity,
+                            'harga_total' => $item->item->harga * $item->quantity,
+                        ];
+                    }
+
+                    $jenisItemsList[] = [
+                        'nama_jenis' => $jenisItem->jenisItem->nama_jenis_item,
+                        'items' => $itemsList,
+                    ];
+                }
+            }
+
+            return [
+                'id' => $rabProduk->id,
+                'nama_produk' => $rabProduk->itemPekerjaanProduk->produk->nama_produk,
+                'nama_ruangan' => $rabProduk->itemPekerjaanProduk->nama_ruangan,
+                'qty_produk' => $rabProduk->itemPekerjaanProduk->quantity,
+                'panjang' => $rabProduk->itemPekerjaanProduk->panjang,
+                'lebar' => $rabProduk->itemPekerjaanProduk->lebar,
+                'tinggi' => $rabProduk->itemPekerjaanProduk->tinggi,
+                'markup_satuan' => $rabProduk->markup_satuan,
+                'harga_dasar' => $rabProduk->harga_dasar,
+                'harga_items_non_aksesoris' => $rabProduk->harga_items_non_aksesoris,
+                'harga_dimensi' => $rabProduk->harga_dimensi,
+                'harga_satuan' => $rabProduk->harga_satuan,
+                'harga_total_aksesoris' => $rabProduk->harga_total_aksesoris,
+                'harga_akhir' => $rabProduk->harga_akhir,
+                'diskon_per_produk' => $rabProduk->diskon_per_produk ?? 0,
+                'bahan_baku_names' => $bahanBakuNames,
+                'jenis_items' => $jenisItemsList,
+                'aksesoris' => $rabProduk->rabAksesoris->map(function ($aksesoris) {
+                    return [
+                        'id' => $aksesoris->id,
+                        'item_pekerjaan_item_id' => $aksesoris->item_pekerjaan_item_id,
+                        'nama_aksesoris' => $aksesoris->nama_aksesoris,
+                        'qty_aksesoris' => $aksesoris->qty_aksesoris,
+                        'markup_aksesoris' => $aksesoris->markup_aksesoris,
+                        'harga_satuan_aksesoris' => $aksesoris->harga_satuan_aksesoris,
+                        'harga_total' => $aksesoris->harga_total,
+                    ];
+                })->toArray(),
+            ];
+        });
+
+        $totalSemuaProduk = $produks->sum('harga_akhir');
+
+        return [
+            'rabInternal' => $rabInternal,
+            'produks' => $produks,
+            'totalSemuaProduk' => $totalSemuaProduk,
+        ];
     }
 
     private function syncOtherRabs($rabInternalId)

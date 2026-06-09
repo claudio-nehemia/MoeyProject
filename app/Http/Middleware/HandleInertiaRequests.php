@@ -49,6 +49,8 @@ class HandleInertiaRequests extends Middleware
                         $request->user()->getPermissions()->pluck('name')->toArray() : [],
                     'isKepalaMarketing' => $request->user()->role ? 
                         $request->user()->role->nama_role === 'Kepala Marketing' : false,
+                    'isAdmin' => $request->user()->role ? 
+                        $request->user()->role->nama_role === 'Admin' : false,
                 ] : null,
             ],
             'flash' => [

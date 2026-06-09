@@ -149,6 +149,20 @@ interface Produk {
                                                 )}
                                             </div>
                                         </div>
+                                        <div className="mt-4 flex flex-wrap gap-2 border-t border-amber-400/30 pt-4">
+                                            <a
+                                                href={`/rab-internal/${rabInternal.id}/pdf`}
+                                                className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-red-700 transition"
+                                            >
+                                                📄 Export PDF
+                                            </a>
+                                            <a
+                                                href={`/rab-internal/${rabInternal.id}/excel`}
+                                                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-emerald-700 transition"
+                                            >
+                                                📊 Export Excel
+                                            </a>
+                                        </div>
                                     </div>
                                     
                                     {/* Submit Button */}

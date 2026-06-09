@@ -222,18 +222,11 @@ class RabVendorController extends Controller
         return $pdf->download($filename);
     }
 
-    /**
-     * Export RAB Vendor as Word
-     */
-    public function exportWord($rabVendorId)
+    public function exportExcel($rabVendorId)
     {
         $data = $this->getExportData($rabVendorId);
-        $html = view('pdf.rab-vendor', $data)->render();
-        $filename = 'RAB-Vendor-' . $data['rabVendor']->itemPekerjaan->moodboard->order->nama_project . '-' . date('YmdHis') . '.doc';
-
-        return response($html)
-            ->header('Content-Type', 'application/vnd.ms-word')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        $filename = 'RAB-Vendor-' . $data['rabVendor']->itemPekerjaan->moodboard->order->nama_project . '-' . date('YmdHis') . '.xlsx';
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\RabVendorExport($data), $filename);
     }
 
     private function getExportData($rabVendorId)
@@ -301,6 +294,7 @@ class RabVendorController extends Controller
             return [
                 'id' => $rabProduk->id,
                 'nama_produk' => $rabProduk->itemPekerjaanProduk->produk->nama_produk,
+                'nama_ruangan' => $rabProduk->itemPekerjaanProduk->nama_ruangan,
                 'qty_produk' => $rabProduk->itemPekerjaanProduk->quantity,
                 'panjang' => $rabProduk->itemPekerjaanProduk->panjang,
                 'lebar' => $rabProduk->itemPekerjaanProduk->lebar,

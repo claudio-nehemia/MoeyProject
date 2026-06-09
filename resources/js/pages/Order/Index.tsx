@@ -256,13 +256,6 @@ export default function Index({ orders }: Props) {
                                     PDF
                                 </a>
                                 <a
-                                    href="/order-export-word"
-                                    className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-white px-3 py-2.5 text-sm font-semibold text-blue-600 shadow-sm transition-all hover:bg-blue-50 hover:border-blue-300"
-                                >
-                                    <FileDown size={16} />
-                                    Word
-                                </a>
-                                <a
                                     href="/order-export-excel"
                                     className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 py-2.5 text-sm font-semibold text-emerald-600 shadow-sm transition-all hover:bg-emerald-50 hover:border-emerald-300"
                                 >

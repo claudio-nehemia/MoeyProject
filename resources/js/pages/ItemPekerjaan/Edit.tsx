@@ -705,6 +705,12 @@ export default function Edit({
                                     •{' '}
                                     {itemPekerjaan.moodboard.order.company_name}
                                 </p>
+                                <div className="mt-2 flex items-center gap-2 text-xs font-medium text-blue-600 bg-blue-50 w-fit px-3 py-1.5 rounded-full border border-blue-100 shadow-sm">
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Tip: Klik icon panah pada Ruangan atau Produk untuk membuka/menutup detail.
+                                </div>
                             </div>
                         </div>
                     </div>

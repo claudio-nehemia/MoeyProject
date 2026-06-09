@@ -62,7 +62,7 @@ class ItemPekerjaan extends Model
 
     public function produks()
     {
-        return $this->hasMany(ItemPekerjaanProduk::class);
+        return $this->hasMany(ItemPekerjaanProduk::class)->orderBy('id', 'asc');
     }
 
     public function rabInternal()

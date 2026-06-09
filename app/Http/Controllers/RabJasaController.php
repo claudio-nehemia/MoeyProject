@@ -197,18 +197,11 @@ class RabJasaController extends Controller
         return $pdf->download($filename);
     }
 
-    /**
-     * Export RAB Jasa as Word
-     */
-    public function exportWord($rabJasaId)
+    public function exportExcel($rabJasaId)
     {
         $data = $this->getExportData($rabJasaId);
-        $html = view('pdf.rab-jasa', $data)->render();
-        $filename = 'RAB-Jasa-' . $data['rabJasa']->itemPekerjaan->moodboard->order->nama_project . '-' . date('YmdHis') . '.doc';
-
-        return response($html)
-            ->header('Content-Type', 'application/vnd.ms-word')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        $filename = 'RAB-Jasa-' . $data['rabJasa']->itemPekerjaan->moodboard->order->nama_project . '-' . date('YmdHis') . '.xlsx';
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\RabJasaExport($data), $filename);
     }
 
     private function getExportData($rabJasaId)
@@ -258,6 +251,7 @@ class RabJasaController extends Controller
             return [
                 'id' => $rabProduk->id,
                 'nama_produk' => $rabProduk->itemPekerjaanProduk->produk->nama_produk,
+                'nama_ruangan' => $rabProduk->itemPekerjaanProduk->nama_ruangan,
                 'qty_produk' => $rabProduk->itemPekerjaanProduk->quantity,
                 'panjang' => $rabProduk->itemPekerjaanProduk->panjang,
                 'lebar' => $rabProduk->itemPekerjaanProduk->lebar,

@@ -272,18 +272,11 @@ class RabKontrakController extends Controller
         return $pdf->download($filename);
     }
 
-    /**
-     * Export RAB Kontrak as Word
-     */
-    public function exportWord($rabKontrakId)
+    public function exportExcel($rabKontrakId)
     {
         $data = $this->getExportData($rabKontrakId);
-        $html = view('pdf.rab-kontrak', $data)->render();
-        $filename = 'RAB-Kontrak-' . $data['rabKontrak']->itemPekerjaan->moodboard->order->nama_project . '-' . date('YmdHis') . '.doc';
-
-        return response($html)
-            ->header('Content-Type', 'application/vnd.ms-word')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        $filename = 'RAB-Kontrak-' . $data['rabKontrak']->itemPekerjaan->moodboard->order->nama_project . '-' . date('YmdHis') . '.xlsx';
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\RabKontrakExport($data), $filename);
     }
 
     private function getExportData($rabKontrakId)
@@ -344,6 +337,7 @@ class RabKontrakController extends Controller
             return [
                 'id' => $rabProduk->id,
                 'nama_produk' => $rabProduk->itemPekerjaanProduk->produk->nama_produk,
+                'nama_ruangan' => $rabProduk->itemPekerjaanProduk->nama_ruangan,
                 'qty_produk' => $rabProduk->itemPekerjaanProduk->quantity,
                 'panjang' => $rabProduk->itemPekerjaanProduk->panjang,
                 'lebar' => $rabProduk->itemPekerjaanProduk->lebar,

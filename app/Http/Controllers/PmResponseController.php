@@ -26,8 +26,8 @@ class PmResponseController extends Controller
     private function checkPm()
     {
         $user = auth()->user();
-        if (!$user->role || $user->role->nama_role !== 'Kepala Marketing') {
-            return redirect()->back()->with('error', 'Unauthorized. Only Kepala Marketing can perform this action.');
+        if (!$user->role || !in_array($user->role->nama_role, ['Kepala Marketing', 'Admin'])) {
+            return redirect()->back()->with('error', 'Unauthorized. Only Kepala Marketing or Admin can perform this action.');
         }
         return null;
     }
@@ -35,8 +35,12 @@ class PmResponseController extends Controller
     private function checkOriginalKepalaMarketing(Order $order)
     {
         $user = auth()->user();
-        if (!$user || !$user->role || $user->role->nama_role !== 'Kepala Marketing') {
-            return redirect()->back()->with('error', 'Unauthorized. Only Kepala Marketing can perform this action.');
+        if (!$user || !$user->role || !in_array($user->role->nama_role, ['Kepala Marketing', 'Admin'])) {
+            return redirect()->back()->with('error', 'Unauthorized. Only Kepala Marketing or Admin can perform this action.');
+        }
+
+        if ($user->role->nama_role === 'Admin') {
+            return null;
         }
 
         $isAssignedKepalaMarketing = $order->users()

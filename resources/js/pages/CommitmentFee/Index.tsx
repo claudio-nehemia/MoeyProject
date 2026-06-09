@@ -647,14 +647,7 @@ export default function Index({ moodboards }: Props) {
                                                                     >
                                                                         Cetak CF
                                                                     </a>
-                                                                    <a
-                                                                        href={`/commitment-fee/${moodboard.commitmentFee?.id}/export-word`}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="rounded-md bg-sky-600 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-sky-700 w-full text-center"
-                                                                    >
-                                                                        Word CF
-                                                                    </a>
+
                                                                     <button
                                                                         onClick={() => handleOpenPaymentModal(moodboard)}
                                                                         className="rounded-md bg-green-600 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-green-700 w-full text-center"
@@ -672,14 +665,7 @@ export default function Index({ moodboards }: Props) {
                                                                     >
                                                                         Cetak CF
                                                                     </a>
-                                                                    <a
-                                                                        href={`/commitment-fee/${moodboard.commitmentFee?.id}/export-word`}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="rounded-md bg-sky-600 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-sky-700 w-full text-center"
-                                                                    >
-                                                                        Word CF
-                                                                    </a>
+
                                                                     <a
                                                                         href={`/storage/${moodboard.commitmentFee?.payment_proof!}`}
                                                                         target="_blank"

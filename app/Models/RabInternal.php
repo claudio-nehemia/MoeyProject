@@ -31,6 +31,6 @@ class RabInternal extends Model
 
     public function rabProduks()
     {
-        return $this->hasMany(RabProduk::class);
+        return $this->hasMany(RabProduk::class)->orderBy('item_pekerjaan_produk_id', 'asc');
     }
 }

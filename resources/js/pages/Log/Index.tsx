@@ -32,12 +32,26 @@ interface TaskResponse {
     } | null;
 }
 
+interface PmProgressItem {
+    id: number;
+    nama_project: string;
+    customer_name: string;
+    company_name: string;
+    total_products: number;
+}
+
 interface Props {
     taskResponses: {
         data: TaskResponse[];
         links: any;
         meta: any;
     };
+    pmProgress: {
+        data: PmProgressItem[];
+        links: any;
+        meta: any;
+    };
+    activeTab: 'tasks' | 'pm';
     users: Array<{
         id: number;
         name: string;
@@ -59,11 +73,14 @@ interface Props {
         tahap?: string;
         status?: string;
         search?: string;
+        tab?: 'tasks' | 'pm';
     };
 }
 
 export default function Index({
     taskResponses,
+    pmProgress,
+    activeTab,
     users,
     orders,
     tahapOptions,
@@ -93,6 +110,9 @@ export default function Index({
         filters.search || '',
     );
 
+    const currentTab = activeTab || 'tasks';
+    const [expandedOrders, setExpandedOrders] = useState<Record<number, boolean>>({});
+
     useEffect(() => {
         setMounted(true);
 
@@ -112,10 +132,11 @@ export default function Index({
         router.get(
             '/log',
             {
-                user_id: selectedUserId || undefined,
+                tab: currentTab,
+                user_id: currentTab === 'tasks' ? (selectedUserId || undefined) : undefined,
                 order_id: selectedOrderId || undefined,
-                tahap: selectedTahap || undefined,
-                status: selectedStatus || undefined,
+                tahap: currentTab === 'tasks' ? (selectedTahap || undefined) : undefined,
+                status: currentTab === 'tasks' ? (selectedStatus || undefined) : undefined,
                 search: searchQuery || undefined,
             },
             {
@@ -131,7 +152,29 @@ export default function Index({
         setSelectedTahap('');
         setSelectedStatus('');
         setSearchQuery('');
-        router.get('/log');
+        router.get('/log', { tab: currentTab });
+    };
+
+    const handleTabChange = (tab: 'tasks' | 'pm') => {
+        router.get(
+            '/log',
+            {
+                tab,
+                order_id: selectedOrderId || undefined,
+                search: searchQuery || undefined,
+            },
+            {
+                preserveState: false,
+                preserveScroll: true,
+            },
+        );
+    };
+
+    const toggleOrder = (orderId: number) => {
+        setExpandedOrders((prev) => ({
+            ...prev,
+            [orderId]: !prev[orderId],
+        }));
     };
 
     const getStatusBadge = (status: string) => {
@@ -149,9 +192,60 @@ export default function Index({
         );
     };
 
+    const getPmStageStatusBadge = (status: string, delayDays: number | null) => {
+        switch (status) {
+            case 'done_on_time':
+                return (
+                    <span className="inline-flex items-center rounded-full bg-green-50 text-green-700 border border-green-200 px-2.5 py-0.5 text-xs font-semibold">
+                        Tepat Waktu
+                    </span>
+                );
+            case 'done_early':
+                return (
+                    <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 text-xs font-semibold">
+                        Cepat {delayDays} Hari
+                    </span>
+                );
+            case 'done_late':
+                return (
+                    <span className="inline-flex items-center rounded-full bg-red-50 text-red-700 border border-red-200 px-2.5 py-0.5 text-xs font-semibold animate-pulse">
+                        Terlambat {delayDays} Hari
+                    </span>
+                );
+            case 'overdue':
+                return (
+                    <span className="inline-flex items-center rounded-full bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-0.5 text-xs font-semibold animate-pulse">
+                        Terlambat {delayDays} Hari (Belum Selesai)
+                    </span>
+                );
+            case 'in_progress':
+                return (
+                    <span className="inline-flex items-center rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-0.5 text-xs font-semibold animate-pulse">
+                        Sedang Berjalan
+                    </span>
+                );
+            case 'planned':
+            default:
+                return (
+                    <span className="inline-flex items-center rounded-full bg-slate-50 text-slate-600 border border-slate-200 px-2.5 py-0.5 text-xs font-semibold">
+                        Direncanakan
+                    </span>
+                );
+        }
+    };
+
     const formatDate = (date: string | null) => {
         if (!date) return '-';
         return new Date(date).toLocaleString('id-ID');
+    };
+
+    const formatDateOnly = (date: string | null) => {
+        if (!date) return '-';
+        return new Date(date).toLocaleDateString('id-ID', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
     };
 
     if (!mounted) return null;
@@ -199,6 +293,30 @@ export default function Index({
                         </div>
                     </div>
 
+                    {/* Tab Selection Switch */}
+                    <div className="mb-6 flex border-b border-slate-200">
+                        <button
+                            onClick={() => handleTabChange('tasks')}
+                            className={`px-5 py-3 text-sm font-semibold border-b-2 transition-all ${
+                                currentTab === 'tasks'
+                                    ? 'border-indigo-600 text-indigo-600'
+                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                            }`}
+                        >
+                            Log Task Response
+                        </button>
+                        <button
+                            onClick={() => handleTabChange('pm')}
+                            className={`px-5 py-3 text-sm font-semibold border-b-2 transition-all ${
+                                currentTab === 'pm'
+                                    ? 'border-indigo-600 text-indigo-600'
+                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                            }`}
+                        >
+                            Project Management Progress
+                        </button>
+                    </div>
+
                     {/* Filters */}
                     <div className="mb-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
                         <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-6 py-5">
@@ -231,45 +349,44 @@ export default function Index({
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Cari berdasarkan nama project atau user..."
+                                    placeholder={currentTab === 'tasks' ? "Cari berdasarkan nama project atau user..." : "Cari berdasarkan nama project, customer, atau company..."}
                                     className="block w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm shadow-sm transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                                     onKeyDown={(e) => e.key === 'Enter' && handleFilter()}
                                 />
                             </div>
-                            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-slate-700">
-                                        User
-                                    </label>
-                                    <select
-                                        value={selectedUserId}
-                                        onChange={(e) =>
-                                            setSelectedUserId(
-                                                e.target.value
-                                                    ? Number(e.target.value)
-                                                    : '',
-                                            )
-                                        }
-                                        className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm shadow-sm transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                                    >
-                                        <option value="">Semua User</option>
-                                        {users.map((user) => (
-                                            <option
-                                                key={user.id}
-                                                value={user.id}
-                                            >
-                                                {user.name} (
-                                                {user.role?.nama_role ||
-                                                    'No Role'}
+                            <div className={`grid grid-cols-1 gap-5 ${currentTab === 'tasks' ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-2'}`}>
+                                {currentTab === 'tasks' && (
+                                    <div>
+                                        <label className="mb-2 block text-sm font-medium text-slate-700">
+                                            User
+                                        </label>
+                                        <select
+                                            value={selectedUserId}
+                                            onChange={(e) =>
+                                                setSelectedUserId(
+                                                    e.target.value
+                                                        ? Number(e.target.value)
+                                                        : '',
                                                 )
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+                                            }
+                                            className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm shadow-sm transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                                        >
+                                            <option value="">Semua User</option>
+                                            {users.map((user) => (
+                                                <option
+                                                    key={user.id}
+                                                    value={user.id}
+                                                >
+                                                    {user.name} ({user.role?.nama_role || 'No Role'})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
 
                                 <div>
                                     <label className="mb-2 block text-sm font-medium text-slate-700">
-                                        Order
+                                        Order / Project
                                     </label>
                                     <select
                                         value={selectedOrderId}
@@ -288,56 +405,59 @@ export default function Index({
                                                 key={order.id}
                                                 value={order.id}
                                             >
-                                                {order.nama_project} -{' '}
-                                                {order.customer_name}
+                                                {order.nama_project} - {order.customer_name}
                                             </option>
                                         ))}
                                     </select>
                                 </div>
 
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-slate-700">
-                                        Tahap
-                                    </label>
-                                    <select
-                                        value={selectedTahap}
-                                        onChange={(e) =>
-                                            setSelectedTahap(e.target.value)
-                                        }
-                                        className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm shadow-sm transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                                    >
-                                        <option value="">Semua Tahap</option>
-                                        {Object.entries(tahapOptions).map(
-                                            ([key, value]) => (
-                                                <option key={key} value={key}>
-                                                    {value}
-                                                </option>
-                                            ),
-                                        )}
-                                    </select>
-                                </div>
+                                {currentTab === 'tasks' && (
+                                    <>
+                                        <div>
+                                            <label className="mb-2 block text-sm font-medium text-slate-700">
+                                                Tahap
+                                            </label>
+                                            <select
+                                                value={selectedTahap}
+                                                onChange={(e) =>
+                                                    setSelectedTahap(e.target.value)
+                                                }
+                                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm shadow-sm transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                                            >
+                                                <option value="">Semua Tahap</option>
+                                                {Object.entries(tahapOptions).map(
+                                                    ([key, value]) => (
+                                                        <option key={key} value={key}>
+                                                            {value}
+                                                        </option>
+                                                    ),
+                                                )}
+                                            </select>
+                                        </div>
 
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-slate-700">
-                                        Status
-                                    </label>
-                                    <select
-                                        value={selectedStatus}
-                                        onChange={(e) =>
-                                            setSelectedStatus(e.target.value)
-                                        }
-                                        className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm shadow-sm transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                                    >
-                                        <option value="">Semua Status</option>
-                                        {Object.entries(statusOptions).map(
-                                            ([key, value]) => (
-                                                <option key={key} value={key}>
-                                                    {value}
-                                                </option>
-                                            ),
-                                        )}
-                                    </select>
-                                </div>
+                                        <div>
+                                            <label className="mb-2 block text-sm font-medium text-slate-700">
+                                                Status
+                                            </label>
+                                            <select
+                                                value={selectedStatus}
+                                                onChange={(e) =>
+                                                    setSelectedStatus(e.target.value)
+                                                }
+                                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm shadow-sm transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                                            >
+                                                <option value="">Semua Status</option>
+                                                {Object.entries(statusOptions).map(
+                                                    ([key, value]) => (
+                                                        <option key={key} value={key}>
+                                                            {value}
+                                                        </option>
+                                                    ),
+                                                )}
+                                            </select>
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             <div className="mt-5 flex gap-3">
@@ -357,196 +477,261 @@ export default function Index({
                         </div>
                     </div>
 
-                    {/* Table */}
-                    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-slate-200">
-                                <thead>
-                                    <tr className="bg-gradient-to-r from-slate-50 to-gray-50">
-                                        <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
-                                            Nama Project
-                                        </th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
-                                            User
-                                        </th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
-                                            Role User
-                                        </th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
-                                            Tahap
-                                        </th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
-                                            Status
-                                        </th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
-                                            Notif Time
-                                        </th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
-                                            Response Time
-                                        </th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
-                                            Update Data Time
-                                        </th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
-                                            Deadline
-                                        </th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
-                                            Extend
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 bg-white">
-                                    {taskResponses.data.map((task) => (
-                                        <tr
-                                            key={task.id}
-                                            className="transition-colors hover:bg-slate-50"
-                                        >
-                                            <td className="px-6 py-4">
-                                                <div>
-                                                    <Link
-                                                        href={`/log/order/${task.order_id}`}
-                                                        className="text-sm font-medium text-indigo-600 transition-colors hover:text-indigo-800"
-                                                    >
-                                                        {
-                                                            task.order
-                                                                .nama_project
-                                                        }
-                                                    </Link>
-                                                    <div className="mt-0.5 text-xs text-slate-500">
-                                                        {
-                                                            task.order
-                                                                .customer_name
-                                                        }
-                                                    </div>
-                                                    {task.is_marketing && (
-                                                        <span className="mt-1 inline-flex items-center rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                                                            Marketing
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                {task.user ? (
-                                                    <Link
-                                                        href={`/log/user/${task.user.id}`}
-                                                        className="text-sm text-indigo-600 transition-colors hover:text-indigo-800"
-                                                    >
-                                                        {task.user.name}
+                    {/* Content Section */}
+                    {currentTab === 'tasks' ? (
+                        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-slate-200">
+                                    <thead>
+                                        <tr className="bg-gradient-to-r from-slate-50 to-gray-50">
+                                            <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
+                                                Nama Project
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
+                                                User
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
+                                                Role User
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
+                                                Tahap
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
+                                                Status
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
+                                                Notif Time
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
+                                                Response Time
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
+                                                Update Data Time
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
+                                                Deadline
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">
+                                                Extend
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 bg-white">
+                                        {taskResponses.data.map((task) => (
+                                            <tr
+                                                key={task.id}
+                                                className="transition-colors hover:bg-slate-50"
+                                            >
+                                                <td className="px-6 py-4">
+                                                    <div>
+                                                        <Link
+                                                            href={`/log/order/${task.order_id}`}
+                                                            className="text-sm font-medium text-indigo-600 transition-colors hover:text-indigo-800"
+                                                        >
+                                                            {task.order.nama_project}
+                                                        </Link>
                                                         <div className="mt-0.5 text-xs text-slate-500">
-                                                            {task.user.role
-                                                                ?.nama_role ||
-                                                                'No Role'}
+                                                            {task.order.customer_name}
                                                         </div>
-                                                    </Link>
-                                                ) : (
-                                                    <span className="text-sm text-slate-400">
-                                                        -
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                {task.user ? (
-                                                    <span className="text-sm text-slate-700">
-                                                        {task.user.role
-                                                            ?.nama_role ||
-                                                            'No Role'}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-sm text-slate-400">
-                                                        -
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className="text-sm font-medium text-slate-700">
-                                                    {tahapOptions[task.tahap] ||
-                                                        task.tahap}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span
-                                                    className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusBadge(task.status)}`}
-                                                >
-                                                    {statusOptions[
-                                                        task.status
-                                                    ] || task.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-slate-600">
-                                                {formatDate(task.start_time)}
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-slate-600">
-                                                {formatDate(task.response_time)}
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-slate-600">
-                                                {formatDate(
-                                                    task.update_data_time,
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-slate-600">
-                                                {formatDate(task.deadline)}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <Link
-                                                    href={`/log/task-response/${task.id}/extend-log`}
-                                                    className="group inline-flex items-center gap-1.5 text-sm text-indigo-600 transition-colors hover:text-indigo-800"
-                                                >
-                                                    {task.extend_time > 0 ? (
-                                                        <span className="font-semibold text-orange-600">
-                                                            {task.extend_time}x
+                                                        {task.is_marketing && (
+                                                            <span className="mt-1 inline-flex items-center rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                                                                Marketing
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {task.user ? (
+                                                        <Link
+                                                            href={`/log/user/${task.user.id}`}
+                                                            className="text-sm text-indigo-600 transition-colors hover:text-indigo-800"
+                                                        >
+                                                            {task.user.name}
+                                                            <div className="mt-0.5 text-xs text-slate-500">
+                                                                {task.user.role?.nama_role || 'No Role'}
+                                                            </div>
+                                                        </Link>
+                                                    ) : (
+                                                        <span className="text-sm text-slate-400">-</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {task.user ? (
+                                                        <span className="text-sm text-slate-700">
+                                                            {task.user.role?.nama_role || 'No Role'}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-slate-500">
-                                                            Lihat log
-                                                        </span>
+                                                        <span className="text-sm text-slate-400">-</span>
                                                     )}
-                                                    <svg
-                                                        className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        viewBox="0 0 24 24"
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm font-medium text-slate-700">
+                                                        {tahapOptions[task.tahap] || task.tahap}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span
+                                                        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusBadge(task.status)}`}
                                                     >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            strokeWidth={2}
-                                                            d="M9 5l7 7-7 7"
-                                                        />
-                                                    </svg>
-                                                </Link>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Pagination */}
-                        {taskResponses.links && (
-                            <div className="border-t border-slate-200 bg-slate-50 px-6 py-4">
-                                <nav className="flex justify-center">
-                                    <div className="flex space-x-1">
-                                        {taskResponses.links.map(
-                                            (link: any, index: number) => (
-                                                <Link
-                                                    key={index}
-                                                    href={link.url || '#'}
-                                                    className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-                                                        link.active
-                                                            ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md'
-                                                            : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
-                                                    } ${!link.url ? 'cursor-not-allowed opacity-50' : 'hover:shadow-sm'}`}
-                                                    dangerouslySetInnerHTML={{
-                                                        __html: link.label,
-                                                    }}
-                                                />
-                                            ),
-                                        )}
-                                    </div>
-                                </nav>
+                                                        {statusOptions[task.status] || task.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-slate-600">
+                                                    {formatDate(task.start_time)}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-slate-600">
+                                                    {formatDate(task.response_time)}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-slate-600">
+                                                    {formatDate(task.update_data_time)}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-slate-600">
+                                                    {formatDate(task.deadline)}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <Link
+                                                        href={`/log/task-response/${task.id}/extend-log`}
+                                                        className="group inline-flex items-center gap-1.5 text-sm text-indigo-600 transition-colors hover:text-indigo-800"
+                                                    >
+                                                        {task.extend_time > 0 ? (
+                                                            <span className="font-semibold text-orange-600">
+                                                                {task.extend_time}x
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-slate-500">Lihat log</span>
+                                                        )}
+                                                        <svg
+                                                            className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={2}
+                                                                d="M9 5l7 7-7 7"
+                                                            />
+                                                        </svg>
+                                                    </Link>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
-                        )}
-                    </div>
+
+                            {/* original pagination inside wrapper */}
+                            {taskResponses.links && (
+                                <div className="border-t border-slate-200 bg-slate-50 px-6 py-4">
+                                    <nav className="flex justify-center">
+                                        <div className="flex space-x-1">
+                                            {taskResponses.links.map(
+                                                (link: any, index: number) => (
+                                                    <Link
+                                                        key={index}
+                                                        href={link.url || '#'}
+                                                        className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                                                            link.active
+                                                                ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md'
+                                                                : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                                                        } ${!link.url ? 'cursor-not-allowed opacity-50' : 'hover:shadow-sm'}`}
+                                                        dangerouslySetInnerHTML={{
+                                                            __html: link.label,
+                                                        }}
+                                                    />
+                                                ),
+                                            )}
+                                        </div>
+                                    </nav>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        /* Project Management Progress Tab content */
+                        <div className="space-y-4">
+                            {pmProgress.data.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center p-12 text-center bg-white rounded-xl border border-slate-200 shadow-sm">
+                                    <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <h3 className="mt-4 text-lg font-semibold text-slate-900">Tidak ada progress project management</h3>
+                                    <p className="mt-1 text-sm text-slate-500">Coba ubah filter atau kata pencarian Anda.</p>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Simplified PM Project Table */}
+                                    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full divide-y divide-slate-200">
+                                                <thead>
+                                                    <tr className="bg-gradient-to-r from-slate-50 to-gray-50">
+                                                        <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">Nama Project</th>
+                                                        <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">Customer</th>
+                                                        <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">Company Name</th>
+                                                        <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">Jumlah Produk</th>
+                                                        <th className="px-6 py-4 text-left text-xs font-semibold tracking-wider text-slate-700 uppercase">Aksi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100 bg-white">
+                                                    {pmProgress.data.map((project) => (
+                                                        <tr key={project.id} className="transition-colors hover:bg-slate-50">
+                                                            <td className="px-6 py-4 text-sm font-semibold text-slate-900">
+                                                                {project.nama_project}
+                                                            </td>
+                                                            <td className="px-6 py-4 text-sm text-slate-700 font-medium">
+                                                                {project.customer_name}
+                                                            </td>
+                                                            <td className="px-6 py-4 text-sm text-slate-500">
+                                                                {project.company_name || '-'}
+                                                            </td>
+                                                            <td className="px-6 py-4 text-sm text-slate-700">
+                                                                {project.total_products}
+                                                            </td>
+                                                            <td className="px-6 py-4 text-sm">
+                                                                <Link
+                                                                    href={`/log/pm/${project.id}`}
+                                                                    className="inline-flex items-center rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 border border-indigo-100 hover:bg-indigo-100 hover:text-indigo-800 transition-colors"
+                                                                >
+                                                                    Lihat Detail Progress
+                                                                </Link>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    {/* PM Pagination */}
+                                    {pmProgress.links && (
+                                        <div className="border-t border-slate-200 bg-slate-50 px-6 py-4 rounded-xl shadow-sm mt-4">
+                                            <nav className="flex justify-center">
+                                                <div className="flex space-x-1">
+                                                    {pmProgress.links.map(
+                                                        (link: any, index: number) => (
+                                                            <Link
+                                                                key={index}
+                                                                href={link.url || '#'}
+                                                                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                                                                    link.active
+                                                                        ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md'
+                                                                        : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                                                                } ${!link.url ? 'cursor-not-allowed opacity-50' : 'hover:shadow-sm'}`}
+                                                                dangerouslySetInnerHTML={{
+                                                                    __html: link.label,
+                                                                }}
+                                                            />
+                                                        ),
+                                                    )}
+                                                </div>
+                                            </nav>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
                 </div>
             </main>
         </div>

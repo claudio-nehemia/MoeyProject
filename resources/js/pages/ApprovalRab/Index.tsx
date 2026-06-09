@@ -378,12 +378,7 @@ export default function ApprovalRabIndex({ items }: Props) {
                                                             📄 Export PDF
                                                         </a>
 
-                                                        <a
-                                                            href={`/approval-material/${row.id}/export-word`}
-                                                            className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-blue-700 text-center inline-block"
-                                                        >
-                                                            📝 Export Word
-                                                        </a>
+
 
                                                         {isKepalaMarketing && !row.pm_approval_rab_response_time && (
                                                             <button

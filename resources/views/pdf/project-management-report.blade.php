@@ -317,39 +317,40 @@
                             <div class="evidence-title">
                                 📦 {{ $produk['nama_produk'] }} (Qty: {{ $produk['quantity'] }})
                             </div>
-
-                            @foreach($stageMapping as $shortName => $internalName)
-                                @if(isset($produk['stage_evidences'][$internalName]))
-                                    <div class="evidence-stage-title">{{ $shortName }} — {{ $internalName }}</div>
-                                    <table class="evidence-grid">
-                                        <tr>
-                                            @foreach($produk['stage_evidences'][$internalName] as $idx => $evidence)
-                                                <td style="width: 130px;">
+                            <table class="evidence-grid">
+                                <tr>
+                                    @php $flatIdx = 0; @endphp
+                                    @foreach($stageMapping as $shortName => $internalName)
+                                        @if(isset($produk['stage_evidences'][$internalName]))
+                                            @foreach($produk['stage_evidences'][$internalName] as $evidence)
+                                                <td style="width: 110px; padding: 4px; text-align: center;">
                                                     @php
                                                         $imgPath = storage_path('app/public/' . $evidence['path']);
                                                     @endphp
                                                     @if(file_exists($imgPath))
-                                                        <img src="{{ $imgPath }}" class="evidence-img" />
+                                                        <img src="{{ $imgPath }}" class="evidence-img" style="width: 100px; height: 75px; object-fit: cover;" />
                                                     @else
-                                                        <div style="width:120px;height:90px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:7px;color:#94a3b8;">Foto tidak ditemukan</div>
+                                                        <div style="width:100px;height:75px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:7px;color:#94a3b8;">Foto tidak ditemukan</div>
                                                     @endif
-                                                    <div class="evidence-caption">
+                                                    <div class="evidence-caption" style="font-size: 6.5px; line-height: 1.1; margin-top: 2px;">
+                                                        <strong style="color: #3b82f6;">{{ $shortName }}</strong><br/>
                                                         {{ $evidence['uploaded_by'] }}<br/>
                                                         {{ $evidence['created_at'] }}
                                                         @if($evidence['notes'])
-                                                            <br/><em>{{ Str::limit($evidence['notes'], 40) }}</em>
+                                                            <br/><em>{{ Str::limit($evidence['notes'], 25) }}</em>
                                                         @endif
                                                     </div>
                                                 </td>
-                                                {{-- Max 5 per row --}}
-                                                @if(($idx + 1) % 5 === 0 && ($idx + 1) < count($produk['stage_evidences'][$internalName]))
+                                                @php $flatIdx++; @endphp
+                                                {{-- Max 7 per row --}}
+                                                @if($flatIdx % 7 === 0)
                                                     </tr><tr>
                                                 @endif
                                             @endforeach
-                                        </tr>
-                                    </table>
-                                @endif
-                            @endforeach
+                                        @endif
+                                    @endforeach
+                                </tr>
+                            </table>
                         </div>
                     @endif
                 @endforeach
