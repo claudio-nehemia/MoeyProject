@@ -8,6 +8,7 @@ use App\Http\Controllers\LogController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\KpiController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\DefectController;
 use App\Http\Controllers\DivisiController;
@@ -38,6 +39,7 @@ use App\Http\Controllers\SurveyResultsController;
 use App\Http\Controllers\SurveyScheduleController;
 use App\Http\Controllers\JenisPengukuranController;
 use App\Http\Controllers\ProjectManagementController;
+use App\Http\Controllers\CashflowController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -122,6 +124,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('permission:user.edit')->name('user.update');
     Route::delete('user/{user}', [UserController::class, 'destroy'])
         ->middleware('permission:user.delete')->name('user.destroy');
+
+    // KPI Routes
+    Route::middleware(['permission:kpi.index'])->group(function () {
+        Route::get('kpi', [KpiController::class, 'index'])->name('kpi.index');
+        Route::get('kpi/{user}', [KpiController::class, 'show'])->name('kpi.show');
+    });
+    Route::post('kpi/settings', [KpiController::class, 'updateSettings'])
+        ->middleware('permission:kpi.edit-settings')->name('kpi.update-settings');
+
+    // Cashflow Routes
+    Route::middleware(['permission:cashflow.index'])->group(function () {
+        Route::get('cashflow', [CashflowController::class, 'index'])->name('cashflow.index');
+        Route::get('cashflow/{order}', [CashflowController::class, 'show'])->name('cashflow.show');
+    });
+    Route::post('cashflow/{order}/manual-entry', [CashflowController::class, 'storeManualEntry'])
+        ->middleware('permission:cashflow.create')->name('cashflow.store-manual');
+    Route::put('cashflow/manual-entry/{entry}', [CashflowController::class, 'updateManualEntry'])
+        ->middleware('permission:cashflow.edit')->name('cashflow.update-manual');
+    Route::delete('cashflow/manual-entry/{entry}', [CashflowController::class, 'deleteManualEntry'])
+        ->middleware('permission:cashflow.delete')->name('cashflow.delete-manual');
 
     // Jenis Interior Routes
     Route::resource('jenis-interior', JenisInteriorController::class)

@@ -901,6 +901,28 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Export PDF Documents',
                 'group' => 'Operations - Reports'
             ],
+
+            // Cashflow Permissions
+            [
+                'name' => 'cashflow.index',
+                'display_name' => 'View Cashflow List',
+                'group' => 'Operations - Cashflow'
+            ],
+            [
+                'name' => 'cashflow.create',
+                'display_name' => 'Create Cashflow Entry',
+                'group' => 'Operations - Cashflow'
+            ],
+            [
+                'name' => 'cashflow.edit',
+                'display_name' => 'Edit Cashflow Entry',
+                'group' => 'Operations - Cashflow'
+            ],
+            [
+                'name' => 'cashflow.delete',
+                'display_name' => 'Delete Cashflow Entry',
+                'group' => 'Operations - Cashflow'
+            ],
         ];
 
         foreach ($permissions as $permission) {
