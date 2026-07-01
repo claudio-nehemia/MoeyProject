@@ -17,6 +17,7 @@ interface Item {
     jenis_item_id: number;
     jenis_item: JenisItem;
     harga: number;
+    kategori?: string;
     created_at: string;
     updated_at: string;
 }
@@ -45,6 +46,7 @@ export default function Index({ items }: Props) {
         nama_item: "",
         jenis_item_id: "",
         harga: "",
+        kategori: "internal",
     });
 
     useEffect(() => {
@@ -85,7 +87,8 @@ export default function Index({ items }: Props) {
         setData({
             nama_item: item.nama_item,
             jenis_item_id: item.jenis_item_id.toString(),
-            harga: item.harga.toString(),
+            harga: item.harga ? item.harga.toString() : "",
+            kategori: item.kategori || "internal",
         });
         setEditMode(true);
         setShowModal(true);
@@ -213,6 +216,7 @@ export default function Index({ items }: Props) {
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">No</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Item Name</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700 hidden sm:table-cell">Type</th>
+                                        <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Kategori</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Price</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-center font-semibold text-stone-700">Actions</th>
                                     </tr>
@@ -239,6 +243,9 @@ export default function Index({ items }: Props) {
                                                 <span className="inline-flex items-center px-2 py-1 rounded-full bg-gradient-to-r from-indigo-100 to-indigo-200 text-indigo-700 font-medium text-xs">
                                                     {item.jenis_item.nama_jenis_item}
                                                 </span>
+                                            </td>
+                                            <td className="px-3 sm:px-4 py-2.5 capitalize font-medium text-stone-800">
+                                                {item.kategori || 'internal'}
                                             </td>
                                             <td className="px-3 sm:px-4 py-2.5">
                                                 <span className="inline-flex items-center px-2 py-1 rounded-full bg-gradient-to-r from-orange-100 to-orange-200 text-orange-700 font-semibold text-xs whitespace-nowrap">

@@ -49,6 +49,7 @@ class ItemController extends Controller
         $rules = [
             'nama_item' => 'required|string|max:255',
             'jenis_item_id' => 'required|exists:jenis_items,id',
+            'kategori' => 'required|string|in:internal,fisik,eksternal',
         ];
 
         // Harga nullable untuk Bahan Baku, required untuk Finishing dan Aksesoris
@@ -105,6 +106,7 @@ class ItemController extends Controller
         $rules = [
             'nama_item' => 'required|string|max:255',
             'jenis_item_id' => 'required|exists:jenis_items,id',
+            'kategori' => 'required|string|in:internal,fisik,eksternal',
         ];
 
         // Harga nullable untuk Bahan Baku, required untuk Finishing dan Aksesoris

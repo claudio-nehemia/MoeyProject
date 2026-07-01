@@ -8,6 +8,7 @@ interface ItemModalProps {
         nama_item: string;
         jenis_item_id: string;
         harga: string;
+        kategori: string;
     };
     errors: {
         [key: string]: string;
@@ -142,6 +143,31 @@ export default function ItemModal({
                                     <path fillRule="evenodd" d="M18.101 12.93a1 1 0 00-1.414-1.414L10 14.586l-6.687-6.687a1 1 0 00-1.414 1.414l8 8a1 1 0 001.414 0l8-8z" clipRule="evenodd" />
                                 </svg>
                                 <p className="text-xs text-red-600">{errors.jenis_item_id}</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Kategori */}
+                    <div>
+                        <label className="block text-xs font-semibold text-stone-700 mb-1.5">
+                            Kategori
+                        </label>
+                        <select
+                            value={data.kategori}
+                            onChange={(e) => onDataChange('kategori', e.target.value)}
+                            className={`w-full px-3 py-2 text-sm border-2 rounded-lg transition-colors focus:outline-none ${
+                                errors.kategori
+                                    ? 'border-red-300 focus:border-red-500 bg-red-50'
+                                    : 'border-stone-200 focus:border-orange-500 bg-stone-50'
+                            }`}
+                        >
+                            <option value="internal">Internal</option>
+                            <option value="fisik">Fisik</option>
+                            <option value="eksternal">Eksternal</option>
+                        </select>
+                        {errors.kategori && (
+                            <div className="flex items-center gap-1.5 mt-1">
+                                <p className="text-xs text-red-600">{errors.kategori}</p>
                             </div>
                         )}
                     </div>

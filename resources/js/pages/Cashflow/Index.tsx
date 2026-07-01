@@ -60,10 +60,8 @@ export default function Index({ orders, filters }: Props) {
     });
     const [search, setSearch] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
-    const [mounted, setMounted] = useState<boolean>(false);
 
     useEffect(() => {
-        setMounted(true);
         const handleResize = () => {
             if (window.innerWidth >= 1024) {
                 setSidebarOpen(true);
@@ -85,7 +83,6 @@ export default function Index({ orders, filters }: Props) {
         router.get('/cashflow', { search, status: value }, { preserveState: true, replace: true });
     };
 
-    // Calculate totals from paginated list (or global totals if provided in future)
     const totalKontrak = orders.data.reduce((sum, o) => sum + o.harga_kontrak, 0);
     const totalReceived = orders.data.reduce((sum, o) => sum + o.total_received, 0);
     const totalPiutang = orders.data.reduce((sum, o) => sum + o.sisa_piutang, 0);
@@ -122,22 +119,22 @@ export default function Index({ orders, filters }: Props) {
                             </span>
                         </div>
                         <p className="text-xs text-stone-500">
-                            Monitor and calculate cash flow breakdown (Internal, Fisik, and External) per project.
+                            Monitor and calculate cash flow breakdown per project dynamically based on item categories.
                         </p>
                     </div>
 
                     {/* Summary Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                         <div className="bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
-                            <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">Total Kontrak</p>
+                            <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">Total Kontrak (Page)</p>
                             <p className="text-xl font-bold text-stone-800 mt-1">{formatCurrency(totalKontrak)}</p>
                         </div>
                         <div className="bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
-                            <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Total Diterima</p>
+                            <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Total Diterima (Page)</p>
                             <p className="text-xl font-bold text-emerald-600 mt-1">{formatCurrency(totalReceived)}</p>
                         </div>
                         <div className="bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
-                            <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">Sisa Piutang</p>
+                            <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">Sisa Piutang (Page)</p>
                             <p className="text-xl font-bold text-amber-600 mt-1">{formatCurrency(totalPiutang)}</p>
                         </div>
                     </div>
@@ -145,7 +142,7 @@ export default function Index({ orders, filters }: Props) {
                     {/* Filters */}
                     <div className="flex flex-col md:flex-row gap-3 mb-4">
                         <div className="flex-1">
-                            <SearchFilter value={search} onChange={handleSearch} placeholder="Cari project, customer..." />
+                            <SearchFilter onSearch={handleSearch} searchPlaceholder="Cari project, customer..." />
                         </div>
                         <select
                             value={statusFilter}
@@ -169,10 +166,10 @@ export default function Index({ orders, filters }: Props) {
                                     <tr className="bg-stone-50 border-b border-stone-200 text-stone-500">
                                         <th className="text-left px-4 py-3 font-semibold uppercase">Project</th>
                                         <th className="text-left px-4 py-3 font-semibold uppercase">PM</th>
-                                        <th className="text-right px-4 py-3 font-semibold uppercase">Kontrak</th>
+                                        <th className="text-right px-4 py-3 font-semibold uppercase">Total Kontrak</th>
                                         <th className="text-right px-4 py-3 font-semibold text-emerald-700/80 uppercase">Internal</th>
                                         <th className="text-right px-4 py-3 font-semibold text-blue-700/80 uppercase">Fisik</th>
-                                        <th className="text-right px-4 py-3 font-semibold text-violet-700/80 uppercase">External</th>
+                                        <th className="text-right px-4 py-3 font-semibold text-purple-700/80 uppercase">External</th>
                                         <th className="text-right px-4 py-3 font-semibold uppercase">Diterima</th>
                                         <th className="text-right px-4 py-3 font-semibold uppercase">Piutang</th>
                                         <th className="text-center px-4 py-3 font-semibold uppercase">Status</th>
@@ -198,10 +195,10 @@ export default function Index({ orders, filters }: Props) {
                                                 <div className="text-[10px] text-stone-500">{order.customer_name} · {order.company_name}</div>
                                             </td>
                                             <td className="px-4 py-3 text-stone-600">{order.pm_name}</td>
-                                            <td className="px-4 py-3 text-right font-mono text-stone-700">{formatCurrency(order.harga_kontrak)}</td>
+                                            <td className="px-4 py-3 text-right font-mono text-stone-700 font-semibold">{formatCurrency(order.harga_kontrak)}</td>
                                             <td className="px-4 py-3 text-right font-mono text-emerald-600 font-semibold">{formatCurrency(order.kontrak_internal)}</td>
                                             <td className="px-4 py-3 text-right font-mono text-blue-600 font-semibold">{formatCurrency(order.kontrak_fisik)}</td>
-                                            <td className="px-4 py-3 text-right font-mono text-violet-600 font-semibold">{formatCurrency(order.kontrak_external)}</td>
+                                            <td className="px-4 py-3 text-right font-mono text-purple-600 font-semibold">{formatCurrency(order.kontrak_external)}</td>
                                             <td className="px-4 py-3 text-right font-mono text-emerald-600">{formatCurrency(order.total_received)}</td>
                                             <td className="px-4 py-3 text-right font-mono text-amber-600">{formatCurrency(order.sisa_piutang)}</td>
                                             <td className="px-4 py-3 text-center">
