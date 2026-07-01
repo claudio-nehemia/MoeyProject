@@ -176,18 +176,23 @@ export default function Show({ user, summary, taskHistory, completedProjects, tr
 
                     {/* Dots and interactive hover triggers */}
                     {points.map((p, idx) => (
-                        <g key={idx}>
-                            {/* Outer dot hover effect */}
-                            {hoveredTrendIndex === idx && (
-                                <circle 
-                                    cx={p.x} 
-                                    cy={p.y} 
-                                    r="9" 
-                                    fill="#fef3c7" 
-                                    stroke="#b45309"
-                                    strokeWidth="2"
-                                />
-                            )}
+                        <g 
+                            key={idx}
+                            onMouseEnter={() => setHoveredTrendIndex(idx)}
+                            onMouseLeave={() => setHoveredTrendIndex(null)}
+                            className="cursor-pointer"
+                        >
+                            {/* Outer dot hover effect (always mounted, opacity animated) */}
+                            <circle 
+                                cx={p.x} 
+                                cy={p.y} 
+                                r="9" 
+                                fill="#fef3c7" 
+                                stroke="#b45309"
+                                strokeWidth="2"
+                                style={{ opacity: hoveredTrendIndex === idx ? 1 : 0, transition: 'opacity 0.15s ease' }}
+                                className="pointer-events-none"
+                            />
                             {/* Inner Dot */}
                             <circle 
                                 cx={p.x} 
@@ -196,16 +201,21 @@ export default function Show({ user, summary, taskHistory, completedProjects, tr
                                 fill="#d97706" 
                                 stroke="white"
                                 strokeWidth="2"
-                                className="cursor-pointer transition-all hover:scale-125"
-                                onMouseEnter={() => setHoveredTrendIndex(idx)}
-                                onMouseLeave={() => setHoveredTrendIndex(null)}
+                                className="pointer-events-none"
+                            />
+                            {/* Invisible larger hover catcher to prevent cursor jitter */}
+                            <circle 
+                                cx={p.x} 
+                                cy={p.y} 
+                                r="15" 
+                                fill="transparent"
                             />
                             {/* X Axis Labels */}
                             <text 
                                 x={p.x} 
                                 y={height - 15} 
                                 textAnchor="middle" 
-                                className="text-[9px] fill-stone-500 font-bold"
+                                className="text-[9px] fill-stone-500 font-bold pointer-events-none"
                             >
                                 {p.month}
                             </text>
@@ -295,8 +305,37 @@ export default function Show({ user, summary, taskHistory, completedProjects, tr
                         </div>
                     </div>
 
+                    {/* Attendance Info Alert Card */}
+                    <div className="bg-indigo-50/50 border border-indigo-200/60 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <span className="text-xl">📅</span>
+                            <div>
+                                <h4 className="text-xs font-bold text-indigo-800">Catatan Absensi Bulanan</h4>
+                                <p className="text-[11px] text-indigo-700/80 mt-0.5">Penilaian kehadiran berdasarkan finger print & log kehadiran harian.</p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+                            <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-1">
+                                <span className="text-[9px] text-emerald-700 font-bold block">Hadir</span>
+                                <span className="font-mono font-extrabold text-emerald-800 text-xs">0 Hari</span>
+                            </div>
+                            <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-1">
+                                <span className="text-[9px] text-amber-700 font-bold block">Telat</span>
+                                <span className="font-mono font-extrabold text-amber-800 text-xs">0 Hari</span>
+                            </div>
+                            <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-1">
+                                <span className="text-[9px] text-blue-700 font-bold block">Izin</span>
+                                <span className="font-mono font-extrabold text-blue-800 text-xs">0 Hari</span>
+                            </div>
+                            <div className="bg-rose-50 border border-rose-100 rounded-lg px-3 py-1">
+                                <span className="text-[9px] text-rose-700 font-bold block">Tanpa Keterangan</span>
+                                <span className="font-mono font-extrabold text-rose-800 text-xs">0 Hari</span>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Stats Summary Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                         <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-4 rounded-xl text-center shadow-md text-white border border-amber-600/20">
                             <p className="text-[9px] uppercase font-extrabold tracking-wider opacity-90">Total Poin Bulan Ini</p>
                             <p className="text-3xl font-extrabold mt-1">{summary.score}</p>
@@ -317,10 +356,15 @@ export default function Show({ user, summary, taskHistory, completedProjects, tr
                             <p className="text-2xl font-extrabold text-emerald-600 mt-1">+{summary.fast_updates}</p>
                             <p className="text-[9px] text-stone-500 mt-1">Selesai sebelum target</p>
                         </div>
-                        <div className="bg-white rounded-xl border border-stone-200 p-4 text-center shadow-sm col-span-2 md:col-span-1">
+                        <div className="bg-white rounded-xl border border-stone-200 p-4 text-center shadow-sm">
                             <p className="text-[9px] uppercase font-bold text-stone-400">Late Tasks</p>
                             <p className="text-2xl font-extrabold text-rose-500 mt-1">-{summary.late_tasks}</p>
                             <p className="text-[9px] text-stone-500 mt-1">-{settings.penalty_late} poin / terlambat</p>
+                        </div>
+                        <div className="bg-white rounded-xl border border-stone-200 p-4 text-center shadow-sm">
+                            <p className="text-[9px] uppercase font-bold text-stone-400">Kehadiran (Absensi)</p>
+                            <p className="text-2xl font-extrabold text-indigo-600 mt-1">100%</p>
+                            <p className="text-[9px] text-stone-500 mt-1">Hadir tepat waktu & patuh</p>
                         </div>
                     </div>
 

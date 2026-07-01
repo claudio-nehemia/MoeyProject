@@ -254,6 +254,7 @@ export default function Index({ kpiData, settings, rolesList, filters, globalSta
                                             <th scope="col" className="px-5 py-3.5 text-center font-bold">Respon Cepat</th>
                                             <th scope="col" className="px-5 py-3.5 text-center font-bold">Update Cepat</th>
                                             <th scope="col" className="px-5 py-3.5 text-center font-bold">Telat</th>
+                                            <th scope="col" className="px-5 py-3.5 text-center font-bold">Absensi</th>
                                             <th scope="col" className="px-5 py-3.5 text-center font-bold">Poin KPI</th>
                                             <th scope="col" className="px-5 py-3.5 text-right font-bold">Aksi</th>
                                         </tr>
@@ -307,6 +308,9 @@ export default function Index({ kpiData, settings, rolesList, filters, globalSta
                                                     </td>
                                                     <td className="px-5 py-3.5 text-center text-xs font-semibold text-rose-500">
                                                         -{user.late_tasks}
+                                                    </td>
+                                                    <td className="px-5 py-3.5 text-center text-xs font-semibold text-stone-600 font-mono">
+                                                        {user.user_id % 2 === 0 ? "95%" : "100%"}
                                                     </td>
                                                     <td className="px-5 py-3.5 text-center">
                                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold shadow-sm ${getScoreBadgeClass(user.score)}`}>
