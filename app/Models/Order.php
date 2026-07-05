@@ -27,6 +27,7 @@ class Order extends Model
         'survey_response_by',
         'pm_survey_response_by',
         'pm_survey_response_time',
+        'created_by',
     ];
 
     protected $casts = [
@@ -42,6 +43,11 @@ class Order extends Model
     {
         return $this->belongsToMany(User::class, 'order_teams')
             ->withTimestamps();
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function surveyResults()
@@ -121,16 +127,23 @@ class Order extends Model
             return $query->whereRaw('1 = 0');
         }
 
-        // Roles yang hanya bisa melihat order dimana mereka adalah team member
-        $restrictedRoles = ['Surveyor', 'Drafter', 'Desainer'];
-        
         // Load role jika belum di-load
         if (!$user->relationLoaded('role')) {
             $user->load('role');
         }
+
+        $roleName = $user->role ? $user->role->nama_role : null;
+
+        // Customer Service hanya bisa melihat order yang mereka buat sendiri
+        if ($roleName === 'Customer Service') {
+            return $query->where('created_by', $user->id);
+        }
+
+        // Roles yang hanya bisa melihat order dimana mereka adalah team member
+        $restrictedRoles = ['Surveyor', 'Drafter', 'Desainer'];
         
         // Cek apakah user memiliki role yang dibatasi
-        if ($user->role && in_array($user->role->nama_role, $restrictedRoles)) {
+        if ($roleName && in_array($roleName, $restrictedRoles)) {
             // Filter hanya order dimana user adalah team member
             return $query->whereHas('users', function($q) use ($user) {
                 $q->where('users.id', $user->id);

@@ -1,6 +1,6 @@
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 import { Eye, Edit2, Trash2, FileDown } from 'lucide-react';
 
@@ -26,6 +26,10 @@ interface OrderData {
     payment_status: string;
     tahapan_proyek: string;
     users: User[];
+    creator?: {
+        id: number;
+        name: string;
+    } | null;
 }
 
 interface Props {
@@ -33,6 +37,9 @@ interface Props {
 }
 
 export default function Index({ orders }: Props) {
+    const { auth } = usePage<any>().props;
+    const showCreator = auth?.user?.role?.nama_role !== 'Customer Service';
+
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 1024;
@@ -362,6 +369,7 @@ export default function Index({ orders }: Props) {
                                             <th className="px-6 py-4">Stage / Tahapan</th>
                                             <th className="px-6 py-4">Payment Status</th>
                                             <th className="px-6 py-4">Team</th>
+                                            {showCreator && <th className="px-6 py-4">Dibuat Oleh</th>}
                                             <th className="px-6 py-4 text-right">Actions</th>
                                         </tr>
                                     </thead>
@@ -426,6 +434,13 @@ export default function Index({ orders }: Props) {
                                                         )}
                                                     </div>
                                                 </td>
+                                                {showCreator && (
+                                                    <td className="px-6 py-4">
+                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold tracking-wide border border-stone-200 bg-stone-50 rounded-lg text-stone-600">
+                                                            👤 {order.creator?.name || 'System'}
+                                                        </span>
+                                                    </td>
+                                                )}
                                                 <td className="px-6 py-4 text-right">
                                                     <div className="flex items-center justify-end gap-3 opacity-100 sm:opacity-50 group-hover:opacity-100 transition-opacity">
                                                         <Link
