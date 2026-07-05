@@ -1264,4 +1264,49 @@ class NotificationService
 
         return $urls[$tahap] ?? '/order';
     }
+
+    /**
+     * Send payment reminder notification to Legal Admin users
+     */
+    public function sendPaymentReminderNotification(Order $order, \App\Models\CashflowVendorEntry $entry, string $paymentType = 'dp')
+    {
+        $legalAdmins = User::whereHas('role', function ($query) {
+            $query->where('nama_role', 'Legal Admin');
+        })->get();
+
+        $amount = $paymentType === 'termin' ? $entry->pembayaran_termin : $entry->pembayaran;
+        $formattedAmount = 'Rp ' . number_format($amount, 0, ',', '.');
+        $label = $entry->label ?: $entry->vendor_name ?: 'Vendor';
+        $typeLabel = $paymentType === 'termin' ? 'Termin' : 'DP/Pembayaran';
+
+        foreach ($legalAdmins as $legalAdmin) {
+            $notification = Notification::create([
+                'user_id' => $legalAdmin->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_PAYMENT_REMINDER,
+                'title' => "💰 Reminder Pembayaran - {$order->nama_project}",
+                'message' => "Pembayaran {$typeLabel} untuk \"{$label}\" sebesar {$formattedAmount} pada project \"{$order->nama_project}\" jatuh tempo hari ini.",
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'vendor_entry_id' => $entry->id,
+                    'vendor_type' => $entry->vendor_type,
+                    'payment_type' => $paymentType,
+                    'amount' => $amount,
+                    'action_url' => '/cashflow/' . $order->id,
+                ],
+            ]);
+
+            // 🔥 Send FCM push notification to mobile
+            $this->fcmService->sendToUser($legalAdmin->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
+    }
 }

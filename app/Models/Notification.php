@@ -51,6 +51,8 @@ class Notification extends Model
 
     const TYPE_PROJECT_MANAGEMENT_REQUEST = 'project_management_request';
 
+    const TYPE_PAYMENT_REMINDER = 'payment_reminder';
+
     public function user()
     {
         return $this->belongsTo(User::class);

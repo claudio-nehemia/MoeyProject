@@ -6,6 +6,8 @@ use Inertia\Inertia;
 use App\Models\Order;
 use App\Models\JenisItem;
 use App\Models\CashflowManualEntry;
+use App\Models\CashflowVendorEntry;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -108,6 +110,12 @@ class CashflowController extends Controller
         $invoices = $ip?->invoices ?? collect();
         $commitmentFee = $order->moodboard?->commitmentFee;
 
+        // Initialize defaults if they do not exist
+        $this->initializeDefaultVendorEntries($order);
+
+        // Fetch all vendor entries
+        $vendorEntries = CashflowVendorEntry::where('order_id', $order->id)->orderBy('sort_order')->orderBy('id')->get();
+
         // ═══════════════════════════════════════
         // BAGIAN 1: CUSTOMER (Kontrak split)
         // ═══════════════════════════════════════
@@ -122,6 +130,147 @@ class CashflowController extends Controller
             $entry = $manualEntries->get($category);
             return $entry ? (float) $entry->{$field} : 0;
         };
+
+        // ═══════════════════════════════════════
+        // BAGIAN 3: SPK VENDOR
+        // ═══════════════════════════════════════
+        $spkInternal = $getManual('spk_internal');
+        $spkFisik = $getManual('spk_fisik');
+        $spkExternal = $getManual('spk_external');
+
+        $spkInternalFix = $getManual('spk_internal_fix');
+        $upgradeMaterial = $getManual('upgrade_material');
+        $spkFisikFix = $getManual('spk_fisik_fix');
+        $spkExternalFix = $getManual('spk_external_fix');
+
+        $saldoEfisiensiInternal = $spkInternalFix > 0 ? $spkInternal - $spkInternalFix : 0;
+        $saldoEfisiensiFisik = $spkFisikFix > 0 ? $spkFisik - $spkFisikFix : 0;
+        $saldoEfisiensiExternal = $spkExternalFix > 0 ? $spkExternal - $spkExternalFix : 0;
+
+        $totalSpkFix = $spkInternalFix + $spkFisikFix + $spkExternalFix;
+        $totalSaldoEfisiensi = $saldoEfisiensiInternal + $saldoEfisiensiFisik + $saldoEfisiensiExternal;
+
+        // ═══════════════════════════════════════
+        // DYNAMIC VENDOR ENTRIES & CALCULATIONS
+        // ═══════════════════════════════════════
+        // A. Vendor Internal Main Entries
+        $internalMain = $vendorEntries->where('vendor_type', 'internal')->where('section', 'pembayaran_vendor')->sortBy('sort_order');
+        $totalMaterialInternalNilai = $vendorEntries->where('vendor_type', 'internal')->where('section', 'material_hutang')->sum('nilai');
+        $totalMaterialInternalPembayaran = $vendorEntries->where('vendor_type', 'internal')->where('section', 'material_hutang')->sum('pembayaran');
+
+        $internalMainFormatted = [];
+        $sumMainNilaiExceptPelunasan = 0;
+        $sumMainPembayaranExceptPelunasan = 0;
+
+        foreach ($internalMain as $entry) {
+            if ($entry->notes !== 'pelunasan') {
+                if ($entry->persentase !== null && $entry->persentase > 0) {
+                    $entryNilai = $spkInternalFix * ($entry->persentase / 100);
+                } else {
+                    $entryNilai = $entry->nilai;
+                }
+                $sumMainNilaiExceptPelunasan += $entryNilai;
+                $sumMainPembayaranExceptPelunasan += $entry->pembayaran;
+            }
+        }
+
+        $pelunasanInternalNilai = $spkInternalFix - $sumMainNilaiExceptPelunasan - $totalMaterialInternalNilai;
+        if ($pelunasanInternalNilai < 0) $pelunasanInternalNilai = 0;
+
+        foreach ($internalMain as $entry) {
+            $entryNilai = 0;
+            $calculatedPct = 0;
+            if ($entry->notes === 'pelunasan') {
+                $entryNilai = $pelunasanInternalNilai;
+                $calculatedPct = $spkInternalFix > 0 ? ($pelunasanInternalNilai / $spkInternalFix) * 100 : 0;
+            } else {
+                if ($entry->persentase !== null && $entry->persentase > 0) {
+                    $entryNilai = $spkInternalFix * ($entry->persentase / 100);
+                    $calculatedPct = $entry->persentase;
+                } else {
+                    $entryNilai = $entry->nilai;
+                    $calculatedPct = $spkInternalFix > 0 ? ($entry->nilai / $spkInternalFix) * 100 : 0;
+                }
+            }
+            $internalMainFormatted[] = [
+                'id' => $entry->id,
+                'label' => $entry->label,
+                'persentase' => round($calculatedPct, 2),
+                'nilai' => round($entryNilai),
+                'pembayaran' => $entry->pembayaran,
+                'tanggal_pembayaran' => $entry->tanggal_pembayaran ? $entry->tanggal_pembayaran->format('Y-m-d') : null,
+                'flag_af' => $entry->flag_af,
+                'flag_fb' => $entry->flag_fb,
+                'flag_jw' => $entry->flag_jw,
+                'notes' => $entry->notes ?: 'dp',
+            ];
+        }
+
+        $totalPembayaranMainInternal = $internalMain->sum('pembayaran');
+        $realisasiInternal = $totalPembayaranMainInternal + $totalMaterialInternalPembayaran;
+        $statusPoInternal = ($totalMaterialInternalNilai < $spkInternalFix * 0.35) ? 'Bisa PO' : 'Tidak Bisa PO';
+
+        // B. Vendor Fisik Main Entries
+        $fisikMain = $vendorEntries->where('vendor_type', 'fisik')->where('section', 'pembayaran_vendor')->sortBy('sort_order');
+        $totalMaterialFisikNilai = $vendorEntries->where('vendor_type', 'fisik')->where('section', 'material_hutang')->sum('nilai');
+        $totalMaterialFisikPembayaran = $vendorEntries->where('vendor_type', 'fisik')->where('section', 'material_hutang')->sum('pembayaran');
+
+        $fisikMainFormatted = [];
+        $totalFisikMainPembayaran = 0;
+        $dpFisik = 0;
+        $terminFisik = 0;
+        $pelunasanFisik = 0;
+
+        foreach ($fisikMain as $entry) {
+            $entryNilai = $spkFisikFix * ($entry->persentase / 100);
+            $totalFisikMainPembayaran += $entry->pembayaran;
+
+            if ($entry->notes === 'dp' || ($entry->notes === null && $entry->label === 'DP')) {
+                $dpFisik = $entry->pembayaran;
+            } elseif ($entry->notes === 'termin' || ($entry->notes === null && $entry->label === 'Termin II')) {
+                $terminFisik = $entry->pembayaran;
+            } elseif ($entry->notes === 'pelunasan' || ($entry->notes === null && $entry->label === 'Pelunasan')) {
+                $pelunasanFisik = $entry->pembayaran;
+            }
+
+            $fisikMainFormatted[] = [
+                'id' => $entry->id,
+                'label' => $entry->label,
+                'persentase' => $entry->persentase,
+                'nilai' => round($entryNilai),
+                'pembayaran' => $entry->pembayaran,
+                'tanggal_pembayaran' => $entry->tanggal_pembayaran ? $entry->tanggal_pembayaran->format('Y-m-d') : null,
+                'flag_af' => $entry->flag_af,
+                'flag_fb' => $entry->flag_fb,
+                'flag_jw' => $entry->flag_jw,
+                'notes' => $entry->notes ?: 'dp',
+            ];
+        }
+
+        $budgetMaterialFisik = $spkFisikFix - $totalFisikMainPembayaran;
+        $sisaBudgetMaterialFisik = $budgetMaterialFisik - $totalMaterialFisikPembayaran;
+        $realisasiFisik = $totalFisikMainPembayaran + $totalMaterialFisikPembayaran;
+
+        // C. Vendor External
+        $externalItems = $this->getExternalEntries($order, 'item_external');
+        $externalAddendums = $this->getExternalEntries($order, 'addendum_external');
+        $externalPengeluaranLuar = $this->getExternalEntries($order, 'pengeluaran_luar');
+
+        $totalDpExternal = $vendorEntries->where('vendor_type', 'external')->where('section', 'item_external')->sum('pembayaran');
+        $totalTerminExternal = $vendorEntries->where('vendor_type', 'external')->where('section', 'item_external')->sum('pembayaran_termin');
+        $totalAddendumExternalPembayaran = $vendorEntries->where('vendor_type', 'external')->where('section', 'addendum_external')->sum('pembayaran');
+        $totalPengeluaranLuarPembayaran = $vendorEntries->where('vendor_type', 'external')->where('section', 'pengeluaran_luar')->sum('pembayaran');
+
+        $realisasiExternal = $totalDpExternal + $totalTerminExternal;
+        $realisasiAddendum = $totalAddendumExternalPembayaran + $totalPengeluaranLuarPembayaran;
+
+        // ═══════════════════════════════════════
+        // REALISASI SUMMARY & PROJECT STATUS
+        // ═══════════════════════════════════════
+        $sisaSaldoInternal = $spkInternal - $realisasiInternal;
+        $sisaSaldoFisik = $spkFisik - $realisasiFisik;
+        $sisaSaldoExternal = $spkExternal - $realisasiExternal;
+        $totalRealisasi = $realisasiInternal + $realisasiFisik + $realisasiExternal + $realisasiAddendum;
 
         // ═══════════════════════════════════════
         // BAGIAN 2: PEMBAYARAN (DP, Termin, Pelunasan)
@@ -139,13 +288,8 @@ class CashflowController extends Controller
 
         // Paid invoices sorted by date
         $paidInvoices = $invoices->where('status', 'paid')->sortBy('paid_at');
+        $cmFeePaid = ($commitmentFee && $commitmentFee->payment_status === 'completed') ? (float) $commitmentFee->total_fee : 0;
 
-        // Try to get payment amounts from actual invoices / CM Fee
-        $cmFeePaid = ($commitmentFee && $commitmentFee->payment_status === 'completed')
-            ? (float) $commitmentFee->total_fee
-            : 0;
-
-        // Parse termin structure for percentages
         if (is_array($tahapan)) {
             foreach ($tahapan as $idx => $t) {
                 $pct = isset($t['persentase']) ? (float) $t['persentase'] : 0;
@@ -179,44 +323,9 @@ class CashflowController extends Controller
             $tglPelunasan = $paidInvoicesList->get(2)?->paid_at;
         }
 
-        // Add CM Fee to DP if applicable
         $pembayaranDp += $cmFeePaid;
-
         $totalDiterima = $pembayaranDp + $pembayaranTermin + $pembayaranPelunasan;
         $sisaPiutang = $split['total'] - $totalDiterima;
-
-        // ═══════════════════════════════════════
-        // BAGIAN 3: SPK VENDOR
-        // ═══════════════════════════════════════
-        $spkInternal = $getManual('spk_internal');
-        $spkFisik = $getManual('spk_fisik');
-        $spkExternal = $getManual('spk_external');
-
-        $spkInternalFix = $getManual('spk_internal_fix');
-        $upgradeMaterial = $getManual('upgrade_material');
-        $spkFisikFix = $getManual('spk_fisik_fix');
-        $spkExternalFix = $getManual('spk_external_fix');
-
-        $saldoEfisiensiInternal = $spkInternalFix > 0 ? $spkInternal - $spkInternalFix : 0;
-        $saldoEfisiensiFisik = $spkFisikFix > 0 ? $spkFisik - $spkFisikFix : 0;
-        $saldoEfisiensiExternal = $spkExternalFix > 0 ? $spkExternal - $spkExternalFix : 0;
-
-        $totalSpkFix = $spkInternalFix + $spkFisikFix + $spkExternalFix;
-        $totalSaldoEfisiensi = $saldoEfisiensiInternal + $saldoEfisiensiFisik + $saldoEfisiensiExternal;
-
-        // ═══════════════════════════════════════
-        // BAGIAN 4: REALISASI PENGELUARAN (manual input)
-        // ═══════════════════════════════════════
-        $realisasiInternal = $getManual('realisasi_internal');
-        $realisasiFisik = $getManual('realisasi_fisik');
-        $realisasiExternal = $getManual('realisasi_external');
-        $realisasiAddendum = $getManual('realisasi_addendum');
-
-        $sisaSaldoInternal = $spkInternal - $realisasiInternal;
-        $sisaSaldoFisik = $spkFisik - $realisasiFisik;
-        $sisaSaldoExternal = $spkExternal - $realisasiExternal;
-
-        $totalRealisasi = $realisasiInternal + $realisasiFisik + $realisasiExternal + $realisasiAddendum;
 
         // ═══════════════════════════════════════
         // BAGIAN 5: ESTIMASI MARGIN
@@ -231,8 +340,6 @@ class CashflowController extends Controller
         $pctTargetExternal = $split['eksternal'] > 0 ? $targetExternal / $split['eksternal'] : 0;
         $pctTotalMargin = $split['total'] > 0 ? $totalTargetMargin / $split['total'] : 0;
 
-        // Logic: if target internal margin % <= 30%, use target internal as base
-        // Otherwise, use 30% * kontrak internal as base
         $marginBase = ($pctTargetInternal <= 0.30) ? $targetInternal : (0.30 * $split['internal']);
 
         // Load dynamic Margin Breakdown entries
@@ -243,7 +350,6 @@ class CashflowController extends Controller
 
         $breakdownData = [];
         if ($breakdownEntries->isEmpty()) {
-            // Default breakdown list
             $breakdownData = [
                 ['label' => 'Budget Digital Marketing', 'pct' => 10.0, 'base' => 'internal_margin'],
                 ['label' => 'Operasional', 'pct' => 6.0, 'base' => 'internal_margin'],
@@ -282,17 +388,15 @@ class CashflowController extends Controller
         }
         unset($item);
 
-        // Fee Team — get individual fee percentages from manual entries
+        // Fee Team
         $feeTeamMembers = CashflowManualEntry::where('order_id', $order->id)
             ->where('category', 'fee_team')
             ->orderBy('id')
             ->get();
 
-        // If no fee team entries exist, calculate total fee team from default percentages
         $totalFeeTeam = 0;
         $feeTeamData = [];
         if ($feeTeamMembers->isEmpty()) {
-            // Default fee team structure from spreadsheet
             $defaultFees = [
                 ['label' => 'Designer 1', 'pct' => 7.35],
                 ['label' => 'Lead Designer', 'pct' => 0, 'formula' => 'designer1/4'],
@@ -343,12 +447,18 @@ class CashflowController extends Controller
         // ═══════════════════════════════════════
         // Fase DP
         $rpkDp = $pembayaranDp;
-        $dpVendor = $getManual('dp_vendor') ?: round($spkInternalFix * 0.20);
-        $cadanganVendorDp = $getManual('cadangan_vendor_dp') ?: round($spkInternalFix * 0.15);
-        $dpFisik = $getManual('dp_fisik');
-        $dpExternal = $getManual('dp_external');
+        $dpVendor = $internalMain->where('notes', 'dp')->sum('pembayaran');
+        $cadanganVendorDp = $internalMain->where('notes', 'cadangan')->sum('pembayaran');
 
-        $totalPengeluaranDp = $dpVendor + $cadanganVendorDp + $dpFisik + $dpExternal + $totalFeeTeam + $totalBreakdownAmount;
+        // Fallback to labels for backwards compatibility / static seeder data
+        if ($dpVendor == 0 && $cadanganVendorDp == 0) {
+            $sdmWorkshopPembayaran = $internalMain->where('label', 'SDM Workshop')->first()?->pembayaran ?? 0;
+            $cadanganVendorPembayaran = $internalMain->where('label', 'Cadangan Vendor')->first()?->pembayaran ?? 0;
+            $dpVendor = $sdmWorkshopPembayaran;
+            $cadanganVendorDp = $cadanganVendorPembayaran;
+        }
+
+        $totalPengeluaranDp = $dpVendor + $cadanganVendorDp + $dpFisik + $totalDpExternal + $totalFeeTeam + $totalBreakdownAmount;
         $sisaCashSebelumMgmtDp = $rpkDp - $totalPengeluaranDp;
         $managementDp = ($sisaCashSebelumMgmtDp > $sisaMargin) ? $sisaMargin : $sisaCashSebelumMgmtDp;
         if ($managementDp < 0) $managementDp = 0;
@@ -359,17 +469,21 @@ class CashflowController extends Controller
         $sisaCashSebelumnya = $sisaCashDp;
         $totalCashTermin = $rpkTermin + $sisaCashSebelumnya;
 
-        $terminVendor = $getManual('termin_vendor');
-        $materialHutangVendor = $getManual('material_hutang_vendor');
-        $terminFisik = $getManual('termin_fisik');
-        $terminExternal = $getManual('termin_external');
+        $terminVendor = $internalMain->where('notes', 'termin')->sum('pembayaran');
+        if ($terminVendor == 0) {
+            $kasbonIPembayaran = $internalMain->where('label', 'Kasbon I')->first()?->pembayaran ?? 0;
+            $kasbonIIPembayaran = $internalMain->where('label', 'Kasbon II')->first()?->pembayaran ?? 0;
+            $sdmWorkshop2Pembayaran = $internalMain->where('label', 'SDM Workshop 2')->first()?->pembayaran ?? 0;
+            $terminVendor = $kasbonIPembayaran + $kasbonIIPembayaran + $sdmWorkshop2Pembayaran;
+        }
+        $materialHutangVendor = $totalMaterialInternalPembayaran;
 
-        $sisaCashSebelumMgmtTermin = $totalCashTermin - $terminVendor - $materialHutangVendor - $terminFisik - $terminExternal;
+        $sisaCashSebelumMgmtTermin = $totalCashTermin - $terminVendor - $materialHutangVendor - $terminFisik - $totalTerminExternal;
         $managementTermin = 0;
         if (($managementDp + $sisaCashSebelumMgmtTermin) > $sisaMargin) {
             $managementTermin = $sisaMargin - $managementDp;
         } else {
-            $managementTermin = $rpkTermin - $terminVendor - $materialHutangVendor - $terminFisik - $terminExternal;
+            $managementTermin = $rpkTermin - $terminVendor - $materialHutangVendor - $terminFisik - $totalTerminExternal;
         }
         if ($managementTermin < 0) $managementTermin = 0;
         $sisaCashTermin = $sisaCashSebelumMgmtTermin - $managementTermin;
@@ -378,19 +492,25 @@ class CashflowController extends Controller
         $sisaCashSebelumnyaPelunasan = $sisaCashTermin;
         $totalCashPelunasan = $pembayaranPelunasan + $sisaCashSebelumnyaPelunasan;
 
-        $pelunasanVendor = $getManual('pelunasan_vendor');
-        $materialHutangVendorPel = $getManual('material_hutang_vendor_pel');
-        $pelunasanFisik = $getManual('pelunasan_fisik');
-        $pelunasanExternal = $getManual('pelunasan_external');
+        $pelunasanVendor = $internalMain->where('notes', 'pelunasan')->sum('pembayaran');
+        if ($pelunasanVendor == 0) {
+            $pelunasanVendor = $internalMain->where('label', 'Pelunasan')->first()?->pembayaran ?? 0;
+        }
+        $materialHutangVendorPel = $totalMaterialFisikPembayaran;
 
-        $sisaCashSebelumMgmtPelunasan = $totalCashPelunasan - $pelunasanVendor - $materialHutangVendorPel - $pelunasanFisik - $pelunasanExternal;
+        // Status sisa external items
+        $totalStatusExternal = $vendorEntries->where('vendor_type', 'external')->where('section', 'item_external')->sum(function($entry) {
+            return $entry->spk_amount - $entry->pembayaran - $entry->pembayaran_termin;
+        });
+
+        $sisaCashSebelumMgmtPelunasan = $totalCashPelunasan - $pelunasanVendor - $materialHutangVendorPel - $pelunasanFisik - $totalStatusExternal;
         $managementPelunasan = 0;
         if ($pembayaranPelunasan > 0) {
             $managementPelunasan = $sisaMargin - $managementDp - $managementTermin;
         }
         if ($managementPelunasan < 0) $managementPelunasan = 0;
-        $addendumCadanganGaji = $getManual('addendum_cadangan_gaji');
-        $pengeluaranLainLain = $getManual('pengeluaran_lain_lain');
+        $addendumCadanganGaji = $totalAddendumExternalPembayaran;
+        $pengeluaranLainLain = $totalPengeluaranLuarPembayaran;
 
         // ═══════════════════════════════════════
         // BAGIAN 7: STATUS PROJECT
@@ -411,6 +531,9 @@ class CashflowController extends Controller
             ],
             'split' => $split,
             'pembayaran' => [
+                'amount_dp' => $pembayaranDp,
+                'amount_termin' => $pembayaranTermin,
+                'amount_pelunasan' => $pembayaranPelunasan,
                 'dp' => ['amount' => $pembayaranDp, 'pct' => $pctDp, 'proyeksi' => $proyeksiDp, 'tanggal' => $tglDp],
                 'termin' => ['amount' => $pembayaranTermin, 'pct' => $pctTermin, 'proyeksi' => $proyeksiTermin, 'tanggal' => $tglTermin],
                 'pelunasan' => ['amount' => $pembayaranPelunasan, 'pct' => $pctPelunasan, 'proyeksi' => $proyeksiPelunasan, 'tanggal' => $tglPelunasan],
@@ -463,7 +586,7 @@ class CashflowController extends Controller
                     'dp_vendor' => $dpVendor,
                     'cadangan_vendor' => $cadanganVendorDp,
                     'dp_fisik' => $dpFisik,
-                    'dp_external' => $dpExternal,
+                    'dp_external' => $totalDpExternal,
                     'fee_team_detail' => $feeTeamData,
                     'breakdown_items' => $breakdownData,
                     'sisa_cash_sebelum_mgmt' => round($sisaCashSebelumMgmtDp),
@@ -477,7 +600,7 @@ class CashflowController extends Controller
                     'termin_vendor' => $terminVendor,
                     'material_hutang_vendor' => $materialHutangVendor,
                     'termin_fisik' => $terminFisik,
-                    'termin_external' => $terminExternal,
+                    'termin_external' => $totalTerminExternal,
                     'sisa_cash_sebelum_mgmt' => round($sisaCashSebelumMgmtTermin),
                     'management' => round($managementTermin),
                     'sisa_cash' => round($sisaCashTermin),
@@ -488,7 +611,7 @@ class CashflowController extends Controller
                     'pelunasan_vendor' => $pelunasanVendor,
                     'material_hutang_vendor' => $materialHutangVendorPel,
                     'pelunasan_fisik' => $pelunasanFisik,
-                    'pelunasan_external' => $pelunasanExternal,
+                    'pelunasan_external' => $totalStatusExternal,
                     'sisa_cash_sebelum_mgmt' => round($sisaCashSebelumMgmtPelunasan),
                     'management' => round($managementPelunasan),
                     'addendum_cadangan_gaji' => $addendumCadanganGaji,
@@ -496,6 +619,25 @@ class CashflowController extends Controller
                 ],
             ],
             'status_project' => round($statusProject),
+            'vendor_internal' => [
+                'main_entries' => $internalMainFormatted,
+                'material_groups' => $this->getGroupedMaterials($order, 'internal'),
+                'total_material_nilai' => $totalMaterialInternalNilai,
+                'total_material_pembayaran' => $totalMaterialInternalPembayaran,
+                'status_po' => $statusPoInternal,
+            ],
+            'vendor_fisik' => [
+                'main_entries' => $fisikMainFormatted,
+                'material_groups' => $this->getGroupedMaterials($order, 'fisik'),
+                'budget_material' => $budgetMaterialFisik,
+                'total_material_pembayaran' => $totalMaterialFisikPembayaran,
+                'sisa_budget' => $sisaBudgetMaterialFisik,
+            ],
+            'vendor_external' => [
+                'items' => $externalItems,
+                'addendums' => $externalAddendums,
+                'pengeluaran_luar' => $externalPengeluaranLuar,
+            ],
         ]);
     }
 
@@ -672,5 +814,323 @@ class CashflowController extends Controller
             'eksternal' => $kontrakExternal,
             'total' => $kontrakInternal + $kontrakFisik + $kontrakExternal,
         ];
+    }
+
+    /**
+     * Store/update all cashflow vendor entries
+     */
+    public function storeVendorEntries(Request $request, Order $order)
+    {
+        // 1. Save Pembayaran Vendor Utama Internal
+        if ($request->has('pembayaran_vendor_internal')) {
+            $items = $request->input('pembayaran_vendor_internal');
+            if (is_array($items)) {
+                $incomingIds = array_filter(array_column($items, 'id'));
+                CashflowVendorEntry::where('order_id', $order->id)
+                    ->where('vendor_type', 'internal')
+                    ->where('section', 'pembayaran_vendor')
+                    ->whereNotIn('id', $incomingIds)
+                    ->delete();
+
+                foreach ($items as $idx => $item) {
+                    $oldDate = null;
+                    if (isset($item['id'])) {
+                        $entry = CashflowVendorEntry::find($item['id']);
+                        if ($entry) {
+                            $oldDate = $entry->tanggal_pembayaran;
+                        }
+                    }
+
+                    $data = [
+                        'order_id' => $order->id,
+                        'vendor_type' => 'internal',
+                        'section' => 'pembayaran_vendor',
+                        'label' => $item['label'] ?? '',
+                        'persentase' => isset($item['persentase']) ? (float)$item['persentase'] : null,
+                        'nilai' => isset($item['nilai']) ? (float)$item['nilai'] : 0,
+                        'pembayaran' => (float)($item['pembayaran'] ?? 0),
+                        'tanggal_pembayaran' => $item['tanggal_pembayaran'] ?: null,
+                        'flag_af' => $item['flag_af'] ?: null,
+                        'flag_fb' => $item['flag_fb'] ?: null,
+                        'flag_jw' => $item['flag_jw'] ?: null,
+                        'notes' => $item['notes'] ?? 'dp',
+                        'sort_order' => $idx + 1,
+                    ];
+
+                    if (isset($item['id'])) {
+                        $entry = CashflowVendorEntry::find($item['id']);
+                        $entry->update($data);
+                    } else {
+                        $entry = CashflowVendorEntry::create($data);
+                    }
+
+                    if ($entry->tanggal_pembayaran && (!$oldDate || $oldDate->format('Y-m-d') !== Carbon::parse($entry->tanggal_pembayaran)->format('Y-m-d'))) {
+                        $entry->update(['reminder_sent' => false]);
+                    }
+                }
+            }
+        }
+
+        // 2. Save Pembayaran Vendor Utama Fisik
+        if ($request->has('pembayaran_vendor_fisik')) {
+            $items = $request->input('pembayaran_vendor_fisik');
+            if (is_array($items)) {
+                $incomingIds = array_filter(array_column($items, 'id'));
+                CashflowVendorEntry::where('order_id', $order->id)
+                    ->where('vendor_type', 'fisik')
+                    ->where('section', 'pembayaran_vendor')
+                    ->whereNotIn('id', $incomingIds)
+                    ->delete();
+
+                foreach ($items as $idx => $item) {
+                    $oldDate = null;
+                    if (isset($item['id'])) {
+                        $entry = CashflowVendorEntry::find($item['id']);
+                        if ($entry) {
+                            $oldDate = $entry->tanggal_pembayaran;
+                        }
+                    }
+
+                    $data = [
+                        'order_id' => $order->id,
+                        'vendor_type' => 'fisik',
+                        'section' => 'pembayaran_vendor',
+                        'label' => $item['label'] ?? '',
+                        'persentase' => isset($item['persentase']) ? (float)$item['persentase'] : null,
+                        'nilai' => isset($item['nilai']) ? (float)$item['nilai'] : 0,
+                        'pembayaran' => (float)($item['pembayaran'] ?? 0),
+                        'tanggal_pembayaran' => $item['tanggal_pembayaran'] ?: null,
+                        'flag_af' => $item['flag_af'] ?: null,
+                        'flag_fb' => $item['flag_fb'] ?: null,
+                        'flag_jw' => $item['flag_jw'] ?: null,
+                        'notes' => $item['notes'] ?? 'dp',
+                        'sort_order' => $idx + 1,
+                    ];
+
+                    if (isset($item['id'])) {
+                        $entry = CashflowVendorEntry::find($item['id']);
+                        $entry->update($data);
+                    } else {
+                        $entry = CashflowVendorEntry::create($data);
+                    }
+
+                    if ($entry->tanggal_pembayaran && (!$oldDate || $oldDate->format('Y-m-d') !== Carbon::parse($entry->tanggal_pembayaran)->format('Y-m-d'))) {
+                        $entry->update(['reminder_sent' => false]);
+                    }
+                }
+            }
+        }
+
+        // 3. Save Material Hutang (Internal & Fisik)
+        $materialHutangTypes = ['internal', 'fisik'];
+        foreach ($materialHutangTypes as $type) {
+            $inputKey = "material_groups_{$type}";
+            if ($request->has($inputKey)) {
+                $groups = $request->input($inputKey);
+                if (is_array($groups)) {
+                    $incomingIds = [];
+                    foreach ($groups as $group) {
+                        if (isset($group['items']) && is_array($group['items'])) {
+                            foreach ($group['items'] as $item) {
+                                if (isset($item['id'])) {
+                                    $incomingIds[] = $item['id'];
+                                }
+                            }
+                        }
+                    }
+
+                    CashflowVendorEntry::where('order_id', $order->id)
+                        ->where('vendor_type', $type)
+                        ->where('section', 'material_hutang')
+                        ->whereNotIn('id', $incomingIds)
+                        ->delete();
+
+                    foreach ($groups as $group) {
+                        $groupName = $group['name'];
+                        if (isset($group['items']) && is_array($group['items'])) {
+                            foreach ($group['items'] as $item) {
+                                $oldDate = null;
+                                if (isset($item['id'])) {
+                                    $entry = CashflowVendorEntry::find($item['id']);
+                                    if ($entry) {
+                                        $oldDate = $entry->tanggal_pembayaran;
+                                    }
+                                }
+
+                                $data = [
+                                    'order_id' => $order->id,
+                                    'vendor_type' => $type,
+                                    'section' => 'material_hutang',
+                                    'vendor_group' => $groupName,
+                                    'label' => $item['label'] ?? '',
+                                    'nilai' => (float)($item['nilai'] ?? 0),
+                                    'pembayaran' => (float)($item['pembayaran'] ?? 0),
+                                    'tanggal_inv' => $item['tanggal_inv'] ?: null,
+                                    'tanggal_pembayaran' => $item['tanggal_pembayaran'] ?: null,
+                                    'flag_af' => $item['flag_af'] ?: null,
+                                    'flag_fb' => $item['flag_fb'] ?: null,
+                                    'flag_jw' => $item['flag_jw'] ?: null,
+                                ];
+
+                                if (isset($item['id'])) {
+                                    $entry = CashflowVendorEntry::find($item['id']);
+                                    $entry->update($data);
+                                } else {
+                                    $entry = CashflowVendorEntry::create($data);
+                                }
+
+                                if ($entry->tanggal_pembayaran && (!$oldDate || $oldDate->format('Y-m-d') !== Carbon::parse($entry->tanggal_pembayaran)->format('Y-m-d'))) {
+                                    $entry->update(['reminder_sent' => false]);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Save External Items
+        $externalSections = [
+            'item_external' => 'external_items',
+            'addendum_external' => 'external_addendums',
+            'pengeluaran_luar' => 'external_pengeluaran_luar'
+        ];
+
+        foreach ($externalSections as $section => $inputKey) {
+            if ($request->has($inputKey)) {
+                $items = $request->input($inputKey);
+                if (is_array($items)) {
+                    $incomingIds = array_filter(array_column($items, 'id'));
+                    CashflowVendorEntry::where('order_id', $order->id)
+                        ->where('vendor_type', 'external')
+                        ->where('section', $section)
+                        ->whereNotIn('id', $incomingIds)
+                        ->delete();
+
+                    foreach ($items as $item) {
+                        $oldDate = null;
+                        $oldTerminDate = null;
+                        if (isset($item['id'])) {
+                            $entry = CashflowVendorEntry::find($item['id']);
+                            if ($entry) {
+                                $oldDate = $entry->tanggal_pembayaran;
+                                $oldTerminDate = $entry->tanggal_pembayaran_termin;
+                            }
+                        }
+
+                        $data = [
+                            'order_id' => $order->id,
+                            'vendor_type' => 'external',
+                            'section' => $section,
+                            'label' => $item['label'] ?? '',
+                            'vendor_name' => $item['vendor_name'] ?? '',
+                            'nilai' => (float)($item['nilai'] ?? 0),
+                            'spk_amount' => (float)($item['spk_amount'] ?? 0),
+                            'tanggal_perencanaan' => $item['tanggal_perencanaan'] ?: null,
+                            'pembayaran' => (float)($item['pembayaran'] ?? 0),
+                            'tanggal_pembayaran' => $item['tanggal_pembayaran'] ?: null,
+                            'pembayaran_termin' => (float)($item['pembayaran_termin'] ?? 0),
+                            'tanggal_pembayaran_termin' => $item['tanggal_pembayaran_termin'] ?: null,
+                            'flag_af' => $item['flag_af'] ?: null,
+                            'flag_fb' => $item['flag_fb'] ?: null,
+                            'flag_jw' => $item['flag_jw'] ?: null,
+                            'flag_af_termin' => $item['flag_af_termin'] ?: null,
+                            'flag_fb_termin' => $item['flag_fb_termin'] ?: null,
+                            'flag_jw_termin' => $item['flag_jw_termin'] ?: null,
+                        ];
+
+                        if (isset($item['id'])) {
+                            $entry = CashflowVendorEntry::find($item['id']);
+                            $entry->update($data);
+                        } else {
+                            $entry = CashflowVendorEntry::create($data);
+                        }
+
+                        if ($entry->tanggal_pembayaran && (!$oldDate || $oldDate->format('Y-m-d') !== Carbon::parse($entry->tanggal_pembayaran)->format('Y-m-d'))) {
+                            $entry->update(['reminder_sent' => false]);
+                        }
+                        if ($entry->tanggal_pembayaran_termin && (!$oldTerminDate || $oldTerminDate->format('Y-m-d') !== Carbon::parse($entry->tanggal_pembayaran_termin)->format('Y-m-d'))) {
+                            $entry->update(['reminder_termin_sent' => false]);
+                        }
+                    }
+                }
+            }
+        }
+
+        return back()->with('success', 'Detail pembayaran vendor berhasil disimpan');
+    }
+
+    private function initializeDefaultVendorEntries(Order $order)
+    {
+        // Start completely empty by default for new projects
+        return;
+    }
+
+    private function getGroupedMaterials(Order $order, string $type)
+    {
+        $entries = CashflowVendorEntry::where('order_id', $order->id)
+            ->where('vendor_type', $type)
+            ->where('section', 'material_hutang')
+            ->orderBy('id')
+            ->get();
+
+        $grouped = [];
+        foreach ($entries as $entry) {
+            $groupName = $entry->vendor_group ?: 'Uncategorized';
+            if (!isset($grouped[$groupName])) {
+                $grouped[$groupName] = [
+                    'name' => $groupName,
+                    'items' => [],
+                ];
+            }
+            $grouped[$groupName]['items'][] = [
+                'id' => $entry->id,
+                'label' => $entry->label,
+                'nilai' => $entry->nilai,
+                'pembayaran' => $entry->pembayaran,
+                'tanggal_inv' => $entry->tanggal_inv ? $entry->tanggal_inv->format('Y-m-d') : null,
+                'tanggal_pembayaran' => $entry->tanggal_pembayaran ? $entry->tanggal_pembayaran->format('Y-m-d') : null,
+                'umur_inv' => $entry->umur_inv,
+                'flag_af' => $entry->flag_af,
+                'flag_fb' => $entry->flag_fb,
+                'flag_jw' => $entry->flag_jw,
+            ];
+        }
+
+        return array_values($grouped);
+    }
+
+    private function getExternalEntries(Order $order, string $section)
+    {
+        $entries = CashflowVendorEntry::where('order_id', $order->id)
+            ->where('vendor_type', 'external')
+            ->where('section', $section)
+            ->orderBy('id')
+            ->get();
+
+        $formatted = [];
+        foreach ($entries as $entry) {
+            $formatted[] = [
+                'id' => $entry->id,
+                'label' => $entry->label,
+                'vendor_name' => $entry->vendor_name,
+                'nilai' => $entry->nilai,
+                'spk_amount' => $entry->spk_amount,
+                'tanggal_perencanaan' => $entry->tanggal_perencanaan ? $entry->tanggal_perencanaan->format('Y-m-d') : null,
+                'pembayaran' => $entry->pembayaran,
+                'tanggal_pembayaran' => $entry->tanggal_pembayaran ? $entry->tanggal_pembayaran->format('Y-m-d') : null,
+                'pembayaran_termin' => $entry->pembayaran_termin,
+                'tanggal_pembayaran_termin' => $entry->tanggal_pembayaran_termin ? $entry->tanggal_pembayaran_termin->format('Y-m-d') : null,
+                'status_sisa' => $entry->status_sisa,
+                'flag_af' => $entry->flag_af,
+                'flag_fb' => $entry->flag_fb,
+                'flag_jw' => $entry->flag_jw,
+                'flag_af_termin' => $entry->flag_af_termin,
+                'flag_fb_termin' => $entry->flag_fb_termin,
+                'flag_jw_termin' => $entry->flag_jw_termin,
+            ];
+        }
+
+        return $formatted;
     }
 }

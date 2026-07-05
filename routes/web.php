@@ -140,6 +140,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
     Route::post('cashflow/{order}/manual-entry', [CashflowController::class, 'storeManualEntry'])
         ->middleware('permission:cashflow.create')->name('cashflow.store-manual');
+    Route::post('cashflow/{order}/vendor-entries', [CashflowController::class, 'storeVendorEntries'])
+        ->middleware('permission:cashflow.create')->name('cashflow.store-vendor-entries');
     Route::put('cashflow/manual-entry/{entry}', [CashflowController::class, 'updateManualEntry'])
         ->middleware('permission:cashflow.edit')->name('cashflow.update-manual');
     Route::delete('cashflow/manual-entry/{entry}', [CashflowController::class, 'deleteManualEntry'])

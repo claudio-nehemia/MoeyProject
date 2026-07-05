@@ -46,6 +46,14 @@ class CashflowSampleSeeder extends Seeder
 {
     public function run(): void
     {
+        // Cleanup old sample data if exists to allow safe re-seeding
+        $oldOrder = Order::where('nama_project', 'Titik Interior - Sample Finance')->first();
+        if ($oldOrder) {
+            \App\Models\CashflowVendorEntry::where('order_id', $oldOrder->id)->delete();
+            \App\Models\CashflowManualEntry::where('order_id', $oldOrder->id)->delete();
+            $oldOrder->delete();
+        }
+
         // ──────────────────────────────────────────
         // 1. CREATE ORDER
         // ──────────────────────────────────────────
@@ -376,6 +384,93 @@ class CashflowSampleSeeder extends Seeder
                 'phase' => 'general',
                 'created_by' => $pm?->id,
             ]);
+        }
+
+        // ──────────────────────────────────────────
+        // 9. SEED DETAILED VENDOR ENTRIES
+        // ──────────────────────────────────────────
+        // A. Internal Main Payments
+        $internalMainData = [
+            ['label' => 'SDM Workshop', 'persentase' => 20.0, 'nilai' => 42415837, 'pembayaran' => 4305911, 'tanggal_pembayaran' => '2026-04-20', 'notes' => 'dp', 'sort_order' => 1],
+            ['label' => 'Cadangan Vendor', 'persentase' => 15.0, 'nilai' => 31811878, 'pembayaran' => 3229433, 'tanggal_pembayaran' => '2026-04-20', 'notes' => 'cadangan', 'sort_order' => 2],
+            ['label' => 'Kasbon I', 'persentase' => 0.0, 'nilai' => 0, 'pembayaran' => 35000000, 'tanggal_pembayaran' => '2026-05-11', 'notes' => 'termin', 'sort_order' => 3],
+            ['label' => 'Kasbon II', 'persentase' => 0.0, 'nilai' => 0, 'pembayaran' => 0, 'tanggal_pembayaran' => null, 'notes' => 'termin', 'sort_order' => 4],
+            ['label' => 'SDM Workshop 2', 'persentase' => 10.0, 'nilai' => 21207919, 'pembayaran' => 0, 'tanggal_pembayaran' => null, 'notes' => 'termin', 'sort_order' => 5],
+            ['label' => 'Pelunasan', 'persentase' => null, 'nilai' => 41359130, 'pembayaran' => 0, 'tanggal_pembayaran' => null, 'notes' => 'pelunasan', 'sort_order' => 6],
+        ];
+        foreach ($internalMainData as $item) {
+            \App\Models\CashflowVendorEntry::create(array_merge($item, [
+                'order_id' => $order->id,
+                'vendor_type' => 'internal',
+                'section' => 'pembayaran_vendor',
+                'created_by' => $pm?->id,
+            ]));
+        }
+
+        // B. Internal Material Hutang - SOLMATOSS
+        $solmatossInternal = [
+            ['label' => 'Pembelian Material 26003105 - INV', 'nilai' => 193439, 'pembayaran' => 193439, 'tanggal_inv' => '2026-03-29', 'tanggal_pembayaran' => '2026-06-21', 'flag_af' => '✔'],
+            ['label' => 'Pembelian Material 26003103 - INV', 'nilai' => 11981518, 'pembayaran' => 11981518, 'tanggal_inv' => '2026-03-29', 'tanggal_pembayaran' => '2026-06-21', 'flag_af' => '✔'],
+            ['label' => 'Pembelian Material 26004315 - INV', 'nilai' => 45595199, 'pembayaran' => 45595199, 'tanggal_inv' => '2026-04-05', 'tanggal_pembayaran' => '2026-06-21', 'flag_af' => '✔'],
+            ['label' => 'Pembelian Material 26005731 - INV', 'nilai' => 6393265, 'pembayaran' => 6393265, 'tanggal_inv' => '2026-06-01', 'tanggal_pembayaran' => '2026-06-21', 'flag_af' => '✔'],
+        ];
+        foreach ($solmatossInternal as $item) {
+            \App\Models\CashflowVendorEntry::create(array_merge($item, [
+                'order_id' => $order->id,
+                'vendor_type' => 'internal',
+                'section' => 'material_hutang',
+                'vendor_group' => 'SOLMATOSS',
+                'created_by' => $pm?->id,
+            ]));
+        }
+
+        // C. Internal Material Hutang - FINARTINDO
+        $finartindoInternal = [
+            ['label' => 'Pembelian Material SI 20260401820', 'nilai' => 6396999, 'pembayaran' => 0, 'tanggal_inv' => '2026-05-20', 'tanggal_pembayaran' => '2026-06-25'],
+            ['label' => 'Pembelian Material SI 20260401575', 'nilai' => 4194000, 'pembayaran' => 0, 'tanggal_inv' => '2026-05-16', 'tanggal_pembayaran' => '2026-06-25'],
+            ['label' => 'Pembelian Material SI 20260500611', 'nilai' => 530002, 'pembayaran' => 0, 'tanggal_inv' => '2026-06-03', 'tanggal_pembayaran' => '2026-06-25'],
+        ];
+        foreach ($finartindoInternal as $item) {
+            \App\Models\CashflowVendorEntry::create(array_merge($item, [
+                'order_id' => $order->id,
+                'vendor_type' => 'internal',
+                'section' => 'material_hutang',
+                'vendor_group' => 'FINARTINDO',
+                'created_by' => $pm?->id,
+            ]));
+        }
+
+        // D. Fisik Main Payments
+        $fisikMainData = [
+            ['label' => 'DP', 'persentase' => 50.0, 'nilai' => 21028250, 'pembayaran' => 0, 'tanggal_pembayaran' => null, 'notes' => 'dp', 'sort_order' => 1],
+            ['label' => 'Termin II', 'persentase' => 40.0, 'nilai' => 16822600, 'pembayaran' => 0, 'tanggal_pembayaran' => null, 'notes' => 'termin', 'sort_order' => 2],
+            ['label' => 'Pelunasan', 'persentase' => 10.0, 'nilai' => 4205650, 'pembayaran' => 0, 'tanggal_pembayaran' => null, 'notes' => 'pelunasan', 'sort_order' => 3],
+        ];
+        foreach ($fisikMainData as $item) {
+            \App\Models\CashflowVendorEntry::create(array_merge($item, [
+                'order_id' => $order->id,
+                'vendor_type' => 'fisik',
+                'section' => 'pembayaran_vendor',
+                'created_by' => $pm?->id,
+            ]));
+        }
+
+        // E. External Items (Tabel 3A)
+        $externalItems = [
+            ['label' => 'Meja Konsol', 'vendor_name' => 'Nunggu bungke', 'nilai' => 2800000, 'spk_amount' => 4000000, 'tanggal_perencanaan' => '2026-06-25', 'pembayaran' => 4000000, 'tanggal_pembayaran' => '2026-06-25', 'flag_af' => '✔'],
+            ['label' => 'Marmer', 'vendor_name' => 'Teguh', 'nilai' => 17567500, 'spk_amount' => 0, 'tanggal_perencanaan' => '2026-07-02', 'pembayaran' => 0, 'tanggal_pembayaran' => null],
+            ['label' => 'Duco', 'vendor_name' => 'Edi', 'nilai' => 119717000, 'spk_amount' => 98500000, 'tanggal_perencanaan' => '2026-05-13', 'pembayaran' => 0, 'tanggal_pembayaran' => null],
+            ['label' => 'Panel', 'vendor_name' => 'List Joints', 'nilai' => 28569430, 'spk_amount' => 0, 'tanggal_perencanaan' => '2026-06-25', 'pembayaran' => 0, 'tanggal_pembayaran' => null],
+            ['label' => 'Besi', 'vendor_name' => 'Kasbon Besi', 'nilai' => 4060000, 'spk_amount' => 3500000, 'tanggal_perencanaan' => '2026-06-12', 'pembayaran' => 0, 'tanggal_pembayaran' => null],
+            ['label' => 'Padded', 'vendor_name' => 'Mang Ujang', 'nilai' => 12808610, 'spk_amount' => 11000000, 'tanggal_perencanaan' => '2026-06-22', 'pembayaran' => 0, 'tanggal_pembayaran' => null],
+        ];
+        foreach ($externalItems as $item) {
+            \App\Models\CashflowVendorEntry::create(array_merge($item, [
+                'order_id' => $order->id,
+                'vendor_type' => 'external',
+                'section' => 'item_external',
+                'created_by' => $pm?->id,
+            ]));
         }
 
         $this->command->info("✅ Sample cashflow order created: '{$order->nama_project}' (ID: {$order->id})");
