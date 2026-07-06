@@ -77,6 +77,7 @@ class AuthController extends Controller
                     'role_name' => $user->role?->nama_role,
                     'is_kepala_marketing' => $user->role && $user->role->nama_role === 'Kepala Marketing',
                     'nearest_task' => $alerts['nearest_task'],
+                    'overdue_task' => $alerts['overdue_task'],
                     'nearest_payment' => $alerts['nearest_payment'],
                 ],
                 'access_token' => $token,
@@ -103,6 +104,7 @@ class AuthController extends Controller
                 'role_name' => $user->role?->nama_role,
                 'is_kepala_marketing' => $user->role && $user->role->nama_role === 'Kepala Marketing',
                 'nearest_task' => $alerts['nearest_task'],
+                'overdue_task' => $alerts['overdue_task'],
                 'nearest_payment' => $alerts['nearest_payment'],
             ]
         ]);
@@ -130,10 +132,11 @@ class AuthController extends Controller
     /**
      * Helper to retrieve dashboard alerts
      */
-    private function getDashboardAlerts(User $user)
+  private function getDashboardAlerts(User $user)
     {
         $roleName = $user->role?->nama_role;
         $alerts = [
+            'overdue_task' => null,
             'nearest_task' => null,
             'nearest_payment' => null,
         ];
@@ -151,35 +154,67 @@ class AuthController extends Controller
         ];
 
         $roleTasks = $roleTasksMap[$roleName] ?? [];
+        $overdueTask = null;
         $nearestTask = null;
 
         if (!empty($roleTasks)) {
             $visibleOrderIds = Order::visibleToUser($user)->pluck('id');
+            
+            // Query overdue tasks (deadline < today)
+            $overdueTask = TaskResponse::whereIn('order_id', $visibleOrderIds)
+                ->whereIn('tahap', $roleTasks)
+                ->whereNotIn('status', ['selesai', 'telat_submit'])
+                ->whereNotNull('deadline')
+                ->where('deadline', '<', now()->startOfDay())
+                ->with('order')
+                ->orderBy('deadline', 'asc') // oldest overdue first
+                ->first();
+
+            // Query nearest upcoming tasks (deadline >= today)
             $nearestTask = TaskResponse::whereIn('order_id', $visibleOrderIds)
                 ->whereIn('tahap', $roleTasks)
                 ->whereNotIn('status', ['selesai', 'telat_submit'])
                 ->whereNotNull('deadline')
+                ->where('deadline', '>=', now()->startOfDay())
                 ->with('order')
-                ->orderBy('deadline', 'asc')
+                ->orderBy('deadline', 'asc') // closest upcoming first
                 ->first();
         }
 
-        if ($nearestTask && $nearestTask->order) {
-            $tahapMap = [
-                'survey' => 'survey',
-                'moodboard' => 'moodboard',
-                'estimasi' => 'estimasi',
-                'cm_fee' => 'commitment fee',
-                'desain_final' => 'desain final',
-                'item_pekerjaan' => 'item pekerjaan',
-                'rab_internal' => 'RAB internal',
-                'kontrak' => 'kontrak',
-                'survey_schedule' => 'jadwal survey',
-                'survey_ulang' => 'survey ulang',
-                'gambar_kerja' => 'gambar kerja',
-                'approval_material' => 'approval material',
-                'workplan' => 'workplan',
+        $tahapMap = [
+            'survey' => 'survey',
+            'moodboard' => 'moodboard',
+            'estimasi' => 'estimasi',
+            'cm_fee' => 'commitment fee',
+            'desain_final' => 'desain final',
+            'item_pekerjaan' => 'item pekerjaan',
+            'rab_internal' => 'RAB internal',
+            'kontrak' => 'kontrak',
+            'survey_schedule' => 'jadwal survey',
+            'survey_ulang' => 'survey ulang',
+            'gambar_kerja' => 'gambar kerja',
+            'approval_material' => 'approval material',
+            'workplan' => 'workplan',
+        ];
+
+        if ($overdueTask && $overdueTask->order) {
+            $tahapName = $tahapMap[$overdueTask->tahap] ?? $overdueTask->tahap;
+            $projectName = $overdueTask->order->nama_project;
+
+            $deadline = Carbon::parse($overdueTask->deadline);
+            $daysLeft = now()->startOfDay()->diffInDays($deadline, false);
+
+            $alerts['overdue_task'] = [
+                'id' => $overdueTask->id,
+                'tahap' => $overdueTask->tahap,
+                'nama_project' => $projectName,
+                'message' => "Ada task terlambat terkait {$tahapName} project \"{$projectName}\"",
+                'deadline' => $overdueTask->deadline->toIso8601String(),
+                'days_left' => $daysLeft,
             ];
+        }
+
+        if ($nearestTask && $nearestTask->order) {
             $tahapName = $tahapMap[$nearestTask->tahap] ?? $nearestTask->tahap;
             $projectName = $nearestTask->order->nama_project;
 
