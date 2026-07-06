@@ -61,6 +61,11 @@ class User extends Authenticatable
         return $this->belongsTo(Role::class, 'role_id');
     }
 
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class, 'user_roles');
+    }
+
     public function orders()
     {
         return $this->belongsToMany(Order::class, 'order_teams')
@@ -68,25 +73,23 @@ class User extends Authenticatable
     }
 
     /**
-     * Get all permissions for this user through their role
+     * Get all permissions for this user through all of their roles
      */
     public function getPermissions()
     {
-        if (!$this->role) {
-            return collect([]);
-        }
-        return $this->role->permissions;
+        return $this->roles()->with('permissions')->get()->flatMap(function ($role) {
+            return $role->permissions;
+        })->unique('id');
     }
 
     /**
-     * Check if user has specific permission
+     * Check if user has specific permission in any of their roles
      */
     public function hasPermission(string $permission): bool
     {
-        if (!$this->role) {
-            return false;
-        }
-        return $this->role->hasPermission($permission);
+        return $this->roles()->whereHas('permissions', function ($query) use ($permission) {
+            $query->where('name', $permission);
+        })->exists();
     }
 
     /**

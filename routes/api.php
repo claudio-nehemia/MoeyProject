@@ -21,6 +21,14 @@ Route::prefix('auth')->group(function () {
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
+    // Mobile Orders API
+    Route::prefix('mobile/orders')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\OrderApiController::class, 'index']);
+        Route::get('/form-data', [\App\Http\Controllers\Api\OrderApiController::class, 'getFormData']);
+        Route::post('/', [\App\Http\Controllers\Api\OrderApiController::class, 'store']);
+        Route::get('/{id}', [\App\Http\Controllers\Api\OrderApiController::class, 'show']);
+    });
+
     // Mobile Notifications API
     Route::prefix('mobile/notifications')->name('api.mobile.notifications.')->group(function () {
         Route::get('/', [NotificationApiController::class, 'index'])->name('index');

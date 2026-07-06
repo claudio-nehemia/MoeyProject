@@ -21,6 +21,7 @@ interface User {
             nama_divisi: string;
         };
     };
+    roles?: Role[];
     created_at: string;
     updated_at: string;
 }
@@ -50,7 +51,7 @@ export default function Index({ users }: Props) {
         email: '',
         password: '',
         password_confirmation: '',
-        role_id: '',
+        role_ids: [] as string[],
     });
 
     useEffect(() => {
@@ -65,9 +66,11 @@ export default function Index({ users }: Props) {
         );
 
         if (selectedRole) {
-            filtered = filtered.filter((user) =>
-                user.role_id.toString() === selectedRole
-            );
+            filtered = filtered.filter((user) => {
+                // check either role_id fallback or any roles matches selectedRole
+                const hasMatchingRole = user.roles && user.roles.some((r) => r.id.toString() === selectedRole);
+                return user.role_id.toString() === selectedRole || hasMatchingRole;
+            });
         }
 
         setFilteredUsers(filtered);
@@ -95,11 +98,15 @@ export default function Index({ users }: Props) {
         setEditMode(true);
         setSelectedUser(user);
         
+        let userRoles: Role[] = user.roles || [];
         // Fetch roles
         try {
             const response = await fetch(`/user/${user.id}/edit`);
             const responseData = await response.json();
             setRoles(responseData.roles);
+            if (responseData.user && responseData.user.roles) {
+                userRoles = responseData.user.roles;
+            }
         } catch (error) {
             console.error('Error fetching roles:', error);
         }
@@ -109,7 +116,7 @@ export default function Index({ users }: Props) {
             email: user.email,
             password: '',
             password_confirmation: '',
-            role_id: user.role_id.toString(),
+            role_ids: userRoles.map((r) => r.id.toString()),
         });
         setShowModal(true);
     };
@@ -321,9 +328,19 @@ export default function Index({ users }: Props) {
                                                 </div>
                                             </td>
                                             <td className="px-5 py-3">
-                                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                                    {user.role?.nama_role || '-'}
-                                                </span>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {user.roles && user.roles.length > 0 ? (
+                                                        user.roles.map((role) => (
+                                                            <span key={role.id} className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                                                                {role.nama_role}
+                                                            </span>
+                                                        ))
+                                                    ) : (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-stone-50 text-stone-600 border border-stone-200">
+                                                            {user.role?.nama_role || '-'}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-5 py-3">
                                                 <span className="text-xs text-stone-600">

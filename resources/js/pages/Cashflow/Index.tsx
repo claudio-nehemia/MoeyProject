@@ -18,6 +18,7 @@ interface OrderCashflow {
     kontrak_external: number;
     total_received: number;
     sisa_piutang: number;
+    status_project: number;
     has_bast: boolean;
 }
 
@@ -86,6 +87,7 @@ export default function Index({ orders, filters }: Props) {
     const totalKontrak = orders.data.reduce((sum, o) => sum + o.harga_kontrak, 0);
     const totalReceived = orders.data.reduce((sum, o) => sum + o.total_received, 0);
     const totalPiutang = orders.data.reduce((sum, o) => sum + o.sisa_piutang, 0);
+    const totalStatusProject = orders.data.reduce((sum, o) => sum + o.status_project, 0);
 
     return (
         <>
@@ -124,7 +126,7 @@ export default function Index({ orders, filters }: Props) {
                     </div>
 
                     {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <div className="bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
                             <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">Total Kontrak (Page)</p>
                             <p className="text-xl font-bold text-stone-800 mt-1">{formatCurrency(totalKontrak)}</p>
@@ -136,6 +138,10 @@ export default function Index({ orders, filters }: Props) {
                         <div className="bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
                             <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">Sisa Piutang (Page)</p>
                             <p className="text-xl font-bold text-amber-600 mt-1">{formatCurrency(totalPiutang)}</p>
+                        </div>
+                        <div className="bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
+                            <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider">Status Project (Page)</p>
+                            <p className="text-xl font-bold text-indigo-600 mt-1">{formatCurrency(totalStatusProject)}</p>
                         </div>
                     </div>
 
@@ -172,6 +178,7 @@ export default function Index({ orders, filters }: Props) {
                                         <th className="text-right px-4 py-3 font-semibold text-purple-700/80 uppercase">External</th>
                                         <th className="text-right px-4 py-3 font-semibold uppercase">Diterima</th>
                                         <th className="text-right px-4 py-3 font-semibold uppercase">Piutang</th>
+                                        <th className="text-right px-4 py-3 font-semibold text-indigo-700/80 uppercase">Status Project</th>
                                         <th className="text-center px-4 py-3 font-semibold uppercase">Status</th>
                                         <th className="text-center px-4 py-3 font-semibold uppercase">BAST</th>
                                     </tr>
@@ -179,7 +186,7 @@ export default function Index({ orders, filters }: Props) {
                                 <tbody className="divide-y divide-stone-100">
                                     {orders.data.length === 0 && (
                                         <tr>
-                                            <td colSpan={10} className="px-4 py-12 text-center text-stone-400 italic">
+                                            <td colSpan={11} className="px-4 py-12 text-center text-stone-400 italic">
                                                 Tidak ada data project dengan kontrak ditemukan
                                             </td>
                                         </tr>
@@ -201,6 +208,7 @@ export default function Index({ orders, filters }: Props) {
                                             <td className="px-4 py-3 text-right font-mono text-purple-600 font-semibold">{formatCurrency(order.kontrak_external)}</td>
                                             <td className="px-4 py-3 text-right font-mono text-emerald-600">{formatCurrency(order.total_received)}</td>
                                             <td className="px-4 py-3 text-right font-mono text-amber-600">{formatCurrency(order.sisa_piutang)}</td>
+                                            <td className="px-4 py-3 text-right font-mono text-indigo-600 font-semibold">{formatCurrency(order.status_project)}</td>
                                             <td className="px-4 py-3 text-center">
                                                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusColors[order.payment_status] || 'bg-stone-100 text-stone-700'}`}>
                                                     {statusLabels[order.payment_status] || order.payment_status}

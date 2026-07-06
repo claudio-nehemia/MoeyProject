@@ -47,13 +47,13 @@ class OrderController extends Controller
      */
     public function create()
     {
-        $marketings = User::whereHas('role', function ($query) {
+        $marketings = User::whereHas('roles', function ($query) {
             $query->where('nama_role', 'Kepala Marketing');
         })->get();
-        $drafters = User::whereHas('role', function ($query) {
+        $drafters = User::whereHas('roles', function ($query) {
             $query->whereIn('nama_role', ['Surveyor', 'Drafter']);
         })->get();
-        $desainers = User::whereHas('role', function ($query) {
+        $desainers = User::whereHas('roles', function ($query) {
             $query->where('nama_role', 'Desainer');
         })->get();
         $jenisInteriors = JenisInterior::select('id', 'nama_interior')->get();
@@ -190,13 +190,13 @@ class OrderController extends Controller
      */
     public function edit(Order $order)
     {
-        $marketings = User::whereHas('role', function ($query) {
+        $marketings = User::whereHas('roles', function ($query) {
             $query->where('nama_role', 'Kepala Marketing');
         })->get();
-        $drafters = User::whereHas('role', function ($query) {
+        $drafters = User::whereHas('roles', function ($query) {
             $query->whereIn('nama_role', ['Surveyor', 'Drafter']);
         })->get();
-        $desainers = User::whereHas('role', function ($query) {
+        $desainers = User::whereHas('roles', function ($query) {
             $query->where('nama_role', 'Desainer');
         })->get();
         $jenisInteriors = JenisInterior::select('id', 'nama_interior')->get();

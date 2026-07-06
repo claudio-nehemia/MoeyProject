@@ -77,6 +77,7 @@ class CashflowController extends Controller
                     'total_received' => $totalReceived,
                     'sisa_piutang' => $sisaPiutang,
                     'has_bast' => !empty($ip?->bast_number),
+                    'status_project' => round($this->calculateStatusProject($order)),
                 ];
             });
 
@@ -1132,5 +1133,54 @@ class CashflowController extends Controller
         }
 
         return $formatted;
+    }
+
+    private function calculateStatusProject(Order $order)
+    {
+        $manualEntries = CashflowManualEntry::where('order_id', $order->id)->get()->keyBy('category');
+        $spkInternal = (float) ($manualEntries->get('spk_internal')->amount_estimasi ?? 0);
+        $spkFisik = (float) ($manualEntries->get('spk_fisik')->amount_estimasi ?? 0);
+        $spkExternal = (float) ($manualEntries->get('spk_external')->amount_estimasi ?? 0);
+
+        $vendorEntries = CashflowVendorEntry::where('order_id', $order->id)->get();
+
+        // Realisasi Internal
+        $totalPembayaranMainInternal = (float) $vendorEntries
+            ->where('vendor_type', 'internal')
+            ->where('section', 'pembayaran_vendor')
+            ->sum('pembayaran');
+        $totalMaterialInternalPembayaran = (float) $vendorEntries
+            ->where('vendor_type', 'internal')
+            ->where('section', 'material_hutang')
+            ->sum('pembayaran');
+        $realisasiInternal = $totalPembayaranMainInternal + $totalMaterialInternalPembayaran;
+
+        // Realisasi Fisik
+        $totalFisikMainPembayaran = (float) $vendorEntries
+            ->where('vendor_type', 'fisik')
+            ->where('section', 'pembayaran_vendor')
+            ->sum('pembayaran');
+        $totalMaterialFisikPembayaran = (float) $vendorEntries
+            ->where('vendor_type', 'fisik')
+            ->where('section', 'material_hutang')
+            ->sum('pembayaran');
+        $realisasiFisik = $totalFisikMainPembayaran + $totalMaterialFisikPembayaran;
+
+        // Realisasi External
+        $totalDpExternal = (float) $vendorEntries
+            ->where('vendor_type', 'external')
+            ->where('section', 'item_external')
+            ->sum('pembayaran');
+        $totalTerminExternal = (float) $vendorEntries
+            ->where('vendor_type', 'external')
+            ->where('section', 'item_external')
+            ->sum('pembayaran_termin');
+        $realisasiExternal = $totalDpExternal + $totalTerminExternal;
+
+        $sisaSaldoInternal = $spkInternal - $realisasiInternal;
+        $sisaSaldoFisik = $spkFisik - $realisasiFisik;
+        $sisaSaldoExternal = $spkExternal - $realisasiExternal;
+
+        return $sisaSaldoInternal + $sisaSaldoFisik + $sisaSaldoExternal;
     }
 }

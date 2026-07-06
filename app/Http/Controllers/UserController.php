@@ -13,7 +13,7 @@ class UserController extends Controller
 {
     public function index()
     {
-        $users = User::with('role.divisi')->get();
+        $users = User::with('role.divisi', 'roles')->get();
         return Inertia::render('User/Index', [
             'users' => $users,
         ]);
@@ -37,12 +37,20 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'role_id' => 'required|exists:roles,id',
+            'role_ids' => 'required|array',
+            'role_ids.*' => 'exists:roles,id',
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
+        
+        // Primary role fallback for backward compatibility
+        $validated['role_id'] = $validated['role_ids'][0];
 
-        User::create($validated);
+        $roleIds = $validated['role_ids'];
+        unset($validated['role_ids']);
+
+        $user = User::create($validated);
+        $user->roles()->sync($roleIds);
 
         return redirect()->back()->with('success', 'User created successfully.');
     }
@@ -52,7 +60,7 @@ class UserController extends Controller
         $roles = Role::select('id', 'nama_role')->get();
         return response()->json([
             'roles' => $roles,
-            'user' => $user
+            'user' => $user->load('roles')
         ]);
     }
 
@@ -61,7 +69,8 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
-            'role_id' => 'required|exists:roles,id',
+            'role_ids' => 'required|array',
+            'role_ids.*' => 'exists:roles,id',
         ]);
 
         if ($request->filled('password')) {
@@ -71,7 +80,14 @@ class UserController extends Controller
             $validated['password'] = Hash::make($request->password);
         }
 
+        // Primary role fallback for backward compatibility
+        $validated['role_id'] = $validated['role_ids'][0];
+
+        $roleIds = $validated['role_ids'];
+        unset($validated['role_ids']);
+
         $user->update($validated);
+        $user->roles()->sync($roleIds);
 
         return redirect()->back()->with('success', 'User updated successfully.');
     }

@@ -14,19 +14,19 @@ interface UserModalProps {
         email: string;
         password: string;
         password_confirmation: string;
-        role_id: string;
+        role_ids: string[];
     };
     errors: {
         name?: string;
         email?: string;
         password?: string;
         password_confirmation?: string;
-        role_id?: string;
+        role_ids?: string;
     };
     roles: Role[];
     onClose: () => void;
     onSubmit: FormEventHandler;
-    onDataChange: (field: string, value: string) => void;
+    onDataChange: (field: string, value: any) => void;
 }
 
 export default function UserModal({
@@ -131,28 +131,36 @@ export default function UserModal({
 
                                 {/* Role */}
                                 <div>
-                                    <label htmlFor="role_id" className="block text-sm font-semibold text-stone-700 mb-1.5">
-                                        Role <span className="text-red-500">*</span>
+                                    <label className="block text-sm font-semibold text-stone-700 mb-1.5">
+                                        Roles <span className="text-red-500">*</span>
                                     </label>
-                                    <select
-                                        id="role_id"
-                                        value={data.role_id}
-                                        onChange={(e) => onDataChange('role_id', e.target.value)}
-                                        className="w-full px-3.5 py-2.5 text-sm border-2 border-stone-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all hover:border-stone-300"
-                                    >
-                                        <option value="">Select a role</option>
-                                        {roles.map((role) => (
-                                            <option key={role.id} value={role.id}>
-                                                {role.nama_role}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {errors.role_id && (
+                                    <div className="grid grid-cols-2 gap-2 border-2 border-stone-200 rounded-lg p-3 max-h-48 overflow-y-auto bg-stone-50/50">
+                                        {roles.map((role) => {
+                                            const isChecked = data.role_ids.includes(role.id.toString());
+                                            return (
+                                                <label key={role.id} className="flex items-center gap-2 text-xs text-stone-700 cursor-pointer hover:bg-white p-1.5 rounded-lg border border-transparent hover:border-stone-200 hover:shadow-sm transition-all select-none">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isChecked}
+                                                        onChange={(e) => {
+                                                            const nextSelection = e.target.checked
+                                                                ? [...data.role_ids, role.id.toString()]
+                                                                : data.role_ids.filter((id) => id !== role.id.toString());
+                                                            onDataChange('role_ids', nextSelection);
+                                                        }}
+                                                        className="rounded border-stone-300 text-blue-500 focus:ring-blue-400 focus:ring-0 scale-90"
+                                                    />
+                                                    <span>{role.nama_role}</span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                    {errors.role_ids && (
                                         <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
                                             <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                                             </svg>
-                                            {errors.role_id}
+                                            {errors.role_ids}
                                         </p>
                                     )}
                                 </div>

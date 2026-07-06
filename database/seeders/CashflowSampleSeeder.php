@@ -330,7 +330,7 @@ class CashflowSampleSeeder extends Seeder
             // SPK Values
             ['category' => 'spk_internal', 'amount_estimasi' => 362412673],
             ['category' => 'spk_fisik', 'amount_estimasi' => 42056500],
-            ['category' => 'spk_external', 'amount_estimasi' => 260406760],
+            ['category' => 'spk_external', 'amount_estimasi' => 260406759.5],
 
             // SPK Fix
             ['category' => 'spk_internal_fix', 'amount_estimasi' => 212079185],
@@ -339,7 +339,7 @@ class CashflowSampleSeeder extends Seeder
             ['category' => 'spk_external_fix', 'amount_estimasi' => 192699917],
 
             // Realisasi Pengeluaran
-            ['category' => 'realisasi_internal', 'amount_estimasi' => 106698765],
+            ['category' => 'realisasi_internal', 'amount_estimasi' => 106698765.25],
             ['category' => 'realisasi_fisik', 'amount_estimasi' => 0],
             ['category' => 'realisasi_external', 'amount_estimasi' => 103519500],
             ['category' => 'realisasi_addendum', 'amount_estimasi' => 0],
@@ -354,7 +354,7 @@ class CashflowSampleSeeder extends Seeder
 
             // RPK DP
             ['category' => 'dp_vendor', 'amount_estimasi' => 42415837],
-            ['category' => 'cadangan_vendor_dp', 'amount_estimasi' => 31811878],
+            ['category' => 'cadangan_vendor_dp', 'amount_estimasi' => 31811877.75],
             ['category' => 'dp_fisik', 'amount_estimasi' => 0],
             ['category' => 'dp_external', 'amount_estimasi' => 72519500],
 
@@ -386,17 +386,50 @@ class CashflowSampleSeeder extends Seeder
             ]);
         }
 
+        // Seed dynamic Fee Team members
+        $feeTeamEntries = [
+            ['category' => 'fee_team', 'label' => 'Designer 1', 'amount_estimasi' => 14461320.09105],
+            ['category' => 'fee_team', 'label' => 'Lead Designer', 'amount_estimasi' => 3615330.0227625],
+            ['category' => 'fee_team', 'label' => 'Estimator', 'amount_estimasi' => 9542503.73355],
+            ['category' => 'fee_team', 'label' => 'PM', 'amount_estimasi' => 6099332.2833],
+            ['category' => 'fee_team', 'label' => 'SPV1', 'amount_estimasi' => 8657116.7892],
+            ['category' => 'fee_team', 'label' => 'Trasnport SPV', 'amount_estimasi' => 1967526.543],
+            ['category' => 'fee_team', 'label' => 'Drafter', 'amount_estimasi' => 4190831.53659],
+            ['category' => 'fee_team', 'label' => 'Fibri', 'amount_estimasi' => 5902579.629],
+            ['category' => 'fee_team', 'label' => 'Surveyor As Marketing', 'amount_estimasi' => 1000000],
+            ['category' => 'fee_team', 'label' => 'Fee External', 'amount_estimasi' => -13349432.95],
+            ['category' => 'fee_team', 'label' => 'Manager Marketing', 'amount_estimasi' => 3607131.9955],
+            ['category' => 'fee_team', 'label' => 'Fee Marketing', 'amount_estimasi' => 13117499.462181],
+            ['category' => 'fee_team', 'label' => 'Yusuf', 'amount_estimasi' => 9838124.5966357],
+            ['category' => 'fee_team', 'label' => 'Ria', 'amount_estimasi' => 1639687.4327726],
+            ['category' => 'fee_team', 'label' => 'Adit', 'amount_estimasi' => 819843.71638631],
+            ['category' => 'fee_team', 'label' => 'Surya', 'amount_estimasi' => 819843.71638631],
+        ];
+
+        foreach ($feeTeamEntries as $entry) {
+            CashflowManualEntry::create([
+                'order_id' => $order->id,
+                'category' => $entry['category'],
+                'label' => $entry['label'],
+                'amount_estimasi' => $entry['amount_estimasi'],
+                'amount_realisasi' => 0,
+                'section' => 'general',
+                'phase' => 'general',
+                'created_by' => $pm?->id,
+            ]);
+        }
+
         // ──────────────────────────────────────────
         // 9. SEED DETAILED VENDOR ENTRIES
         // ──────────────────────────────────────────
         // A. Internal Main Payments
         $internalMainData = [
-            ['label' => 'SDM Workshop', 'persentase' => 20.0, 'nilai' => 42415837, 'pembayaran' => 4305911, 'tanggal_pembayaran' => '2026-04-20', 'notes' => 'dp', 'sort_order' => 1],
-            ['label' => 'Cadangan Vendor', 'persentase' => 15.0, 'nilai' => 31811878, 'pembayaran' => 3229433, 'tanggal_pembayaran' => '2026-04-20', 'notes' => 'cadangan', 'sort_order' => 2],
-            ['label' => 'Kasbon I', 'persentase' => 0.0, 'nilai' => 0, 'pembayaran' => 35000000, 'tanggal_pembayaran' => '2026-05-11', 'notes' => 'termin', 'sort_order' => 3],
-            ['label' => 'Kasbon II', 'persentase' => 0.0, 'nilai' => 0, 'pembayaran' => 0, 'tanggal_pembayaran' => null, 'notes' => 'termin', 'sort_order' => 4],
-            ['label' => 'SDM Workshop 2', 'persentase' => 10.0, 'nilai' => 21207919, 'pembayaran' => 0, 'tanggal_pembayaran' => null, 'notes' => 'termin', 'sort_order' => 5],
-            ['label' => 'Pelunasan', 'persentase' => null, 'nilai' => 41359130, 'pembayaran' => 0, 'tanggal_pembayaran' => null, 'notes' => 'pelunasan', 'sort_order' => 6],
+            ['label' => 'SDM Workshop', 'persentase' => 20.0, 'nilai' => 42415837, 'pembayaran' => 4305911, 'tanggal_pembayaran' => '2026-03-28', 'notes' => 'dp', 'sort_order' => 1],
+            ['label' => 'Cadangan Vendor', 'persentase' => 15.0, 'nilai' => 31811877.75, 'pembayaran' => 3229433.25, 'tanggal_pembayaran' => '2026-03-28', 'notes' => 'cadangan', 'sort_order' => 2],
+            ['label' => 'Kasbon I', 'persentase' => null, 'nilai' => 0, 'pembayaran' => 35000000, 'tanggal_pembayaran' => '2026-04-18', 'notes' => 'termin', 'sort_order' => 3],
+            ['label' => 'Kasbon II', 'persentase' => null, 'nilai' => 0, 'pembayaran' => 0, 'tanggal_pembayaran' => null, 'notes' => 'termin', 'sort_order' => 4],
+            ['label' => 'SDM Workshop', 'persentase' => 10.0, 'nilai' => 21207918.5, 'pembayaran' => 0, 'tanggal_pembayaran' => null, 'notes' => 'termin', 'sort_order' => 5],
+            ['label' => 'Pelunasan', 'persentase' => 11.412164317444, 'nilai' => 41359129.75, 'pembayaran' => 0, 'tanggal_pembayaran' => null, 'notes' => 'pelunasan', 'sort_order' => 6],
         ];
         foreach ($internalMainData as $item) {
             \App\Models\CashflowVendorEntry::create(array_merge($item, [
@@ -409,10 +442,10 @@ class CashflowSampleSeeder extends Seeder
 
         // B. Internal Material Hutang - SOLMATOSS
         $solmatossInternal = [
-            ['label' => 'Pembelian Material 26003105 - INV', 'nilai' => 193439, 'pembayaran' => 193439, 'tanggal_inv' => '2026-03-29', 'tanggal_pembayaran' => '2026-06-21', 'flag_af' => '✔'],
-            ['label' => 'Pembelian Material 26003103 - INV', 'nilai' => 11981518, 'pembayaran' => 11981518, 'tanggal_inv' => '2026-03-29', 'tanggal_pembayaran' => '2026-06-21', 'flag_af' => '✔'],
-            ['label' => 'Pembelian Material 26004315 - INV', 'nilai' => 45595199, 'pembayaran' => 45595199, 'tanggal_inv' => '2026-04-05', 'tanggal_pembayaran' => '2026-06-21', 'flag_af' => '✔'],
-            ['label' => 'Pembelian Material 26005731 - INV', 'nilai' => 6393265, 'pembayaran' => 6393265, 'tanggal_inv' => '2026-06-01', 'tanggal_pembayaran' => '2026-06-21', 'flag_af' => '✔'],
+            ['label' => 'Pembelian Material 26003105 - INV', 'nilai' => 193439, 'pembayaran' => 193439, 'tanggal_inv' => '2026-03-06', 'tanggal_pembayaran' => '2026-05-29', 'flag_af' => '✔'],
+            ['label' => 'Pembelian Material 26003103 - INV', 'nilai' => 11981518, 'pembayaran' => 11981518, 'tanggal_inv' => '2026-03-06', 'tanggal_pembayaran' => '2026-05-29', 'flag_af' => '✔'],
+            ['label' => 'Pembelian Material 26004315 - INV', 'nilai' => 45595199, 'pembayaran' => 45595199, 'tanggal_inv' => '2026-03-13', 'tanggal_pembayaran' => '2026-05-29', 'flag_af' => '✔'],
+            ['label' => 'Pembelian Material 26005731 - INV', 'nilai' => 6393265, 'pembayaran' => 6393265, 'tanggal_inv' => '2026-05-09', 'tanggal_pembayaran' => '2026-05-29', 'flag_af' => '✔'],
         ];
         foreach ($solmatossInternal as $item) {
             \App\Models\CashflowVendorEntry::create(array_merge($item, [
@@ -426,9 +459,9 @@ class CashflowSampleSeeder extends Seeder
 
         // C. Internal Material Hutang - FINARTINDO
         $finartindoInternal = [
-            ['label' => 'Pembelian Material SI 20260401820', 'nilai' => 6396999, 'pembayaran' => 0, 'tanggal_inv' => '2026-05-20', 'tanggal_pembayaran' => '2026-06-25'],
-            ['label' => 'Pembelian Material SI 20260401575', 'nilai' => 4194000, 'pembayaran' => 0, 'tanggal_inv' => '2026-05-16', 'tanggal_pembayaran' => '2026-06-25'],
-            ['label' => 'Pembelian Material SI 20260500611', 'nilai' => 530002, 'pembayaran' => 0, 'tanggal_inv' => '2026-06-03', 'tanggal_pembayaran' => '2026-06-25'],
+            ['label' => 'Pembelian Material SI 20260401820', 'nilai' => 6396999, 'pembayaran' => 0, 'tanggal_inv' => '2026-04-27', 'tanggal_pembayaran' => null],
+            ['label' => 'Pembelian Material SI 20260401575', 'nilai' => 4194000, 'pembayaran' => 0, 'tanggal_inv' => '2026-04-23', 'tanggal_pembayaran' => null],
+            ['label' => 'Pembelian Material SI 20260500611', 'nilai' => 530002, 'pembayaran' => 0, 'tanggal_inv' => '2026-05-11', 'tanggal_pembayaran' => null],
         ];
         foreach ($finartindoInternal as $item) {
             \App\Models\CashflowVendorEntry::create(array_merge($item, [
@@ -457,18 +490,271 @@ class CashflowSampleSeeder extends Seeder
 
         // E. External Items (Tabel 3A)
         $externalItems = [
-            ['label' => 'Meja Konsol', 'vendor_name' => 'Nunggu bungke', 'nilai' => 2800000, 'spk_amount' => 4000000, 'tanggal_perencanaan' => '2026-06-25', 'pembayaran' => 4000000, 'tanggal_pembayaran' => '2026-06-25', 'flag_af' => '✔'],
-            ['label' => 'Marmer', 'vendor_name' => 'Teguh', 'nilai' => 17567500, 'spk_amount' => 0, 'tanggal_perencanaan' => '2026-07-02', 'pembayaran' => 0, 'tanggal_pembayaran' => null],
-            ['label' => 'Duco', 'vendor_name' => 'Edi', 'nilai' => 119717000, 'spk_amount' => 98500000, 'tanggal_perencanaan' => '2026-05-13', 'pembayaran' => 0, 'tanggal_pembayaran' => null],
-            ['label' => 'Panel', 'vendor_name' => 'List Joints', 'nilai' => 28569430, 'spk_amount' => 0, 'tanggal_perencanaan' => '2026-06-25', 'pembayaran' => 0, 'tanggal_pembayaran' => null],
-            ['label' => 'Besi', 'vendor_name' => 'Kasbon Besi', 'nilai' => 4060000, 'spk_amount' => 3500000, 'tanggal_perencanaan' => '2026-06-12', 'pembayaran' => 0, 'tanggal_pembayaran' => null],
-            ['label' => 'Padded', 'vendor_name' => 'Mang Ujang', 'nilai' => 12808610, 'spk_amount' => 11000000, 'tanggal_perencanaan' => '2026-06-22', 'pembayaran' => 0, 'tanggal_pembayaran' => null],
+            [
+                'label' => 'Meja Konsol',
+                'vendor_name' => 'Nunggu bungke',
+                'nilai' => 2800000,
+                'spk_amount' => 4000000,
+                'tanggal_perencanaan' => '2026-06-02',
+                'pembayaran' => 0,
+                'tanggal_pembayaran' => null,
+                'flag_af' => null,
+                'flag_fb' => null,
+                'flag_jw' => null,
+                'pembayaran_termin' => 4000000,
+                'tanggal_pembayaran_termin' => '2026-06-02',
+                'flag_af_termin' => null,
+                'flag_fb_termin' => null,
+                'flag_jw_termin' => null,
+            ],
+            [
+                'label' => 'Marmer',
+                'vendor_name' => 'Teguh',
+                'nilai' => 17567500,
+                'spk_amount' => 0,
+                'tanggal_perencanaan' => '2026-06-09',
+                'pembayaran' => 0,
+                'tanggal_pembayaran' => null,
+                'flag_af' => null,
+                'flag_fb' => null,
+                'flag_jw' => null,
+                'pembayaran_termin' => 0,
+                'tanggal_pembayaran_termin' => null,
+                'flag_af_termin' => null,
+                'flag_fb_termin' => null,
+                'flag_jw_termin' => null,
+            ],
+            [
+                'label' => 'Duco',
+                'vendor_name' => 'Edi',
+                'nilai' => 119717000,
+                'spk_amount' => 98500000,
+                'tanggal_perencanaan' => '2026-04-20',
+                'pembayaran' => 50000000,
+                'tanggal_pembayaran' => '2026-04-20',
+                'flag_af' => null,
+                'flag_fb' => '✔',
+                'flag_jw' => '✔',
+                'pembayaran_termin' => 0,
+                'tanggal_pembayaran_termin' => null,
+                'flag_af_termin' => null,
+                'flag_fb_termin' => '✔',
+                'flag_jw_termin' => null,
+            ],
+            [
+                'label' => 'Panel',
+                'vendor_name' => 'List Joints',
+                'nilai' => 28569430,
+                'spk_amount' => 0,
+                'tanggal_perencanaan' => '2026-06-02',
+                'pembayaran' => 8169500,
+                'tanggal_pembayaran' => '2026-06-02',
+                'flag_af' => null,
+                'flag_fb' => null,
+                'flag_jw' => null,
+                'pembayaran_termin' => 0,
+                'tanggal_pembayaran_termin' => null,
+                'flag_af_termin' => null,
+                'flag_fb_termin' => null,
+                'flag_jw_termin' => null,
+            ],
+            [
+                'label' => 'Besi',
+                'vendor_name' => 'Kasbon Besi ',
+                'nilai' => 4060000,
+                'spk_amount' => 3500000,
+                'tanggal_perencanaan' => '2026-05-20',
+                'pembayaran' => 1500000,
+                'tanggal_pembayaran' => '2026-05-21',
+                'flag_af' => null,
+                'flag_fb' => '✔',
+                'flag_jw' => null,
+                'pembayaran_termin' => 0,
+                'tanggal_pembayaran_termin' => null,
+                'flag_af_termin' => null,
+                'flag_fb_termin' => null,
+                'flag_jw_termin' => null,
+            ],
+            [
+                'label' => 'Padded',
+                'vendor_name' => 'Mang Ujang',
+                'nilai' => 12808610,
+                'spk_amount' => 11000000,
+                'tanggal_perencanaan' => '2026-05-30',
+                'pembayaran' => 8000000,
+                'tanggal_pembayaran' => '2026-05-26',
+                'flag_af' => null,
+                'flag_fb' => '✔',
+                'flag_jw' => null,
+                'pembayaran_termin' => 0,
+                'tanggal_pembayaran_termin' => null,
+                'flag_af_termin' => null,
+                'flag_fb_termin' => null,
+                'flag_jw_termin' => null,
+            ],
+            [
+                'label' => 'Cat Texture',
+                'vendor_name' => null,
+                'nilai' => 6212500,
+                'spk_amount' => 4850000,
+                'tanggal_perencanaan' => '2026-05-05',
+                'pembayaran' => 4850000,
+                'tanggal_pembayaran' => '2026-04-14',
+                'flag_af' => null,
+                'flag_fb' => null,
+                'flag_jw' => null,
+                'pembayaran_termin' => 0,
+                'tanggal_pembayaran_termin' => null,
+                'flag_af_termin' => null,
+                'flag_fb_termin' => null,
+                'flag_jw_termin' => null,
+            ],
+            [
+                'label' => 'Mural',
+                'vendor_name' => 'Mural',
+                'nilai' => 5850000,
+                'spk_amount' => 4800000,
+                'tanggal_perencanaan' => '2026-04-10',
+                'pembayaran' => 0,
+                'tanggal_pembayaran' => null,
+                'flag_af' => null,
+                'flag_fb' => null,
+                'flag_jw' => null,
+                'pembayaran_termin' => 4800000,
+                'tanggal_pembayaran_termin' => '2026-04-16',
+                'flag_af_termin' => null,
+                'flag_fb_termin' => null,
+                'flag_jw_termin' => null,
+            ],
+            [
+                'label' => 'Akrilik',
+                'vendor_name' => null,
+                'nilai' => 572200,
+                'spk_amount' => 572200,
+                'tanggal_perencanaan' => '2026-06-02',
+                'pembayaran' => 0,
+                'tanggal_pembayaran' => null,
+                'flag_af' => null,
+                'flag_fb' => null,
+                'flag_jw' => null,
+                'pembayaran_termin' => 0,
+                'tanggal_pembayaran_termin' => null,
+                'flag_af_termin' => '✔',
+                'flag_fb_termin' => null,
+                'flag_jw_termin' => null,
+            ],
+            [
+                'label' => 'SPC',
+                'vendor_name' => null,
+                'nilai' => 26472900,
+                'spk_amount' => 26160900,
+                'tanggal_perencanaan' => '2026-06-16',
+                'pembayaran' => 0,
+                'tanggal_pembayaran' => null,
+                'flag_af' => null,
+                'flag_fb' => null,
+                'flag_jw' => null,
+                'pembayaran_termin' => 0,
+                'tanggal_pembayaran_termin' => null,
+                'flag_af_termin' => null,
+                'flag_fb_termin' => null,
+                'flag_jw_termin' => null,
+            ],
+            [
+                'label' => 'Higold',
+                'vendor_name' => null,
+                'nilai' => 10916817,
+                'spk_amount' => 10916817,
+                'tanggal_perencanaan' => '2026-06-02',
+                'pembayaran' => 0,
+                'tanggal_pembayaran' => null,
+                'flag_af' => null,
+                'flag_fb' => null,
+                'flag_jw' => null,
+                'pembayaran_termin' => 0,
+                'tanggal_pembayaran_termin' => null,
+                'flag_af_termin' => null,
+                'flag_fb_termin' => null,
+                'flag_jw_termin' => null,
+            ],
+            [
+                'label' => 'Wallprinting',
+                'vendor_name' => null,
+                'nilai' => 2200000,
+                'spk_amount' => 2200000,
+                'tanggal_perencanaan' => '2026-05-15',
+                'pembayaran' => 0,
+                'tanggal_pembayaran' => null,
+                'flag_af' => null,
+                'flag_fb' => null,
+                'flag_jw' => null,
+                'pembayaran_termin' => 2200000,
+                'tanggal_pembayaran_termin' => '2026-04-14',
+                'flag_af_termin' => null,
+                'flag_fb_termin' => null,
+                'flag_jw_termin' => null,
+            ],
+            [
+                'label' => 'Fullframe',
+                'vendor_name' => 'DP Frame ',
+                'nilai' => 21414802.5,
+                'spk_amount' => 25000000,
+                'tanggal_perencanaan' => '2026-05-30',
+                'pembayaran' => 0,
+                'tanggal_pembayaran' => null,
+                'flag_af' => null,
+                'flag_fb' => '✔',
+                'flag_jw' => null,
+                'pembayaran_termin' => 20000000,
+                'tanggal_pembayaran_termin' => '2026-05-21',
+                'flag_af_termin' => null,
+                'flag_fb_termin' => null,
+                'flag_jw_termin' => null,
+            ],
+            [
+                'label' => 'Wallprinting 2',
+                'vendor_name' => null,
+                'nilai' => 1245000,
+                'spk_amount' => 1200000,
+                'tanggal_perencanaan' => '2026-06-16',
+                'pembayaran' => 0,
+                'tanggal_pembayaran' => null,
+                'flag_af' => null,
+                'flag_fb' => null,
+                'flag_jw' => null,
+                'pembayaran_termin' => 0,
+                'tanggal_pembayaran_termin' => null,
+                'flag_af_termin' => null,
+                'flag_fb_termin' => null,
+                'flag_jw_termin' => null,
+            ],
         ];
         foreach ($externalItems as $item) {
             \App\Models\CashflowVendorEntry::create(array_merge($item, [
                 'order_id' => $order->id,
                 'vendor_type' => 'external',
                 'section' => 'item_external',
+                'created_by' => $pm?->id,
+            ]));
+        }
+
+        // F. Cash Urgent / Pengeluaran Luar
+        $cashUrgent = [
+            [
+                'label' => 'Cuci Ac',
+                'nilai' => 1000000,
+                'pembayaran' => 1000000,
+                'tanggal_pembayaran' => '2026-06-02',
+                'flag_af' => null,
+                'flag_fb' => null,
+                'flag_jw' => null,
+            ],
+        ];
+        foreach ($cashUrgent as $item) {
+            \App\Models\CashflowVendorEntry::create(array_merge($item, [
+                'order_id' => $order->id,
+                'vendor_type' => 'external',
+                'section' => 'pengeluaran_luar',
                 'created_by' => $pm?->id,
             ]));
         }

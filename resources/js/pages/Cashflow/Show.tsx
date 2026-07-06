@@ -446,7 +446,7 @@ export default function Show({
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-xs text-stone-400 font-medium">Status Akhir:</span>
+                            <span className="text-xs text-stone-400 font-medium">Status Project:</span>
                             <span className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-mono text-sm font-bold rounded-xl shadow-md shadow-emerald-500/10">
                                 {fmt(status_project)}
                             </span>
