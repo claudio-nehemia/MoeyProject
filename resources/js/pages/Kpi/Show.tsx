@@ -9,6 +9,9 @@ interface KpiUserSummary {
     fast_updates: number;
     late_tasks: number;
     completed_projects: number;
+    late_presences?: number;
+    alpha_days?: number;
+    perfect_attendance_bonus?: boolean;
 }
 
 interface TaskHistoryItem {
@@ -39,6 +42,9 @@ interface MonthlyTrendItem {
     fast_updates: number;
     late_tasks: number;
     completed_projects: number;
+    late_presences?: number;
+    alpha_days?: number;
+    perfect_attendance_bonus?: boolean;
 }
 
 interface KpiSettings {
@@ -48,6 +54,9 @@ interface KpiSettings {
     penalty_late: number;
     points_completed_project: number;
     bonus_type: 'flat' | 'proportional';
+    penalty_attendance_late?: number;
+    penalty_attendance_alpha?: number;
+    bonus_attendance_perfect?: number;
 }
 
 interface Props {
@@ -306,67 +315,82 @@ export default function Show({ user, summary, taskHistory, completedProjects, tr
                     </div>
 
                     {/* Attendance Info Alert Card */}
-                    <div className="bg-indigo-50/50 border border-indigo-200/60 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <span className="text-xl">📅</span>
-                            <div>
-                                <h4 className="text-xs font-bold text-indigo-800">Catatan Absensi Bulanan</h4>
-                                <p className="text-[11px] text-indigo-700/80 mt-0.5">Penilaian kehadiran berdasarkan finger print & log kehadiran harian.</p>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
-                            <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-1">
-                                <span className="text-[9px] text-emerald-700 font-bold block">Hadir</span>
-                                <span className="font-mono font-extrabold text-emerald-800 text-xs">0 Hari</span>
-                            </div>
-                            <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-1">
-                                <span className="text-[9px] text-amber-700 font-bold block">Telat</span>
-                                <span className="font-mono font-extrabold text-amber-800 text-xs">0 Hari</span>
-                            </div>
-                            <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-1">
-                                <span className="text-[9px] text-blue-700 font-bold block">Izin</span>
-                                <span className="font-mono font-extrabold text-blue-800 text-xs">0 Hari</span>
-                            </div>
-                            <div className="bg-rose-50 border border-rose-100 rounded-lg px-3 py-1">
-                                <span className="text-[9px] text-rose-700 font-bold block">Tanpa Keterangan</span>
-                                <span className="font-mono font-extrabold text-rose-800 text-xs">0 Hari</span>
-                            </div>
-                        </div>
-                    </div>
+                    {(() => {
+                        const penaltyLateVal = settings.penalty_attendance_late ?? 5;
+                        const penaltyAlphaVal = settings.penalty_attendance_alpha ?? 15;
+                        const bonusPerfectVal = settings.bonus_attendance_perfect ?? 15;
 
-                    {/* Stats Summary Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-                        <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-4 rounded-xl text-center shadow-md text-white border border-amber-600/20">
-                            <p className="text-[9px] uppercase font-extrabold tracking-wider opacity-90">Total Poin Bulan Ini</p>
-                            <p className="text-3xl font-extrabold mt-1">{summary.score}</p>
-                            <p className="text-[9px] opacity-80 mt-1">Awal bulan reset ke {settings.base_points}</p>
-                        </div>
-                        <div className="bg-white rounded-xl border border-stone-200 p-4 text-center shadow-sm">
-                            <p className="text-[9px] uppercase font-bold text-stone-400">Project Selesai</p>
-                            <p className="text-2xl font-extrabold text-stone-800 mt-1">{summary.completed_projects}</p>
-                            <p className="text-[9px] text-stone-500 mt-1">+{settings.points_completed_project} poin / project</p>
-                        </div>
-                        <div className="bg-white rounded-xl border border-stone-200 p-4 text-center shadow-sm">
-                            <p className="text-[9px] uppercase font-bold text-stone-400">Respon Cepat</p>
-                            <p className="text-2xl font-extrabold text-emerald-600 mt-1">+{summary.fast_responses}</p>
-                            <p className="text-[9px] text-stone-500 mt-1">Sesuai duration_actual</p>
-                        </div>
-                        <div className="bg-white rounded-xl border border-stone-200 p-4 text-center shadow-sm">
-                            <p className="text-[9px] uppercase font-bold text-stone-400">Update Cepat</p>
-                            <p className="text-2xl font-extrabold text-emerald-600 mt-1">+{summary.fast_updates}</p>
-                            <p className="text-[9px] text-stone-500 mt-1">Selesai sebelum target</p>
-                        </div>
-                        <div className="bg-white rounded-xl border border-stone-200 p-4 text-center shadow-sm">
-                            <p className="text-[9px] uppercase font-bold text-stone-400">Late Tasks</p>
-                            <p className="text-2xl font-extrabold text-rose-500 mt-1">-{summary.late_tasks}</p>
-                            <p className="text-[9px] text-stone-500 mt-1">-{settings.penalty_late} poin / terlambat</p>
-                        </div>
-                        <div className="bg-white rounded-xl border border-stone-200 p-4 text-center shadow-sm">
-                            <p className="text-[9px] uppercase font-bold text-stone-400">Kehadiran (Absensi)</p>
-                            <p className="text-2xl font-extrabold text-indigo-600 mt-1">100%</p>
-                            <p className="text-[9px] text-stone-500 mt-1">Hadir tepat waktu & patuh</p>
-                        </div>
-                    </div>
+                        const attendancePenalty = ((summary.late_presences ?? 0) * penaltyLateVal) + ((summary.alpha_days ?? 0) * penaltyAlphaVal);
+                        const attendanceBonus = summary.perfect_attendance_bonus ? bonusPerfectVal : 0;
+
+                        return (
+                            <>
+                                <div className="bg-indigo-50/50 border border-indigo-200/60 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xl">📅</span>
+                                        <div>
+                                            <h4 className="text-xs font-bold text-indigo-800">Catatan Absensi Bulanan</h4>
+                                            <p className="text-[11px] text-indigo-700/80 mt-0.5">Penilaian kehadiran berdasarkan finger print & log kehadiran harian.</p>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center text-xs">
+                                        <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-1">
+                                            <span className="text-[9px] text-amber-700 font-bold block">Terlambat ({penaltyLateVal} pts)</span>
+                                            <span className="font-mono font-extrabold text-amber-800 text-xs">{summary.late_presences ?? 0} Kali</span>
+                                        </div>
+                                        <div className="bg-rose-50 border border-rose-100 rounded-lg px-3 py-1">
+                                            <span className="text-[9px] text-rose-700 font-bold block">Mangkir / Alpa ({penaltyAlphaVal} pts)</span>
+                                            <span className="font-mono font-extrabold text-rose-800 text-xs">{summary.alpha_days ?? 0} Hari</span>
+                                        </div>
+                                        <div className={`rounded-lg px-3 py-1 border ${summary.perfect_attendance_bonus ? 'bg-emerald-50 border-emerald-150' : 'bg-stone-50 border-stone-150'}`}>
+                                            <span className={`text-[9px] font-bold block ${summary.perfect_attendance_bonus ? 'text-emerald-700' : 'text-stone-500'}`}>Perfect Attendance (+{bonusPerfectVal} pts)</span>
+                                            <span className={`font-mono font-extrabold text-xs ${summary.perfect_attendance_bonus ? 'text-emerald-800' : 'text-stone-500'}`}>
+                                                {summary.perfect_attendance_bonus ? 'Ya ✅' : 'Tidak ❌'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Stats Summary Grid */}
+                                <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                                    <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-4 rounded-xl text-center shadow-md text-white border border-amber-600/20">
+                                        <p className="text-[9px] uppercase font-extrabold tracking-wider opacity-90">Total Poin Bulan Ini</p>
+                                        <p className="text-3xl font-extrabold mt-1">{summary.score}</p>
+                                        <p className="text-[9px] opacity-80 mt-1">Awal bulan reset ke {settings.base_points}</p>
+                                    </div>
+                                    <div className="bg-white rounded-xl border border-stone-200 p-4 text-center shadow-sm">
+                                        <p className="text-[9px] uppercase font-bold text-stone-400">Project Selesai</p>
+                                        <p className="text-2xl font-extrabold text-stone-800 mt-1">{summary.completed_projects}</p>
+                                        <p className="text-[9px] text-stone-500 mt-1">+{settings.points_completed_project} poin / project</p>
+                                    </div>
+                                    <div className="bg-white rounded-xl border border-stone-200 p-4 text-center shadow-sm">
+                                        <p className="text-[9px] uppercase font-bold text-stone-400">Respon Cepat</p>
+                                        <p className="text-2xl font-extrabold text-emerald-600 mt-1">+{summary.fast_responses}</p>
+                                        <p className="text-[9px] text-stone-500 mt-1">Sesuai duration_actual</p>
+                                    </div>
+                                    <div className="bg-white rounded-xl border border-stone-200 p-4 text-center shadow-sm">
+                                        <p className="text-[9px] uppercase font-bold text-stone-400">Update Cepat</p>
+                                        <p className="text-2xl font-extrabold text-emerald-600 mt-1">+{summary.fast_updates}</p>
+                                        <p className="text-[9px] text-stone-500 mt-1">Selesai sebelum target</p>
+                                    </div>
+                                    <div className="bg-white rounded-xl border border-stone-200 p-4 text-center shadow-sm">
+                                        <p className="text-[9px] uppercase font-bold text-stone-400">Late Tasks</p>
+                                        <p className="text-2xl font-extrabold text-rose-500 mt-1">-{summary.late_tasks}</p>
+                                        <p className="text-[9px] text-stone-500 mt-1">-{settings.penalty_late} poin / terlambat</p>
+                                    </div>
+                                    <div className="bg-white rounded-xl border border-stone-200 p-4 text-center shadow-sm">
+                                        <p className="text-[9px] uppercase font-bold text-stone-400">Presensi Karyawan</p>
+                                        <p className={`text-xl font-extrabold mt-1 ${attendanceBonus > 0 ? 'text-emerald-600' : attendancePenalty > 0 ? 'text-rose-500' : 'text-stone-600'}`}>
+                                            {attendanceBonus > 0 ? `+${attendanceBonus}` : attendancePenalty > 0 ? `-${attendancePenalty}` : '0'} Poin
+                                        </p>
+                                        <p className="text-[9px] text-stone-500 mt-1">
+                                            {summary.late_presences ?? 0} T, {summary.alpha_days ?? 0} A
+                                        </p>
+                                    </div>
+                                </div>
+                            </>
+                        );
+                    })()}
 
                     {/* Chart Section */}
                     <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-md space-y-4">

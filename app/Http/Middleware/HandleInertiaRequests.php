@@ -53,6 +53,9 @@ class HandleInertiaRequests extends Middleware
                         $request->user()->role->nama_role === 'Admin' : false,
                 ] : null,
             ],
+            'attendanceSettings' => [
+                'cuti_approval_role_id' => \App\Models\Pengaturanumum::first()?->cuti_approval_role_id,
+            ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

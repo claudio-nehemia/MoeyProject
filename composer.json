@@ -41,7 +41,8 @@
         },
         "files": [
             "app/Helpers/image.php",
-            "app/Helpers/terbilang.php"
+            "app/Helpers/terbilang.php",
+            "app/Helpers/myHelper.php"
         ]
     },
     "autoload-dev": {

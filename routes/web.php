@@ -661,6 +661,49 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/task-response/{orderId}/{tahap}', [TaskResponseController::class, 'getTaskResponse'])
         ->name('task-response.show');
 
+    // Persetujuan Izin / Cuti Karyawan
+    Route::get('/approve-cuti', [\App\Http\Controllers\CutiApprovalController::class, 'index'])->name('approve-cuti.index');
+    Route::post('/approve-cuti', [\App\Http\Controllers\CutiApprovalController::class, 'approve'])->name('approve-cuti.approve');
+
+    // Riwayat & Log Presensi Karyawan
+    Route::get('/presensi-karyawan', [\App\Http\Controllers\PresensiKaryawanController::class, 'index'])->name('presensi-karyawan.index');
+    Route::get('/presensi-karyawan/export', [\App\Http\Controllers\PresensiKaryawanController::class, 'exportExcel'])->name('presensi-karyawan.export');
+
+    // Pengumuman Karyawan
+    Route::get('/pengumuman-presensi', [\App\Http\Controllers\PengumumanController::class, 'index'])->name('pengumuman-presensi.index');
+    Route::post('/pengumuman-presensi', [\App\Http\Controllers\PengumumanController::class, 'store'])->name('pengumuman-presensi.store');
+    Route::post('/pengumuman-presensi/{id}', [\App\Http\Controllers\PengumumanController::class, 'update'])->name('pengumuman-presensi.update');
+    Route::delete('/pengumuman-presensi/{id}', [\App\Http\Controllers\PengumumanController::class, 'destroy'])->name('pengumuman-presensi.destroy');
+
+    // Pengaturan Presensi & Fitur Mobile
+    Route::get('/pengaturan-presensi', [\App\Http\Controllers\PengaturanPresensiController::class, 'index'])->name('pengaturan-presensi.index');
+    Route::post('/pengaturan-presensi', [\App\Http\Controllers\PengaturanPresensiController::class, 'update'])->name('pengaturan-presensi.update');
+
+    // Karyawan Management & Face Recognition Master Data
+    Route::middleware(['permission:karyawan.index'])->group(function () {
+        Route::get('karyawan', [\App\Http\Controllers\KaryawanController::class, 'index'])->name('karyawan.index');
+        Route::post('karyawan', [\App\Http\Controllers\KaryawanController::class, 'store'])->middleware('permission:karyawan.create')->name('karyawan.store');
+        Route::post('karyawan/{nik}/upload-face', [\App\Http\Controllers\KaryawanController::class, 'uploadFace'])->middleware('permission:karyawan.edit')->name('karyawan.upload-face');
+        Route::delete('karyawan/{nik}/delete-face/{id}', [\App\Http\Controllers\KaryawanController::class, 'deleteFace'])->middleware('permission:karyawan.edit')->name('karyawan.delete-face');
+        Route::put('karyawan/{nik}', [\App\Http\Controllers\KaryawanController::class, 'update'])->middleware('permission:karyawan.edit')->name('karyawan.update');
+        Route::delete('karyawan/{nik}', [\App\Http\Controllers\KaryawanController::class, 'destroy'])->middleware('permission:karyawan.delete')->name('karyawan.destroy');
+    });
+
+    // Jam Kerja Management
+    Route::middleware(['permission:jamkerja.index'])->group(function () {
+        Route::get('jamkerja', [\App\Http\Controllers\JamkerjaController::class, 'index'])->name('jamkerja.index');
+        Route::post('jamkerja', [\App\Http\Controllers\JamkerjaController::class, 'store'])->middleware('permission:jamkerja.create')->name('jamkerja.store');
+        Route::put('jamkerja/{kode_jam_kerja}', [\App\Http\Controllers\JamkerjaController::class, 'update'])->middleware('permission:jamkerja.edit')->name('jamkerja.update');
+        Route::delete('jamkerja/{kode_jam_kerja}', [\App\Http\Controllers\JamkerjaController::class, 'destroy'])->middleware('permission:jamkerja.delete')->name('jamkerja.destroy');
+    });
+
+    // Cabang Management
+    Route::middleware(['permission:cabang.index'])->group(function () {
+        Route::get('cabang', [\App\Http\Controllers\CabangController::class, 'index'])->name('cabang.index');
+        Route::post('cabang', [\App\Http\Controllers\CabangController::class, 'store'])->middleware('permission:cabang.create')->name('cabang.store');
+        Route::put('cabang/{kode_cabang}', [\App\Http\Controllers\CabangController::class, 'update'])->middleware('permission:cabang.edit')->name('cabang.update');
+        Route::delete('cabang/{kode_cabang}', [\App\Http\Controllers\CabangController::class, 'destroy'])->middleware('permission:cabang.delete')->name('cabang.destroy');
+    });
 });
 
 require __DIR__ . '/settings.php';

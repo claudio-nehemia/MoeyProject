@@ -9,6 +9,19 @@ interface SidebarProps {
 
 interface AuthUser {
     permissions: string[];
+    role?: {
+        id: number;
+        nama_role: string;
+    } | null;
+}
+
+interface MenuItem {
+    name: string;
+    href: string;
+    page: string;
+    permission: string | null;
+    icon: React.ReactNode;
+    gradient: string;
 }
 
 export default function Sidebar({
@@ -36,7 +49,7 @@ export default function Sidebar({
     };
 
     // Define menu items with their required permissions
-    const masterDataMenus = [
+    const masterDataMenus: MenuItem[] = [
         {
             name: 'Dashboard',
             href: '/dashboard',
@@ -84,6 +97,78 @@ export default function Sidebar({
                 </svg>
             ),
             gradient: 'from-green-400 to-green-600',
+        },
+        {
+            name: 'Data Karyawan',
+            href: '/karyawan',
+            page: 'karyawan',
+            permission: 'karyawan.index',
+            icon: (
+                <svg
+                    className="h-3.5 w-3.5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                    />
+                </svg>
+            ),
+            gradient: 'from-amber-500 to-amber-600',
+        },
+        {
+            name: 'Jam Kerja',
+            href: '/jamkerja',
+            page: 'jamkerja',
+            permission: 'jamkerja.index',
+            icon: (
+                <svg
+                    className="h-3.5 w-3.5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                </svg>
+            ),
+            gradient: 'from-emerald-400 to-emerald-600',
+        },
+        {
+            name: 'Cabang',
+            href: '/cabang',
+            page: 'cabang',
+            permission: 'cabang.index',
+            icon: (
+                <svg
+                    className="h-3.5 w-3.5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                    />
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                </svg>
+            ),
+            gradient: 'from-cyan-400 to-cyan-600',
         },
         {
             name: 'Roles',
@@ -271,7 +356,7 @@ export default function Sidebar({
         },
     ];
 
-    const operationsMenus = [
+    const operationsMenus: MenuItem[] = [
         {
             name: 'Orders',
             href: '/order',
@@ -673,19 +758,125 @@ export default function Sidebar({
             ),
             gradient: 'from-slate-400 to-slate-600',
         },
+        {
+            name: 'Riwayat Presensi',
+            href: '/presensi-karyawan',
+            page: 'presensi-karyawan',
+            permission: 'kpi.index',
+            icon: (
+                <svg
+                    className="h-3.5 w-3.5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                </svg>
+            ),
+            gradient: 'from-blue-400 to-blue-600',
+        },
+        {
+            name: 'Pengaturan Presensi',
+            href: '/pengaturan-presensi',
+            page: 'pengaturan-presensi',
+            permission: 'kpi.index',
+            icon: (
+                <svg
+                    className="h-3.5 w-3.5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    />
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                </svg>
+            ),
+            gradient: 'from-amber-400 to-amber-600',
+        },
+        {
+            name: 'Pengumuman',
+            href: '/pengumuman-presensi',
+            page: 'pengumuman-presensi',
+            permission: 'kpi.index',
+            icon: (
+                <svg
+                    className="h-3.5 w-3.5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
+                    />
+                </svg>
+            ),
+            gradient: 'from-orange-400 to-orange-600',
+        },
     ];
+
+    const { attendanceSettings } = usePage<any>().props;
+    const isApprovalRole = auth?.user?.role?.id && attendanceSettings?.cuti_approval_role_id && 
+                          (auth.user.role.id === attendanceSettings.cuti_approval_role_id || 
+                           auth.user.role.nama_role === 'Admin' || 
+                           auth.user.role.nama_role === 'Super Admin');
 
     // Filter menus based on permissions
     const visibleMasterData = masterDataMenus.filter(
         (menu) => !menu.permission || hasPermission(menu.permission),
     );
 
-    const visibleOperations = operationsMenus.filter(
+    let visibleOperations = operationsMenus.filter(
         (menu) => !menu.permission || hasPermission(menu.permission),
     );
 
+    if (isApprovalRole) {
+        visibleOperations = [
+            ...visibleOperations,
+            {
+                name: 'Persetujuan Cuti',
+                href: '/approve-cuti',
+                page: 'approve-cuti',
+                permission: null,
+                icon: (
+                    <svg
+                        className="h-3.5 w-3.5 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                    </svg>
+                ),
+                gradient: 'from-amber-500 to-amber-600',
+            }
+        ];
+    }
+
     const renderMenuItem = (
-        menu: (typeof masterDataMenus)[0],
+        menu: MenuItem,
         index: number,
     ) => (
         <li

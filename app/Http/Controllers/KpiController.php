@@ -13,6 +13,13 @@ use Carbon\Carbon;
 
 class KpiController extends Controller
 {
+    protected $kpiService;
+
+    public function __construct(\App\Services\KpiService $kpiService)
+    {
+        $this->kpiService = $kpiService;
+    }
+
     public function index(Request $request)
     {
         $settings = KpiSetting::first() ?? KpiSetting::create([
@@ -29,7 +36,7 @@ class KpiController extends Controller
         // Sync KPI histories for all users for the current month so that calculations are up-to-date.
         $users = User::all();
         foreach ($users as $user) {
-            $this->syncAndCalculateMonthlyKpi($user, $currentMonth, $settings);
+            $this->kpiService->syncAndCalculateMonthlyKpi($user, $currentMonth, $settings);
         }
 
         // Calculate global stats across all users for the current month
@@ -123,7 +130,7 @@ class KpiController extends Controller
         $user->load('role.divisi');
 
         // Sync and get 12 months trend history
-        $trend = $this->syncUserKpiHistories($user, $settings);
+        $trend = $this->kpiService->syncUserKpiHistories($user, $settings);
         $currentMonthRecord = end($trend);
 
         // Fetch task history for this user (recent 30 task responses)
@@ -284,6 +291,9 @@ class KpiController extends Controller
                 'fast_updates' => $currentMonthRecord['fast_updates'],
                 'late_tasks' => $currentMonthRecord['late_tasks'],
                 'completed_projects' => $currentMonthRecord['completed_projects'],
+                'late_presences' => $currentMonthRecord['late_presences'] ?? 0,
+                'alpha_days' => $currentMonthRecord['alpha_days'] ?? 0,
+                'perfect_attendance_bonus' => $currentMonthRecord['perfect_attendance_bonus'] ?? false,
             ],
             'taskHistory' => $taskHistory,
             'completedProjects' => $completedProjects,
@@ -301,223 +311,48 @@ class KpiController extends Controller
             'penalty_late' => 'required|integer|min:0',
             'points_completed_project' => 'required|integer|min:0',
             'bonus_type' => 'required|string|in:flat,proportional',
+            
+            // Attendance KPI validation
+            'penalty_attendance_late' => 'required|integer|min:0',
+            'penalty_attendance_alpha' => 'required|integer|min:0',
+            'bonus_attendance_perfect' => 'required|integer|min:0',
         ]);
 
         $settings = KpiSetting::first();
         if ($settings) {
-            $settings->update($validated);
+            $settings->update([
+                'base_points' => $validated['base_points'],
+                'points_fast_response' => $validated['points_fast_response'],
+                'points_fast_update' => $validated['points_fast_update'],
+                'penalty_late' => $validated['penalty_late'],
+                'points_completed_project' => $validated['points_completed_project'],
+                'bonus_type' => $validated['bonus_type'],
+                'penalty_attendance_late' => $validated['penalty_attendance_late'],
+                'penalty_attendance_alpha' => $validated['penalty_attendance_alpha'],
+                'bonus_attendance_perfect' => $validated['bonus_attendance_perfect'],
+            ]);
         } else {
-            KpiSetting::create($validated);
+            KpiSetting::create([
+                'base_points' => $validated['base_points'],
+                'points_fast_response' => $validated['points_fast_response'],
+                'points_fast_update' => $validated['points_fast_update'],
+                'penalty_late' => $validated['penalty_late'],
+                'points_completed_project' => $validated['points_completed_project'],
+                'bonus_type' => $validated['bonus_type'],
+                'penalty_attendance_late' => $validated['penalty_attendance_late'],
+                'penalty_attendance_alpha' => $validated['penalty_attendance_alpha'],
+                'bonus_attendance_perfect' => $validated['bonus_attendance_perfect'],
+            ]);
         }
 
         // Recalculate historical snapshots for the current month so that the dashboard reflects settings updates instantly
         $currentMonth = Carbon::now()->format('Y-m');
         $users = User::all();
         foreach ($users as $user) {
-            $this->syncAndCalculateMonthlyKpi($user, $currentMonth, KpiSetting::first());
+            $this->kpiService->syncAndCalculateMonthlyKpi($user, $currentMonth, KpiSetting::first());
         }
 
         return redirect()->back()->with('success', 'KPI settings updated successfully.');
     }
 
-    private function syncUserKpiHistories(User $user, KpiSetting $settings)
-    {
-        $trend = [];
-        // Fetch 12 months history
-        for ($i = 11; $i >= 0; $i--) {
-            $date = Carbon::now()->subMonths($i);
-            $month = $date->format('Y-m');
-            $record = $this->syncAndCalculateMonthlyKpi($user, $month, $settings);
-            $trend[] = [
-                'month' => $date->format('M Y'),
-                'score' => $record->score,
-                'fast_responses' => $record->fast_responses,
-                'fast_updates' => $record->fast_updates,
-                'late_tasks' => $record->late_tasks,
-                'completed_projects' => $record->completed_projects,
-            ];
-        }
-        return $trend;
-    }
-
-    private function syncAndCalculateMonthlyKpi(User $user, string $month, KpiSetting $settings)
-    {
-        $isCurrentMonth = ($month === Carbon::now()->format('Y-m'));
-
-        if (!$isCurrentMonth) {
-            $existing = KpiHistory::where('user_id', $user->id)
-                ->where('month', $month)
-                ->first();
-            if ($existing) {
-                return $existing;
-            }
-        }
-
-        $startOfMonth = Carbon::parse($month . '-01')->startOfMonth();
-        $endOfMonth = Carbon::parse($month . '-01')->endOfMonth();
-
-        // Fetch tasks relevant to this month
-        $tasks = DB::table('task_responses')
-            ->where('user_id', $user->id)
-            ->where(function($query) use ($startOfMonth, $endOfMonth) {
-                $query->whereBetween('update_data_time', [$startOfMonth, $endOfMonth])
-                      ->orWhereBetween('response_time', [$startOfMonth, $endOfMonth])
-                      ->orWhere(function($q) use ($startOfMonth, $endOfMonth) {
-                          $q->whereBetween('deadline', [$startOfMonth, $endOfMonth])
-                            ->whereNotIn('status', ['selesai']);
-                      });
-            })
-            ->get();
-
-        $fastResponsesCount = 0;
-        $fastUpdatesCount = 0;
-        $lateTasksCount = 0;
-
-        $fastResponsesBonus = 0;
-        $fastUpdatesBonus = 0;
-
-        foreach ($tasks as $task) {
-            $isLate = false;
-
-            // Check response time
-            if ($task->response_time) {
-                $respTime = Carbon::parse($task->response_time);
-                if ($respTime->between($startOfMonth, $endOfMonth)) {
-                    $startTime = Carbon::parse($task->start_time);
-                    $diffDays = $respTime->diffInDays($startTime);
-                    
-                    if ($diffDays < $task->duration_actual) {
-                        $fastResponsesCount++;
-                        $daysEarly = $task->duration_actual - $diffDays;
-                        if ($settings->bonus_type === 'flat') {
-                            $fastResponsesBonus += $settings->points_fast_response;
-                        } else {
-                            $fastResponsesBonus += round(($settings->points_fast_response * $daysEarly) / $task->duration_actual);
-                        }
-                    }
-
-                    if ($respTime->greaterThan(Carbon::parse($task->deadline))) {
-                        $isLate = true;
-                    }
-                }
-            }
-
-            // Check update data time
-            if ($task->update_data_time) {
-                $updTime = Carbon::parse($task->update_data_time);
-                if ($updTime->between($startOfMonth, $endOfMonth)) {
-                    $baseTime = Carbon::parse($task->response_time ?? $task->start_time);
-                    $diffDays = $updTime->diffInDays($baseTime);
-                    
-                    $targetUpdateDays = max(1, $task->duration - $task->duration_actual);
-                    if ($diffDays < $targetUpdateDays) {
-                        $fastUpdatesCount++;
-                        $daysEarly = $targetUpdateDays - $diffDays;
-                        if ($settings->bonus_type === 'flat') {
-                            $fastUpdatesBonus += $settings->points_fast_update;
-                        } else {
-                            $fastUpdatesBonus += round(($settings->points_fast_update * $daysEarly) / $targetUpdateDays);
-                        }
-                    }
-
-                    if ($updTime->greaterThan(Carbon::parse($task->deadline))) {
-                        $isLate = true;
-                    }
-                }
-            }
-
-            // Check status-based lateness
-            if (in_array($task->status, ['telat', 'telat_submit'])) {
-                $deadline = Carbon::parse($task->deadline);
-                if ($deadline->between($startOfMonth, $endOfMonth)) {
-                    $isLate = true;
-                }
-            }
-
-            if ($isLate) {
-                $lateTasksCount++;
-            }
-        }
-
-        // Projects completed in this month
-        $orderIdsFromTeams = DB::table('order_teams')
-            ->where('user_id', $user->id)
-            ->pluck('order_id')
-            ->toArray();
-
-        $orderIdsFromTasks = DB::table('task_responses')
-            ->where('user_id', $user->id)
-            ->pluck('order_id')
-            ->toArray();
-
-        $orderIds = array_unique(array_merge($orderIdsFromTeams, $orderIdsFromTasks));
-        $completedProjectsCount = 0;
-
-        if (!empty($orderIds)) {
-            $orders = Order::whereIn('id', $orderIds)
-                ->with(['itemPekerjaans.invoices'])
-                ->get();
-
-            foreach ($orders as $order) {
-                $orderIsCompleted = false;
-                $completionDate = null;
-                $items = $order->itemPekerjaans;
-
-                if ($items->isNotEmpty()) {
-                    $orderIsCompleted = true;
-                    $dates = [];
-                    foreach ($items as $item) {
-                        if (empty($item->bast_number)) {
-                            $orderIsCompleted = false;
-                            break;
-                        }
-                        if ($item->bast_date) {
-                            $dates[] = Carbon::parse($item->bast_date);
-                        }
-
-                        $invoices = $item->invoices;
-                        if ($invoices->isEmpty()) {
-                            $orderIsCompleted = false;
-                            break;
-                        }
-                        foreach ($invoices as $inv) {
-                            if ($inv->status !== 'paid') {
-                                $orderIsCompleted = false;
-                                break 2;
-                            }
-                            if ($inv->paid_at) {
-                                $dates[] = Carbon::parse($inv->paid_at);
-                            }
-                        }
-                    }
-
-                    if ($orderIsCompleted && !empty($dates)) {
-                        $completionDate = max($dates);
-                    }
-                }
-
-                if ($orderIsCompleted && $completionDate && $completionDate->between($startOfMonth, $endOfMonth)) {
-                    $completedProjectsCount++;
-                }
-            }
-        }
-
-        $monthlyScore = $settings->base_points 
-            + $fastResponsesBonus 
-            + $fastUpdatesBonus 
-            - ($lateTasksCount * $settings->penalty_late) 
-            + ($completedProjectsCount * $settings->points_completed_project);
-
-        return KpiHistory::updateOrCreate(
-            ['user_id' => $user->id, 'month' => $month],
-            [
-                'base_score' => $settings->base_points,
-                'fast_responses' => $fastResponsesCount,
-                'fast_updates' => $fastUpdatesCount,
-                'late_tasks' => $lateTasksCount,
-                'completed_projects' => $completedProjectsCount,
-                'score' => max(0, $monthlyScore),
-            ]
-        );
-    }
 }

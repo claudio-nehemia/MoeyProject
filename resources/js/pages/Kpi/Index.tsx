@@ -55,7 +55,13 @@ interface Props {
     globalStats: GlobalStats;
 }
 
-export default function Index({ kpiData, settings, rolesList, filters, globalStats }: Props) {
+export default function Index({ 
+    kpiData, 
+    settings, 
+    rolesList, 
+    filters, 
+    globalStats,
+}: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 1024;
@@ -68,14 +74,31 @@ export default function Index({ kpiData, settings, rolesList, filters, globalSta
     const [selectedRole, setSelectedRole] = useState(filters.role || "");
     const [mounted, setMounted] = useState(false);
 
+    interface KpiSettingsForm {
+        base_points: number;
+        points_fast_response: number;
+        points_fast_update: number;
+        penalty_late: number;
+        points_completed_project: number;
+        bonus_type: 'flat' | 'proportional';
+        penalty_attendance_late: number;
+        penalty_attendance_alpha: number;
+        bonus_attendance_perfect: number;
+    }
+
     // Settings Form
-    const { data: settingsData, setData: setSettingsData, post: submitSettings, processing: savingSettings } = useForm({
+    const { data: settingsData, setData: setSettingsData, post: submitSettings, processing: savingSettings } = useForm<KpiSettingsForm>({
         base_points: settings.base_points,
         points_fast_response: settings.points_fast_response,
         points_fast_update: settings.points_fast_update,
         penalty_late: settings.penalty_late,
         points_completed_project: settings.points_completed_project,
         bonus_type: settings.bonus_type,
+        
+        // Attendance KPI settings
+        penalty_attendance_late: (settings as any).penalty_attendance_late ?? 5,
+        penalty_attendance_alpha: (settings as any).penalty_attendance_alpha ?? 15,
+        bonus_attendance_perfect: (settings as any).bonus_attendance_perfect ?? 15,
     });
 
     useEffect(() => {
@@ -466,6 +489,56 @@ export default function Index({ kpiData, settings, rolesList, filters, globalSta
                                             />
                                         </div>
                                     </div>
+
+                                    {/* Attendance KPI: penalty_attendance_late */}
+                                    <div className="border border-stone-200 rounded-lg p-4 space-y-3.5 shadow-sm bg-stone-50/50">
+                                        <h3 className="text-xs font-bold text-rose-800 border-b border-stone-200 pb-1.5">🕒 Penalti Terlambat Presensi</h3>
+                                        <div className="space-y-1.5">
+                                            <label className="block text-[11px] font-semibold text-stone-700">Pengurangan Poin per Keterlambatan</label>
+                                            <input
+                                                type="number"
+                                                value={settingsData.penalty_attendance_late}
+                                                onChange={e => setSettingsData('penalty_attendance_late', parseInt(e.target.value))}
+                                                className="w-full px-3 py-1.5 text-xs border border-stone-300 rounded-lg font-semibold text-rose-600"
+                                                required
+                                                min="0"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Attendance KPI: penalty_attendance_alpha */}
+                                    <div className="border border-stone-200 rounded-lg p-4 space-y-3.5 shadow-sm bg-stone-50/50">
+                                        <h3 className="text-xs font-bold text-rose-800 border-b border-stone-200 pb-1.5">🚫 Penalti Alpa / Mangkir</h3>
+                                        <div className="space-y-1.5">
+                                            <label className="block text-[11px] font-semibold text-stone-700">Pengurangan Poin per Hari Alpa</label>
+                                            <input
+                                                type="number"
+                                                value={settingsData.penalty_attendance_alpha}
+                                                onChange={e => setSettingsData('penalty_attendance_alpha', parseInt(e.target.value))}
+                                                className="w-full px-3 py-1.5 text-xs border border-stone-300 rounded-lg font-semibold text-rose-600"
+                                                required
+                                                min="0"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Attendance KPI: bonus_attendance_perfect */}
+                                    <div className="border border-stone-200 rounded-lg p-4 space-y-3.5 shadow-sm bg-stone-50/50 col-span-1 md:col-span-2">
+                                        <h3 className="text-xs font-bold text-emerald-800 border-b border-stone-200 pb-1.5">🏆 Bonus Kehadiran Sempurna</h3>
+                                        <div className="space-y-1.5">
+                                            <label className="block text-[11px] font-semibold text-stone-700">Tambahan Poin Kehadiran Sempurna Bulanan</label>
+                                            <p className="text-[9px] text-stone-400">Bonus poin jika sebulan penuh hadir (tanpa terlambat & tanpa mangkir).</p>
+                                            <input
+                                                type="number"
+                                                value={settingsData.bonus_attendance_perfect}
+                                                onChange={e => setSettingsData('bonus_attendance_perfect', parseInt(e.target.value))}
+                                                className="w-full px-3 py-1.5 text-xs border border-stone-300 rounded-lg font-semibold text-emerald-600"
+                                                required
+                                                min="0"
+                                            />
+                                        </div>
+                                    </div>
+
 
                                 </div>
 

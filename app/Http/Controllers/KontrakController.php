@@ -1040,7 +1040,8 @@ class KontrakController extends Controller
         $projectName = $kontrak->itemPekerjaan->moodboard->order->nama_project;
         $filename = 'Kontrak_TTD_' . $projectName . '.pdf';
 
-        return Storage::disk('public')->download($kontrak->signed_contract_path, $filename);
+        $filePath = Storage::disk('public')->path($kontrak->signed_contract_path);
+        return response()->download($filePath, $filename);
     }
 
     /**

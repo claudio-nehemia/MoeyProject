@@ -145,4 +145,9 @@ class User extends Authenticatable
     {
         return $this->unreadNotifications()->count();
     }
+
+    public function karyawan()
+    {
+        return $this->hasOne(Karyawan::class, 'user_id');
+    }
 }

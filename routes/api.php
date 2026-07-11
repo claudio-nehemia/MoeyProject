@@ -39,10 +39,43 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{id}/pm-response', [NotificationApiController::class, 'handlePmResponse'])->name('pm-response');
     });
 
-    // Mobile FCM Token Management
+    // Mobile FCM & Attendance API
     Route::prefix('mobile')->group(function () {
         Route::post('fcm-token', [FCMController::class, 'updateToken']);
         Route::delete('fcm-token', [FCMController::class, 'removeToken']);
+
+        // Dashboard
+        Route::get('dashboard', [\App\Http\Controllers\Api\Mobile\DashboardController::class, 'index']);
+        
+        // Attendance
+        Route::post('presensi/masuk', [\App\Http\Controllers\Api\Mobile\PresensiController::class, 'masuk']);
+        Route::post('presensi/pulang', [\App\Http\Controllers\Api\Mobile\PresensiController::class, 'pulang']);
+        Route::post('presensi/istirahat', [\App\Http\Controllers\Api\Mobile\PresensiController::class, 'istirahat']);
+        Route::get('presensi/riwayat', [\App\Http\Controllers\Api\Mobile\PresensiController::class, 'riwayat']);
+        
+        // Face Registration
+        Route::get('face-recognition', [\App\Http\Controllers\Api\Mobile\FacerecognitionController::class, 'index']);
+        Route::post('face-recognition', [\App\Http\Controllers\Api\Mobile\FacerecognitionController::class, 'store']);
+        Route::delete('face-recognition', [\App\Http\Controllers\Api\Mobile\FacerecognitionController::class, 'destroy']);
+        
+        // Visit Tracking (Opsional)
+        Route::get('kunjungan', [\App\Http\Controllers\Api\Mobile\KunjunganController::class, 'index']);
+        Route::post('kunjungan', [\App\Http\Controllers\Api\Mobile\KunjunganController::class, 'store']);
+        
+        // Laporan Aktivitas Harian (Opsional)
+        Route::get('aktivitas', [\App\Http\Controllers\Api\Mobile\AktivitasController::class, 'index']);
+        Route::post('aktivitas', [\App\Http\Controllers\Api\Mobile\AktivitasController::class, 'store']);
+        Route::delete('aktivitas/{id}', [\App\Http\Controllers\Api\Mobile\AktivitasController::class, 'destroy']);
+        
+        // Izin/Cuti
+        Route::get('izin', [\App\Http\Controllers\Api\Mobile\IzinController::class, 'index']);
+        Route::post('izin', [\App\Http\Controllers\Api\Mobile\IzinController::class, 'store']);
+        Route::delete('izin/{kode}', [\App\Http\Controllers\Api\Mobile\IzinController::class, 'destroy']);
+        
+        // Lembur
+        Route::get('lembur', [\App\Http\Controllers\Api\Mobile\LemburController::class, 'index']);
+        Route::post('lembur', [\App\Http\Controllers\Api\Mobile\LemburController::class, 'store']);
+        Route::post('lembur/presensi', [\App\Http\Controllers\Api\Mobile\LemburController::class, 'storepresensi']);
     });
 
     // Admin FCM routes (optional - for testing and monitoring)

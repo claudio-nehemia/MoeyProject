@@ -923,6 +923,72 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Delete Cashflow Entry',
                 'group' => 'Operations - Cashflow'
             ],
+
+            // Karyawan Permissions
+            [
+                'name' => 'karyawan.index',
+                'display_name' => 'View Karyawan List',
+                'group' => 'Master Data - Karyawan'
+            ],
+            [
+                'name' => 'karyawan.create',
+                'display_name' => 'Create Karyawan',
+                'group' => 'Master Data - Karyawan'
+            ],
+            [
+                'name' => 'karyawan.edit',
+                'display_name' => 'Edit Karyawan',
+                'group' => 'Master Data - Karyawan'
+            ],
+            [
+                'name' => 'karyawan.delete',
+                'display_name' => 'Delete Karyawan',
+                'group' => 'Master Data - Karyawan'
+            ],
+
+            // Jam Kerja Permissions
+            [
+                'name' => 'jamkerja.index',
+                'display_name' => 'View Jam Kerja List',
+                'group' => 'Master Data - Jam Kerja'
+            ],
+            [
+                'name' => 'jamkerja.create',
+                'display_name' => 'Create Jam Kerja',
+                'group' => 'Master Data - Jam Kerja'
+            ],
+            [
+                'name' => 'jamkerja.edit',
+                'display_name' => 'Edit Jam Kerja',
+                'group' => 'Master Data - Jam Kerja'
+            ],
+            [
+                'name' => 'jamkerja.delete',
+                'display_name' => 'Delete Jam Kerja',
+                'group' => 'Master Data - Jam Kerja'
+            ],
+
+            // Cabang Permissions
+            [
+                'name' => 'cabang.index',
+                'display_name' => 'View Cabang List',
+                'group' => 'Master Data - Cabang'
+            ],
+            [
+                'name' => 'cabang.create',
+                'display_name' => 'Create Cabang',
+                'group' => 'Master Data - Cabang'
+            ],
+            [
+                'name' => 'cabang.edit',
+                'display_name' => 'Edit Cabang',
+                'group' => 'Master Data - Cabang'
+            ],
+            [
+                'name' => 'cabang.delete',
+                'display_name' => 'Delete Cabang',
+                'group' => 'Master Data - Cabang'
+            ],
         ];
 
         foreach ($permissions as $permission) {
