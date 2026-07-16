@@ -31,6 +31,8 @@ class CashflowVendorEntry extends Model
         'flag_jw_termin',
         'reminder_sent',
         'reminder_termin_sent',
+        'reminder_h7_sent',
+        'reminder_h7_termin_sent',
         'sort_order',
         'notes',
         'created_by',
@@ -48,6 +50,8 @@ class CashflowVendorEntry extends Model
         'tanggal_pembayaran_termin' => 'date',
         'reminder_sent' => 'boolean',
         'reminder_termin_sent' => 'boolean',
+        'reminder_h7_sent' => 'boolean',
+        'reminder_h7_termin_sent' => 'boolean',
         'sort_order' => 'integer',
     ];
 

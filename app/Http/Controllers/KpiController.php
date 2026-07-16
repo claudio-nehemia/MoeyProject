@@ -92,7 +92,10 @@ class KpiController extends Controller
             'kpi_histories.fast_responses as kpi_fast_responses',
             'kpi_histories.fast_updates as kpi_fast_updates',
             'kpi_histories.late_tasks as kpi_late_tasks',
-            'kpi_histories.completed_projects as kpi_completed_projects'
+            'kpi_histories.completed_projects as kpi_completed_projects',
+            'kpi_histories.late_presences as kpi_late_presences',
+            'kpi_histories.alpha_days as kpi_alpha_days',
+            'kpi_histories.perfect_attendance_bonus as kpi_perfect_attendance_bonus'
         )
         ->orderByRaw('COALESCE(kpi_histories.score, 0) DESC');
 
@@ -109,6 +112,9 @@ class KpiController extends Controller
                 'fast_updates' => $user->kpi_fast_updates ?? 0,
                 'late_tasks' => $user->kpi_late_tasks ?? 0,
                 'completed_projects' => $user->kpi_completed_projects ?? 0,
+                'late_presences' => $user->kpi_late_presences ?? 0,
+                'alpha_days' => $user->kpi_alpha_days ?? 0,
+                'perfect_attendance_bonus' => (bool)($user->kpi_perfect_attendance_bonus ?? false),
                 'score' => $user->kpi_score ?? $settings->base_points,
             ];
         });

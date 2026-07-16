@@ -29,6 +29,8 @@ interface PaginatedData<T> {
 
 interface Props {
     orders: PaginatedData<OrderCashflow>;
+    total_hutang: number;
+    daily_payments: any[];
     filters: { search?: string; status?: string };
 }
 
@@ -52,7 +54,7 @@ const statusLabels: Record<string, string> = {
     lunas: 'Lunas',
 };
 
-export default function Index({ orders, filters }: Props) {
+export default function Index({ orders, total_hutang, daily_payments, filters }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 1024;
@@ -61,6 +63,7 @@ export default function Index({ orders, filters }: Props) {
     });
     const [search, setSearch] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
+    const [activeTab, setActiveTab] = useState<'project' | 'daily'>('project');
 
     useEffect(() => {
         const handleResize = () => {
@@ -84,10 +87,23 @@ export default function Index({ orders, filters }: Props) {
         router.get('/cashflow', { search, status: value }, { preserveState: true, replace: true });
     };
 
+    const handleToggleFlag = (entryId: number, flagField: string, currentValue: string | null) => {
+        const newValue = currentValue ? null : '✔';
+        router.post(`/cashflow/vendor-entries/${entryId}/toggle-flag`, {
+            flag: flagField,
+            value: newValue
+        }, {
+            preserveScroll: true,
+        });
+    };
+
+    const handleExportExcel = () => {
+        window.open('/cashflow/export-daily-payments', '_blank');
+    };
+
     const totalKontrak = orders.data.reduce((sum, o) => sum + o.harga_kontrak, 0);
     const totalReceived = orders.data.reduce((sum, o) => sum + o.total_received, 0);
     const totalPiutang = orders.data.reduce((sum, o) => sum + o.sisa_piutang, 0);
-    const totalStatusProject = orders.data.reduce((sum, o) => sum + o.status_project, 0);
 
     return (
         <>
@@ -139,115 +155,252 @@ export default function Index({ orders, filters }: Props) {
                             <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">Sisa Piutang (Page)</p>
                             <p className="text-xl font-bold text-amber-600 mt-1">{formatCurrency(totalPiutang)}</p>
                         </div>
-                        <div className="bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
-                            <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider">Status Project (Page)</p>
-                            <p className="text-xl font-bold text-indigo-600 mt-1">{formatCurrency(totalStatusProject)}</p>
+                        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 shadow-sm">
+                            <p className="text-[10px] text-rose-700 font-bold uppercase tracking-wider">Total Hutang Vendor (Global)</p>
+                            <p className="text-xl font-bold text-rose-700 mt-1">{formatCurrency(total_hutang)}</p>
                         </div>
                     </div>
 
-                    {/* Filters */}
-                    <div className="flex flex-col md:flex-row gap-3 mb-4">
-                        <div className="flex-1">
-                            <SearchFilter onSearch={handleSearch} searchPlaceholder="Cari project, customer..." />
-                        </div>
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => handleStatusFilter(e.target.value)}
-                            className="bg-white border border-stone-200 rounded-lg px-3 py-2 text-xs text-stone-700 focus:ring-amber-500 focus:border-amber-500 shadow-sm"
+                    {/* Tab Navigation */}
+                    <div className="flex border-b border-stone-200 mb-6 gap-6">
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('project')}
+                            className={`pb-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${
+                                activeTab === 'project'
+                                    ? 'border-amber-500 text-stone-850'
+                                    : 'border-transparent text-stone-400 hover:text-stone-600'
+                            }`}
                         >
-                            <option value="">Semua Status</option>
-                            <option value="not_start">Belum Mulai</option>
-                            <option value="cm_fee">CM Fee</option>
-                            <option value="dp">DP</option>
-                            <option value="termin">Termin</option>
-                            <option value="lunas">Lunas</option>
-                        </select>
+                            Daftar Project
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('daily')}
+                            className={`pb-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${
+                                activeTab === 'daily'
+                                    ? 'border-amber-500 text-stone-850'
+                                    : 'border-transparent text-stone-400 hover:text-stone-600'
+                            }`}
+                        >
+                            Pembayaran General All Project
+                        </button>
                     </div>
 
-                    {/* Table */}
-                    <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm fadeInUp">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-xs">
-                                <thead>
-                                    <tr className="bg-stone-50 border-b border-stone-200 text-stone-500">
-                                        <th className="text-left px-4 py-3 font-semibold uppercase">Project</th>
-                                        <th className="text-left px-4 py-3 font-semibold uppercase">PM</th>
-                                        <th className="text-right px-4 py-3 font-semibold uppercase">Total Kontrak</th>
-                                        <th className="text-right px-4 py-3 font-semibold text-emerald-700/80 uppercase">Internal</th>
-                                        <th className="text-right px-4 py-3 font-semibold text-blue-700/80 uppercase">Fisik</th>
-                                        <th className="text-right px-4 py-3 font-semibold text-purple-700/80 uppercase">External</th>
-                                        <th className="text-right px-4 py-3 font-semibold uppercase">Diterima</th>
-                                        <th className="text-right px-4 py-3 font-semibold uppercase">Piutang</th>
-                                        <th className="text-right px-4 py-3 font-semibold text-indigo-700/80 uppercase">Status Project</th>
-                                        <th className="text-center px-4 py-3 font-semibold uppercase">Status</th>
-                                        <th className="text-center px-4 py-3 font-semibold uppercase">BAST</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-stone-100">
-                                    {orders.data.length === 0 && (
-                                        <tr>
-                                            <td colSpan={11} className="px-4 py-12 text-center text-stone-400 italic">
-                                                Tidak ada data project dengan kontrak ditemukan
-                                            </td>
-                                        </tr>
-                                    )}
-                                    {orders.data.map((order) => (
-                                        <tr
-                                            key={order.id}
-                                            className="table-row-hover cursor-pointer transition-colors bg-white"
-                                            onClick={() => router.visit(`/cashflow/${order.id}`)}
-                                        >
-                                            <td className="px-4 py-3">
-                                                <div className="font-semibold text-stone-850">{order.nama_project}</div>
-                                                <div className="text-[10px] text-stone-500">{order.customer_name} · {order.company_name}</div>
-                                            </td>
-                                            <td className="px-4 py-3 text-stone-600">{order.pm_name}</td>
-                                            <td className="px-4 py-3 text-right font-mono text-stone-700 font-semibold">{formatCurrency(order.harga_kontrak)}</td>
-                                            <td className="px-4 py-3 text-right font-mono text-emerald-600 font-semibold">{formatCurrency(order.kontrak_internal)}</td>
-                                            <td className="px-4 py-3 text-right font-mono text-blue-600 font-semibold">{formatCurrency(order.kontrak_fisik)}</td>
-                                            <td className="px-4 py-3 text-right font-mono text-purple-600 font-semibold">{formatCurrency(order.kontrak_external)}</td>
-                                            <td className="px-4 py-3 text-right font-mono text-emerald-600">{formatCurrency(order.total_received)}</td>
-                                            <td className="px-4 py-3 text-right font-mono text-amber-600">{formatCurrency(order.sisa_piutang)}</td>
-                                            <td className="px-4 py-3 text-right font-mono text-indigo-600 font-semibold">{formatCurrency(order.status_project)}</td>
-                                            <td className="px-4 py-3 text-center">
-                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusColors[order.payment_status] || 'bg-stone-100 text-stone-700'}`}>
-                                                    {statusLabels[order.payment_status] || order.payment_status}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
-                                                {order.has_bast ? (
-                                                    <span className="text-emerald-600 font-bold text-sm">✓</span>
-                                                ) : (
-                                                    <span className="text-stone-300 font-bold">—</span>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Pagination */}
-                        {orders.links.length > 3 && (
-                            <div className="flex items-center justify-center gap-1 px-4 py-3 border-t border-stone-150 bg-stone-50">
-                                {orders.links.map((link, i) => (
-                                    <button
-                                        key={i}
-                                        disabled={!link.url}
-                                        onClick={() => link.url && router.visit(link.url)}
-                                        className={`px-2.5 py-1 rounded text-[10px] font-semibold transition-colors ${
-                                            link.active
-                                                ? 'bg-amber-500 text-white shadow'
-                                                : link.url
-                                                ? 'text-stone-600 hover:bg-stone-200'
-                                                : 'text-stone-300 cursor-not-allowed'
-                                        }`}
-                                        dangerouslySetInnerHTML={{ __html: link.label }}
-                                    />
-                                ))}
+                    {activeTab === 'project' ? (
+                        <>
+                            {/* Filters */}
+                            <div className="flex flex-col md:flex-row gap-3 mb-4">
+                                <div className="flex-1">
+                                    <SearchFilter onSearch={handleSearch} searchPlaceholder="Cari project, customer..." />
+                                </div>
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => handleStatusFilter(e.target.value)}
+                                    className="bg-white border border-stone-200 rounded-lg px-3 py-2 text-xs text-stone-700 focus:ring-amber-500 focus:border-amber-500 shadow-sm"
+                                >
+                                    <option value="">Semua Status</option>
+                                    <option value="not_start">Belum Mulai</option>
+                                    <option value="cm_fee">CM Fee</option>
+                                    <option value="dp">DP</option>
+                                    <option value="termin">Termin</option>
+                                    <option value="lunas">Lunas</option>
+                                </select>
                             </div>
-                        )}
-                    </div>
+
+                            {/* Table */}
+                            <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm fadeInUp">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-xs">
+                                        <thead>
+                                            <tr className="bg-stone-50 border-b border-stone-200 text-stone-500">
+                                                <th className="text-left px-4 py-3 font-semibold uppercase">Project</th>
+                                                <th className="text-left px-4 py-3 font-semibold uppercase">PM</th>
+                                                <th className="text-right px-4 py-3 font-semibold uppercase">Total Kontrak</th>
+                                                <th className="text-right px-4 py-3 font-semibold text-emerald-700/80 uppercase">Internal</th>
+                                                <th className="text-right px-4 py-3 font-semibold text-blue-700/80 uppercase">Fisik</th>
+                                                <th className="text-right px-4 py-3 font-semibold text-purple-700/80 uppercase">External</th>
+                                                <th className="text-right px-4 py-3 font-semibold uppercase">Diterima</th>
+                                                <th className="text-right px-4 py-3 font-semibold uppercase">Piutang</th>
+                                                <th className="text-center px-4 py-3 font-semibold uppercase">Status</th>
+                                                <th className="text-center px-4 py-3 font-semibold uppercase">BAST</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-stone-100">
+                                            {orders.data.length === 0 && (
+                                                <tr>
+                                                    <td colSpan={10} className="px-4 py-12 text-center text-stone-400 italic">
+                                                        Tidak ada data project dengan kontrak ditemukan
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            {orders.data.map((order) => (
+                                                <tr
+                                                    key={order.id}
+                                                    className="table-row-hover cursor-pointer transition-colors bg-white"
+                                                    onClick={() => router.visit(`/cashflow/${order.id}`)}
+                                                >
+                                                    <td className="px-4 py-3">
+                                                        <div className="font-semibold text-stone-850">{order.nama_project}</div>
+                                                        <div className="text-[10px] text-stone-500">{order.customer_name} · {order.company_name}</div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-stone-600">{order.pm_name}</td>
+                                                    <td className="px-4 py-3 text-right font-mono text-stone-700 font-semibold">{formatCurrency(order.harga_kontrak)}</td>
+                                                    <td className="px-4 py-3 text-right font-mono text-emerald-600 font-semibold">{formatCurrency(order.kontrak_internal)}</td>
+                                                    <td className="px-4 py-3 text-right font-mono text-blue-600 font-semibold">{formatCurrency(order.kontrak_fisik)}</td>
+                                                    <td className="px-4 py-3 text-right font-mono text-purple-600 font-semibold">{formatCurrency(order.kontrak_external)}</td>
+                                                    <td className="px-4 py-3 text-right font-mono text-emerald-600">{formatCurrency(order.total_received)}</td>
+                                                    <td className="px-4 py-3 text-right font-mono text-amber-600">{formatCurrency(order.sisa_piutang)}</td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusColors[order.payment_status] || 'bg-stone-100 text-stone-700'}`}>
+                                                            {statusLabels[order.payment_status] || order.payment_status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        {order.has_bast ? (
+                                                            <span className="text-emerald-600 font-bold text-sm">✓</span>
+                                                        ) : (
+                                                            <span className="text-stone-300 font-bold">—</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Pagination */}
+                                {orders.links.length > 3 && (
+                                    <div className="flex items-center justify-center gap-1 px-4 py-3 border-t border-stone-150 bg-stone-50">
+                                        {orders.links.map((link, i) => (
+                                            <button
+                                                key={i}
+                                                disabled={!link.url}
+                                                onClick={() => link.url && router.visit(link.url)}
+                                                className={`px-2.5 py-1 rounded text-[10px] font-semibold transition-colors ${
+                                                    link.active
+                                                        ? 'bg-amber-500 text-white shadow'
+                                                        : link.url
+                                                        ? 'text-stone-600 hover:bg-stone-200'
+                                                        : 'text-stone-300 cursor-not-allowed'
+                                                }`}
+                                                dangerouslySetInnerHTML={{ __html: link.label }}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            {/* Daily Payments List */}
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-sm font-bold text-stone-700 uppercase tracking-wider">
+                                    Jadwal Pembayaran Harian (Seluruh Project)
+                                </h3>
+                                <button
+                                    type="button"
+                                    onClick={handleExportExcel}
+                                    className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition"
+                                >
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    Ekspor Excel
+                                </button>
+                            </div>
+
+                            <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm fadeInUp">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-xs text-stone-600">
+                                        <thead className="text-[10px] text-stone-400 uppercase bg-stone-50 border-b border-stone-200">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left">Tanggal</th>
+                                                <th className="px-4 py-3 text-left">Project</th>
+                                                <th className="px-4 py-3 text-left">Vendor / Type</th>
+                                                <th className="px-4 py-3 text-left">Fase</th>
+                                                <th className="px-4 py-3 text-left">Keterangan</th>
+                                                <th className="px-4 py-3 text-right">Nominal</th>
+                                                <th className="px-4 py-3 text-center">AF</th>
+                                                <th className="px-4 py-3 text-center">FB</th>
+                                                <th className="px-4 py-3 text-center">JW</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-stone-100">
+                                            {daily_payments.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={9} className="px-4 py-12 text-center text-stone-400 italic">
+                                                        Tidak ada jadwal pembayaran harian ditemukan
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                daily_payments.map((item) => {
+                                                    const isTermin = item.id.endsWith('-termin');
+                                                    const afField = isTermin ? 'flag_af_termin' : 'flag_af';
+                                                    const fbField = isTermin ? 'flag_fb_termin' : 'flag_fb';
+                                                    const jwField = isTermin ? 'flag_jw_termin' : 'flag_jw';
+
+                                                    return (
+                                                        <tr key={item.id} className="table-row-hover bg-white hover:bg-amber-50/20">
+                                                            <td className="px-4 py-3 font-semibold text-stone-800">
+                                                                {item.date}
+                                                            </td>
+                                                            <td className="px-4 py-3 font-medium text-stone-850">
+                                                                {item.project_name}
+                                                            </td>
+                                                            <td className="px-4 py-3">
+                                                                <div className="font-semibold">{item.vendor_name}</div>
+                                                                <span className="text-[9px] uppercase tracking-wider font-bold text-stone-400">
+                                                                    {item.vendor_type}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-4 py-3">
+                                                                <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                                                    isTermin ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                                                                }`}>
+                                                                    {item.type}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-4 py-3 text-stone-500">
+                                                                {item.label}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right font-mono font-bold text-stone-800">
+                                                                {formatCurrency(item.amount)}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-center">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={!!item.flag_af}
+                                                                    onChange={() => handleToggleFlag(item.entry_id, afField, item.flag_af)}
+                                                                    className="rounded border-stone-300 text-amber-500 focus:ring-amber-500"
+                                                                />
+                                                            </td>
+                                                            <td className="px-4 py-3 text-center">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={!!item.flag_fb}
+                                                                    onChange={() => handleToggleFlag(item.entry_id, fbField, item.flag_fb)}
+                                                                    className="rounded border-stone-300 text-amber-500 focus:ring-amber-500"
+                                                                />
+                                                            </td>
+                                                            <td className="px-4 py-3 text-center">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={!!item.flag_jw}
+                                                                    onChange={() => handleToggleFlag(item.entry_id, jwField, item.flag_jw)}
+                                                                    className="rounded border-stone-300 text-amber-500 focus:ring-amber-500"
+                                                                />
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </>

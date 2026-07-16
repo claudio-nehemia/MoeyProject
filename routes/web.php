@@ -40,6 +40,7 @@ use App\Http\Controllers\SurveyScheduleController;
 use App\Http\Controllers\JenisPengukuranController;
 use App\Http\Controllers\ProjectManagementController;
 use App\Http\Controllers\CashflowController;
+use App\Http\Controllers\SupplierController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -136,6 +137,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Cashflow Routes
     Route::middleware(['permission:cashflow.index'])->group(function () {
         Route::get('cashflow', [CashflowController::class, 'index'])->name('cashflow.index');
+        Route::get('cashflow/export-daily-payments', [CashflowController::class, 'exportDailyPayments'])
+            ->name('cashflow.export-daily-payments');
+        Route::get('cashflow/{order}/export-vendor-payments', [CashflowController::class, 'exportProjectVendorPayments'])
+            ->name('cashflow.export-vendor-payments');
         Route::get('cashflow/{order}', [CashflowController::class, 'show'])->name('cashflow.show');
     });
     Route::post('cashflow/{order}/manual-entry', [CashflowController::class, 'storeManualEntry'])
@@ -146,6 +151,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('permission:cashflow.edit')->name('cashflow.update-manual');
     Route::delete('cashflow/manual-entry/{entry}', [CashflowController::class, 'deleteManualEntry'])
         ->middleware('permission:cashflow.delete')->name('cashflow.delete-manual');
+    Route::post('cashflow/vendor-entries/{entry}/toggle-flag', [CashflowController::class, 'toggleVendorFlag'])
+        ->name('cashflow.vendor-entries.toggle-flag');
 
     // Jenis Interior Routes
     Route::resource('jenis-interior', JenisInteriorController::class)
@@ -203,9 +210,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware([
             'index' => 'permission:produk.index',
             'store' => 'permission:produk.create',
-            'update' => 'permission:produk.edit',
-            'destroy' => 'permission:produk.delete',
         ]);
+
+    // Supplier Routes
+    Route::resource('suppliers', SupplierController::class);
 
     Route::get('produk', [ProdukController::class, 'index'])
         ->middleware('permission:produk.index')->name('produk.index');

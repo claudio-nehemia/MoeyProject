@@ -18,15 +18,26 @@ interface Item {
     jenis_item: JenisItem;
     harga: number;
     kategori?: string;
+    supplier_id?: number;
+    supplier?: {
+        id: number;
+        name: string;
+    };
     created_at: string;
     updated_at: string;
 }
 
-interface Props {
-    items: Item[];
+interface Supplier {
+    id: number;
+    name: string;
 }
 
-export default function Index({ items }: Props) {
+interface Props {
+    items: Item[];
+    suppliers: Supplier[];
+}
+
+export default function Index({ items, suppliers = [] }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 1024;
@@ -47,6 +58,7 @@ export default function Index({ items }: Props) {
         jenis_item_id: "",
         harga: "",
         kategori: "internal",
+        supplier_id: "",
     });
 
     useEffect(() => {
@@ -89,6 +101,7 @@ export default function Index({ items }: Props) {
             jenis_item_id: item.jenis_item_id.toString(),
             harga: item.harga ? item.harga.toString() : "",
             kategori: item.kategori || "internal",
+            supplier_id: item.supplier_id ? item.supplier_id.toString() : "",
         });
         setEditMode(true);
         setShowModal(true);
@@ -217,6 +230,7 @@ export default function Index({ items }: Props) {
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Item Name</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700 hidden sm:table-cell">Type</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Kategori</th>
+                                        <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Supplier</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Price</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-center font-semibold text-stone-700">Actions</th>
                                     </tr>
@@ -246,6 +260,9 @@ export default function Index({ items }: Props) {
                                             </td>
                                             <td className="px-3 sm:px-4 py-2.5 capitalize font-medium text-stone-800">
                                                 {item.kategori || 'internal'}
+                                            </td>
+                                            <td className="px-3 sm:px-4 py-2.5 font-medium text-stone-900">
+                                                {item.supplier?.name || '—'}
                                             </td>
                                             <td className="px-3 sm:px-4 py-2.5">
                                                 <span className="inline-flex items-center px-2 py-1 rounded-full bg-gradient-to-r from-orange-100 to-orange-200 text-orange-700 font-semibold text-xs whitespace-nowrap">

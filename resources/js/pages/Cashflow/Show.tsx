@@ -8,7 +8,7 @@ interface Split { internal: number; fisik: number; eksternal: number; total: num
 interface Pembayaran { amount_dp?: number; amount_termin?: number; amount_pelunasan?: number; dp: { amount: number; pct: number; proyeksi: number; tanggal: string|null }; termin: { amount: number; pct: number; proyeksi: number; tanggal: string|null }; pelunasan: { amount: number; pct: number; proyeksi: number; tanggal: string|null }; total_diterima: number; sisa_piutang: number; }
 interface Spk { internal: number; fisik: number; external: number; internal_fix: number; upgrade_material: number; fisik_fix: number; external_fix: number; saldo_efisiensi_internal: number; saldo_efisiensi_fisik: number; saldo_efisiensi_external: number; total_fix: number; total_saldo_efisiensi: number; }
 interface Realisasi { internal: number; fisik: number; external: number; addendum: number; sisa_saldo_internal: number; sisa_saldo_fisik: number; sisa_saldo_external: number; total: number; }
-interface FeeTeamItem { label: string; amount: number; }
+interface FeeTeamItem { label: string; amount: number; type?: string; pct?: number; fixed?: number; formula?: string; }
 interface BreakdownItem { label: string; pct: number; base: 'internal_margin' | 'fisik_eksternal' | 'total_kontrak' | 'fixed'; amount?: number; }
 interface Margin { target_internal: number; target_fisik: number; target_external: number; total_target: number; pct_internal: number; pct_fisik: number; pct_external: number; pct_total: number; fee_team: number; pct_fee_team: number; fee_team_detail: FeeTeamItem[]; breakdown_items: BreakdownItem[]; sisa_margin: number; pct_sisa_margin: number; }
 interface RpkDp { cash_in: number; dp_vendor: number; cadangan_vendor: number; dp_fisik: number; dp_external: number; fee_team_detail: FeeTeamItem[]; breakdown_items: BreakdownItem[]; sisa_cash_sebelum_mgmt: number; management: number; sisa_cash: number; }
@@ -22,9 +22,14 @@ interface VendorMainEntry {
     nilai: number;
     pembayaran: number;
     tanggal_pembayaran: string|null;
+    pembayaran_termin?: number;
+    tanggal_pembayaran_termin?: string|null;
     flag_af: string|null;
     flag_fb: string|null;
     flag_jw: string|null;
+    flag_af_termin?: string|null;
+    flag_fb_termin?: string|null;
+    flag_jw_termin?: string|null;
     notes?: string|null;
 }
 interface MaterialItem {
@@ -123,7 +128,14 @@ export default function Show({
         upgrade_material: spk.upgrade_material.toString(),
         spk_fisik_fix: spk.fisik_fix.toString(),
         spk_external_fix: spk.external_fix.toString(),
-        fee_team_items: margin.fee_team_detail.map(item => ({ label: item.label, amount: item.amount })),
+        fee_team_items: margin.fee_team_detail.map(item => ({
+            label: item.label,
+            amount: item.amount,
+            type: item.type || 'percentage',
+            pct: item.pct || 0,
+            fixed: item.fixed || 0,
+            formula: item.formula || ''
+        })),
         margin_breakdown_items: margin.breakdown_items.map(item => ({ label: item.label, pct: item.pct, base: item.base }))
     });
 
@@ -188,13 +200,42 @@ export default function Show({
             return { ...item, amount: roundedAmount };
         });
 
-        const total_fee_team = generalForm.data.fee_team_items.reduce((sum, item) => sum + (parseFloat(item.amount as any) || 0), 0);
+        let calculated_fee_team_items = generalForm.data.fee_team_items.map(item => {
+            let amount = 0;
+            const type = item.type || 'percentage';
+            const pct = parseFloat(item.pct as any) || 0;
+            const fixed = parseFloat(item.fixed as any) || 0;
+            const formula = item.formula || '';
+
+            if (type === 'fixed') {
+                amount = fixed;
+            } else if (type === 'percentage') {
+                amount = marginBase * (pct / 100);
+            } else if (type === 'formula') {
+                if (formula === 'designer1/4') {
+                    let d1Pct = 7.35;
+                    const d1 = generalForm.data.fee_team_items.find(f => f.label === 'Designer 1');
+                    if (d1 && d1.pct !== undefined) {
+                        d1Pct = parseFloat(d1.pct as any) || 0;
+                    }
+                    const designer1 = marginBase * (d1Pct / 100);
+                    amount = designer1 / 4;
+                } else if (formula === 'target_ext_10pct') {
+                    amount = target_external * 0.10;
+                }
+            }
+            return { ...item, amount: Math.round(amount) };
+        });
+
+        const total_fee_team = calculated_fee_team_items.reduce((sum, item) => sum + (item.amount || 0), 0);
         const pct_fee_team = split.internal > 0 ? (total_fee_team / split.internal) * 100 : 0;
 
         const sisa_margin = total_target - total_breakdown_amount - total_fee_team;
         const pct_sisa_margin = split.total > 0 ? sisa_margin / split.total : 0;
 
         return {
+            calculated_fee_team_items,
+            marginBase,
             total_fix,
             saldo_efisiensi_internal,
             saldo_efisiensi_fisik,
@@ -240,12 +281,15 @@ export default function Show({
     // GENERAL CONFIG EDIT LIST HANDLERS
     // ──────────────────────────────────────────
     const handleAddFeeMember = () => {
-        generalForm.setData('fee_team_items', [...generalForm.data.fee_team_items, { label: 'Role Baru', amount: 0 }]);
+        generalForm.setData('fee_team_items', [
+            ...generalForm.data.fee_team_items,
+            { label: 'Role Baru', amount: 0, type: 'fixed', fixed: 0, pct: 0, formula: '' }
+        ]);
     };
     const handleRemoveFeeMember = (idx: number) => {
         generalForm.setData('fee_team_items', generalForm.data.fee_team_items.filter((_, i) => i !== idx));
     };
-    const handleUpdateFeeMember = (idx: number, key: 'label'|'amount', val: any) => {
+    const handleUpdateFeeMember = (idx: number, key: 'label'|'amount'|'type'|'fixed'|'pct'|'formula', val: any) => {
         const current = [...generalForm.data.fee_team_items];
         current[idx] = { ...current[idx], [key]: val };
         generalForm.setData('fee_team_items', current);
@@ -333,9 +377,14 @@ export default function Show({
             nilai: 0,
             pembayaran: 0,
             tanggal_pembayaran: null,
+            pembayaran_termin: 0,
+            tanggal_pembayaran_termin: null,
             flag_af: null,
             flag_fb: null,
             flag_jw: null,
+            flag_af_termin: null,
+            flag_fb_termin: null,
+            flag_jw_termin: null,
             notes: 'dp'
         } as any]);
     };
@@ -413,14 +462,25 @@ export default function Show({
                         placeholder="0"
                     />
                 </div>
-                {val > 0 && (
-                    <div className="text-[10px] text-stone-400 font-mono text-right mt-1.5">{fmt(val)}</div>
+                {((isReadOnly ? val : parseFloat((generalForm.data as any)[name])) || 0) > 0 && (
+                    <div className="text-[10px] text-amber-600 font-mono font-bold text-right mt-1.5">
+                        Preview: {fmt((isReadOnly ? val : parseFloat((generalForm.data as any)[name])) || 0)}
+                    </div>
                 )}
             </div>
         );
     };
 
     const pctPayment = split.total > 0 ? (pembayaran.total_diterima / split.total) * 100 : 0;
+
+    const isPaymentOverdue = (dateStr: string | null, isApproved: boolean) => {
+        if (!dateStr || isApproved) return false;
+        const target = new Date(dateStr);
+        const today = new Date();
+        target.setHours(0,0,0,0);
+        today.setHours(0,0,0,0);
+        return target <= today;
+    };
 
     return (
         <>
@@ -445,11 +505,23 @@ export default function Show({
                                 <p className="text-xs text-stone-500">{order.customer_name} &bull; {order.company_name} &bull; PM: {order.pm_name}</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs text-stone-400 font-medium">Status Project:</span>
-                            <span className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-mono text-sm font-bold rounded-xl shadow-md shadow-emerald-500/10">
-                                {fmt(status_project)}
-                            </span>
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-stone-400 font-medium">Status Project:</span>
+                                <span className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-mono text-sm font-bold rounded-xl shadow-md shadow-emerald-500/10">
+                                    {fmt(status_project)}
+                                </span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => window.open(`/cashflow/${order.id}/export-vendor-payments`, '_blank')}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-md hover:bg-emerald-700 transition"
+                            >
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Ekspor Excel
+                            </button>
                         </div>
                     </div>
 
@@ -694,23 +766,89 @@ export default function Show({
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {generalForm.data.fee_team_items.map((item, idx) => (
-                                                <div key={idx} className="flex items-center gap-3 bg-stone-50 p-3 rounded-xl border border-stone-200/50">
+                                                <div key={idx} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 bg-stone-50 p-3.5 rounded-xl border border-stone-200/50 shadow-xs">
                                                     <input
                                                         type="text"
                                                         value={item.label}
                                                         onChange={(e) => handleUpdateFeeMember(idx, 'label', e.target.value)}
-                                                        className="w-1/2 px-3 py-1.5 text-xs text-stone-700 bg-white border border-stone-200 rounded-lg focus:outline-none focus:ring-0"
+                                                        className="w-full sm:w-1/3 px-2 py-1 text-xs text-stone-700 bg-white border border-stone-200 rounded-lg focus:outline-none focus:ring-0 focus:border-stone-300 font-semibold"
+                                                        placeholder="Nama"
                                                     />
-                                                    <div className="relative w-1/3">
-                                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-stone-400 text-[10px]">Rp</span>
-                                                        <input
-                                                            type="number"
-                                                            value={item.amount}
-                                                            onChange={(e) => handleUpdateFeeMember(idx, 'amount', parseFloat(e.target.value) || 0)}
-                                                            className="w-full pl-6 pr-2 py-1.5 text-right font-mono text-xs text-stone-700 bg-white border border-stone-200 rounded-lg focus:outline-none"
-                                                        />
+                                                    
+                                                    <select
+                                                        value={item.type || 'fixed'}
+                                                        onChange={(e) => handleUpdateFeeMember(idx, 'type', e.target.value)}
+                                                        className="w-full sm:w-1/4 px-2 py-1 text-xs text-stone-600 bg-white border border-stone-200 rounded-lg focus:outline-none focus:ring-0 focus:border-stone-300"
+                                                    >
+                                                        <option value="fixed">Nominal (Rp)</option>
+                                                        <option value="percentage">Persentase (%)</option>
+                                                        <option value="formula">Formula Bawaan</option>
+                                                    </select>
+                                                    
+                                                    {item.type === 'percentage' && (
+                                                        <div className="relative w-full sm:w-1/4">
+                                                            <input
+                                                                type="number"
+                                                                step="0.01"
+                                                                value={item.pct || 0}
+                                                                onChange={(e) => {
+                                                                    const pctVal = parseFloat(e.target.value) || 0;
+                                                                    handleUpdateFeeMember(idx, 'pct', pctVal);
+                                                                    handleUpdateFeeMember(idx, 'amount', Math.round(computed.marginBase * (pctVal / 100)));
+                                                                }}
+                                                                className="w-full pr-5 pl-2 py-1 text-right font-mono text-xs text-stone-700 bg-white border border-stone-200 rounded-lg focus:outline-none focus:border-stone-300"
+                                                            />
+                                                            <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-stone-400 text-xs">%</span>
+                                                        </div>
+                                                    )}
+
+                                                    {item.type === 'fixed' && (
+                                                        <div className="relative w-full sm:w-1/4">
+                                                            <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-stone-400 text-[10px]">Rp</span>
+                                                            <input
+                                                                type="text"
+                                                                value={item.fixed ? new Intl.NumberFormat('id-ID').format(item.fixed) : ''}
+                                                                onChange={(e) => {
+                                                                    const val = parseFloat(e.target.value.replace(/\./g, '')) || 0;
+                                                                    handleUpdateFeeMember(idx, 'fixed', val);
+                                                                    handleUpdateFeeMember(idx, 'amount', val);
+                                                                }}
+                                                                className="w-full pl-6 pr-2 py-1 text-right font-mono text-xs text-stone-700 bg-white border border-stone-200 rounded-lg focus:outline-none focus:border-stone-300"
+                                                                placeholder="0"
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    {item.type === 'formula' && (
+                                                        <select
+                                                            value={item.formula || ''}
+                                                            onChange={(e) => {
+                                                                    const f = e.target.value;
+                                                                    handleUpdateFeeMember(idx, 'formula', f);
+                                                                    let amount = 0;
+                                                                    if (f === 'designer1/4') {
+                                                                        const d1 = generalForm.data.fee_team_items.find(f => f.label === 'Designer 1');
+                                                                        const d1Pct = d1 ? (parseFloat(d1.pct as any) || 7.35) : 7.35;
+                                                                        amount = computed.marginBase * (d1Pct / 100) / 4;
+                                                                    } else if (f === 'target_ext_10pct') {
+                                                                        amount = computed.target_external * 0.10;
+                                                                    }
+                                                                    handleUpdateFeeMember(idx, 'amount', Math.round(amount));
+                                                            }}
+                                                            className="w-full sm:w-1/4 px-2 py-1 text-xs text-stone-600 bg-white border border-stone-200 rounded-lg focus:outline-none focus:ring-0 focus:border-stone-300"
+                                                        >
+                                                            <option value="">Pilih Formula</option>
+                                                            <option value="designer1/4">Designer 1 / 4</option>
+                                                            <option value="target_ext_10pct">Target Ext 10%</option>
+                                                        </select>
+                                                    )}
+
+                                                    {/* Display calculated nominal value read-only */}
+                                                    <div className="w-full sm:w-1/4 text-right font-mono font-bold text-xs text-stone-600 px-2 flex items-center justify-end">
+                                                        {fmt(computed.calculated_fee_team_items[idx]?.amount || 0)}
                                                     </div>
-                                                    <button type="button" onClick={() => handleRemoveFeeMember(idx)} className="text-xs text-rose-500 hover:text-rose-600 p-1">Hapus</button>
+
+                                                    <button type="button" onClick={() => handleRemoveFeeMember(idx)} className="text-xs text-rose-500 hover:text-rose-600 p-1.5 hover:bg-rose-50 rounded-lg sm:ml-auto">Hapus</button>
                                                 </div>
                                             ))}
                                         </div>
@@ -735,7 +873,6 @@ export default function Show({
                             {activeTab === 'vendor_internal' && (
                                 <div className="space-y-6">
                                     {/* Main Pembayaran Table */}
-                                    {/* Main Pembayaran Table */}
                                     <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm p-5 space-y-4">
                                         <div className="flex justify-between items-center border-b border-stone-100 pb-2">
                                             <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">1A. Rincian Pembayaran Vendor Utama</h3>
@@ -755,11 +892,16 @@ export default function Show({
                                                         <th className="px-4 py-2">Target Fase</th>
                                                         <th className="px-4 py-2 text-right">Persentase (%)</th>
                                                         <th className="px-4 py-2 text-right">Nilai (U)</th>
-                                                        <th className="px-4 py-2 text-right">Pembayaran (V)</th>
-                                                        <th className="px-4 py-2">Tanggal Pembayaran</th>
+                                                        <th className="px-4 py-2 text-right">DP (V)</th>
+                                                        <th className="px-4 py-2">Tanggal DP</th>
                                                         <th className="px-4 py-2 text-center">AF</th>
                                                         <th className="px-4 py-2 text-center">FB</th>
                                                         <th className="px-4 py-2 text-center">JW</th>
+                                                        <th className="px-4 py-2 text-right">Termin (V2)</th>
+                                                        <th className="px-4 py-2">Tanggal Termin</th>
+                                                        <th className="px-4 py-2 text-center">AF (T)</th>
+                                                        <th className="px-4 py-2 text-center">FB (T)</th>
+                                                        <th className="px-4 py-2 text-center">JW (T)</th>
                                                         <th className="px-4 py-2 text-center">Aksi</th>
                                                     </tr>
                                                 </thead>
@@ -812,20 +954,22 @@ export default function Show({
                                                                             step="0.01"
                                                                             value={item.persentase || ''}
                                                                             onChange={(e) => handleUpdateMainVendorField('internal', idx, 'persentase', parseFloat(e.target.value) || 0)}
-                                                                            className="w-16 px-2 py-1 text-right text-xs font-semibold bg-white border border-stone-200 rounded"
+                                                                            className="w-14 px-2 py-1 text-right text-xs font-semibold bg-white border border-stone-200 rounded"
                                                                             placeholder="0"
                                                                         />
                                                                     ) : (
                                                                         <span className="font-mono text-stone-400 font-semibold px-2">{calculatedPct.toFixed(1)}%</span>
                                                                     )}
                                                                 </td>
-                                                                <td className="px-4 py-3 text-right font-mono text-stone-500">{fmt(calculatedNilai)}</td>
+                                                                <td className="px-2 py-3 text-right font-mono text-stone-500">{fmt(calculatedNilai)}</td>
+                                                                
+                                                                {/* DP Fields */}
                                                                 <td className="p-1">
                                                                     <input
                                                                         type="number"
                                                                         value={item.pembayaran}
                                                                         onChange={(e) => handleUpdateMainVendorField('internal', idx, 'pembayaran', parseFloat(e.target.value) || 0)}
-                                                                        className="w-24 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded focus:ring-0"
+                                                                        className="w-20 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded focus:ring-0"
                                                                     />
                                                                 </td>
                                                                 <td className="p-1">
@@ -833,8 +977,15 @@ export default function Show({
                                                                         type="date"
                                                                         value={item.tanggal_pembayaran || ''}
                                                                         onChange={(e) => handleUpdateMainVendorField('internal', idx, 'tanggal_pembayaran', e.target.value)}
-                                                                        className="px-2 py-1 text-[11px] text-stone-600 bg-white border border-stone-200 rounded"
+                                                                        className={`px-1 py-1 text-[11px] rounded border focus:ring-0 focus:outline-none ${
+                                                                            isPaymentOverdue(item.tanggal_pembayaran, !!item.flag_fb || !!item.flag_jw)
+                                                                                ? 'border-rose-400 bg-rose-50 text-rose-700 font-semibold'
+                                                                                : 'border-stone-200 bg-white text-stone-600'
+                                                                        }`}
                                                                     />
+                                                                    {isPaymentOverdue(item.tanggal_pembayaran, !!item.flag_fb || !!item.flag_jw) && (
+                                                                        <span className="text-[9px] text-rose-600 font-bold block mt-0.5 whitespace-nowrap">Reschedule PM!</span>
+                                                                    )}
                                                                 </td>
                                                                 {['flag_af', 'flag_fb', 'flag_jw'].map((flag) => (
                                                                     <td key={flag} className="p-1 text-center">
@@ -846,6 +997,42 @@ export default function Show({
                                                                         />
                                                                     </td>
                                                                 ))}
+
+                                                                {/* Termin Fields */}
+                                                                <td className="p-1">
+                                                                    <input
+                                                                        type="number"
+                                                                        value={item.pembayaran_termin || 0}
+                                                                        onChange={(e) => handleUpdateMainVendorField('internal', idx, 'pembayaran_termin', parseFloat(e.target.value) || 0)}
+                                                                        className="w-20 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded focus:ring-0"
+                                                                    />
+                                                                </td>
+                                                                <td className="p-1">
+                                                                    <input
+                                                                        type="date"
+                                                                        value={item.tanggal_pembayaran_termin || ''}
+                                                                        onChange={(e) => handleUpdateMainVendorField('internal', idx, 'tanggal_pembayaran_termin', e.target.value)}
+                                                                        className={`px-1 py-1 text-[11px] rounded border focus:ring-0 focus:outline-none ${
+                                                                            isPaymentOverdue(item.tanggal_pembayaran_termin, !!item.flag_fb_termin || !!item.flag_jw_termin)
+                                                                                ? 'border-rose-400 bg-rose-50 text-rose-700 font-semibold'
+                                                                                : 'border-stone-200 bg-white text-stone-600'
+                                                                        }`}
+                                                                    />
+                                                                    {isPaymentOverdue(item.tanggal_pembayaran_termin, !!item.flag_fb_termin || !!item.flag_jw_termin) && (
+                                                                        <span className="text-[9px] text-rose-600 font-bold block mt-0.5 whitespace-nowrap">Reschedule PM!</span>
+                                                                    )}
+                                                                </td>
+                                                                {['flag_af_termin', 'flag_fb_termin', 'flag_jw_termin'].map((flag) => (
+                                                                    <td key={flag} className="p-1 text-center">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={!!item[flag as keyof VendorMainEntry]}
+                                                                            onChange={(e) => handleUpdateMainVendorField('internal', idx, flag as keyof VendorMainEntry, e.target.checked ? '✔' : null)}
+                                                                            className="rounded border-stone-300 text-amber-500 focus:ring-amber-500 scale-90"
+                                                                        />
+                                                                    </td>
+                                                                ))}
+
                                                                 <td className="p-1 text-center">
                                                                     <button
                                                                         type="button"
@@ -1000,11 +1187,16 @@ export default function Show({
                                                         <th className="px-4 py-2">Target Fase</th>
                                                         <th className="px-4 py-2 text-right">Persentase (%)</th>
                                                         <th className="px-4 py-2 text-right">Nilai (U)</th>
-                                                        <th className="px-4 py-2 text-right">Pembayaran (V)</th>
-                                                        <th className="px-4 py-2">Tanggal Pembayaran</th>
+                                                        <th className="px-4 py-2 text-right">DP (V)</th>
+                                                        <th className="px-4 py-2">Tanggal DP</th>
                                                         <th className="px-4 py-2 text-center">AF</th>
                                                         <th className="px-4 py-2 text-center">FB</th>
                                                         <th className="px-4 py-2 text-center">JW</th>
+                                                        <th className="px-4 py-2 text-right">Termin (V2)</th>
+                                                        <th className="px-4 py-2">Tanggal Termin</th>
+                                                        <th className="px-4 py-2 text-center">AF (T)</th>
+                                                        <th className="px-4 py-2 text-center">FB (T)</th>
+                                                        <th className="px-4 py-2 text-center">JW (T)</th>
                                                         <th className="px-4 py-2 text-center">Aksi</th>
                                                     </tr>
                                                 </thead>
@@ -1043,17 +1235,17 @@ export default function Show({
                                                                         step="0.01"
                                                                         value={item.persentase || ''}
                                                                         onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'persentase', parseFloat(e.target.value) || 0)}
-                                                                        className="w-16 px-2 py-1 text-right text-xs font-semibold bg-white border border-stone-200 rounded"
+                                                                        className="w-14 px-2 py-1 text-right text-xs font-semibold bg-white border border-stone-200 rounded"
                                                                         placeholder="0"
                                                                     />
                                                                 </td>
-                                                                <td className="px-4 py-3 text-right font-mono text-stone-500">{fmt(calculatedNilai)}</td>
+                                                                <td className="px-2 py-3 text-right font-mono text-stone-500">{fmt(calculatedNilai)}</td>
                                                                 <td className="p-1">
                                                                     <input
                                                                         type="number"
                                                                         value={item.pembayaran}
                                                                         onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'pembayaran', parseFloat(e.target.value) || 0)}
-                                                                        className="w-24 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded focus:ring-0"
+                                                                        className="w-20 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded focus:ring-0"
                                                                     />
                                                                 </td>
                                                                 <td className="p-1">
@@ -1061,10 +1253,50 @@ export default function Show({
                                                                         type="date"
                                                                         value={item.tanggal_pembayaran || ''}
                                                                         onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'tanggal_pembayaran', e.target.value)}
-                                                                        className="px-2 py-1 text-[11px] text-stone-600 bg-white border border-stone-200 rounded"
+                                                                        className={`px-1 py-1 text-[11px] rounded border focus:ring-0 focus:outline-none ${
+                                                                            isPaymentOverdue(item.tanggal_pembayaran, !!item.flag_fb || !!item.flag_jw)
+                                                                                ? 'border-rose-400 bg-rose-50 text-rose-700 font-semibold'
+                                                                                : 'border-stone-200 bg-white text-stone-600'
+                                                                        }`}
                                                                     />
+                                                                    {isPaymentOverdue(item.tanggal_pembayaran, !!item.flag_fb || !!item.flag_jw) && (
+                                                                        <span className="text-[9px] text-rose-600 font-bold block mt-0.5 whitespace-nowrap">Reschedule PM!</span>
+                                                                    )}
                                                                 </td>
                                                                 {['flag_af', 'flag_fb', 'flag_jw'].map((flag) => (
+                                                                    <td key={flag} className="p-1 text-center">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={!!item[flag as keyof VendorMainEntry]}
+                                                                            onChange={(e) => handleUpdateMainVendorField('fisik', idx, flag as keyof VendorMainEntry, e.target.checked ? '✔' : null)}
+                                                                            className="rounded border-stone-300 text-amber-500 focus:ring-amber-500 scale-90"
+                                                                        />
+                                                                    </td>
+                                                                ))}
+                                                                <td className="p-1">
+                                                                    <input
+                                                                        type="number"
+                                                                        value={item.pembayaran_termin || 0}
+                                                                        onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'pembayaran_termin', parseFloat(e.target.value) || 0)}
+                                                                        className="w-20 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded focus:ring-0"
+                                                                    />
+                                                                </td>
+                                                                <td className="p-1">
+                                                                    <input
+                                                                        type="date"
+                                                                        value={item.tanggal_pembayaran_termin || ''}
+                                                                        onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'tanggal_pembayaran_termin', e.target.value)}
+                                                                        className={`px-1 py-1 text-[11px] rounded border focus:ring-0 focus:outline-none ${
+                                                                            isPaymentOverdue(item.tanggal_pembayaran_termin, !!item.flag_fb_termin || !!item.flag_jw_termin)
+                                                                                ? 'border-rose-400 bg-rose-50 text-rose-700 font-semibold'
+                                                                                : 'border-stone-200 bg-white text-stone-600'
+                                                                        }`}
+                                                                    />
+                                                                    {isPaymentOverdue(item.tanggal_pembayaran_termin, !!item.flag_fb_termin || !!item.flag_jw_termin) && (
+                                                                        <span className="text-[9px] text-rose-600 font-bold block mt-0.5 whitespace-nowrap">Reschedule PM!</span>
+                                                                    )}
+                                                                </td>
+                                                                {['flag_af_termin', 'flag_fb_termin', 'flag_jw_termin'].map((flag) => (
                                                                     <td key={flag} className="p-1 text-center">
                                                                         <input
                                                                             type="checkbox"

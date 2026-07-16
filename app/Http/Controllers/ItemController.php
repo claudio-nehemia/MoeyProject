@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Item;
 use Inertia\Inertia;
 use App\Models\JenisItem;
+use App\Models\Supplier;
 use Illuminate\Http\Request;
 
 class ItemController extends Controller
@@ -14,10 +15,12 @@ class ItemController extends Controller
      */
     public function index()
     {
-        $items = Item::with('jenisItem')->get();
+        $items = Item::with(['jenisItem', 'supplier'])->get();
+        $suppliers = Supplier::orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Item/Index', [
             'items' => $items,
+            'suppliers' => $suppliers,
         ]);
     }
 
@@ -50,6 +53,7 @@ class ItemController extends Controller
             'nama_item' => 'required|string|max:255',
             'jenis_item_id' => 'required|exists:jenis_items,id',
             'kategori' => 'required|string|in:internal,fisik,eksternal',
+            'supplier_id' => 'nullable|exists:suppliers,id',
         ];
 
         // Harga nullable untuk Bahan Baku, required untuk Finishing dan Aksesoris
@@ -107,6 +111,7 @@ class ItemController extends Controller
             'nama_item' => 'required|string|max:255',
             'jenis_item_id' => 'required|exists:jenis_items,id',
             'kategori' => 'required|string|in:internal,fisik,eksternal',
+            'supplier_id' => 'nullable|exists:suppliers,id',
         ];
 
         // Harga nullable untuk Bahan Baku, required untuk Finishing dan Aksesoris

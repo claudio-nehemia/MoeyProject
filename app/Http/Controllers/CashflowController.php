@@ -10,6 +10,9 @@ use App\Models\CashflowVendorEntry;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\DailyPaymentsExport;
+use App\Exports\ProjectVendorPaymentsExport;
 
 class CashflowController extends Controller
 {
@@ -81,8 +84,75 @@ class CashflowController extends Controller
                 ];
             });
 
+        $totalHutang = 0;
+        $vendorEntries = CashflowVendorEntry::all();
+        foreach ($vendorEntries as $entry) {
+            if ($entry->section === 'pembayaran_vendor') {
+                $totalHutang += max(0, $entry->nilai - $entry->pembayaran - $entry->pembayaran_termin);
+            } elseif ($entry->section === 'item_external') {
+                $totalHutang += max(0, $entry->spk_amount - $entry->pembayaran - $entry->pembayaran_termin);
+            } else {
+                $totalVal = $entry->spk_amount > 0 ? $entry->spk_amount : $entry->nilai;
+                $totalHutang += max(0, $totalVal - $entry->pembayaran);
+            }
+        }
+
+        $rawEntries = CashflowVendorEntry::with('order')
+            ->whereNotNull('tanggal_pembayaran')
+            ->orWhereNotNull('tanggal_pembayaran_termin')
+            ->get();
+
+        $dailyPayments = [];
+        foreach ($rawEntries as $entry) {
+            if (!$entry->order) continue;
+
+            if ($entry->tanggal_pembayaran) {
+                $dailyPayments[] = [
+                    'id' => $entry->id . '-dp',
+                    'entry_id' => $entry->id,
+                    'project_id' => $entry->order_id,
+                    'project_name' => $entry->order->nama_project,
+                    'vendor_type' => $entry->vendor_type,
+                    'category' => $entry->section,
+                    'label' => $entry->label ?: 'DP / Pembayaran Utama',
+                    'vendor_name' => $entry->vendor_name ?: '-',
+                    'type' => 'DP / Pembayaran',
+                    'amount' => (float) $entry->pembayaran,
+                    'date' => $entry->tanggal_pembayaran->format('Y-m-d'),
+                    'flag_af' => $entry->flag_af,
+                    'flag_fb' => $entry->flag_fb,
+                    'flag_jw' => $entry->flag_jw,
+                ];
+            }
+
+            if ($entry->tanggal_pembayaran_termin) {
+                $dailyPayments[] = [
+                    'id' => $entry->id . '-termin',
+                    'entry_id' => $entry->id,
+                    'project_id' => $entry->order_id,
+                    'project_name' => $entry->order->nama_project,
+                    'vendor_type' => $entry->vendor_type,
+                    'category' => $entry->section,
+                    'label' => $entry->label ?: 'Termin Pembayaran',
+                    'vendor_name' => $entry->vendor_name ?: '-',
+                    'type' => 'Termin',
+                    'amount' => (float) $entry->pembayaran_termin,
+                    'date' => $entry->tanggal_pembayaran_termin->format('Y-m-d'),
+                    'flag_af' => $entry->flag_af_termin,
+                    'flag_fb' => $entry->flag_fb_termin,
+                    'flag_jw' => $entry->flag_jw_termin,
+                ];
+            }
+        }
+
+        usort($dailyPayments, function($a, $b) {
+            return strcmp($b['date'], $a['date']);
+        });
+
         return Inertia::render('Cashflow/Index', [
             'orders' => $orders,
+            'total_hutang' => round($totalHutang),
+            'daily_payments' => $dailyPayments,
             'filters' => [
                 'search' => $search,
                 'status' => $statusFilter,
@@ -200,14 +270,19 @@ class CashflowController extends Controller
                 'nilai' => round($entryNilai),
                 'pembayaran' => $entry->pembayaran,
                 'tanggal_pembayaran' => $entry->tanggal_pembayaran ? $entry->tanggal_pembayaran->format('Y-m-d') : null,
+                'pembayaran_termin' => $entry->pembayaran_termin,
+                'tanggal_pembayaran_termin' => $entry->tanggal_pembayaran_termin ? $entry->tanggal_pembayaran_termin->format('Y-m-d') : null,
                 'flag_af' => $entry->flag_af,
                 'flag_fb' => $entry->flag_fb,
                 'flag_jw' => $entry->flag_jw,
+                'flag_af_termin' => $entry->flag_af_termin,
+                'flag_fb_termin' => $entry->flag_fb_termin,
+                'flag_jw_termin' => $entry->flag_jw_termin,
                 'notes' => $entry->notes ?: 'dp',
             ];
         }
 
-        $totalPembayaranMainInternal = $internalMain->sum('pembayaran');
+        $totalPembayaranMainInternal = $internalMain->sum('pembayaran') + $internalMain->sum('pembayaran_termin');
         $realisasiInternal = $totalPembayaranMainInternal + $totalMaterialInternalPembayaran;
         $statusPoInternal = ($totalMaterialInternalNilai < $spkInternalFix * 0.35) ? 'Bisa PO' : 'Tidak Bisa PO';
 
@@ -224,14 +299,19 @@ class CashflowController extends Controller
 
         foreach ($fisikMain as $entry) {
             $entryNilai = $spkFisikFix * ($entry->persentase / 100);
-            $totalFisikMainPembayaran += $entry->pembayaran;
+            $totalFisikMainPembayaran += ($entry->pembayaran + $entry->pembayaran_termin);
 
             if ($entry->notes === 'dp' || ($entry->notes === null && $entry->label === 'DP')) {
-                $dpFisik = $entry->pembayaran;
-            } elseif ($entry->notes === 'termin' || ($entry->notes === null && $entry->label === 'Termin II')) {
-                $terminFisik = $entry->pembayaran;
+                $dpFisik += $entry->pembayaran;
+            } 
+            
+            // Add pembayaran_termin to termin phase
+            $terminFisik += $entry->pembayaran_termin;
+
+            if ($entry->notes === 'termin' || ($entry->notes === null && $entry->label === 'Termin II')) {
+                $terminFisik += $entry->pembayaran;
             } elseif ($entry->notes === 'pelunasan' || ($entry->notes === null && $entry->label === 'Pelunasan')) {
-                $pelunasanFisik = $entry->pembayaran;
+                $pelunasanFisik += $entry->pembayaran;
             }
 
             $fisikMainFormatted[] = [
@@ -241,9 +321,14 @@ class CashflowController extends Controller
                 'nilai' => round($entryNilai),
                 'pembayaran' => $entry->pembayaran,
                 'tanggal_pembayaran' => $entry->tanggal_pembayaran ? $entry->tanggal_pembayaran->format('Y-m-d') : null,
+                'pembayaran_termin' => $entry->pembayaran_termin,
+                'tanggal_pembayaran_termin' => $entry->tanggal_pembayaran_termin ? $entry->tanggal_pembayaran_termin->format('Y-m-d') : null,
                 'flag_af' => $entry->flag_af,
                 'flag_fb' => $entry->flag_fb,
                 'flag_jw' => $entry->flag_jw,
+                'flag_af_termin' => $entry->flag_af_termin,
+                'flag_fb_termin' => $entry->flag_fb_termin,
+                'flag_jw_termin' => $entry->flag_jw_termin,
                 'notes' => $entry->notes ?: 'dp',
             ];
         }
@@ -399,41 +484,81 @@ class CashflowController extends Controller
         $feeTeamData = [];
         if ($feeTeamMembers->isEmpty()) {
             $defaultFees = [
-                ['label' => 'Designer 1', 'pct' => 7.35],
-                ['label' => 'Lead Designer', 'pct' => 0, 'formula' => 'designer1/4'],
-                ['label' => 'Estimator', 'pct' => 4.85],
-                ['label' => 'PM', 'pct' => 3.10],
-                ['label' => 'SPV1', 'pct' => 4.40],
-                ['label' => 'Transport SPV', 'pct' => 1.00],
-                ['label' => 'Drafter', 'pct' => 2.13],
-                ['label' => 'Fibri', 'pct' => 3.00],
-                ['label' => 'Surveyor As Marketing', 'pct' => 0, 'fixed' => 1000000],
-                ['label' => 'Fee External', 'pct' => 0, 'formula' => 'target_ext_10pct'],
-                ['label' => 'Manager Marketing', 'pct' => 1.83],
-                ['label' => 'Fee Marketing', 'pct' => 6.67],
+                ['label' => 'Designer 1', 'pct' => 7.35, 'type' => 'percentage'],
+                ['label' => 'Lead Designer', 'pct' => 0, 'formula' => 'designer1/4', 'type' => 'formula'],
+                ['label' => 'Estimator', 'pct' => 4.85, 'type' => 'percentage'],
+                ['label' => 'PM', 'pct' => 3.10, 'type' => 'percentage'],
+                ['label' => 'SPV1', 'pct' => 4.40, 'type' => 'percentage'],
+                ['label' => 'Transport SPV', 'pct' => 1.00, 'type' => 'percentage'],
+                ['label' => 'Drafter', 'pct' => 2.13, 'type' => 'percentage'],
+                ['label' => 'Fibri', 'pct' => 3.00, 'type' => 'percentage'],
+                ['label' => 'Surveyor As Marketing', 'pct' => 0, 'fixed' => 1000000, 'type' => 'fixed'],
+                ['label' => 'Fee External', 'pct' => 0, 'formula' => 'target_ext_10pct', 'type' => 'formula'],
+                ['label' => 'Manager Marketing', 'pct' => 1.83, 'type' => 'percentage'],
+                ['label' => 'Fee Marketing', 'pct' => 6.67, 'type' => 'percentage'],
             ];
 
             foreach ($defaultFees as $fee) {
                 $amount = 0;
-                if (isset($fee['fixed'])) {
+                if ($fee['type'] === 'fixed') {
                     $amount = $fee['fixed'];
-                } elseif (isset($fee['formula'])) {
+                } elseif ($fee['type'] === 'formula') {
                     if ($fee['formula'] === 'designer1/4') {
                         $designer1 = $marginBase * (7.35 / 100);
                         $amount = $designer1 / 4;
                     } elseif ($fee['formula'] === 'target_ext_10pct') {
                         $amount = $targetExternal * 0.10;
                     }
-                } elseif ($fee['pct'] > 0) {
+                } elseif ($fee['type'] === 'percentage') {
                     $amount = $marginBase * ($fee['pct'] / 100);
                 }
-                $feeTeamData[] = ['label' => $fee['label'], 'amount' => round($amount)];
+                $feeTeamData[] = [
+                    'label' => $fee['label'],
+                    'amount' => round($amount),
+                    'type' => $fee['type'],
+                    'pct' => $fee['pct'] ?? 0,
+                    'fixed' => $fee['fixed'] ?? 0,
+                    'formula' => $fee['formula'] ?? '',
+                ];
                 $totalFeeTeam += $amount;
             }
         } else {
             foreach ($feeTeamMembers as $member) {
-                $amount = (float) $member->amount_estimasi;
-                $feeTeamData[] = ['label' => $member->label, 'amount' => $amount];
+                $notes = json_decode($member->notes, true) ?? [];
+                $type = $notes['type'] ?? 'fixed';
+                $pct = isset($notes['pct']) ? (float) $notes['pct'] : 0;
+                $fixed = isset($notes['fixed']) ? (float) $notes['fixed'] : 0;
+                $formula = $notes['formula'] ?? '';
+
+                $amount = 0;
+                if ($type === 'fixed') {
+                    $amount = (float) $member->amount_estimasi;
+                } elseif ($type === 'percentage') {
+                    $amount = $marginBase * ($pct / 100);
+                } elseif ($type === 'formula') {
+                    if ($formula === 'designer1/4') {
+                        $d1Pct = 7.35;
+                        foreach ($feeTeamMembers as $m) {
+                            $mNotes = json_decode($m->notes, true) ?? [];
+                            if ($m->label === 'Designer 1' && isset($mNotes['pct'])) {
+                                $d1Pct = (float) $mNotes['pct'];
+                            }
+                        }
+                        $designer1 = $marginBase * ($d1Pct / 100);
+                        $amount = $designer1 / 4;
+                    } elseif ($formula === 'target_ext_10pct') {
+                        $amount = $targetExternal * 0.10;
+                    }
+                }
+
+                $feeTeamData[] = [
+                    'label' => $member->label,
+                    'amount' => round($amount),
+                    'type' => $type,
+                    'pct' => $pct,
+                    'fixed' => $fixed,
+                    'formula' => $formula,
+                ];
                 $totalFeeTeam += $amount;
             }
         }
@@ -470,7 +595,7 @@ class CashflowController extends Controller
         $sisaCashSebelumnya = $sisaCashDp;
         $totalCashTermin = $rpkTermin + $sisaCashSebelumnya;
 
-        $terminVendor = $internalMain->where('notes', 'termin')->sum('pembayaran');
+        $terminVendor = $internalMain->where('notes', 'termin')->sum('pembayaran') + $internalMain->sum('pembayaran_termin');
         if ($terminVendor == 0) {
             $kasbonIPembayaran = $internalMain->where('label', 'Kasbon I')->first()?->pembayaran ?? 0;
             $kasbonIIPembayaran = $internalMain->where('label', 'Kasbon II')->first()?->pembayaran ?? 0;
@@ -697,6 +822,12 @@ class CashflowController extends Controller
                             'category' => 'fee_team',
                             'label' => $item['label'],
                             'amount_estimasi' => (float) ($item['amount'] ?? 0),
+                            'notes' => json_encode([
+                                'type' => $item['type'] ?? 'fixed',
+                                'pct' => (float) ($item['pct'] ?? 0),
+                                'fixed' => (float) ($item['fixed'] ?? 0),
+                                'formula' => $item['formula'] ?? '',
+                            ]),
                             'section' => 'general',
                             'phase' => 'general',
                             'created_by' => auth()->id(),
@@ -835,10 +966,12 @@ class CashflowController extends Controller
 
                 foreach ($items as $idx => $item) {
                     $oldDate = null;
+                    $oldTerminDate = null;
                     if (isset($item['id'])) {
                         $entry = CashflowVendorEntry::find($item['id']);
                         if ($entry) {
                             $oldDate = $entry->tanggal_pembayaran;
+                            $oldTerminDate = $entry->tanggal_pembayaran_termin;
                         }
                     }
 
@@ -851,9 +984,14 @@ class CashflowController extends Controller
                         'nilai' => isset($item['nilai']) ? (float)$item['nilai'] : 0,
                         'pembayaran' => (float)($item['pembayaran'] ?? 0),
                         'tanggal_pembayaran' => $item['tanggal_pembayaran'] ?: null,
+                        'pembayaran_termin' => (float)($item['pembayaran_termin'] ?? 0),
+                        'tanggal_pembayaran_termin' => $item['tanggal_pembayaran_termin'] ?: null,
                         'flag_af' => $item['flag_af'] ?: null,
                         'flag_fb' => $item['flag_fb'] ?: null,
                         'flag_jw' => $item['flag_jw'] ?: null,
+                        'flag_af_termin' => $item['flag_af_termin'] ?: null,
+                        'flag_fb_termin' => $item['flag_fb_termin'] ?: null,
+                        'flag_jw_termin' => $item['flag_jw_termin'] ?: null,
                         'notes' => $item['notes'] ?? 'dp',
                         'sort_order' => $idx + 1,
                     ];
@@ -866,7 +1004,11 @@ class CashflowController extends Controller
                     }
 
                     if ($entry->tanggal_pembayaran && (!$oldDate || $oldDate->format('Y-m-d') !== Carbon::parse($entry->tanggal_pembayaran)->format('Y-m-d'))) {
-                        $entry->update(['reminder_sent' => false]);
+                        $entry->update(['reminder_sent' => false, 'reminder_h7_sent' => false]);
+                    }
+
+                    if ($entry->tanggal_pembayaran_termin && (!$oldTerminDate || $oldTerminDate->format('Y-m-d') !== Carbon::parse($entry->tanggal_pembayaran_termin)->format('Y-m-d'))) {
+                        $entry->update(['reminder_termin_sent' => false, 'reminder_h7_termin_sent' => false]);
                     }
                 }
             }
@@ -885,10 +1027,12 @@ class CashflowController extends Controller
 
                 foreach ($items as $idx => $item) {
                     $oldDate = null;
+                    $oldTerminDate = null;
                     if (isset($item['id'])) {
                         $entry = CashflowVendorEntry::find($item['id']);
                         if ($entry) {
                             $oldDate = $entry->tanggal_pembayaran;
+                            $oldTerminDate = $entry->tanggal_pembayaran_termin;
                         }
                     }
 
@@ -901,9 +1045,14 @@ class CashflowController extends Controller
                         'nilai' => isset($item['nilai']) ? (float)$item['nilai'] : 0,
                         'pembayaran' => (float)($item['pembayaran'] ?? 0),
                         'tanggal_pembayaran' => $item['tanggal_pembayaran'] ?: null,
+                        'pembayaran_termin' => (float)($item['pembayaran_termin'] ?? 0),
+                        'tanggal_pembayaran_termin' => $item['tanggal_pembayaran_termin'] ?: null,
                         'flag_af' => $item['flag_af'] ?: null,
                         'flag_fb' => $item['flag_fb'] ?: null,
                         'flag_jw' => $item['flag_jw'] ?: null,
+                        'flag_af_termin' => $item['flag_af_termin'] ?: null,
+                        'flag_fb_termin' => $item['flag_fb_termin'] ?: null,
+                        'flag_jw_termin' => $item['flag_jw_termin'] ?: null,
                         'notes' => $item['notes'] ?? 'dp',
                         'sort_order' => $idx + 1,
                     ];
@@ -916,7 +1065,11 @@ class CashflowController extends Controller
                     }
 
                     if ($entry->tanggal_pembayaran && (!$oldDate || $oldDate->format('Y-m-d') !== Carbon::parse($entry->tanggal_pembayaran)->format('Y-m-d'))) {
-                        $entry->update(['reminder_sent' => false]);
+                        $entry->update(['reminder_sent' => false, 'reminder_h7_sent' => false]);
+                    }
+
+                    if ($entry->tanggal_pembayaran_termin && (!$oldTerminDate || $oldTerminDate->format('Y-m-d') !== Carbon::parse($entry->tanggal_pembayaran_termin)->format('Y-m-d'))) {
+                        $entry->update(['reminder_termin_sent' => false, 'reminder_h7_termin_sent' => false]);
                     }
                 }
             }
@@ -981,7 +1134,7 @@ class CashflowController extends Controller
                                 }
 
                                 if ($entry->tanggal_pembayaran && (!$oldDate || $oldDate->format('Y-m-d') !== Carbon::parse($entry->tanggal_pembayaran)->format('Y-m-d'))) {
-                                    $entry->update(['reminder_sent' => false]);
+                                    $entry->update(['reminder_sent' => false, 'reminder_h7_sent' => false]);
                                 }
                             }
                         }
@@ -1048,10 +1201,10 @@ class CashflowController extends Controller
                         }
 
                         if ($entry->tanggal_pembayaran && (!$oldDate || $oldDate->format('Y-m-d') !== Carbon::parse($entry->tanggal_pembayaran)->format('Y-m-d'))) {
-                            $entry->update(['reminder_sent' => false]);
+                            $entry->update(['reminder_sent' => false, 'reminder_h7_sent' => false]);
                         }
                         if ($entry->tanggal_pembayaran_termin && (!$oldTerminDate || $oldTerminDate->format('Y-m-d') !== Carbon::parse($entry->tanggal_pembayaran_termin)->format('Y-m-d'))) {
-                            $entry->update(['reminder_termin_sent' => false]);
+                            $entry->update(['reminder_termin_sent' => false, 'reminder_h7_termin_sent' => false]);
                         }
                     }
                 }
@@ -1063,8 +1216,66 @@ class CashflowController extends Controller
 
     private function initializeDefaultVendorEntries(Order $order)
     {
-        // Start completely empty by default for new projects
-        return;
+        $count = CashflowVendorEntry::where('order_id', $order->id)->count();
+        if ($count > 0) {
+            return;
+        }
+
+        $kontrak = $order->moodboard?->itemPekerjaan?->kontrak;
+        $startDate = $kontrak?->tanggal_mulai;
+        $endDate = $kontrak?->tanggal_selesai;
+        
+        $midDate = null;
+        if ($startDate && $endDate) {
+            $diff = Carbon::parse($startDate)->diffInDays(Carbon::parse($endDate));
+            $midDate = Carbon::parse($startDate)->addDays(round($diff / 2));
+        }
+
+        // Default Internal Main Entries
+        $defaultInternal = [
+            ['label' => 'DP', 'persentase' => 50, 'notes' => 'dp', 'tanggal_pembayaran' => $startDate],
+            ['label' => 'Termin II', 'persentase' => 30, 'notes' => 'termin', 'tanggal_pembayaran' => $midDate],
+            ['label' => 'Pelunasan', 'persentase' => 20, 'notes' => 'pelunasan', 'tanggal_pembayaran' => $endDate],
+        ];
+
+        foreach ($defaultInternal as $idx => $item) {
+            CashflowVendorEntry::create([
+                'order_id' => $order->id,
+                'vendor_type' => 'internal',
+                'section' => 'pembayaran_vendor',
+                'label' => $item['label'],
+                'persentase' => $item['persentase'],
+                'nilai' => 0,
+                'pembayaran' => 0,
+                'pembayaran_termin' => 0,
+                'tanggal_pembayaran' => $item['tanggal_pembayaran'],
+                'sort_order' => $idx + 1,
+                'notes' => $item['notes'],
+            ]);
+        }
+
+        // Default Fisik Main Entries
+        $defaultFisik = [
+            ['label' => 'DP', 'persentase' => 50, 'notes' => 'dp', 'tanggal_pembayaran' => $startDate],
+            ['label' => 'Termin II', 'persentase' => 30, 'notes' => 'termin', 'tanggal_pembayaran' => $midDate],
+            ['label' => 'Pelunasan', 'persentase' => 20, 'notes' => 'pelunasan', 'tanggal_pembayaran' => $endDate],
+        ];
+
+        foreach ($defaultFisik as $idx => $item) {
+            CashflowVendorEntry::create([
+                'order_id' => $order->id,
+                'vendor_type' => 'fisik',
+                'section' => 'pembayaran_vendor',
+                'label' => $item['label'],
+                'persentase' => $item['persentase'],
+                'nilai' => 0,
+                'pembayaran' => 0,
+                'pembayaran_termin' => 0,
+                'tanggal_pembayaran' => $item['tanggal_pembayaran'],
+                'sort_order' => $idx + 1,
+                'notes' => $item['notes'],
+            ]);
+        }
     }
 
     private function getGroupedMaterials(Order $order, string $type)
@@ -1144,22 +1355,30 @@ class CashflowController extends Controller
 
         $vendorEntries = CashflowVendorEntry::where('order_id', $order->id)->get();
 
-        // Realisasi Internal
+        // Realisasi Internal (include termin)
         $totalPembayaranMainInternal = (float) $vendorEntries
             ->where('vendor_type', 'internal')
             ->where('section', 'pembayaran_vendor')
-            ->sum('pembayaran');
+            ->sum('pembayaran')
+            + (float) $vendorEntries
+            ->where('vendor_type', 'internal')
+            ->where('section', 'pembayaran_vendor')
+            ->sum('pembayaran_termin');
         $totalMaterialInternalPembayaran = (float) $vendorEntries
             ->where('vendor_type', 'internal')
             ->where('section', 'material_hutang')
             ->sum('pembayaran');
         $realisasiInternal = $totalPembayaranMainInternal + $totalMaterialInternalPembayaran;
 
-        // Realisasi Fisik
+        // Realisasi Fisik (include termin)
         $totalFisikMainPembayaran = (float) $vendorEntries
             ->where('vendor_type', 'fisik')
             ->where('section', 'pembayaran_vendor')
-            ->sum('pembayaran');
+            ->sum('pembayaran')
+            + (float) $vendorEntries
+            ->where('vendor_type', 'fisik')
+            ->where('section', 'pembayaran_vendor')
+            ->sum('pembayaran_termin');
         $totalMaterialFisikPembayaran = (float) $vendorEntries
             ->where('vendor_type', 'fisik')
             ->where('section', 'material_hutang')
@@ -1182,5 +1401,172 @@ class CashflowController extends Controller
         $sisaSaldoExternal = $spkExternal - $realisasiExternal;
 
         return $sisaSaldoInternal + $sisaSaldoFisik + $sisaSaldoExternal;
+    }
+
+    public function toggleVendorFlag(Request $request, CashflowVendorEntry $entry)
+    {
+        $validated = $request->validate([
+            'flag' => 'required|string|in:flag_af,flag_fb,flag_jw,flag_af_termin,flag_fb_termin,flag_jw_termin',
+            'value' => 'nullable|string|max:10',
+        ]);
+
+        $entry->update([
+            $validated['flag'] => $validated['value'],
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'entry' => $entry]);
+        }
+        return back()->with('success', 'Status approval berhasil diperbarui');
+    }
+
+    public function exportDailyPayments()
+    {
+        $rawEntries = CashflowVendorEntry::with('order')
+            ->whereNotNull('tanggal_pembayaran')
+            ->orWhereNotNull('tanggal_pembayaran_termin')
+            ->get();
+
+        $dailyPayments = [];
+        foreach ($rawEntries as $entry) {
+            if (!$entry->order) continue;
+
+            if ($entry->tanggal_pembayaran) {
+                $dailyPayments[] = [
+                    'id' => $entry->id . '-dp',
+                    'project_name' => $entry->order->nama_project,
+                    'vendor_type' => $entry->vendor_type,
+                    'category' => $entry->section,
+                    'label' => $entry->label ?: 'DP / Pembayaran Utama',
+                    'vendor_name' => $entry->vendor_name ?: '-',
+                    'type' => 'DP / Pembayaran',
+                    'amount' => (float) $entry->pembayaran,
+                    'date' => $entry->tanggal_pembayaran->format('Y-m-d'),
+                    'flag_af' => $entry->flag_af,
+                    'flag_fb' => $entry->flag_fb,
+                    'flag_jw' => $entry->flag_jw,
+                ];
+            }
+
+            if ($entry->tanggal_pembayaran_termin) {
+                $dailyPayments[] = [
+                    'id' => $entry->id . '-termin',
+                    'project_name' => $entry->order->nama_project,
+                    'vendor_type' => $entry->vendor_type,
+                    'category' => $entry->section,
+                    'label' => $entry->label ?: 'Termin Pembayaran',
+                    'vendor_name' => $entry->vendor_name ?: '-',
+                    'type' => 'Termin',
+                    'amount' => (float) $entry->pembayaran_termin,
+                    'date' => $entry->tanggal_pembayaran_termin->format('Y-m-d'),
+                    'flag_af' => $entry->flag_af_termin,
+                    'flag_fb' => $entry->flag_fb_termin,
+                    'flag_jw' => $entry->flag_jw_termin,
+                ];
+            }
+        }
+
+        usort($dailyPayments, function($a, $b) {
+            return strcmp($b['date'], $a['date']);
+        });
+
+        return Excel::download(new DailyPaymentsExport($dailyPayments), 'pembayaran_harian.xlsx');
+    }
+
+    public function exportProjectVendorPayments(Order $order)
+    {
+        $order->load([
+            'moodboard.itemPekerjaan.kontrak.termin',
+            'moodboard.itemPekerjaan.invoices',
+            'moodboard.commitmentFee',
+        ]);
+
+        $this->initializeDefaultVendorEntries($order);
+        $vendorEntries = CashflowVendorEntry::where('order_id', $order->id)->orderBy('sort_order')->orderBy('id')->get();
+        $manualEntries = CashflowManualEntry::where('order_id', $order->id)->get()->keyBy('category');
+
+        $getManual = function ($category) use ($manualEntries) {
+            $entry = $manualEntries->get($category);
+            return $entry ? (float) $entry->amount_estimasi : 0;
+        };
+
+        $spkInternalFix = $getManual('spk_internal_fix');
+        $spkFisikFix = $getManual('spk_fisik_fix');
+
+        // Internal Main Entries
+        $internalMain = $vendorEntries->where('vendor_type', 'internal')->where('section', 'pembayaran_vendor')->sortBy('sort_order');
+        $totalMaterialInternalNilai = $vendorEntries->where('vendor_type', 'internal')->where('section', 'material_hutang')->sum('nilai');
+        
+        $internalMainFormatted = [];
+        $sumMainNilaiExceptPelunasan = 0;
+        foreach ($internalMain as $entry) {
+            if ($entry->notes !== 'pelunasan') {
+                $entryNilai = ($entry->persentase !== null && $entry->persentase > 0) ? ($spkInternalFix * ($entry->persentase / 100)) : $entry->nilai;
+                $sumMainNilaiExceptPelunasan += $entryNilai;
+            }
+        }
+        $pelunasanInternalNilai = max(0, $spkInternalFix - $sumMainNilaiExceptPelunasan - $totalMaterialInternalNilai);
+
+        foreach ($internalMain as $entry) {
+            $entryNilai = ($entry->notes === 'pelunasan') ? $pelunasanInternalNilai : (($entry->persentase !== null && $entry->persentase > 0) ? ($spkInternalFix * ($entry->persentase / 100)) : $entry->nilai);
+            $internalMainFormatted[] = [
+                'label' => $entry->label,
+                'notes' => $entry->notes,
+                'persentase' => $entry->persentase ?: 0,
+                'nilai' => $entryNilai,
+                'pembayaran' => $entry->pembayaran,
+                'tanggal_pembayaran' => $entry->tanggal_pembayaran ? $entry->tanggal_pembayaran->format('Y-m-d') : null,
+                'flag_af' => $entry->flag_af,
+                'flag_fb' => $entry->flag_fb,
+                'flag_jw' => $entry->flag_jw,
+                'pembayaran_termin' => $entry->pembayaran_termin,
+                'tanggal_pembayaran_termin' => $entry->tanggal_pembayaran_termin ? $entry->tanggal_pembayaran_termin->format('Y-m-d') : null,
+                'flag_af_termin' => $entry->flag_af_termin,
+                'flag_fb_termin' => $entry->flag_fb_termin,
+                'flag_jw_termin' => $entry->flag_jw_termin,
+            ];
+        }
+
+        // Fisik Main Entries
+        $fisikMain = $vendorEntries->where('vendor_type', 'fisik')->where('section', 'pembayaran_vendor')->sortBy('sort_order');
+        $fisikMainFormatted = [];
+        foreach ($fisikMain as $entry) {
+            $entryNilai = $spkFisikFix * (($entry->persentase ?: 0) / 100);
+            $fisikMainFormatted[] = [
+                'label' => $entry->label,
+                'notes' => $entry->notes,
+                'persentase' => $entry->persentase ?: 0,
+                'nilai' => $entryNilai,
+                'pembayaran' => $entry->pembayaran,
+                'tanggal_pembayaran' => $entry->tanggal_pembayaran ? $entry->tanggal_pembayaran->format('Y-m-d') : null,
+                'flag_af' => $entry->flag_af,
+                'flag_fb' => $entry->flag_fb,
+                'flag_jw' => $entry->flag_jw,
+                'pembayaran_termin' => $entry->pembayaran_termin,
+                'tanggal_pembayaran_termin' => $entry->tanggal_pembayaran_termin ? $entry->tanggal_pembayaran_termin->format('Y-m-d') : null,
+                'flag_af_termin' => $entry->flag_af_termin,
+                'flag_fb_termin' => $entry->flag_fb_termin,
+                'flag_jw_termin' => $entry->flag_jw_termin,
+            ];
+        }
+
+        $data = [
+            'vendor_internal' => [
+                'main_entries' => $internalMainFormatted,
+                'material_groups' => $this->getGroupedMaterials($order, 'internal'),
+            ],
+            'vendor_fisik' => [
+                'main_entries' => $fisikMainFormatted,
+                'material_groups' => $this->getGroupedMaterials($order, 'fisik'),
+            ],
+            'vendor_external' => [
+                'items' => $this->getExternalEntries($order, 'item_external'),
+                'addendums' => $this->getExternalEntries($order, 'addendum_external'),
+                'pengeluaran_luar' => $this->getExternalEntries($order, 'pengeluaran_luar'),
+            ]
+        ];
+
+        $filename = 'vendor_pembayaran_' . strtolower(str_replace(' ', '_', $order->nama_project)) . '.xlsx';
+        return Excel::download(new ProjectVendorPaymentsExport($order, $data), $filename);
     }
 }

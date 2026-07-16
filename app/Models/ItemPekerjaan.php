@@ -25,6 +25,7 @@ class ItemPekerjaan extends Model
         'approval_rab_response_by',
         'pm_approval_rab_response_time',
         'pm_approval_rab_response_by',
+        'reminder_fee_sent',
     ];
 
     protected $casts = [
@@ -32,6 +33,7 @@ class ItemPekerjaan extends Model
         'workplan_end_date' => 'date',
         'bast_date' => 'datetime',
         'bast_foto_klien_uploaded_at' => 'datetime',
+        'reminder_fee_sent' => 'boolean',
     ];
 
     // Accessor: Check if BAST foto klien exists

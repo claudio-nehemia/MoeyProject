@@ -2,6 +2,19 @@ import { Head, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import {
+    Settings as SettingsIcon,
+    Key,
+    Clock,
+    Camera,
+    Smartphone,
+    Info,
+    CheckCircle,
+    MapPin,
+    Calendar,
+    MessageSquare,
+    Save
+} from 'lucide-react';
 
 interface Role {
     id: number;
@@ -61,6 +74,15 @@ export default function Settings({ settings, allRoles }: Props) {
                     to { opacity: 1; transform: translateY(0); }
                 }
                 .fadeInUp { animation: fadeInUp 0.5s ease-out forwards; }
+                
+                .switch-input:checked ~ .switch-dot {
+                    transform: translateX(100%);
+                    background-color: #f59e0b;
+                }
+                .switch-input:checked ~ .switch-line {
+                    background-color: #fef3c7;
+                    border-color: #fde68a;
+                }
             `}</style>
 
             <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
@@ -70,237 +92,271 @@ export default function Settings({ settings, allRoles }: Props) {
                 <div className="p-3 mt-20 max-w-4xl space-y-6 fadeInUp">
                     
                     {/* Header */}
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-slate-800">
-                            ⚙️ Pengaturan Presensi & Aplikasi Mobile
-                        </h1>
-                        <p className="text-xs text-stone-500 mt-1">
+                    <div className="mb-6">
+                        <div className="flex items-center gap-2 mb-1">
+                            <h1 className="text-2xl font-bold tracking-tight text-slate-800">
+                                ⚙️ Pengaturan Presensi & Aplikasi Mobile
+                            </h1>
+                            <span className="inline-flex px-2.5 py-0.5 rounded bg-amber-50 border border-amber-100 text-amber-800 text-[10px] font-extrabold uppercase tracking-wider">
+                                Konfigurasi Global
+                            </span>
+                        </div>
+                        <p className="text-xs text-stone-500">
                             Kelola role berwenang untuk persetujuan cuti/izin/lembur serta on/off fitur opsional pada aplikasi mobile karyawan.
                         </p>
                     </div>
 
-                    {/* Settings Card */}
-                    <div className="bg-white rounded-2xl border border-stone-200 shadow-md p-6">
-                        <form onSubmit={handleSubmit} className="space-y-8">
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        
+                        {/* Section 1: Role Penyetuju */}
+                        <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 space-y-4">
+                            <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 flex-shrink-0">
+                                    <Key size={18} />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-extrabold text-slate-850">
+                                        🔑 Otoritas Approval Pengajuan
+                                    </h3>
+                                    <p className="text-[11px] text-stone-500 mt-0.5">
+                                        Tentukan tingkat role yang memiliki kewenangan penuh untuk menyetujui atau menolak permohonan (cuti, izin, lembur, dan koreksi absen) yang diajukan karyawan dari aplikasi mobile.
+                                    </p>
+                                </div>
+                            </div>
                             
-                            {/* Role Penyetuju */}
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-800 mb-2">
-                                    🔑 Role Penyetuju Izin / Cuti / Lembur / Koreksi
-                                </h3>
-                                <p className="text-[11px] text-stone-500 mb-3">
-                                    Pilih role yang berwenang untuk menyetujui pengajuan izin, cuti, lembur, dan koreksi dari mobile.
-                                </p>
+                            <div className="pt-2 max-w-md">
+                                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-stone-400 mb-1.5">Pilih Role Penyetuju</label>
                                 <select
                                     value={data.cuti_approval_role_id}
                                     onChange={(e) => setData('cuti_approval_role_id', e.target.value)}
-                                    className="w-full max-w-md px-3 py-2 text-xs border border-stone-200 rounded-lg shadow-sm focus:border-amber-500 focus:ring-amber-500"
+                                    className="w-full px-3.5 py-2.5 text-xs border border-stone-250 rounded-xl focus:ring-amber-500 focus:border-amber-500 bg-white font-bold text-stone-700"
                                 >
-                                    <option value="">-- Pilih Role --</option>
+                                    <option value="">-- Tanpa Hubungkan (Bebas Approval) --</option>
                                     {allRoles.map((role) => (
                                         <option key={role.id} value={role.id}>
-                                            {role.name}
+                                            {role.name.toUpperCase()}
                                         </option>
                                     ))}
                                 </select>
                             </div>
+                        </div>
 
-                            <hr className="border-stone-150" />
-
-                            {/* Pembatasan Waktu Absen */}
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-800 mb-2">
-                                    ⏰ Pembatasan Waktu Absen
-                                </h3>
-                                <p className="text-[11px] text-stone-500 mb-4">
-                                    Jika diaktifkan, karyawan hanya bisa check-in/check-out dalam rentang waktu yang ditentukan sesuai jam kerja mereka.
-                                </p>
-
-                                <div className="space-y-4 max-w-2xl">
-                                    <label className="flex items-start gap-3 p-3 bg-stone-50/50 hover:bg-stone-50 border border-stone-150 rounded-xl cursor-pointer transition-all">
-                                        <input
-                                            type="checkbox"
-                                            checked={data.batasi_absen}
-                                            onChange={(e) => setData('batasi_absen', e.target.checked)}
-                                            className="mt-0.5 rounded text-amber-500 border-stone-300 focus:ring-amber-500"
-                                        />
-                                        <div>
-                                            <div className="text-xs font-bold text-slate-800">
-                                                Aktifkan Pembatasan Waktu Absen
-                                            </div>
-                                            <div className="text-[10px] text-stone-500 mt-0.5">
-                                                Karyawan tidak bisa check-in terlalu awal/terlambat dan check-out sebelum waktunya.
-                                            </div>
-                                        </div>
-                                    </label>
-
-                                    {data.batasi_absen && (
-                                        <div className="ml-2 pl-4 border-l-2 border-amber-300 space-y-3">
-                                            <div>
-                                                <label className="text-xs font-semibold text-slate-700 block mb-1">
-                                                    Toleransi Check-In (menit)
-                                                </label>
-                                                <p className="text-[10px] text-stone-500 mb-1">
-                                                    Karyawan bisa check-in dalam rentang ± nilai ini dari jam masuk. Contoh: 30 menit berarti bisa check-in mulai 30 menit sebelum jam masuk.
-                                                </p>
-                                                <input
-                                                    type="number"
-                                                    min={0}
-                                                    max={180}
-                                                    value={data.batas_jam_absen}
-                                                    onChange={(e) => setData('batas_jam_absen', parseInt(e.target.value) || 0)}
-                                                    className="w-32 px-3 py-2 text-xs border border-stone-200 rounded-lg shadow-sm focus:border-amber-500 focus:ring-amber-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-semibold text-slate-700 block mb-1">
-                                                    Toleransi Check-Out (menit)
-                                                </label>
-                                                <p className="text-[10px] text-stone-500 mb-1">
-                                                    Karyawan bisa check-out mulai dari nilai ini sebelum jam pulang. Contoh: 30 menit berarti bisa pulang mulai 30 menit sebelum jam pulang.
-                                                </p>
-                                                <input
-                                                    type="number"
-                                                    min={0}
-                                                    max={180}
-                                                    value={data.batas_jam_absen_pulang}
-                                                    onChange={(e) => setData('batas_jam_absen_pulang', parseInt(e.target.value) || 0)}
-                                                    className="w-32 px-3 py-2 text-xs border border-stone-200 rounded-lg shadow-sm focus:border-amber-500 focus:ring-amber-500"
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
+                        {/* Section 2: Pembatasan Waktu Absen */}
+                        <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 space-y-5">
+                            <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
+                                    <Clock size={18} />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-extrabold text-slate-855">
+                                        ⏰ Toleransi & Pembatasan Waktu Presensi
+                                    </h3>
+                                    <p className="text-[11px] text-stone-500 mt-0.5">
+                                        Jika dibatasi, karyawan hanya diijinkan melakukan absensi check-in/out dalam rentang waktu toleransi tertentu dari jam kerja yang dijadwalkan.
+                                    </p>
                                 </div>
                             </div>
 
-                            <hr className="border-stone-150" />
-
-                            {/* Face Recognition */}
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-800 mb-2">
-                                    👤 Verifikasi Wajah (Face Recognition)
-                                </h3>
-                                <p className="text-[11px] text-stone-500 mb-4">
-                                    Jika diaktifkan, setiap kali karyawan check-in/check-out harus melewati verifikasi wajah.
-                                    Foto selfie akan dicocokkan dengan foto wajah terdaftar menggunakan AI.
-                                </p>
-
-                                <div className="space-y-4 max-w-2xl">
-                                    <label className="flex items-start gap-3 p-3 bg-stone-50/50 hover:bg-stone-50 border border-stone-150 rounded-xl cursor-pointer transition-all">
-                                        <input
-                                            type="checkbox"
-                                            checked={data.face_recognition}
-                                            onChange={(e) => setData('face_recognition', e.target.checked)}
-                                            className="mt-0.5 rounded text-amber-500 border-stone-300 focus:ring-amber-500"
-                                        />
-                                        <div>
-                                            <div className="text-xs font-bold text-slate-800">
-                                                Aktifkan Verifikasi Wajah
-                                            </div>
-                                            <div className="text-[10px] text-stone-500 mt-0.5">
-                                                Karyawan yang belum memiliki foto wajah terdaftar tetap bisa absen tanpa verifikasi.
-                                            </div>
+                            <div className="space-y-4">
+                                <label className="flex items-start gap-3.5 p-3.5 bg-stone-50/50 hover:bg-stone-50 border border-stone-200/80 rounded-2xl cursor-pointer transition-all">
+                                    <input
+                                        type="checkbox"
+                                        checked={data.batasi_absen}
+                                        onChange={(e) => setData('batasi_absen', e.target.checked)}
+                                        className="mt-0.5 rounded text-amber-500 border-stone-300 focus:ring-amber-500 w-4 h-4"
+                                    />
+                                    <div>
+                                        <div className="text-xs font-bold text-slate-800">
+                                            Aktifkan Pembatasan Waktu Absensi
                                         </div>
-                                    </label>
+                                        <div className="text-[10px] text-stone-500 mt-0.5">
+                                            Karyawan tidak diperkenankan absen masuk terlalu cepat, terlambat berlebihan, atau pulang lebih awal sebelum jam yang ditentukan.
+                                        </div>
+                                    </div>
+                                </label>
 
-                                    {data.face_recognition && (
-                                        <div className="ml-2 pl-4 border-l-2 border-amber-300">
-                                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                                                <p className="text-[11px] text-amber-800 font-semibold">⚠️ Catatan Penting:</p>
-                                                <ul className="text-[10px] text-amber-700 mt-1 space-y-0.5 list-disc ml-3">
-                                                    <li>Pastikan foto wajah karyawan sudah di-upload di halaman <strong>Data Karyawan → Face Registration</strong></li>
-                                                    <li>Minimal 2 foto wajah per karyawan untuk hasil akurasi optimal</li>
-                                                    <li>Karyawan tanpa foto wajah terdaftar akan tetap bisa absen (bypass verifikasi)</li>
+                                {data.batasi_absen && (
+                                    <div className="ml-2 pl-4 border-l-2 border-amber-300 space-y-4 py-1">
+                                        <div className="max-w-md">
+                                            <label className="text-[10px] font-extrabold uppercase tracking-wider text-stone-500 block mb-1">
+                                                Toleransi Check-In (Dalam Menit)
+                                            </label>
+                                            <p className="text-[10px] text-stone-400 mb-1.5">
+                                                Staf dapat melakukan check-in dimulai dari N menit sebelum jam masuk.
+                                            </p>
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                max={180}
+                                                value={data.batas_jam_absen}
+                                                onChange={(e) => setData('batas_jam_absen', parseInt(e.target.value) || 0)}
+                                                className="w-32 px-3 py-2 text-xs border border-stone-250 rounded-xl focus:ring-amber-500 focus:border-amber-500 font-bold"
+                                            />
+                                        </div>
+                                        
+                                        <div className="max-w-md">
+                                            <label className="text-[10px] font-extrabold uppercase tracking-wider text-stone-500 block mb-1">
+                                                Toleransi Check-Out (Dalam Menit)
+                                            </label>
+                                            <p className="text-[10px] text-stone-400 mb-1.5">
+                                                Staf diperbolehkan check-out dimulai dari N menit sebelum jam pulang resmi.
+                                            </p>
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                max={180}
+                                                value={data.batas_jam_absen_pulang}
+                                                onChange={(e) => setData('batas_jam_absen_pulang', parseInt(e.target.value) || 0)}
+                                                className="w-32 px-3 py-2 text-xs border border-stone-250 rounded-xl focus:ring-amber-500 focus:border-amber-500 font-bold"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Section 3: Face Recognition */}
+                        <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 space-y-4">
+                            <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                                    <Camera size={18} />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-extrabold text-slate-850">
+                                        👤 Verifikasi Pengenalan Wajah (Face Recognition AI)
+                                    </h3>
+                                    <p className="text-[11px] text-stone-500 mt-0.5">
+                                        Deteksi pencocokan wajah selfie saat absen dengan data wajah master staf terdaftar untuk mencegah manipulasi.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className="flex items-start gap-3.5 p-3.5 bg-stone-50/50 hover:bg-stone-50 border border-stone-200/80 rounded-2xl cursor-pointer transition-all">
+                                    <input
+                                        type="checkbox"
+                                        checked={data.face_recognition}
+                                        onChange={(e) => setData('face_recognition', e.target.checked)}
+                                        className="mt-0.5 rounded text-amber-500 border-stone-300 focus:ring-amber-500 w-4 h-4"
+                                    />
+                                    <div>
+                                        <div className="text-xs font-bold text-slate-800">
+                                            Wajibkan Pencocokan Selfie Wajah
+                                        </div>
+                                        <div className="text-[10px] text-stone-500 mt-0.5">
+                                            Karyawan yang wajahnya belum terdaftar/registered di database tetap dapat melakukan absen (bypass) demi kelancaran operasional.
+                                        </div>
+                                    </div>
+                                </label>
+
+                                {data.face_recognition && (
+                                    <div className="ml-2 pl-4 border-l-2 border-emerald-400">
+                                        <div className="p-4 bg-emerald-50/60 border border-emerald-100 rounded-2xl flex items-start gap-2.5">
+                                            <Info size={14} className="text-emerald-600 mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <p className="text-[11px] text-emerald-800 font-extrabold">💡 Rekomendasi Optimal:</p>
+                                                <ul className="text-[10px] text-emerald-700 mt-1 space-y-1 list-disc ml-3">
+                                                    <li>Upload foto wajah beresolusi jelas di halaman <strong>Data Karyawan → Kelola Wajah</strong>.</li>
+                                                    <li>Usahakan mendaftarkan minimal 2 foto wajah per karyawan dengan variasi cahaya berbeda.</li>
                                                 </ul>
                                             </div>
                                         </div>
-                                    )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Section 4: Mobile App Toggles */}
+                        <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 space-y-4">
+                            <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
+                                    <Smartphone size={18} />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-extrabold text-slate-850">
+                                        📱 Kontrol Layanan & Modul Aplikasi Mobile
+                                    </h3>
+                                    <p className="text-[11px] text-stone-500 mt-0.5">
+                                        Aktifkan atau sembunyikan fitur-fitur opsional pada perangkat mobile karyawan secara dinamis dari cloud database admin.
+                                    </p>
                                 </div>
                             </div>
 
-                            <hr className="border-stone-150" />
-
-                            {/* Toggles */}
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-800 mb-2">
-                                    📱 Status Fitur Aplikasi Mobile
-                                </h3>
-                                <p className="text-[11px] text-stone-500 mb-4">
-                                    Aktifkan atau nonaktifkan fitur-fitur opsional di bawah. Jika dinonaktifkan, menunya akan otomatis tersembunyi dari aplikasi mobile karyawan.
-                                </p>
-
-                                <div className="space-y-4 max-w-2xl">
-                                    {/* Visit Tracking */}
-                                    <label className="flex items-start gap-3 p-3 bg-stone-50/50 hover:bg-stone-50 border border-stone-150 rounded-xl cursor-pointer transition-all">
-                                        <input
-                                            type="checkbox"
-                                            checked={data.feature_visit_tracking}
-                                            onChange={(e) => setData('feature_visit_tracking', e.target.checked)}
-                                            className="mt-0.5 rounded text-amber-500 border-stone-300 focus:ring-amber-500"
-                                        />
-                                        <div>
-                                            <div className="text-xs font-bold text-slate-800">
-                                                📍 Fitur Pelacakan Kunjungan Lapangan (Sales/Client Visit)
-                                            </div>
-                                            <div className="text-[10px] text-stone-500 mt-0.5">
-                                                Memungkinkan karyawan mencatat riwayat kunjungan keluar dengan validasi GPS lokasi.
-                                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                
+                                {/* Visit Tracking */}
+                                <label className="flex items-start gap-3 p-3.5 bg-stone-50/50 hover:bg-stone-50 border border-stone-200/80 rounded-2xl cursor-pointer transition-all">
+                                    <input
+                                        type="checkbox"
+                                        checked={data.feature_visit_tracking}
+                                        onChange={(e) => setData('feature_visit_tracking', e.target.checked)}
+                                        className="mt-0.5 rounded text-amber-500 border-stone-300 focus:ring-amber-500 w-4 h-4"
+                                    />
+                                    <div>
+                                        <div className="text-xs font-bold text-slate-850 flex items-center gap-1">
+                                            <MapPin size={12} className="text-stone-400" />
+                                            Pelacakan Kunjungan (Visit Client)
                                         </div>
-                                    </label>
-
-                                    {/* Daily Activity */}
-                                    <label className="flex items-start gap-3 p-3 bg-stone-50/50 hover:bg-stone-50 border border-stone-150 rounded-xl cursor-pointer transition-all">
-                                        <input
-                                            type="checkbox"
-                                            checked={data.feature_daily_activity}
-                                            onChange={(e) => setData('feature_daily_activity', e.target.checked)}
-                                            className="mt-0.5 rounded text-amber-500 border-stone-300 focus:ring-amber-500"
-                                        />
-                                        <div>
-                                            <div className="text-xs font-bold text-slate-800">
-                                                📸 Fitur Laporan Aktivitas Harian (Daily Activity Log)
-                                            </div>
-                                            <div className="text-[10px] text-stone-500 mt-0.5">
-                                                Memungkinkan karyawan untuk mengunggah aktivitas kerja harian mereka beserta foto lampiran.
-                                            </div>
+                                        <div className="text-[10px] text-stone-450 mt-1">
+                                            Mengaktifkan modul sales/staf lapangan mencatat koordinat lokasi kunjungan klien di luar kantor.
                                         </div>
-                                    </label>
+                                    </div>
+                                </label>
 
-                                    {/* WA Notifications */}
-                                    <label className="flex items-start gap-3 p-3 bg-stone-50/50 hover:bg-stone-50 border border-stone-150 rounded-xl cursor-pointer transition-all">
-                                        <input
-                                            type="checkbox"
-                                            checked={data.feature_wa_notification}
-                                            onChange={(e) => setData('feature_wa_notification', e.target.checked)}
-                                            className="mt-0.5 rounded text-amber-500 border-stone-300 focus:ring-amber-500"
-                                        />
-                                        <div>
-                                            <div className="text-xs font-bold text-slate-800">
-                                                💬 Fitur Notifikasi Gateway WhatsApp
-                                            </div>
-                                            <div className="text-[10px] text-stone-500 mt-0.5">
-                                                Mengirim pesan notifikasi WhatsApp secara otomatis setiap kali check-in/out berhasil.
-                                            </div>
+                                {/* Daily Activity */}
+                                <label className="flex items-start gap-3 p-3.5 bg-stone-50/50 hover:bg-stone-50 border border-stone-200/80 rounded-2xl cursor-pointer transition-all">
+                                    <input
+                                        type="checkbox"
+                                        checked={data.feature_daily_activity}
+                                        onChange={(e) => setData('feature_daily_activity', e.target.checked)}
+                                        className="mt-0.5 rounded text-amber-500 border-stone-300 focus:ring-amber-500 w-4 h-4"
+                                    />
+                                    <div>
+                                        <div className="text-xs font-bold text-slate-850 flex items-center gap-1">
+                                            <Calendar size={12} className="text-stone-400" />
+                                            Laporan Aktivitas Harian (Daily Log)
                                         </div>
-                                    </label>
-                                </div>
+                                        <div className="text-[10px] text-stone-455 mt-1">
+                                            Mengijinkan karyawan mengupload rincian tugas dan bukti gambar pekerjaan harian mereka.
+                                        </div>
+                                    </div>
+                                </label>
+
+                                {/* WA Notifications */}
+                                <label className="flex items-start gap-3 p-3.5 bg-stone-50/50 hover:bg-stone-50 border border-stone-200/80 rounded-2xl cursor-pointer transition-all col-span-1 md:col-span-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={data.feature_wa_notification}
+                                        onChange={(e) => setData('feature_wa_notification', e.target.checked)}
+                                        className="mt-0.5 rounded text-amber-500 border-stone-300 focus:ring-amber-500 w-4 h-4"
+                                    />
+                                    <div>
+                                        <div className="text-xs font-bold text-slate-850 flex items-center gap-1">
+                                            <MessageSquare size={12} className="text-stone-400" />
+                                            Notifikasi Whatsapp Gateway
+                                        </div>
+                                        <div className="text-[10px] text-stone-455 mt-1">
+                                            Mengirim chat notifikasi konfirmasi ke Whatsapp staf seketika setelah presensi in / out dinyatakan sukses oleh server.
+                                        </div>
+                                    </div>
+                                </label>
+
                             </div>
+                        </div>
 
-                            <hr className="border-stone-150" />
+                        {/* Submit Button */}
+                        <div className="flex justify-end pt-2">
+                            <button
+                                type="submit"
+                                disabled={processing}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-xl shadow-md transition-all hover:scale-[1.02] disabled:opacity-50"
+                            >
+                                <Save size={14} />
+                                {processing ? 'Menyimpan Pengaturan...' : 'Simpan Seluruh Perubahan'}
+                            </button>
+                        </div>
 
-                            {/* Submit Button */}
-                            <div className="flex justify-end">
-                                <button
-                                    type="submit"
-                                    disabled={processing}
-                                    className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs rounded-xl shadow transition-all disabled:opacity-50"
-                                >
-                                    {processing ? 'Menyimpan...' : 'Simpan Perubahan'}
-                                </button>
-                            </div>
-
-                        </form>
-                    </div>
+                    </form>
 
                 </div>
             </div>

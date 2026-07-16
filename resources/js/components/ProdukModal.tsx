@@ -16,6 +16,11 @@ interface BahanBakuData {
     harga_jasa: string;
 }
 
+interface Supplier {
+    id: number;
+    name: string;
+}
+
 interface ProdukModalProps {
     show: boolean;
     editMode: boolean;
@@ -23,6 +28,11 @@ interface ProdukModalProps {
     data: {
         nama_produk: string;
         bahan_baku: BahanBakuData[];
+        kategori?: string;
+        supplier_id?: string;
+        is_direct_price?: boolean | number;
+        harga?: string;
+        harga_jasa?: string;
     };
     errors: {
         nama_produk?: string;
@@ -30,13 +40,16 @@ interface ProdukModalProps {
         harga_jasa?: string;
         produk_images?: string;
         bahan_baku?: string;
+        kategori?: string;
+        supplier_id?: string;
     };
     existingImages?: ProdukImage[];
     productId?: number;
     bahanBakuItems: Item[];
+    suppliers?: Supplier[];
     onClose: () => void;
     onSubmit: FormEventHandler;
-    onDataChange: (field: string, value: string | BahanBakuData[]) => void;
+    onDataChange: (field: string, value: any) => void;
     onImagesChange: (files: File[]) => void;
     onDeleteImage: (imagePath: string) => void;
 }
@@ -50,6 +63,7 @@ export default function ProdukModal({
     existingImages = [],
     productId,
     bahanBakuItems,
+    suppliers = [],
     onClose,
     onSubmit,
     onDataChange,
@@ -269,141 +283,238 @@ export default function ProdukModal({
                         )}
                     </div>
 
-                    <div>
-                        <label className="block text-xs sm:text-sm font-semibold text-stone-700 mb-2">
-                            Bahan Baku
-                        </label>
-                        <p className="text-xs text-stone-500 mb-3">
-                            Pilih bahan baku dan masukkan harga dasar & harga jasa untuk setiap bahan baku
-                        </p>
-                        
-                        <div className="mb-3">
-                            <input
-                                type="text"
-                                value={searchBahan}
-                                onChange={(e) => setSearchBahan(e.target.value)}
-                                className="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-                                placeholder="Search materials..."
-                            />
+                    {/* Kategori & Supplier */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs sm:text-sm font-semibold text-stone-700 mb-1.5">
+                                Kategori
+                            </label>
+                            <select
+                                value={data.kategori || 'internal'}
+                                onChange={(e) => onDataChange('kategori', e.target.value)}
+                                className="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent bg-white"
+                                disabled={processing}
+                            >
+                                <option value="internal">Workshop / Internal</option>
+                                <option value="fisik">Fisik / Kontraktor</option>
+                                <option value="eksternal">Vendor Eksternal</option>
+                            </select>
+                            {errors.kategori && <p className="text-red-500 text-xs mt-1">{errors.kategori}</p>}
                         </div>
-
-                        <div className="border border-stone-300 rounded-lg max-h-64 overflow-y-auto">
-                            {filteredBahanBaku.length > 0 ? (
-                                <div className="divide-y divide-stone-200">
-                                    {filteredBahanBaku.map((item) => {
-                                        const isSelected = isItemSelected(item.id);
-                                        const bahanData = getBahanBakuData(item.id);
-                                        
-                                        return (
-                                            <div key={item.id} className="p-3 hover:bg-stone-50 transition-colors">
-                                                <label className="flex items-center gap-3 cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isSelected}
-                                                        onChange={() => toggleBahanBaku(item.id)}
-                                                        className="w-4 h-4 text-rose-600 border-stone-300 rounded focus:ring-rose-500"
-                                                        disabled={processing}
-                                                    />
-                                                    <span className="text-sm font-medium text-stone-700">{item.nama_item}</span>
-                                                </label>
-                                                
-                                                {isSelected && (
-                                                    <div className="mt-3 ml-7 grid grid-cols-2 gap-3">
-                                                        <div>
-                                                            <label className="block text-xs text-stone-600 mb-1">Harga Dasar</label>
-                                                            <div className="relative">
-                                                                <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-stone-500 text-xs">Rp</span>
-                                                                <input
-                                                                    type="text"
-                                                                    value={bahanData?.harga_dasar ? formatNumber(bahanData.harga_dasar) : ''}
-                                                                    onChange={(e) => updateBahanBakuHarga(item.id, 'harga_dasar', e.target.value)}
-                                                                    className="w-full pl-8 pr-2 py-1.5 text-xs border border-stone-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-                                                                    placeholder="0"
-                                                                    disabled={processing}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-xs text-stone-600 mb-1">Harga Jasa</label>
-                                                            <div className="relative">
-                                                                <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-stone-500 text-xs">Rp</span>
-                                                                <input
-                                                                    type="text"
-                                                                    value={bahanData?.harga_jasa ? formatNumber(bahanData.harga_jasa) : ''}
-                                                                    onChange={(e) => updateBahanBakuHarga(item.id, 'harga_jasa', e.target.value)}
-                                                                    className="w-full pl-8 pr-2 py-1.5 text-xs border border-stone-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-                                                                    placeholder="0"
-                                                                    disabled={processing}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="p-4 text-center text-sm text-stone-500">
-                                    {searchBahan ? 'No materials found' : 'No materials available'}
-                                </div>
-                            )}
+                        <div>
+                            <label className="block text-xs sm:text-sm font-semibold text-stone-700 mb-1.5">
+                                Supplier / Vendor
+                            </label>
+                            <select
+                                value={data.supplier_id || ''}
+                                onChange={(e) => onDataChange('supplier_id', e.target.value)}
+                                className="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent bg-white"
+                                disabled={processing}
+                            >
+                                <option value="">Pilih Supplier</option>
+                                {suppliers.map((supplier) => (
+                                    <option key={supplier.id} value={supplier.id}>
+                                        {supplier.name}
+                                    </option>
+                                ))}
+                            </select>
+                            {errors.supplier_id && <p className="text-red-500 text-xs mt-1">{errors.supplier_id}</p>}
                         </div>
-
-                        {/* Summary Section */}
-                        <div className="mt-4 bg-gradient-to-r from-stone-50 to-rose-50 rounded-lg p-4 space-y-2">
-                            <div className="text-xs font-semibold text-stone-700 mb-2">
-                                Ringkasan ({(data.bahan_baku || []).length} bahan baku dipilih)
-                            </div>
-                            
-                            {(data.bahan_baku || []).length > 0 && (
-                                <div className="space-y-1.5 mb-3">
-                                    {(data.bahan_baku || []).map(bahan => {
-                                        const item = bahanBakuItems.find(b => b.id === bahan.item_id);
-                                        return (
-                                            <div key={bahan.item_id} className="flex justify-between text-xs bg-white rounded px-2 py-1.5">
-                                                <span className="text-stone-600 truncate flex-1">{item?.nama_item || 'Unknown'}</span>
-                                                <span className="text-stone-700 font-medium ml-2">
-                                                    D: Rp {new Intl.NumberFormat('id-ID').format(safeParseFloat(bahan.harga_dasar))} | 
-                                                    J: Rp {new Intl.NumberFormat('id-ID').format(safeParseFloat(bahan.harga_jasa))}
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                            
-                            <div className="border-t border-stone-200 pt-2 space-y-1">
-                                <div className="flex justify-between text-xs">
-                                    <span className="text-stone-600">Total Harga Dasar:</span>
-                                    <span className="font-semibold text-stone-700">
-                                        Rp {new Intl.NumberFormat('id-ID').format(calculateTotalHargaDasar())}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between text-xs">
-                                    <span className="text-stone-600">Total Harga Jasa:</span>
-                                    <span className="font-semibold text-green-600">
-                                        Rp {new Intl.NumberFormat('id-ID').format(calculateTotalHargaJasa())}
-                                    </span>
-                                </div>
-                                <div className="border-t border-stone-200 pt-1.5 flex justify-between text-sm">
-                                    <span className="font-semibold text-stone-700">Grand Total:</span>
-                                    <span className="font-bold text-rose-600">
-                                        Rp {new Intl.NumberFormat('id-ID').format(calculateTotalHargaDasar() + calculateTotalHargaJasa())}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {errors.bahan_baku && (
-                            <div className="flex items-center gap-1.5 mt-2 text-red-600 text-xs">
-                                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                </svg>
-                                {errors.bahan_baku}
-                            </div>
-                        )}
                     </div>
+
+                    {/* Toggle Input Harga Langsung */}
+                    <div className="bg-rose-50/50 rounded-xl p-3 sm:p-4 border border-rose-100 flex items-center justify-between">
+                        <div>
+                            <label className="text-xs sm:text-sm font-semibold text-stone-800 block">
+                                Input Harga Langsung
+                            </label>
+                            <span className="text-[11px] text-stone-500">
+                                Aktifkan jika produk ini tidak membutuhkan rincian sub-komponen bahan baku (contoh: kaca lembaran langsung dijual).
+                            </span>
+                        </div>
+                        <input
+                            type="checkbox"
+                            checked={data.is_direct_price == 1 || data.is_direct_price === true}
+                            onChange={(e) => onDataChange('is_direct_price', e.target.checked)}
+                            className="w-5 h-5 text-rose-600 border-stone-300 rounded focus:ring-rose-500 cursor-pointer"
+                            disabled={processing}
+                        />
+                    </div>
+
+                    {data.is_direct_price == 1 || data.is_direct_price === true ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs sm:text-sm font-semibold text-stone-700 mb-1.5">
+                                    Harga Dasar
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-500 text-sm font-semibold">Rp</span>
+                                    <input
+                                        type="text"
+                                        value={data.harga ? formatNumber(data.harga) : ''}
+                                        onChange={(e) => onDataChange('harga', parseFormattedNumber(e.target.value))}
+                                        className="w-full pl-9 pr-4 py-2 sm:py-2.5 text-sm border border-stone-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all font-mono"
+                                        placeholder="0"
+                                        disabled={processing}
+                                    />
+                                </div>
+                                {errors.harga && <p className="text-red-500 text-xs mt-1">{errors.harga}</p>}
+                            </div>
+                            <div>
+                                <label className="block text-xs sm:text-sm font-semibold text-stone-700 mb-1.5">
+                                    Harga Jasa
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-500 text-sm font-semibold">Rp</span>
+                                    <input
+                                        type="text"
+                                        value={data.harga_jasa ? formatNumber(data.harga_jasa) : ''}
+                                        onChange={(e) => onDataChange('harga_jasa', parseFormattedNumber(e.target.value))}
+                                        className="w-full pl-9 pr-4 py-2 sm:py-2.5 text-sm border border-stone-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all font-mono"
+                                        placeholder="0"
+                                        disabled={processing}
+                                    />
+                                </div>
+                                {errors.harga_jasa && <p className="text-red-500 text-xs mt-1">{errors.harga_jasa}</p>}
+                            </div>
+                        </div>
+                    ) : (
+                        <div>
+                            <label className="block text-xs sm:text-sm font-semibold text-stone-700 mb-2">
+                                Bahan Baku
+                            </label>
+                            <p className="text-xs text-stone-500 mb-3">
+                                Pilih bahan baku dan masukkan harga dasar & harga jasa untuk setiap bahan baku
+                            </p>
+                            
+                            <div className="mb-3">
+                                <input
+                                    type="text"
+                                    value={searchBahan}
+                                    onChange={(e) => setSearchBahan(e.target.value)}
+                                    className="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                                    placeholder="Search materials..."
+                                />
+                            </div>
+
+                            <div className="border border-stone-300 rounded-lg max-h-64 overflow-y-auto">
+                                {filteredBahanBaku.length > 0 ? (
+                                    <div className="divide-y divide-stone-200">
+                                        {filteredBahanBaku.map((item) => {
+                                            const isSelected = isItemSelected(item.id);
+                                            const bahanData = getBahanBakuData(item.id);
+                                            
+                                            return (
+                                                <div key={item.id} className="p-3 hover:bg-stone-50 transition-colors">
+                                                    <label className="flex items-center gap-3 cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
+                                                            onChange={() => toggleBahanBaku(item.id)}
+                                                            className="w-4 h-4 text-rose-600 border-stone-300 rounded focus:ring-rose-500"
+                                                            disabled={processing}
+                                                        />
+                                                        <span className="text-sm font-medium text-stone-700">{item.nama_item}</span>
+                                                    </label>
+                                                    
+                                                    {isSelected && (
+                                                        <div className="mt-3 ml-7 grid grid-cols-2 gap-3">
+                                                            <div>
+                                                                <label className="block text-xs text-stone-600 mb-1">Harga Dasar</label>
+                                                                <div className="relative">
+                                                                    <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-stone-500 text-xs">Rp</span>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={bahanData?.harga_dasar ? formatNumber(bahanData.harga_dasar) : ''}
+                                                                        onChange={(e) => updateBahanBakuHarga(item.id, 'harga_dasar', e.target.value)}
+                                                                        className="w-full pl-8 pr-2 py-1.5 text-xs border border-stone-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                                                                        placeholder="0"
+                                                                        disabled={processing}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs text-stone-600 mb-1">Harga Jasa</label>
+                                                                <div className="relative">
+                                                                    <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-stone-500 text-xs">Rp</span>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={bahanData?.harga_jasa ? formatNumber(bahanData.harga_jasa) : ''}
+                                                                        onChange={(e) => updateBahanBakuHarga(item.id, 'harga_jasa', e.target.value)}
+                                                                        className="w-full pl-8 pr-2 py-1.5 text-xs border border-stone-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                                                                        placeholder="0"
+                                                                        disabled={processing}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="p-4 text-center text-sm text-stone-500">
+                                        {searchBahan ? 'No materials found' : 'No materials available'}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Summary Section */}
+                            <div className="mt-4 bg-gradient-to-r from-stone-50 to-rose-50 rounded-lg p-4 space-y-2">
+                                <div className="text-xs font-semibold text-stone-700 mb-2">
+                                    Ringkasan ({(data.bahan_baku || []).length} bahan baku dipilih)
+                                </div>
+                                
+                                {(data.bahan_baku || []).length > 0 && (
+                                    <div className="space-y-1.5 mb-3">
+                                        {(data.bahan_baku || []).map(bahan => {
+                                            const item = bahanBakuItems.find(b => b.id === bahan.item_id);
+                                            return (
+                                                <div key={bahan.item_id} className="flex justify-between text-xs bg-white rounded px-2 py-1.5">
+                                                    <span className="text-stone-600 truncate flex-1">{item?.nama_item || 'Unknown'}</span>
+                                                    <span className="text-stone-700 font-medium ml-2">
+                                                        D: Rp {new Intl.NumberFormat('id-ID').format(safeParseFloat(bahan.harga_dasar))} | 
+                                                        J: Rp {new Intl.NumberFormat('id-ID').format(safeParseFloat(bahan.harga_jasa))}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                
+                                <div className="border-t border-stone-200 pt-2 space-y-1">
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-stone-600">Total Harga Dasar:</span>
+                                        <span className="font-semibold text-stone-700">
+                                            Rp {new Intl.NumberFormat('id-ID').format(calculateTotalHargaDasar())}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-stone-600">Total Harga Jasa:</span>
+                                        <span className="font-semibold text-green-600">
+                                            Rp {new Intl.NumberFormat('id-ID').format(calculateTotalHargaJasa())}
+                                        </span>
+                                    </div>
+                                    <div className="border-t border-stone-200 pt-1.5 flex justify-between text-sm">
+                                        <span className="font-semibold text-stone-700">Grand Total:</span>
+                                        <span className="font-bold text-rose-600">
+                                            Rp {new Intl.NumberFormat('id-ID').format(calculateTotalHargaDasar() + calculateTotalHargaJasa())}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {errors.bahan_baku && (
+                                <div className="flex items-center gap-1.5 mt-2 text-red-600 text-xs">
+                                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                    </svg>
+                                    {errors.bahan_baku}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {editMode && existingImages.length > 0 && (
                         <div>

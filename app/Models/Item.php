@@ -6,7 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class Item extends Model
 {
-    protected $fillable = ['nama_item', 'jenis_item_id', 'harga', 'kategori'];
+    protected $fillable = ['nama_item', 'jenis_item_id', 'harga', 'kategori', 'supplier_id'];
+
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class);
+    }
 
     public function jenisItem()
     {

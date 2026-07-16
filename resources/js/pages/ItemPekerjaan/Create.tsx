@@ -1301,16 +1301,12 @@ export default function Create({
                                                                                                                                 jenisItem.temp_id,
                                                                                                                                 item.temp_id,
                                                                                                                                 'quantity',
-                                                                                                                                parseInt(
-                                                                                                                                    e
-                                                                                                                                        .target
-                                                                                                                                        .value,
-                                                                                                                                ) ||
-                                                                                                                                    1,
+                                                                                                                                e.target.value === '' ? '' : parseFloat(e.target.value)
                                                                                                                             )
                                                                                                                         }
                                                                                                                         className="w-20 rounded border border-slate-300 px-2 py-1 text-sm"
-                                                                                                                        min="1"
+                                                                                                                        step="any"
+                                                                                                                        min="0"
                                                                                                                         placeholder="Qty"
                                                                                                                     />
                                                                                                                 )}

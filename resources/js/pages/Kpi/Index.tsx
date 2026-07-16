@@ -14,6 +14,9 @@ interface KpiUserSummary {
     fast_updates: number;
     late_tasks: number;
     completed_projects: number;
+    late_presences?: number;
+    alpha_days?: number;
+    perfect_attendance_bonus?: boolean;
     score: number;
 }
 
@@ -297,9 +300,17 @@ export default function Index({
                                             kpiData.data.map((user, idx) => (
                                                 <tr key={user.user_id} className="bg-white border-b border-stone-100 table-row-hover transition-all">
                                                     <td className="px-5 py-3.5">
-                                                        <span className="inline-flex w-6 h-6 items-center justify-center rounded-full bg-stone-100 text-[10px] font-bold text-stone-500 shadow-sm border border-stone-200">
-                                                            {((kpiData.meta?.current_page || 1) - 1) * (kpiData.meta?.per_page || 10) + idx + 1}
-                                                        </span>
+                                                        {(() => {
+                                                            const rank = ((kpiData.meta?.current_page || 1) - 1) * (kpiData.meta?.per_page || 10) + idx + 1;
+                                                            if (rank === 1) return <span className="inline-flex w-7 h-7 items-center justify-center rounded-full bg-yellow-100 text-yellow-800 font-extrabold text-xs shadow-sm border border-yellow-300">🥇</span>;
+                                                            if (rank === 2) return <span className="inline-flex w-7 h-7 items-center justify-center rounded-full bg-slate-100 text-slate-850 font-extrabold text-xs shadow-sm border border-slate-300">🥈</span>;
+                                                            if (rank === 3) return <span className="inline-flex w-7 h-7 items-center justify-center rounded-full bg-amber-100 text-amber-800 font-extrabold text-xs shadow-sm border border-amber-300">🥉</span>;
+                                                            return (
+                                                                <span className="inline-flex w-6 h-6 items-center justify-center rounded-full bg-stone-50 text-[10px] font-bold text-stone-500 shadow-sm border border-stone-200">
+                                                                    {rank}
+                                                                </span>
+                                                            );
+                                                        })()}
                                                     </td>
                                                     <td className="px-5 py-3.5">
                                                         <div className="flex items-center gap-3">
@@ -332,8 +343,19 @@ export default function Index({
                                                     <td className="px-5 py-3.5 text-center text-xs font-semibold text-rose-500">
                                                         -{user.late_tasks}
                                                     </td>
-                                                    <td className="px-5 py-3.5 text-center text-xs font-semibold text-stone-600 font-mono">
-                                                        {user.user_id % 2 === 0 ? "95%" : "100%"}
+                                                    <td className="px-5 py-3.5 text-center text-[10px] font-bold">
+                                                        {user.perfect_attendance_bonus ? (
+                                                            <span className="inline-flex px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                                                Perfect ⭐
+                                                            </span>
+                                                        ) : (user.late_presences || user.alpha_days) ? (
+                                                            <span className="inline-flex flex-col gap-0.5 text-rose-600">
+                                                                {user.late_presences ? `-${user.late_presences}T` : ''}
+                                                                {user.alpha_days ? `-${user.alpha_days}A` : ''}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-stone-400 font-medium">-</span>
+                                                        )}
                                                     </td>
                                                     <td className="px-5 py-3.5 text-center">
                                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold shadow-sm ${getScoreBadgeClass(user.score)}`}>

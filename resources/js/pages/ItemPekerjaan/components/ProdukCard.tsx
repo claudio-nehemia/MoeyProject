@@ -176,7 +176,7 @@ export default function ProdukCard({
                                 type="number"
                                 min="1"
                                 value={produk.quantity}
-                                onChange={(e) => onUpdateProduk(ruanganTempId, produk.temp_id, 'quantity', parseInt(e.target.value) || 1)}
+                                onChange={(e) => onUpdateProduk(ruanganTempId, produk.temp_id, 'quantity', e.target.value === '' ? '' : (parseInt(e.target.value) || 1))}
                                 className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all text-sm"
                                 required
                             />

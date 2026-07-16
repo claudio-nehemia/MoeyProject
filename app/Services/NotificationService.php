@@ -1309,4 +1309,75 @@ class NotificationService
             ]);
         }
     }
+
+    public function sendPaymentReminderH7Notification(Order $order, \App\Models\CashflowVendorEntry $entry, string $paymentType = 'dp')
+    {
+        $legalAdmins = User::whereHas('role', function ($query) {
+            $query->where('nama_role', 'Legal Admin');
+        })->get();
+
+        $amount = $paymentType === 'termin' ? $entry->pembayaran_termin : $entry->pembayaran;
+        $formattedAmount = 'Rp ' . number_format($amount, 0, ',', '.');
+        $label = $entry->label ?: $entry->vendor_name ?: 'Vendor';
+        $typeLabel = $paymentType === 'termin' ? 'Termin' : 'DP/Pembayaran';
+
+        foreach ($legalAdmins as $legalAdmin) {
+            $notification = Notification::create([
+                'user_id' => $legalAdmin->id,
+                'order_id' => $order->id,
+                'type' => 'payment_reminder_h7',
+                'title' => "⚠️ Reminder H-7 Pembayaran - {$order->nama_project}",
+                'message' => "Pembayaran {$typeLabel} untuk \"{$label}\" sebesar {$formattedAmount} pada project \"{$order->nama_project}\" jatuh tempo dalam 7 hari.",
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'vendor_entry_id' => $entry->id,
+                    'vendor_type' => $entry->vendor_type,
+                    'payment_type' => $paymentType,
+                    'amount' => $amount,
+                    'action_url' => '/cashflow/' . $order->id,
+                ],
+            ]);
+
+            $this->fcmService->sendToUser($legalAdmin->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
+    }
+
+    public function sendFeeReminderNotification(Order $order)
+    {
+        $pmUsers = $order->users;
+
+        foreach ($pmUsers as $user) {
+            $notification = Notification::create([
+                'user_id' => $user->id,
+                'order_id' => $order->id,
+                'type' => 'fee_reminder',
+                'title' => "💰 Reminder Fee Proyek - {$order->nama_project}",
+                'message' => "Fee Team/PM untuk project \"{$order->nama_project}\" harus segera disetujui (3 hari setelah Meeting Approval Material).",
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/cashflow/' . $order->id,
+                ],
+            ]);
+
+            $this->fcmService->sendToUser($user->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
+    }
 }

@@ -6,6 +6,7 @@ use App\Models\Item;
 use Inertia\Inertia;
 use App\Models\Produk;
 use App\Models\ProdukImages;
+use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -13,16 +14,19 @@ class ProdukController extends Controller
 {
     public function index()
     {
-        $produks = Produk::with(['produkImages', 'bahanBakus'])->get();
+        $produks = Produk::with(['produkImages', 'bahanBakus', 'supplier'])->get();
 
         // Ambil semua items yang termasuk bahan baku
         $bahanBakuItems = Item::whereHas('jenisItem', function ($query) {
             $query->where('nama_jenis_item', 'Bahan Baku');
         })->get(['id', 'nama_item']);
 
+        $suppliers = Supplier::orderBy('name')->get(['id', 'name']);
+
         return Inertia::render('Produk/Index', [
             'produks' => $produks,
             'bahanBakuItems' => $bahanBakuItems,
+            'suppliers' => $suppliers,
         ]);
     }
 
@@ -48,24 +52,42 @@ class ProdukController extends Controller
             $request->merge(['bahan_baku' => $sanitizedBahanBaku]);
         }
 
-        $validated = $request->validate([
+        $rules = [
             'nama_produk' => 'required|string|max:255',
             'produk_images' => 'nullable|array',
             'produk_images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'bahan_baku' => 'nullable|array',
-            'bahan_baku.*.item_id' => 'required|integer|exists:items,id',
-            'bahan_baku.*.harga_dasar' => 'required|numeric|min:0|max:9999999999999.99',
-            'bahan_baku.*.harga_jasa' => 'required|numeric|min:0|max:9999999999999.99',
-        ]);
+            'kategori' => 'nullable|string|in:internal,fisik,eksternal',
+            'supplier_id' => 'nullable|exists:suppliers,id',
+            'is_direct_price' => 'nullable',
+        ];
 
-        // Hitung total harga dan harga jasa dari semua bahan baku
+        $isDirectPrice = $request->is_direct_price == 1 || $request->is_direct_price === 'true';
+
+        if ($isDirectPrice) {
+            $rules['harga'] = 'required|numeric|min:0|max:9999999999999.99';
+            $rules['harga_jasa'] = 'required|numeric|min:0|max:9999999999999.99';
+        } else {
+            $rules['bahan_baku'] = 'nullable|array';
+            $rules['bahan_baku.*.item_id'] = 'required|integer|exists:items,id';
+            $rules['bahan_baku.*.harga_dasar'] = 'required|numeric|min:0|max:9999999999999.99';
+            $rules['bahan_baku.*.harga_jasa'] = 'required|numeric|min:0|max:9999999999999.99';
+        }
+
+        $validated = $request->validate($rules);
+
+        // Hitung total harga dan harga jasa dari semua bahan baku atau input langsung
         $totalHarga = 0;
         $totalHargaJasa = 0;
 
-        if (!empty($validated['bahan_baku'])) {
-            foreach ($validated['bahan_baku'] as $bahan) {
-                $totalHarga += floatval($bahan['harga_dasar']);
-                $totalHargaJasa += floatval($bahan['harga_jasa']);
+        if ($isDirectPrice) {
+            $totalHarga = floatval($validated['harga']);
+            $totalHargaJasa = floatval($validated['harga_jasa']);
+        } else {
+            if (!empty($validated['bahan_baku'])) {
+                foreach ($validated['bahan_baku'] as $bahan) {
+                    $totalHarga += floatval($bahan['harga_dasar']);
+                    $totalHargaJasa += floatval($bahan['harga_jasa']);
+                }
             }
         }
 
@@ -74,6 +96,8 @@ class ProdukController extends Controller
             'nama_produk' => $validated['nama_produk'],
             'harga' => min($totalHarga, 9999999999999.99),
             'harga_jasa' => min($totalHargaJasa, 9999999999999.99),
+            'kategori' => $validated['kategori'] ?? 'internal',
+            'supplier_id' => $validated['supplier_id'] ?? null,
         ]);
 
         // 2. Simpan gambar ke tabel relasi
@@ -89,7 +113,7 @@ class ProdukController extends Controller
         }
 
         // 3. Sync bahan baku dengan pivot data
-        if (!empty($validated['bahan_baku'])) {
+        if (!$isDirectPrice && !empty($validated['bahan_baku'])) {
             $syncData = [];
             foreach ($validated['bahan_baku'] as $bahan) {
                 $syncData[$bahan['item_id']] = [
@@ -98,6 +122,8 @@ class ProdukController extends Controller
                 ];
             }
             $produk->bahanBakus()->sync($syncData);
+        } else {
+            $produk->bahanBakus()->detach();
         }
 
         return redirect()->back()->with('success', 'Produk created successfully.');
@@ -132,24 +158,42 @@ class ProdukController extends Controller
             $request->merge(['bahan_baku' => $sanitizedBahanBaku]);
         }
 
-        $validated = $request->validate([
+        $rules = [
             'nama_produk' => 'required|string|max:255',
             'produk_images' => 'nullable|array',
             'produk_images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'bahan_baku' => 'nullable|array',
-            'bahan_baku.*.item_id' => 'required|integer|exists:items,id',
-            'bahan_baku.*.harga_dasar' => 'required|numeric|min:0|max:9999999999999.99',
-            'bahan_baku.*.harga_jasa' => 'required|numeric|min:0|max:9999999999999.99',
-        ]);
+            'kategori' => 'nullable|string|in:internal,fisik,eksternal',
+            'supplier_id' => 'nullable|exists:suppliers,id',
+            'is_direct_price' => 'nullable',
+        ];
 
-        // Hitung total harga dan harga jasa dari semua bahan baku
+        $isDirectPrice = $request->is_direct_price == 1 || $request->is_direct_price === 'true';
+
+        if ($isDirectPrice) {
+            $rules['harga'] = 'required|numeric|min:0|max:9999999999999.99';
+            $rules['harga_jasa'] = 'required|numeric|min:0|max:9999999999999.99';
+        } else {
+            $rules['bahan_baku'] = 'nullable|array';
+            $rules['bahan_baku.*.item_id'] = 'required|integer|exists:items,id';
+            $rules['bahan_baku.*.harga_dasar'] = 'required|numeric|min:0|max:9999999999999.99';
+            $rules['bahan_baku.*.harga_jasa'] = 'required|numeric|min:0|max:9999999999999.99';
+        }
+
+        $validated = $request->validate($rules);
+
+        // Hitung total harga dan harga jasa dari semua bahan baku atau input langsung
         $totalHarga = 0;
         $totalHargaJasa = 0;
 
-        if (!empty($validated['bahan_baku'])) {
-            foreach ($validated['bahan_baku'] as $bahan) {
-                $totalHarga += floatval($bahan['harga_dasar']);
-                $totalHargaJasa += floatval($bahan['harga_jasa']);
+        if ($isDirectPrice) {
+            $totalHarga = floatval($validated['harga']);
+            $totalHargaJasa = floatval($validated['harga_jasa']);
+        } else {
+            if (!empty($validated['bahan_baku'])) {
+                foreach ($validated['bahan_baku'] as $bahan) {
+                    $totalHarga += floatval($bahan['harga_dasar']);
+                    $totalHargaJasa += floatval($bahan['harga_jasa']);
+                }
             }
         }
 
@@ -158,6 +202,8 @@ class ProdukController extends Controller
             'nama_produk' => $validated['nama_produk'],
             'harga' => min($totalHarga, 9999999999999.99),
             'harga_jasa' => min($totalHargaJasa, 9999999999999.99),
+            'kategori' => $validated['kategori'] ?? 'internal',
+            'supplier_id' => $validated['supplier_id'] ?? null,
         ]);
 
         // Tambah gambar baru
@@ -173,7 +219,7 @@ class ProdukController extends Controller
         }
 
         // Sync bahan baku dengan pivot data
-        if (!empty($validated['bahan_baku'])) {
+        if (!$isDirectPrice && !empty($validated['bahan_baku'])) {
             $syncData = [];
             foreach ($validated['bahan_baku'] as $bahan) {
                 $syncData[$bahan['item_id']] = [

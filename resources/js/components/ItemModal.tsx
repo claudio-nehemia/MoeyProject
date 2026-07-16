@@ -1,5 +1,10 @@
 import { FormEventHandler, useEffect, useState } from 'react';
 
+interface Supplier {
+    id: number;
+    name: string;
+}
+
 interface ItemModalProps {
     show: boolean;
     editMode: boolean;
@@ -9,10 +14,12 @@ interface ItemModalProps {
         jenis_item_id: string;
         harga: string;
         kategori: string;
+        supplier_id?: string;
     };
     errors: {
         [key: string]: string;
     };
+    suppliers?: Supplier[];
     onClose: () => void;
     onSubmit: FormEventHandler<HTMLFormElement>;
     onDataChange: (key: string, value: string) => void;
@@ -29,6 +36,7 @@ export default function ItemModal({
     processing,
     data,
     errors,
+    suppliers = [],
     onClose,
     onSubmit,
     onDataChange,
@@ -168,6 +176,34 @@ export default function ItemModal({
                         {errors.kategori && (
                             <div className="flex items-center gap-1.5 mt-1">
                                 <p className="text-xs text-red-600">{errors.kategori}</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Supplier / Vendor */}
+                    <div>
+                        <label className="block text-xs font-semibold text-stone-700 mb-1.5">
+                            Supplier / Vendor
+                        </label>
+                        <select
+                            value={data.supplier_id || ''}
+                            onChange={(e) => onDataChange('supplier_id', e.target.value)}
+                            className={`w-full px-3 py-2 text-sm border-2 rounded-lg transition-colors focus:outline-none ${
+                                errors.supplier_id
+                                    ? 'border-red-300 focus:border-red-500 bg-red-50'
+                                    : 'border-stone-200 focus:border-orange-500 bg-stone-50'
+                            }`}
+                        >
+                            <option value="">Pilih Supplier</option>
+                            {suppliers.map((supplier) => (
+                                <option key={supplier.id} value={supplier.id}>
+                                    {supplier.name}
+                                </option>
+                            ))}
+                        </select>
+                        {errors.supplier_id && (
+                            <div className="flex items-center gap-1.5 mt-1">
+                                <p className="text-xs text-red-600">{errors.supplier_id}</p>
                             </div>
                         )}
                     </div>

@@ -142,9 +142,10 @@ export default function JenisItemCard({
                                     {isAksesoris && (
                                         <input
                                             type="number"
-                                            min="1"
+                                            step="any"
+                                            min="0"
                                             value={item.quantity}
-                                            onChange={(e) => onUpdateItem(ruanganTempId, produkTempId, jenisItem.temp_id, item.temp_id, 'quantity', parseInt(e.target.value) || 1)}
+                                            onChange={(e) => onUpdateItem(ruanganTempId, produkTempId, jenisItem.temp_id, item.temp_id, 'quantity', e.target.value === '' ? '' : parseFloat(e.target.value))}
                                             className="w-16 border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                                             placeholder="Qty"
                                             required

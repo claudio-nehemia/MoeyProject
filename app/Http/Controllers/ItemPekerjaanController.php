@@ -206,7 +206,7 @@ class ItemPekerjaanController extends Controller
                 'produks.*.jenisItems.*.jenis_item_id' => 'required|exists:jenis_items,id',
                 'produks.*.jenisItems.*.items' => 'array',
                 'produks.*.jenisItems.*.items.*.item_id' => 'required|exists:items,id',
-                'produks.*.jenisItems.*.items.*.quantity' => 'required|integer|min:1',
+                'produks.*.jenisItems.*.items.*.quantity' => 'required|numeric|min:0.01',
             ]);
 
             $itemPekerjaan = ItemPekerjaan::findOrFail($validated['item_pekerjaan_id']);
@@ -537,7 +537,7 @@ class ItemPekerjaanController extends Controller
                 'produks.*.jenisItems.*.items' => 'array',
                 'produks.*.jenisItems.*.items.*.id' => 'nullable|exists:item_pekerjaan_items,id',
                 'produks.*.jenisItems.*.items.*.item_id' => 'required|exists:items,id',
-                'produks.*.jenisItems.*.items.*.quantity' => 'required|integer|min:1',
+                'produks.*.jenisItems.*.items.*.quantity' => 'required|numeric|min:0.01',
                 'produks.*.jenisItems.*.items.*.notes' => 'nullable|string',
             ]);
 

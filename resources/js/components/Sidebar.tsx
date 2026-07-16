@@ -99,78 +99,6 @@ export default function Sidebar({
             gradient: 'from-green-400 to-green-600',
         },
         {
-            name: 'Data Karyawan',
-            href: '/karyawan',
-            page: 'karyawan',
-            permission: 'karyawan.index',
-            icon: (
-                <svg
-                    className="h-3.5 w-3.5 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                    />
-                </svg>
-            ),
-            gradient: 'from-amber-500 to-amber-600',
-        },
-        {
-            name: 'Jam Kerja',
-            href: '/jamkerja',
-            page: 'jamkerja',
-            permission: 'jamkerja.index',
-            icon: (
-                <svg
-                    className="h-3.5 w-3.5 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                </svg>
-            ),
-            gradient: 'from-emerald-400 to-emerald-600',
-        },
-        {
-            name: 'Cabang',
-            href: '/cabang',
-            page: 'cabang',
-            permission: 'cabang.index',
-            icon: (
-                <svg
-                    className="h-3.5 w-3.5 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                    />
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                </svg>
-            ),
-            gradient: 'from-cyan-400 to-cyan-600',
-        },
-        {
             name: 'Roles',
             href: '/role',
             page: 'role',
@@ -337,6 +265,28 @@ export default function Sidebar({
                 </svg>
             ),
             gradient: 'from-orange-400 to-orange-600',
+        },
+        {
+            name: 'Supplier/Vendor',
+            href: '/suppliers',
+            page: 'suppliers',
+            permission: 'item.index',
+            icon: (
+                <svg
+                    className="h-3.5 w-3.5 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                    />
+                </svg>
+            ),
+            gradient: 'from-teal-400 to-teal-600',
         },
         {
             name: 'Jenis Pengukuran',
@@ -758,6 +708,81 @@ export default function Sidebar({
             ),
             gradient: 'from-slate-400 to-slate-600',
         },
+    ];
+
+    const presensiMenus: MenuItem[] = [
+        {
+            name: 'Data Karyawan',
+            href: '/karyawan',
+            page: 'karyawan',
+            permission: 'karyawan.index',
+            icon: (
+                <svg
+                    className="h-3.5 w-3.5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                    />
+                </svg>
+            ),
+            gradient: 'from-amber-550 to-amber-600',
+        },
+        {
+            name: 'Jam Kerja',
+            href: '/jamkerja',
+            page: 'jamkerja',
+            permission: 'jamkerja.index',
+            icon: (
+                <svg
+                    className="h-3.5 w-3.5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                </svg>
+            ),
+            gradient: 'from-emerald-400 to-emerald-600',
+        },
+        {
+            name: 'Cabang',
+            href: '/cabang',
+            page: 'cabang',
+            permission: 'cabang.index',
+            icon: (
+                <svg
+                    className="h-3.5 w-3.5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                    />
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                </svg>
+            ),
+            gradient: 'from-cyan-400 to-cyan-600',
+        },
         {
             name: 'Riwayat Presensi',
             href: '/presensi-karyawan',
@@ -843,13 +868,17 @@ export default function Sidebar({
         (menu) => !menu.permission || hasPermission(menu.permission),
     );
 
-    let visibleOperations = operationsMenus.filter(
+    const visibleOperations = operationsMenus.filter(
+        (menu) => !menu.permission || hasPermission(menu.permission),
+    );
+
+    let visiblePresensi = presensiMenus.filter(
         (menu) => !menu.permission || hasPermission(menu.permission),
     );
 
     if (isApprovalRole) {
-        visibleOperations = [
-            ...visibleOperations,
+        visiblePresensi = [
+            ...visiblePresensi,
             {
                 name: 'Persetujuan Cuti',
                 href: '/approve-cuti',
@@ -870,7 +899,7 @@ export default function Sidebar({
                         />
                     </svg>
                 ),
-                gradient: 'from-amber-500 to-amber-600',
+                gradient: 'from-rose-500 to-rose-600',
             }
         ];
     }
@@ -974,11 +1003,30 @@ export default function Sidebar({
                                     Operations
                                 </p>
                             </div>
-                            <ul className="mb-6 space-y-1.5 font-medium">
+                            <ul className="mb-6 space-y-1.5 font-medium font-bold">
                                 {visibleOperations.map((menu, index) =>
                                     renderMenuItem(
                                         menu,
                                         visibleMasterData.length + index,
+                                    ),
+                                )}
+                            </ul>
+                        </>
+                    )}
+
+                    {/* Presensi & Kepegawaian Section */}
+                    {visiblePresensi.length > 0 && (
+                        <>
+                            <div className="mt-4 mb-2 border-t border-stone-200 px-1.5 py-3 pt-4">
+                                <p className="text-xs font-bold tracking-wider text-stone-500 uppercase">
+                                    Presensi & Kepegawaian
+                                </p>
+                            </div>
+                            <ul className="mb-6 space-y-1.5 font-medium font-bold">
+                                {visiblePresensi.map((menu, index) =>
+                                    renderMenuItem(
+                                        menu,
+                                        visibleMasterData.length + visibleOperations.length + index,
                                     ),
                                 )}
                             </ul>

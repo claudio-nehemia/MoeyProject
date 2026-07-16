@@ -26,11 +26,19 @@ interface BahanBakuData {
     harga_jasa: string;
 }
 
+interface Supplier {
+    id: number;
+    name: string;
+}
+
 interface Produk {
     id: number;
     nama_produk: string;
     harga: number;
     harga_jasa: number;
+    kategori?: string;
+    supplier_id?: number;
+    supplier?: Supplier;
     created_at: string;
     updated_at: string;
     produk_images: ProdukImage[];
@@ -40,9 +48,10 @@ interface Produk {
 interface Props {
     produks: Produk[];
     bahanBakuItems: Item[];
+    suppliers: Supplier[];
 }
 
-export default function Index({ produks, bahanBakuItems = [] }: Props) {
+export default function Index({ produks, bahanBakuItems = [], suppliers = [] }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 1024;
@@ -61,6 +70,11 @@ export default function Index({ produks, bahanBakuItems = [] }: Props) {
         nama_produk: "",
         produk_images: [] as File[],
         bahan_baku: [] as BahanBakuData[],
+        kategori: "internal",
+        supplier_id: "",
+        is_direct_price: false as boolean | number,
+        harga: "",
+        harga_jasa: "",
         _method: 'POST'
     });
 
@@ -100,10 +114,17 @@ export default function Index({ produks, bahanBakuItems = [] }: Props) {
             harga_jasa: Math.floor(item.pivot?.harga_jasa || 0).toString(),
         }));
         
+        const isDirect = !produk.bahan_bakus || produk.bahan_bakus.length === 0;
+
         setData({
             nama_produk: produk.nama_produk,
             produk_images: [],
             bahan_baku: bahanBakuData,
+            kategori: produk.kategori || "internal",
+            supplier_id: produk.supplier_id ? produk.supplier_id.toString() : "",
+            is_direct_price: isDirect,
+            harga: isDirect ? Math.floor(produk.harga || 0).toString() : "",
+            harga_jasa: isDirect ? Math.floor(produk.harga_jasa || 0).toString() : "",
             _method: 'POST'
         });
         setEditMode(true);
@@ -144,20 +165,34 @@ export default function Index({ produks, bahanBakuItems = [] }: Props) {
         
         const formData = new FormData();
         formData.append('nama_produk', data.nama_produk.trim());
+        formData.append('kategori', data.kategori || 'internal');
+        if (data.supplier_id) {
+            formData.append('supplier_id', data.supplier_id);
+        }
         
+        const isDirect = data.is_direct_price === true || data.is_direct_price == 1;
+        formData.append('is_direct_price', (isDirect ? 1 : 0).toString());
+
+        if (isDirect) {
+            const cleanHarga = (data.harga || '0').toString().replace(/\D/g, '');
+            const cleanHargaJasa = (data.harga_jasa || '0').toString().replace(/\D/g, '');
+            formData.append('harga', cleanHarga || '0');
+            formData.append('harga_jasa', cleanHargaJasa || '0');
+        } else {
+            // Append bahan baku dengan pivot data - pastikan nilai valid
+            data.bahan_baku.forEach((bahan, index) => {
+                formData.append(`bahan_baku[${index}][item_id]`, bahan.item_id.toString());
+                // Pastikan nilai hanya angka, hapus semua karakter non-digit
+                const cleanHargaDasar = (bahan.harga_dasar || '0').replace(/\D/g, '');
+                const cleanHargaJasa = (bahan.harga_jasa || '0').replace(/\D/g, '');
+                formData.append(`bahan_baku[${index}][harga_dasar]`, cleanHargaDasar || '0');
+                formData.append(`bahan_baku[${index}][harga_jasa]`, cleanHargaJasa || '0');
+            });
+        }
+
         // Append all selected images
         selectedImages.forEach((file, index) => {
             formData.append(`produk_images[${index}]`, file);
-        });
-
-        // Append bahan baku dengan pivot data - pastikan nilai valid
-        data.bahan_baku.forEach((bahan, index) => {
-            formData.append(`bahan_baku[${index}][item_id]`, bahan.item_id.toString());
-            // Pastikan nilai hanya angka, hapus semua karakter non-digit
-            const cleanHargaDasar = (bahan.harga_dasar || '0').replace(/\D/g, '');
-            const cleanHargaJasa = (bahan.harga_jasa || '0').replace(/\D/g, '');
-            formData.append(`bahan_baku[${index}][harga_dasar]`, cleanHargaDasar || '0');
-            formData.append(`bahan_baku[${index}][harga_jasa]`, cleanHargaJasa || '0');
         });
 
         if (editMode && selectedProduk) {
@@ -285,6 +320,9 @@ export default function Index({ produks, bahanBakuItems = [] }: Props) {
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">No</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Image</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Product Name</th>
+                                        <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Kategori</th>
+                                        <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Supplier</th>
+                                        <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Harga Jual</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-left font-semibold text-stone-700">Bahan Baku</th>
                                         <th className="px-3 sm:px-4 py-2.5 text-center font-semibold text-stone-700">Actions</th>
                                     </tr>
@@ -322,6 +360,19 @@ export default function Index({ produks, bahanBakuItems = [] }: Props) {
                                             <td className="px-3 sm:px-4 py-2.5">
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-medium text-stone-900 truncate">{produk.nama_produk}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-3 sm:px-4 py-2.5 capitalize font-medium text-stone-600">
+                                                {produk.kategori || 'internal'}
+                                            </td>
+                                            <td className="px-3 sm:px-4 py-2.5 font-medium text-stone-700">
+                                                {produk.supplier?.name || '—'}
+                                            </td>
+                                            <td className="px-3 sm:px-4 py-2.5">
+                                                <div className="flex flex-col text-[10px] text-stone-600">
+                                                    <span>D: {formatPrice(produk.harga)}</span>
+                                                    <span>J: {formatPrice(produk.harga_jasa)}</span>
+                                                    <span className="font-bold text-rose-600">T: {formatPrice(produk.harga + produk.harga_jasa)}</span>
                                                 </div>
                                             </td>
                                             <td className="px-3 sm:px-4 py-2.5">
@@ -390,6 +441,7 @@ export default function Index({ produks, bahanBakuItems = [] }: Props) {
                 existingImages={selectedProduk?.produk_images || []}
                 productId={selectedProduk?.id}
                 bahanBakuItems={bahanBakuItems}
+                suppliers={suppliers}
                 onClose={closeModal}
                 onSubmit={handleSubmit}
                 onDataChange={handleDataChange}

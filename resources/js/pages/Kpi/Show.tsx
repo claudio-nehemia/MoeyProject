@@ -522,40 +522,66 @@ export default function Show({ user, summary, taskHistory, completedProjects, tr
                         {/* Monthly History parameters log table */}
                         {activeHistoryTab === 'history' && (
                             <div className="border border-stone-200 rounded-xl overflow-hidden shadow-sm overflow-x-auto">
-                                <table className="w-full text-xs text-left text-stone-600 min-w-[600px]">
+                                <table className="w-full text-xs text-left text-stone-600 min-w-[800px]">
                                     <thead className="bg-stone-50 text-[10px] font-bold text-stone-500 uppercase border-b border-stone-200">
                                         <tr>
                                             <th className="px-5 py-3">Bulan</th>
                                             <th className="px-5 py-3 text-center">Project Selesai</th>
                                             <th className="px-5 py-3 text-center">Respon Cepat</th>
                                             <th className="px-5 py-3 text-center">Update Cepat</th>
-                                            <th className="px-5 py-3 text-center">Terlambat</th>
+                                            <th className="px-5 py-3 text-center">Task Terlambat</th>
+                                            <th className="px-5 py-3 text-center">Absen Terlambat</th>
+                                            <th className="px-5 py-3 text-center">Absen Alpa</th>
+                                            <th className="px-5 py-3 text-center">Bonus Kehadiran</th>
                                             <th className="px-5 py-3 text-right">Total Score KPI</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {trend.slice().reverse().map((item, index) => (
-                                            <tr key={index} className="border-b border-stone-100 table-row-hover transition-all">
-                                                <td className="px-5 py-3 font-bold text-stone-900">{item.month}</td>
-                                                <td className="px-5 py-3 text-center font-semibold text-stone-700">
-                                                    {item.completed_projects}
-                                                </td>
-                                                <td className="px-5 py-3 text-center text-emerald-600 font-semibold">
-                                                    +{item.fast_responses}
-                                                </td>
-                                                <td className="px-5 py-3 text-center text-emerald-600 font-semibold">
-                                                    +{item.fast_updates}
-                                                </td>
-                                                <td className="px-5 py-3 text-center text-rose-500 font-semibold">
-                                                    -{item.late_tasks}
-                                                </td>
-                                                <td className="px-5 py-3 text-right">
-                                                    <span className={`inline-flex px-2.5 py-0.5 rounded-full font-bold text-[10px] shadow-sm ${getScoreBadgeClass(item.score)}`}>
-                                                        {item.score} Poin
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {trend.slice().reverse().map((item, index) => {
+                                            const latePresPenalty = (item.late_presences ?? 0) * (settings.penalty_attendance_late ?? 5);
+                                            const alphaPresPenalty = (item.alpha_days ?? 0) * (settings.penalty_attendance_alpha ?? 15);
+                                            const perfectBonus = item.perfect_attendance_bonus ? (settings.bonus_attendance_perfect ?? 15) : 0;
+
+                                            return (
+                                                <tr key={index} className="border-b border-stone-100 table-row-hover transition-all">
+                                                    <td className="px-5 py-3 font-bold text-stone-900">{item.month}</td>
+                                                    <td className="px-5 py-3 text-center font-semibold text-stone-700">
+                                                        {item.completed_projects}
+                                                    </td>
+                                                    <td className="px-5 py-3 text-center text-emerald-600 font-semibold">
+                                                        +{item.fast_responses}
+                                                    </td>
+                                                    <td className="px-5 py-3 text-center text-emerald-600 font-semibold">
+                                                        +{item.fast_updates}
+                                                    </td>
+                                                    <td className="px-5 py-3 text-center text-rose-500 font-semibold">
+                                                        -{item.late_tasks}
+                                                    </td>
+                                                    <td className="px-5 py-3 text-center font-semibold">
+                                                        <span className={item.late_presences ? 'text-amber-600' : 'text-stone-400'}>
+                                                            {item.late_presences ?? 0}x {latePresPenalty > 0 && `(-${latePresPenalty})`}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-5 py-3 text-center font-semibold">
+                                                        <span className={item.alpha_days ? 'text-rose-500' : 'text-stone-400'}>
+                                                            {item.alpha_days ?? 0} hari {alphaPresPenalty > 0 && `(-${alphaPresPenalty})`}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-5 py-3 text-center font-semibold">
+                                                        {perfectBonus > 0 ? (
+                                                            <span className="text-emerald-600">Ya (+{perfectBonus})</span>
+                                                        ) : (
+                                                            <span className="text-stone-400">Tidak</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-5 py-3 text-right">
+                                                        <span className={`inline-flex px-2.5 py-0.5 rounded-full font-bold text-[10px] shadow-sm ${getScoreBadgeClass(item.score)}`}>
+                                                            {item.score} Poin
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
