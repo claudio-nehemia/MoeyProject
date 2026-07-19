@@ -381,36 +381,41 @@ export default function Edit({ rabInternal }: Props) {
 
         if (loading) return;
 
-        // TAMBAH BAGIAN INI - Convert display values back to numbers
         const submitData = formData.map((prod) => {
             const diskon =
                 typeof prod.diskon_per_produk === 'string'
                     ? parseFloat(prod.diskon_per_produk) || 0
                     : prod.diskon_per_produk;
 
+            const markup =
+                typeof prod.markup_satuan === 'string'
+                    ? parseFloat(prod.markup_satuan) || 0
+                    : prod.markup_satuan;
+
             return {
                 ...prod,
                 diskon_per_produk: diskon,
-                harga_produk: prod.harga_produk,
+                markup_satuan: markup,
+                harga_produk: Number(prod.harga_produk) || 0,
                 bahan_bakus: prod.bahan_bakus.map((bb) => ({
                     id: bb.id,
                     item_id: bb.item_id,
                     nama: bb.nama,
-                    harga_dasar: bb.harga_dasar,
+                    harga_dasar: Number(bb.harga_dasar) || 0,
                 })),
                 non_aksesoris_items: prod.non_aksesoris_items.map((item) => ({
                     id: item.id,
                     item_id: item.item_id,
                     nama: item.nama,
-                    harga_satuan: item.harga_satuan,
+                    harga_satuan: Number(item.harga_satuan) || 0,
                 })),
                 aksesoris: prod.aksesoris.map((aks) => ({
                     id: aks.id,
                     item_pekerjaan_item_id: aks.item_pekerjaan_item_id,
                     nama_aksesoris: aks.nama_aksesoris,
-                    harga_satuan_aksesoris: aks.harga_satuan_aksesoris,
-                    qty_aksesoris: aks.qty_aksesoris,
-                    markup_aksesoris: aks.markup_aksesoris,
+                    harga_satuan_aksesoris: Number(aks.harga_satuan_aksesoris) || 0,
+                    qty_aksesoris: Math.floor(Number(aks.qty_aksesoris)) || 0,
+                    markup_aksesoris: Number(aks.markup_aksesoris) || 0,
                 })),
             };
         });
