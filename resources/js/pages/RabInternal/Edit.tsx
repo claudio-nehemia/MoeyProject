@@ -5,16 +5,8 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 
 const formatNumberWithSeparator = (value: number | string): string => {
     if (value === '' || value === null || value === undefined) return '';
-    // Convert to integer: handle both "150000.00" (DB decimal) and "150.000" (user-typed with dot separator)
-    let num: number;
-    const str = String(value);
-    if (/^\d+(\.\d+)?$/.test(str)) {
-        // Pure numeric string (possibly with decimal like "150000.00") — parse as float then floor
-        num = Math.floor(parseFloat(str));
-    } else {
-        // User-formatted string with dot separators like "150.000" — strip dots then parse
-        num = parseInt(str.replace(/\./g, ''), 10) || 0;
-    }
+    const numStr = value.toString().replace(/\./g, '');
+    const num = parseInt(numStr, 10) || 0;
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 };
 

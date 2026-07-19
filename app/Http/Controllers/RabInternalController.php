@@ -174,7 +174,7 @@ class RabInternalController extends Controller
                                         'id' => $item->id,
                                         'item_pekerjaan_item_id' => $item->id,
                                         'nama' => $item->item->nama_item,
-                                        'harga_satuan' => $item->item->harga,
+                                        'harga_satuan' => (float)$item->item->harga,
                                         'qty_item_pekerjaan' => $item->quantity,
                                     ];
                                 }
@@ -186,7 +186,7 @@ class RabInternalController extends Controller
                                         'id' => $item->id,
                                         'item_id' => $item->item_id,
                                         'nama' => $item->item->nama_item,
-                                        'harga_satuan' => $item->item->harga,
+                                        'harga_satuan' => (float)$item->item->harga,
                                         'qty' => $item->quantity,
                                     ];
                                 }
@@ -538,7 +538,7 @@ class RabInternalController extends Controller
                                         'id' => $item->id,
                                         'item_id' => $item->item_id,
                                         'nama' => $item->item->nama_item,
-                                        'harga_satuan' => $item->item->harga,
+                                        'harga_satuan' => (float)$item->item->harga,
                                         'qty' => $item->quantity,
                                     ];
                                 }
