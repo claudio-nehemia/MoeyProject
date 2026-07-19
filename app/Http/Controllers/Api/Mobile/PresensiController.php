@@ -147,42 +147,47 @@ class PresensiController extends Controller
             $imageFile = $request->file('image');
             Storage::disk('public')->put($folderPath . $fileName, file_get_contents($imageFile));
 
-            // Face Recognition verification (if enabled)
-            if ($generalsetting && $generalsetting->face_recognition == 1) {
-                $nama_folder_wajah = $karyawan->nik . "-" . getNamaDepan(strtolower($karyawan->nama_karyawan));
-                $folderWajahPath = "uploads/facerecognition/" . $nama_folder_wajah;
+            // Run Selfie Quality Check & Face Recognition
+            $selfieFullPath = Storage::disk('public')->path($folderPath . $fileName);
+            $nama_folder_wajah = $karyawan->nik . "-" . getNamaDepan(strtolower($karyawan->nama_karyawan));
+            $folderWajahPath = "uploads/facerecognition/" . $nama_folder_wajah;
+            
+            $hasRegisteredFaces = Storage::disk('public')->exists($folderWajahPath) && count(Storage::disk('public')->files($folderWajahPath)) > 0;
+            
+            $registeredDirArg = "";
+            if ($generalsetting && $generalsetting->face_recognition == 1 && $hasRegisteredFaces) {
+                $registeredDirArg = Storage::disk('public')->path($folderWajahPath);
+            }
+
+            $pythonPath = PHP_OS_FAMILY === 'Windows' ? 'python' : 'python3';
+            $scriptPath = base_path('verify_face.py');
+            
+            $command = $pythonPath . " " . escapeshellarg($scriptPath) . " " . escapeshellarg($selfieFullPath);
+            if ($registeredDirArg !== "") {
+                $command .= " " . escapeshellarg($registeredDirArg);
+            }
+            $command .= " 2>&1";
+            
+            $output = shell_exec($command);
+            Log::info("FACE_RECOGNITION_OUTPUT for NIK $karyawan->nik: " . $output);
+            
+            $result = null;
+            $start = strpos($output, '{');
+            $end = strrpos($output, '}');
+            if ($start !== false && $end !== false) {
+                $json_str = substr($output, $start, $end - $start + 1);
+                $result = json_decode($json_str, true);
+            }
+            
+            if (!$result || !isset($result['matched']) || !$result['matched']) {
+                // Delete the uploaded selfie
+                Storage::disk('public')->delete($folderPath . $fileName);
                 
-                if (Storage::disk('public')->exists($folderWajahPath) && count(Storage::disk('public')->files($folderWajahPath)) > 0) {
-                    $selfieFullPath = Storage::disk('public')->path($folderPath . $fileName);
-                    $registeredDirFullPath = Storage::disk('public')->path($folderWajahPath);
-                    
-                    $pythonPath = PHP_OS_FAMILY === 'Windows' ? 'python' : 'python3';
-                    $scriptPath = base_path('verify_face.py');
-                    
-                    $command = $pythonPath . " " . escapeshellarg($scriptPath) . " " . escapeshellarg($selfieFullPath) . " " . escapeshellarg($registeredDirFullPath) . " 2>&1";
-                    
-                    $output = shell_exec($command);
-                    Log::info("FACE_RECOGNITION_OUTPUT for NIK $karyawan->nik: " . $output);
-                    
-                    $result = null;
-                    $start = strpos($output, '{');
-                    $end = strrpos($output, '}');
-                    if ($start !== false && $end !== false) {
-                        $json_str = substr($output, $start, $end - $start + 1);
-                        $result = json_decode($json_str, true);
-                    }
-                    
-                    if (!$result || !isset($result['matched']) || !$result['matched']) {
-                        // Delete the uploaded selfie
-                        Storage::disk('public')->delete($folderPath . $fileName);
-                        
-                        $failMsg = isset($result['message']) ? $result['message'] : 'Verifikasi wajah gagal. Wajah Anda tidak cocok dengan data terdaftar.';
-                        return response()->json([
-                            'success' => false,
-                            'message' => $failMsg
-                        ], 400);
-                    }
-                }
+                $failMsg = isset($result['message']) ? $result['message'] : 'Verifikasi wajah gagal. Wajah Anda tidak cocok dengan data terdaftar.';
+                return response()->json([
+                    'success' => false,
+                    'message' => $failMsg
+                ], 400);
             }
 
             $presensi_hariini = Presensi::where('nik', $karyawan->nik)

@@ -697,6 +697,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('karyawan/{nik}', [\App\Http\Controllers\KaryawanController::class, 'destroy'])->middleware('permission:karyawan.delete')->name('karyawan.destroy');
     });
 
+    // Mesin Fingerprint Management
+    Route::middleware(['permission:mesinfingerprint.index'])->group(function () {
+        Route::get('mesin-fingerprint', [\App\Http\Controllers\MesinFingerprintController::class, 'index'])->name('mesin-fingerprint.index');
+        Route::get('mesin-fingerprint/create', [\App\Http\Controllers\MesinFingerprintController::class, 'create'])->middleware('permission:mesinfingerprint.create')->name('mesin-fingerprint.create');
+        Route::post('mesin-fingerprint', [\App\Http\Controllers\MesinFingerprintController::class, 'store'])->middleware('permission:mesinfingerprint.create')->name('mesin-fingerprint.store');
+        Route::post('mesin-fingerprint/edit', [\App\Http\Controllers\MesinFingerprintController::class, 'edit'])->middleware('permission:mesinfingerprint.edit')->name('mesin-fingerprint.edit');
+        Route::put('mesin-fingerprint/{id}', [\App\Http\Controllers\MesinFingerprintController::class, 'update'])->middleware('permission:mesinfingerprint.edit')->name('mesin-fingerprint.update');
+        Route::delete('mesin-fingerprint/{id}', [\App\Http\Controllers\MesinFingerprintController::class, 'destroy'])->middleware('permission:mesinfingerprint.delete')->name('mesin-fingerprint.delete');
+    });
+
     // Jam Kerja Management
     Route::middleware(['permission:jamkerja.index'])->group(function () {
         Route::get('jamkerja', [\App\Http\Controllers\JamkerjaController::class, 'index'])->name('jamkerja.index');
@@ -712,6 +722,81 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('cabang/{kode_cabang}', [\App\Http\Controllers\CabangController::class, 'update'])->middleware('permission:cabang.edit')->name('cabang.update');
         Route::delete('cabang/{kode_cabang}', [\App\Http\Controllers\CabangController::class, 'destroy'])->middleware('permission:cabang.delete')->name('cabang.destroy');
     });
+
+    // Payroll Denda
+    Route::get('denda', [\App\Http\Controllers\DendaController::class, 'index'])->name('denda.index');
+    Route::post('denda', [\App\Http\Controllers\DendaController::class, 'store'])->name('denda.store');
+    Route::put('denda/{id}', [\App\Http\Controllers\DendaController::class, 'update'])->name('denda.update');
+    Route::delete('denda/{id}', [\App\Http\Controllers\DendaController::class, 'destroy'])->name('denda.destroy');
+
+    // Payroll Jenis Tunjangan
+    Route::get('jenis-tunjangan', [\App\Http\Controllers\JenistunjanganController::class, 'index'])->name('jenis-tunjangan.index');
+    Route::post('jenis-tunjangan', [\App\Http\Controllers\JenistunjanganController::class, 'store'])->name('jenis-tunjangan.store');
+    Route::put('jenis-tunjangan/{kode}', [\App\Http\Controllers\JenistunjanganController::class, 'update'])->name('jenis-tunjangan.update');
+    Route::delete('jenis-tunjangan/{kode}', [\App\Http\Controllers\JenistunjanganController::class, 'destroy'])->name('jenis-tunjangan.destroy');
+
+    // Payroll Gaji Pokok
+    Route::get('gaji-pokok', [\App\Http\Controllers\GajipokokController::class, 'index'])->name('gaji-pokok.index');
+    Route::post('gaji-pokok', [\App\Http\Controllers\GajipokokController::class, 'store'])->name('gaji-pokok.store');
+    Route::put('gaji-pokok/{kode}', [\App\Http\Controllers\GajipokokController::class, 'update'])->name('gaji-pokok.update');
+    Route::delete('gaji-pokok/{kode}', [\App\Http\Controllers\GajipokokController::class, 'destroy'])->name('gaji-pokok.destroy');
+
+    // Payroll BPJS Kesehatan
+    Route::get('bpjs-kesehatan', [\App\Http\Controllers\BpjskesehatanController::class, 'index'])->name('bpjs-kesehatan.index');
+    Route::post('bpjs-kesehatan', [\App\Http\Controllers\BpjskesehatanController::class, 'store'])->name('bpjs-kesehatan.store');
+    Route::put('bpjs-kesehatan/{kode}', [\App\Http\Controllers\BpjskesehatanController::class, 'update'])->name('bpjs-kesehatan.update');
+    Route::delete('bpjs-kesehatan/{kode}', [\App\Http\Controllers\BpjskesehatanController::class, 'destroy'])->name('bpjs-kesehatan.destroy');
+
+    // Payroll BPJS Ketenagakerjaan
+    Route::get('bpjs-ketenagakerjaan', [\App\Http\Controllers\BpjstenagakerjaController::class, 'index'])->name('bpjs-ketenagakerjaan.index');
+    Route::post('bpjs-ketenagakerjaan', [\App\Http\Controllers\BpjstenagakerjaController::class, 'store'])->name('bpjs-ketenagakerjaan.store');
+    Route::put('bpjs-ketenagakerjaan/{kode}', [\App\Http\Controllers\BpjstenagakerjaController::class, 'update'])->name('bpjs-ketenagakerjaan.update');
+    Route::delete('bpjs-ketenagakerjaan/{kode}', [\App\Http\Controllers\BpjstenagakerjaController::class, 'destroy'])->name('bpjs-ketenagakerjaan.destroy');
+
+    // Payroll Tunjangan
+    Route::get('tunjangan', [\App\Http\Controllers\TunjanganController::class, 'index'])->name('tunjangan.index');
+    Route::post('tunjangan', [\App\Http\Controllers\TunjanganController::class, 'store'])->name('tunjangan.store');
+    Route::put('tunjangan/{kode}', [\App\Http\Controllers\TunjanganController::class, 'update'])->name('tunjangan.update');
+    Route::delete('tunjangan/{kode}', [\App\Http\Controllers\TunjanganController::class, 'destroy'])->name('tunjangan.destroy');
+
+    // Payroll Penyesuaian Gaji
+    Route::get('penyesuaian-gaji', [\App\Http\Controllers\PenyesuaiangajiController::class, 'index'])->name('penyesuaian-gaji.index');
+    Route::post('penyesuaian-gaji', [\App\Http\Controllers\PenyesuaiangajiController::class, 'store'])->name('penyesuaian-gaji.store');
+    Route::put('penyesuaian-gaji/{kode}', [\App\Http\Controllers\PenyesuaiangajiController::class, 'update'])->name('penyesuaian-gaji.update');
+    Route::delete('penyesuaian-gaji/{kode}', [\App\Http\Controllers\PenyesuaiangajiController::class, 'destroy'])->name('penyesuaian-gaji.destroy');
+    Route::get('penyesuaian-gaji/set-karyawan/{kode}', [\App\Http\Controllers\PenyesuaiangajiController::class, 'setkaryawan'])->name('penyesuaian-gaji.setkaryawan');
+    Route::post('penyesuaian-gaji/store-karyawan/{kode}', [\App\Http\Controllers\PenyesuaiangajiController::class, 'storekaryawan'])->name('penyesuaian-gaji.storekaryawan');
+    Route::put('penyesuaian-gaji/update-karyawan/{kode}/{nik}', [\App\Http\Controllers\PenyesuaiangajiController::class, 'updatekaryawan'])->name('penyesuaian-gaji.updatekaryawan');
+    Route::delete('penyesuaian-gaji/destroy-karyawan/{kode}/{nik}', [\App\Http\Controllers\PenyesuaiangajiController::class, 'destroykaryawan'])->name('penyesuaian-gaji.destroykaryawan');
+
+    // Payroll Slip Gaji
+    Route::get('slip-gaji', [\App\Http\Controllers\SlipgajiController::class, 'index'])->name('slip-gaji.index');
+    Route::post('slip-gaji', [\App\Http\Controllers\SlipgajiController::class, 'store'])->name('slip-gaji.store');
+    Route::put('slip-gaji/{kode}', [\App\Http\Controllers\SlipgajiController::class, 'update'])->name('slip-gaji.update');
+    Route::delete('slip-gaji/{kode}', [\App\Http\Controllers\SlipgajiController::class, 'destroy'])->name('slip-gaji.destroy');
+
+    // Payroll Slip Gaji Harian
+    Route::post('slip-gaji-harian', [\App\Http\Controllers\SlipgajiHarianController::class, 'store'])->name('slip-gaji-harian.store');
+    Route::get('slip-gaji-harian/{kode}', [\App\Http\Controllers\SlipgajiHarianController::class, 'show'])->name('slip-gaji-harian.show');
+    Route::put('slip-gaji-harian/{kode}', [\App\Http\Controllers\SlipgajiHarianController::class, 'update'])->name('slip-gaji-harian.update');
+    Route::delete('slip-gaji-harian/{kode}', [\App\Http\Controllers\SlipgajiHarianController::class, 'destroy'])->name('slip-gaji-harian.destroy');
+    Route::get('slip-gaji-harian/cetak', [\App\Http\Controllers\SlipgajiHarianController::class, 'cetak'])->name('slip-gaji-harian.cetak');
+
+    // Payroll PPh 21
+    Route::get('pph21', [\App\Http\Controllers\Pph21Controller::class, 'index'])->name('pph21.index');
+    Route::post('pph21/update-setting', [\App\Http\Controllers\Pph21Controller::class, 'updateSetting'])->name('pph21.update-setting');
+    Route::get('pph21/formula', [\App\Http\Controllers\Pph21Controller::class, 'formula'])->name('pph21.formula');
+    Route::post('pph21/formula/store', [\App\Http\Controllers\Pph21Controller::class, 'storeFormula'])->name('pph21.formula.store');
+    Route::post('pph21/formula/toggle/{id}', [\App\Http\Controllers\Pph21Controller::class, 'toggleFormula'])->name('pph21.formula.toggle');
+    Route::delete('pph21/formula/delete/{id}', [\App\Http\Controllers\Pph21Controller::class, 'destroyFormula'])->name('pph21.formula.delete');
+    Route::post('pph21/formula/reorder', [\App\Http\Controllers\Pph21Controller::class, 'reorderFormula'])->name('pph21.formula.reorder');
+    Route::get('pph21/ter', [\App\Http\Controllers\Pph21Controller::class, 'terRates'])->name('pph21.ter');
+    Route::put('pph21/ter/update/{id}', [\App\Http\Controllers\Pph21Controller::class, 'updateTerRate'])->name('pph21.ter.update');
+    Route::get('pph21/progresif', [\App\Http\Controllers\Pph21Controller::class, 'progresifRates'])->name('pph21.progresif');
+    Route::put('pph21/progresif/update/{id}', [\App\Http\Controllers\Pph21Controller::class, 'updateProgresifRate'])->name('pph21.progresif.update');
+    Route::get('pph21/simulasi', [\App\Http\Controllers\Pph21Controller::class, 'simulasi'])->name('pph21.simulasi');
+    Route::post('pph21/simulasi/hitung', [\App\Http\Controllers\Pph21Controller::class, 'hitungSimulasi'])->name('pph21.simulasi.hitung');
+    Route::post('pph21/generate', [\App\Http\Controllers\Pph21Controller::class, 'generateSlip'])->name('pph21.generate');
 });
 
 require __DIR__ . '/settings.php';

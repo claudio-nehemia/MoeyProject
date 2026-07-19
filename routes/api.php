@@ -19,6 +19,12 @@ Route::prefix('auth')->group(function () {
     });
 });
 
+// Fingerprint Machine Integration (ADMS)
+Route::any('/adms/capture', [\App\Http\Controllers\Api\AdmsController::class, 'capture']);
+Route::any('/iclock/cdata', [\App\Http\Controllers\Api\AdmsController::class, 'receiveZktecoStandard']);
+Route::any('/iclock/zkteco', [\App\Http\Controllers\Api\AdmsController::class, 'receiveZktecoStandard']);
+Route::any('/rawdump/{any?}', [\App\Http\Controllers\Api\AdmsController::class, 'rawDump'])->where('any', '.*');
+
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     // Mobile Orders API
@@ -76,6 +82,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('lembur', [\App\Http\Controllers\Api\Mobile\LemburController::class, 'index']);
         Route::post('lembur', [\App\Http\Controllers\Api\Mobile\LemburController::class, 'store']);
         Route::post('lembur/presensi', [\App\Http\Controllers\Api\Mobile\LemburController::class, 'storepresensi']);
+
+        // Slip Gaji
+        Route::get('slipgaji', [\App\Http\Controllers\Api\Mobile\SlipgajiController::class, 'index']);
+        Route::get('slipgaji/{bulan}/{tahun}', [\App\Http\Controllers\Api\Mobile\SlipgajiController::class, 'show']);
     });
 
     // Admin FCM routes (optional - for testing and monitoring)

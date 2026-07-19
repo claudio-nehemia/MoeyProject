@@ -14,17 +14,45 @@ def exit_with_json(matched, message="", score=0.0):
     }))
     sys.exit(0)
 
-if len(sys.argv) < 3:
-    exit_with_json(False, "Missing arguments. Usage: python verify_face.py <selfie_path> <registered_dir_path>")
+if len(sys.argv) < 2:
+    exit_with_json(False, "Missing arguments. Usage: python verify_face.py <selfie_path> [registered_dir_path]")
 
 selfie_path = sys.argv[1]
-registered_dir = sys.argv[2]
+registered_dir = sys.argv[2] if len(sys.argv) >= 3 else ""
 
 if not os.path.exists(selfie_path):
     exit_with_json(False, f"Selfie file not found: {selfie_path}")
 
-if not os.path.exists(registered_dir) or not os.path.isdir(registered_dir):
-    exit_with_json(False, f"Registered directory not found or invalid: {registered_dir}")
+# Check blur using Laplacian variance
+def check_blur(img_path):
+    img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+    if img is None:
+        return False, "Gagal membaca berkas gambar untuk pengecekan blur."
+    laplacian_var = cv2.Laplacian(img, cv2.CV_64F).var()
+    if laplacian_var < 80.0:
+        return False, f"Gambar terlalu kabur atau tidak tajam. Mohon ambil foto di tempat yang lebih stabil."
+    return True, ""
+
+# Check exposure / brightness levels
+def check_exposure(img_path):
+    img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+    if img is None:
+        return False, "Gagal membaca berkas gambar untuk pengecekan pencahayaan."
+    mean_brightness = img.mean()
+    if mean_brightness < 80.0:
+        return False, f"Pencahayaan terlalu gelap. Mohon cari tempat yang lebih terang."
+    if mean_brightness > 220.0:
+        return False, f"Pencahayaan terlalu silau/terang. Mohon cari tempat dengan pencahayaan stabil."
+    return True, ""
+
+# Run quality checks first
+is_not_blurry, blur_msg = check_blur(selfie_path)
+if not is_not_blurry:
+    exit_with_json(False, blur_msg)
+
+is_good_exposure, exp_msg = check_exposure(selfie_path)
+if not is_good_exposure:
+    exit_with_json(False, exp_msg)
 
 # Models directory setup
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'storage', 'models')
@@ -95,14 +123,19 @@ def extract_feature(img_path):
 # Extract feature from uploaded selfie
 selfie_feature = extract_feature(selfie_path)
 if selfie_feature is None:
-    exit_with_json(False, "Wajah tidak terdeteksi pada foto selfie Anda.")
+    exit_with_json(False, "Wajah tidak terdeteksi pada foto selfie Anda. Pastikan wajah tegak, tidak tertutup masker/kacamata hitam, dan menghadap kamera.")
+
+# If registered directory is not provided or empty, we succeed on quality validation!
+if not registered_dir or not os.path.exists(registered_dir) or not os.path.isdir(registered_dir):
+    exit_with_json(True, "Kualitas foto selfie memenuhi syarat (Pencocokan wajah dilewati).", 1.0)
 
 # Scan registered folder and compare
 registered_files = [os.path.join(registered_dir, f) for f in os.listdir(registered_dir) 
                     if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp'))]
 
 if not registered_files:
-    exit_with_json(False, "Tidak ada data foto wajah terdaftar di sistem.")
+    # If folder has no images, still succeed on quality validation
+    exit_with_json(True, "Kualitas foto selfie memenuhi syarat (Tidak ada wajah pembanding terdaftar).", 1.0)
 
 best_score = -1.0
 
