@@ -149,10 +149,21 @@ class CashflowController extends Controller
             return strcmp($b['date'], $a['date']);
         });
 
+        $upcomingPayments = [];
+        foreach ($dailyPayments as $item) {
+            if (empty($item['flag_fb']) || empty($item['flag_jw'])) {
+                $upcomingPayments[] = $item;
+            }
+        }
+        usort($upcomingPayments, function($a, $b) {
+            return strcmp($a['date'], $b['date']);
+        });
+
         return Inertia::render('Cashflow/Index', [
             'orders' => $orders,
             'total_hutang' => round($totalHutang),
             'daily_payments' => $dailyPayments,
+            'upcoming_payments' => $upcomingPayments,
             'filters' => [
                 'search' => $search,
                 'status' => $statusFilter,

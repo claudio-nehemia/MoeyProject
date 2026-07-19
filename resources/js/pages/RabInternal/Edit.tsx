@@ -5,8 +5,17 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 
 const formatNumberWithSeparator = (value: number | string): string => {
     if (value === '' || value === null || value === undefined) return '';
-    const numStr = value.toString().replace(/\./g, '');
-    return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    // Convert to integer: handle both "150000.00" (DB decimal) and "150.000" (user-typed with dot separator)
+    let num: number;
+    const str = String(value);
+    if (/^\d+(\.\d+)?$/.test(str)) {
+        // Pure numeric string (possibly with decimal like "150000.00") — parse as float then floor
+        num = Math.floor(parseFloat(str));
+    } else {
+        // User-formatted string with dot separators like "150.000" — strip dots then parse
+        num = parseInt(str.replace(/\./g, ''), 10) || 0;
+    }
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 };
 
 const parseFormattedNumber = (value: string): number => {
@@ -16,6 +25,7 @@ const parseFormattedNumber = (value: string): number => {
 
 interface NonAksesorisItem {
     id: number;
+    item_id: number;
     nama: string;
     harga_satuan: number;
 }
@@ -27,6 +37,13 @@ interface Aksesoris {
     harga_satuan_aksesoris: number;
     qty_aksesoris: number;
     markup_aksesoris: number;
+}
+
+interface BahanBaku {
+    id: number;
+    item_id: number;
+    nama: string;
+    harga_dasar: number;
 }
 
 interface Produk {
@@ -44,6 +61,7 @@ interface Produk {
     non_aksesoris_items: NonAksesorisItem[];
     aksesoris: Aksesoris[];
     bahan_baku_names: string[];
+    bahan_bakus: BahanBaku[];
     harga_produk: number;
 }
 
@@ -65,6 +83,7 @@ interface Props {
 
 interface FormNonAksesorisItem {
     id?: number;
+    item_id?: number;
     nama: string;
     harga_satuan: number;
     harga_satuan_display?: string;
@@ -87,6 +106,15 @@ interface FormProduk {
     diskon_per_produk: string | number;
     non_aksesoris_items: FormNonAksesorisItem[];
     aksesoris: FormAksesoris[];
+    harga_produk: number;
+    harga_produk_display?: string;
+    bahan_bakus: {
+        id: number;
+        item_id: number;
+        nama: string;
+        harga_dasar: number;
+        harga_dasar_display?: string;
+    }[];
 }
 
 export default function Edit({ rabInternal }: Props) {
@@ -110,14 +138,24 @@ export default function Edit({ rabInternal }: Props) {
             item_pekerjaan_produk_id: produk.item_pekerjaan_produk_id,
             markup_satuan: produk.markup_satuan,
             diskon_per_produk: (produk as any).diskon_per_produk ?? 0,
+            harga_produk: produk.harga_produk ?? 0,
+            harga_produk_display: formatNumberWithSeparator(produk.harga_produk ?? 0),
+            bahan_bakus: (produk.bahan_bakus || []).map((bb) => ({
+                id: bb.id,
+                item_id: bb.item_id,
+                nama: bb.nama,
+                harga_dasar: bb.harga_dasar,
+                harga_dasar_display: formatNumberWithSeparator(bb.harga_dasar),
+            })),
             non_aksesoris_items:
                 produk.non_aksesoris_items?.map((item) => ({
                     id: item.id,
+                    item_id: item.item_id,
                     nama: item.nama,
                     harga_satuan: item.harga_satuan,
                     harga_satuan_display: formatNumberWithSeparator(
                         item.harga_satuan,
-                    ), // TAMBAH INI
+                    ),
                 })) || [],
             aksesoris: produk.aksesoris.map((aks) => ({
                 id: aks.id,
@@ -126,7 +164,7 @@ export default function Edit({ rabInternal }: Props) {
                 harga_satuan_aksesoris: aks.harga_satuan_aksesoris,
                 harga_satuan_display: formatNumberWithSeparator(
                     aks.harga_satuan_aksesoris,
-                ), // TAMBAH INI
+                ), 
                 qty_aksesoris: aks.qty_aksesoris,
                 markup_aksesoris: aks.markup_aksesoris,
             })),
@@ -313,8 +351,10 @@ export default function Edit({ rabInternal }: Props) {
                 0,
             );
 
-        // Ensure numbers are parsed correctly
-        const hargaDasar = Number(produk.harga_dasar) || 0;
+        // Calculate total harga dasar from form data bahan_bakus
+        const hargaDasar = formProduk.bahan_bakus && formProduk.bahan_bakus.length > 0
+            ? formProduk.bahan_bakus.reduce((sum, bb) => sum + (Number(bb.harga_dasar) || 0), 0)
+            : Number(produk.harga_dasar) || 0;
 
         // ✅ RUMUS RAB INTERNAL: (Harga BB + Finishing) ÷ (1 - markup/100) × Dimensi
         const markupDivider = 1 - (markup / 100); // 20% → 1-0.2 = 0.8
@@ -359,8 +399,16 @@ export default function Edit({ rabInternal }: Props) {
             return {
                 ...prod,
                 diskon_per_produk: diskon,
+                harga_produk: prod.harga_produk,
+                bahan_bakus: prod.bahan_bakus.map((bb) => ({
+                    id: bb.id,
+                    item_id: bb.item_id,
+                    nama: bb.nama,
+                    harga_dasar: bb.harga_dasar,
+                })),
                 non_aksesoris_items: prod.non_aksesoris_items.map((item) => ({
                     id: item.id,
+                    item_id: item.item_id,
                     nama: item.nama,
                     harga_satuan: item.harga_satuan,
                 })),
@@ -619,34 +667,63 @@ export default function Edit({ rabInternal }: Props) {
                                                 </div>
 
                                                 <div className="p-3">
+                                                    {/* Harga Master Produk */}
+                                                    <div className="mb-3 rounded-lg bg-stone-50 p-2 dark:bg-stone-850/30 border border-stone-200/50">
+                                                        <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                                            Harga Master Produk (Harga Jual Master)
+                                                        </label>
+                                                        <div className="relative max-w-xs">
+                                                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-bold">Rp</span>
+                                                            <input
+                                                                type="text"
+                                                                value={formProduk.harga_produk_display || ''}
+                                                                onChange={(e) => {
+                                                                    const formatted = formatNumberWithSeparator(e.target.value);
+                                                                    const parsed = parseFormattedNumber(formatted);
+                                                                    const newData = [...formData];
+                                                                    newData[produkIndex].harga_produk = parsed;
+                                                                    newData[produkIndex].harga_produk_display = formatted;
+                                                                    setFormData(newData);
+                                                                }}
+                                                                className="w-full pl-8 pr-3 py-1.5 rounded-lg border-gray-300 text-xs shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 font-semibold"
+                                                                placeholder="0"
+                                                            />
+                                                        </div>
+                                                    </div>
+
                                                     {/* BAHAN BAKU & BREAKDOWN - 2 KOLOM */}
                                                     <div className="mb-2 grid grid-cols-1 md:grid-cols-2 gap-2">
                                                         {/* Bahan Baku */}
-                                                        {produk.bahan_baku_names &&
-                                                            produk.bahan_baku_names
-                                                                .length > 0 && (
-                                                                <div className="rounded-lg bg-slate-50 p-2 dark:bg-slate-800">
-                                                                    <h4 className="mb-1 text-xs font-semibold text-gray-900 dark:text-gray-100">
-                                                                        Bahan Baku
-                                                                    </h4>
-                                                                    <div className="flex flex-wrap gap-1">
-                                                                        {produk.bahan_baku_names.map(
-                                                                            (
-                                                                                name,
-                                                                                idx,
-                                                                            ) => (
-                                                                            <span
-                                                                                key={
-                                                                                    idx
-                                                                                }
-                                                                                className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200"
-                                                                            >
-                                                                                {
-                                                                                    name
-                                                                                }
+                                                        {formProduk.bahan_bakus && formProduk.bahan_bakus.length > 0 && (
+                                                            <div className="rounded-lg bg-slate-50 p-2 dark:bg-slate-800 border border-slate-100">
+                                                                <h4 className="mb-1 text-xs font-semibold text-gray-900 dark:text-gray-100 border-b pb-1">
+                                                                    Bahan Baku (Harga Dasar)
+                                                                </h4>
+                                                                <div className="space-y-2 mt-2">
+                                                                    {formProduk.bahan_bakus.map((bb, bbIdx) => (
+                                                                        <div key={bb.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                                                                            <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                                                                                {bb.nama}
                                                                             </span>
-                                                                        ),
-                                                                    )}
+                                                                            <div className="relative w-full sm:w-36">
+                                                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-bold">Rp</span>
+                                                                                <input
+                                                                                    type="text"
+                                                                                    value={bb.harga_dasar_display || ''}
+                                                                                    onChange={(e) => {
+                                                                                        const formatted = formatNumberWithSeparator(e.target.value);
+                                                                                        const parsed = parseFormattedNumber(formatted);
+                                                                                        const newData = [...formData];
+                                                                                        newData[produkIndex].bahan_bakus[bbIdx].harga_dasar = parsed;
+                                                                                        newData[produkIndex].bahan_bakus[bbIdx].harga_dasar_display = formatted;
+                                                                                        setFormData(newData);
+                                                                                    }}
+                                                                                    className="w-full pl-7 pr-2 py-1 rounded border-gray-300 text-xs shadow-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 text-right font-semibold"
+                                                                                    placeholder="0"
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
                                                                 </div>
                                                             </div>
                                                         )}
@@ -660,7 +737,9 @@ export default function Edit({ rabInternal }: Props) {
                                                                 <div className="flex justify-between">
                                                                     <span className="text-gray-600 dark:text-gray-400">Harga Dasar:</span>
                                                                     <span className="font-medium text-gray-900 dark:text-gray-100">
-                                                                        {formatCurrency(produk.harga_dasar)}
+                                                                        {formatCurrency(
+                                                                            formProduk.bahan_bakus.reduce((sum, bb) => sum + (Number(bb.harga_dasar) || 0), 0)
+                                                                        )}
                                                                     </span>
                                                                 </div>
                                                                 <div className="flex justify-between">
@@ -669,7 +748,7 @@ export default function Edit({ rabInternal }: Props) {
                                                                         {formatCurrency(
                                                                             formProduk.non_aksesoris_items.reduce(
                                                                                 (sum, item) => sum + (Number(item.harga_satuan) || 0),
-                                                                                0
+                                                                                0,
                                                                             )
                                                                         )}
                                                                     </span>
@@ -772,7 +851,7 @@ export default function Edit({ rabInternal }: Props) {
                                                                                                         e
                                                                                                             .target
                                                                                                             .value,
-                                                                                                    );
+                                                                                                );
                                                                                                 handleNonAksesorisChange(
                                                                                                     produkIndex,
                                                                                                     itemIndex,
@@ -780,7 +859,7 @@ export default function Edit({ rabInternal }: Props) {
                                                                                                     formatted,
                                                                                                 );
                                                                                             }}
-                                                                                            className="w-full rounded border-gray-300 text-xs shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                                                                            className="w-full rounded border-gray-300 text-xs shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 font-semibold"
                                                                                             placeholder="0"
                                                                                             required
                                                                                         />
@@ -807,22 +886,12 @@ export default function Edit({ rabInternal }: Props) {
                                                                                 Total:
                                                                             </td>
                                                                             <td
-                                                                                colSpan={
-                                                                                    2
-                                                                                }
+                                                                                colSpan={2}
                                                                                 className="px-2 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400"
                                                                             >
                                                                                 {formatCurrency(
                                                                                     formProduk.non_aksesoris_items.reduce(
-                                                                                        (
-                                                                                            sum,
-                                                                                            item,
-                                                                                        ) =>
-                                                                                            sum +
-                                                                                            (Number(
-                                                                                                item.harga_satuan,
-                                                                                            ) ||
-                                                                                                0),
+                                                                                        (sum, item) => sum + (Number(item.harga_satuan) || 0),
                                                                                         0,
                                                                                     ),
                                                                                 )}
