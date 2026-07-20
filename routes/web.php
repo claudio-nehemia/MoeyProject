@@ -695,6 +695,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('karyawan/{nik}/delete-face/{id}', [\App\Http\Controllers\KaryawanController::class, 'deleteFace'])->middleware('permission:karyawan.edit')->name('karyawan.delete-face');
         Route::put('karyawan/{nik}', [\App\Http\Controllers\KaryawanController::class, 'update'])->middleware('permission:karyawan.edit')->name('karyawan.update');
         Route::delete('karyawan/{nik}', [\App\Http\Controllers\KaryawanController::class, 'destroy'])->middleware('permission:karyawan.delete')->name('karyawan.destroy');
+
+        // Pelatihan routes
+        Route::get('pelatihan', [\App\Http\Controllers\PelatihanController::class, 'index'])->name('pelatihan.index');
+        Route::post('pelatihan', [\App\Http\Controllers\PelatihanController::class, 'store'])->name('pelatihan.store');
+        Route::put('pelatihan/{kode_pelatihan}', [\App\Http\Controllers\PelatihanController::class, 'update'])->name('pelatihan.update');
+        Route::delete('pelatihan/{kode_pelatihan}', [\App\Http\Controllers\PelatihanController::class, 'destroy'])->name('pelatihan.destroy');
+        Route::get('pelatihan/{kode_pelatihan}/peserta', [\App\Http\Controllers\PelatihanController::class, 'manageParticipants'])->name('pelatihan.peserta');
+        Route::post('pelatihan/{kode_pelatihan}/peserta', [\App\Http\Controllers\PelatihanController::class, 'addParticipants'])->name('pelatihan.peserta.add');
+        Route::post('pelatihan/peserta/{id}/update', [\App\Http\Controllers\PelatihanController::class, 'updateParticipant'])->name('pelatihan.peserta.update');
+        Route::delete('pelatihan/peserta/{id}', [\App\Http\Controllers\PelatihanController::class, 'removeParticipant'])->name('pelatihan.peserta.delete');
+
+        // Resign routes
+        Route::get('resign', [\App\Http\Controllers\ResignController::class, 'index'])->name('resign.index');
+        Route::post('resign/{id}/approve', [\App\Http\Controllers\ResignController::class, 'approve'])->name('resign.approve');
+        Route::post('resign/{id}/reject', [\App\Http\Controllers\ResignController::class, 'reject'])->name('resign.reject');
     });
 
     // Mesin Fingerprint Management

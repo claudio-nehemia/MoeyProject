@@ -86,6 +86,13 @@ Route::middleware('auth:sanctum')->group(function () {
         // Slip Gaji
         Route::get('slipgaji', [\App\Http\Controllers\Api\Mobile\SlipgajiController::class, 'index']);
         Route::get('slipgaji/{bulan}/{tahun}', [\App\Http\Controllers\Api\Mobile\SlipgajiController::class, 'show']);
+
+        // Pelatihan
+        Route::get('pelatihan', [\App\Http\Controllers\Api\Mobile\PelatihanMobileController::class, 'getMyTrainings']);
+
+        // Resign
+        Route::get('resign', [\App\Http\Controllers\Api\Mobile\ResignMobileController::class, 'getResignStatus']);
+        Route::post('resign', [\App\Http\Controllers\Api\Mobile\ResignMobileController::class, 'submitResign']);
     });
 
     // Admin FCM routes (optional - for testing and monitoring)
