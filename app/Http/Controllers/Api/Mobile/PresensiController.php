@@ -186,7 +186,8 @@ class PresensiController extends Controller
                 $failMsg = isset($result['message']) ? $result['message'] : 'Verifikasi wajah gagal. Wajah Anda tidak cocok dengan data terdaftar.';
                 return response()->json([
                     'success' => false,
-                    'message' => $failMsg
+                    'message' => $failMsg,
+                    'python_output' => $output ?? ''
                 ], 400);
             }
 
