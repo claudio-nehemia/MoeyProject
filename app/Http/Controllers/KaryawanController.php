@@ -44,6 +44,13 @@ class KaryawanController extends Controller
         }
         $request->merge($inputs);
 
+        // Resolve division and role automatically from linked user
+        $resolved = $this->resolveDeptAndJabatan($request->input('user_id'));
+        $request->merge([
+            'kode_dept' => $resolved['kode_dept'],
+            'kode_jabatan' => $resolved['kode_jabatan']
+        ]);
+
         $validated = $request->validate([
             'nik' => 'required|string|max:9|unique:karyawan,nik',
             'user_id' => 'nullable|integer|exists:users,id',
@@ -78,6 +85,13 @@ class KaryawanController extends Controller
         }
         $request->merge($inputs);
 
+        // Resolve division and role automatically from linked user
+        $resolved = $this->resolveDeptAndJabatan($request->input('user_id'));
+        $request->merge([
+            'kode_dept' => $resolved['kode_dept'],
+            'kode_jabatan' => $resolved['kode_jabatan']
+        ]);
+
         \Illuminate\Support\Facades\Log::info("KARYAWAN_UPDATE_REQUEST for NIK $nik:", $request->all());
 
         try {
@@ -108,6 +122,80 @@ class KaryawanController extends Controller
             \Illuminate\Support\Facades\Log::error("KARYAWAN_UPDATE_VALIDATION_FAILED:", $e->errors());
             throw $e;
         }
+    }
+
+    private function resolveDeptAndJabatan($userId)
+    {
+        $kode_dept = 'OTH';
+        $kode_jabatan = 'STF';
+
+        if ($userId) {
+            $user = User::with(['role.divisi'])->find($userId);
+            if ($user && $user->role) {
+                // 1. Resolve Jabatan from Role
+                $nama_jabatan = substr($user->role->nama_role, 0, 30);
+                $jab = Jabatan::where('nama_jabatan', $nama_jabatan)->first();
+                if (!$jab) {
+                    $baseCode = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $nama_jabatan), 0, 3));
+                    if (strlen($baseCode) < 3) {
+                        $baseCode = str_pad($baseCode, 3, 'X');
+                    }
+                    $code = $baseCode;
+                    $counter = 1;
+                    while (Jabatan::where('kode_jabatan', $code)->exists() && $counter < 10) {
+                        $code = substr($baseCode, 0, 2) . $counter;
+                        $counter++;
+                    }
+                    if (Jabatan::where('kode_jabatan', $code)->exists()) {
+                        $code = strtoupper(substr(md5(uniqid()), 0, 3));
+                    }
+                    $jab = Jabatan::create([
+                        'kode_jabatan' => $code,
+                        'nama_jabatan' => $nama_jabatan
+                    ]);
+                }
+                $kode_jabatan = $jab->kode_jabatan;
+
+                // 2. Resolve Departemen from Divisi
+                if ($user->role->divisi) {
+                    $nama_dept = substr($user->role->divisi->nama_divisi, 0, 30);
+                    $dept = Departemen::where('nama_dept', $nama_dept)->first();
+                    if (!$dept) {
+                        $baseCode = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $nama_dept), 0, 3));
+                        if (strlen($baseCode) < 3) {
+                            $baseCode = str_pad($baseCode, 3, 'X');
+                        }
+                        $code = $baseCode;
+                        $counter = 1;
+                        while (Departemen::where('kode_dept', $code)->exists() && $counter < 10) {
+                            $code = substr($baseCode, 0, 2) . $counter;
+                            $counter++;
+                        }
+                        if (Departemen::where('kode_dept', $code)->exists()) {
+                            $code = strtoupper(substr(md5(uniqid()), 0, 3));
+                        }
+                        $dept = Departemen::create([
+                            'kode_dept' => $code,
+                            'nama_dept' => $nama_dept
+                        ]);
+                    }
+                    $kode_dept = $dept->kode_dept;
+                }
+            }
+        }
+
+        // Ensure fallbacks exist in DB if selected
+        if ($kode_dept === 'OTH') {
+            Departemen::firstOrCreate(['kode_dept' => 'OTH'], ['nama_dept' => 'Lainnya']);
+        }
+        if ($kode_jabatan === 'STF') {
+            Jabatan::firstOrCreate(['kode_jabatan' => 'STF'], ['nama_jabatan' => 'Staff']);
+        }
+
+        return [
+            'kode_dept' => $kode_dept,
+            'kode_jabatan' => $kode_jabatan
+        ];
     }
 
     public function destroy($nik)

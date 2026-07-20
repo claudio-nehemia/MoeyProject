@@ -653,7 +653,7 @@ export default function Index({ karyawans, users, cabangs, departemens, jabatans
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-[10px] font-extrabold uppercase tracking-wider text-stone-500 mb-1">Jenis Kelamin</label>
                                 <select
@@ -681,9 +681,7 @@ export default function Index({ karyawans, users, cabangs, departemens, jabatans
                                 </select>
                                 {errors.user_id && <span className="text-red-500 text-xs mt-1 block">{errors.user_id}</span>}
                             </div>
-                        </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-[10px] font-extrabold uppercase tracking-wider text-stone-500 mb-1">Cabang Kantor</label>
                                 <select
@@ -697,36 +695,6 @@ export default function Index({ karyawans, users, cabangs, departemens, jabatans
                                     ))}
                                 </select>
                                 {errors.kode_cabang && <span className="text-red-500 text-xs mt-1 block">{errors.kode_cabang}</span>}
-                            </div>
-
-                            <div>
-                                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-stone-500 mb-1">Departemen / Divisi</label>
-                                <select
-                                    value={data.kode_dept}
-                                    onChange={e => setData('kode_dept', e.target.value)}
-                                    className="w-full px-3 py-2 text-xs border border-stone-250 rounded-xl focus:ring-amber-500 focus:border-amber-500 bg-white"
-                                    required
-                                >
-                                    {departemens.map(d => (
-                                        <option key={d.kode_dept} value={d.kode_dept}>{d.nama_dept}</option>
-                                    ))}
-                                </select>
-                                {errors.kode_dept && <span className="text-red-500 text-xs mt-1 block">{errors.kode_dept}</span>}
-                            </div>
-
-                            <div>
-                                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-stone-500 mb-1">Jabatan Kepegawaian</label>
-                                <select
-                                    value={data.kode_jabatan}
-                                    onChange={e => setData('kode_jabatan', e.target.value)}
-                                    className="w-full px-3 py-2 text-xs border border-stone-250 rounded-xl focus:ring-amber-500 focus:border-amber-500 bg-white"
-                                    required
-                                >
-                                    {jabatans.map(j => (
-                                        <option key={j.kode_jabatan} value={j.kode_jabatan}>{j.nama_jabatan}</option>
-                                    ))}
-                                </select>
-                                {errors.kode_jabatan && <span className="text-red-500 text-xs mt-1 block">{errors.kode_jabatan}</span>}
                             </div>
                         </div>
 
