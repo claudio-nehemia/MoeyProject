@@ -26,7 +26,7 @@ class SlipgajiController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $userKaryawan = $user->userkaryawan;
+        $userKaryawan = $user->karyawan;
         if (!$userKaryawan) {
             return response()->json([
                 'success' => false,
@@ -124,7 +124,7 @@ class SlipgajiController extends Controller
     public function show(Request $request, $bulan, $tahun)
     {
         $user = $request->user();
-        $userKaryawan = $user->userkaryawan;
+        $userKaryawan = $user->karyawan;
         if (!$userKaryawan) {
             return response()->json([
                 'success' => false,

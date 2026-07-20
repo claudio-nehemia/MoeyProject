@@ -30,43 +30,8 @@ class DashboardController extends Controller
         }
 
         $nik = $karyawan->nik;
-        $hari_ini = Carbon::now(config('app.timezone'))->format('Y-m-d');
-
-        // 1. Get today's attendance status
-        $presensi = Presensi::where('nik', $nik)
-            ->where('tanggal', $hari_ini)
-            ->first();
-
-        // 2. Get monthly recap stats
-        $rekap = Presensi::select(
-            DB::raw("SUM(CASE WHEN status='h' THEN 1 ELSE 0 END) as hadir"),
-            DB::raw("SUM(CASE WHEN status='i' THEN 1 ELSE 0 END) as izin"),
-            DB::raw("SUM(CASE WHEN status='s' THEN 1 ELSE 0 END) as sakit"),
-            DB::raw("SUM(CASE WHEN status='c' THEN 1 ELSE 0 END) as cuti"),
-            DB::raw("SUM(CASE WHEN status='a' THEN 1 ELSE 0 END) as alpa")
-        )
-            ->where('nik', $nik)
-            ->whereRaw("EXTRACT(MONTH FROM tanggal) = EXTRACT(MONTH FROM CAST(? AS DATE))", [$hari_ini])
-            ->whereRaw("EXTRACT(YEAR FROM tanggal) = EXTRACT(YEAR FROM CAST(? AS DATE))", [$hari_ini])
-            ->groupBy('nik')
-            ->first();
-
-        // 3. Get latest announcement
-        $pengumuman = Pengumuman::orderBy('created_at', 'desc')->first();
-
-        // 4. Check if it's user's birthday
-        $is_birthday = false;
-        $umur = null;
-        if ($karyawan->tanggal_lahir) {
-            $tanggalLahir = Carbon::parse($karyawan->tanggal_lahir);
-            $today = Carbon::now();
-            if ($tanggalLahir->month == $today->month && $tanggalLahir->day == $today->day) {
-                $is_birthday = true;
-                $umur = $tanggalLahir->age;
-            }
-        }
-
-        // 5. Get Branch & Active Jam Kerja for GPS presence
+        
+        // Get Branch & Active Jam Kerja for GPS presence first to calculate correct local date
         $cabang = Cabang::where('kode_cabang', $karyawan->kode_cabang)->first();
         $general_setting = Pengaturanumum::where('id', 1)->first();
         $timezone_cabang = $cabang->timezone ?? $general_setting->timezone ?? config('app.timezone');
@@ -86,6 +51,40 @@ class DashboardController extends Controller
             $batas_lh = $cekpresensi_sebelumnya->batas_presensi_pulang ?? ($general_setting ? $general_setting->batas_presensi_lintashari : '08:00:00');
             if ($jamsekarang < $batas_lh) {
                 $hariini = $tgl_sebelumnya;
+            }
+        }
+
+        // 1. Get today's attendance status using correct local date
+        $presensi = Presensi::where('nik', $nik)
+            ->where('tanggal', $hariini)
+            ->first();
+
+        // 2. Get monthly recap stats
+        $rekap = Presensi::select(
+            DB::raw("SUM(CASE WHEN status='h' THEN 1 ELSE 0 END) as hadir"),
+            DB::raw("SUM(CASE WHEN status='i' THEN 1 ELSE 0 END) as izin"),
+            DB::raw("SUM(CASE WHEN status='s' THEN 1 ELSE 0 END) as sakit"),
+            DB::raw("SUM(CASE WHEN status='c' THEN 1 ELSE 0 END) as cuti"),
+            DB::raw("SUM(CASE WHEN status='a' THEN 1 ELSE 0 END) as alpa")
+        )
+            ->where('nik', $nik)
+            ->whereRaw("EXTRACT(MONTH FROM tanggal) = EXTRACT(MONTH FROM CAST(? AS DATE))", [$hariini])
+            ->whereRaw("EXTRACT(YEAR FROM tanggal) = EXTRACT(YEAR FROM CAST(? AS DATE))", [$hariini])
+            ->groupBy('nik')
+            ->first();
+
+        // 3. Get latest announcement
+        $pengumuman = Pengumuman::orderBy('created_at', 'desc')->first();
+
+        // 4. Check if it's user's birthday
+        $is_birthday = false;
+        $umur = null;
+        if ($karyawan->tanggal_lahir) {
+            $tanggalLahir = Carbon::parse($karyawan->tanggal_lahir);
+            $today = Carbon::now();
+            if ($tanggalLahir->month == $today->month && $tanggalLahir->day == $today->day) {
+                $is_birthday = true;
+                $umur = $tanggalLahir->age;
             }
         }
 
