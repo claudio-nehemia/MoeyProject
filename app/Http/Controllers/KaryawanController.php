@@ -222,12 +222,18 @@ class KaryawanController extends Controller
         ];
     }
 
+    private function getNamaDepan($name)
+    {
+        $words = explode(' ', $name);
+        return $words[0];
+    }
+
     public function destroy($nik)
     {
         $karyawan = Karyawan::findOrFail($nik);
         
         // Hapus folder master wajah
-        $namaDepan = getNamaDepan(strtolower($karyawan->nama_karyawan));
+        $namaDepan = $this->getNamaDepan(strtolower($karyawan->nama_karyawan));
         $folderName = $karyawan->nik . "-" . $namaDepan;
         $folderPath = "uploads/facerecognition/" . $folderName;
         
@@ -250,7 +256,7 @@ class KaryawanController extends Controller
 
         $image = $request->file('image');
 
-        $namaDepan = getNamaDepan(strtolower($karyawan->nama_karyawan));
+        $namaDepan = $this->getNamaDepan(strtolower($karyawan->nama_karyawan));
         $folderName = $karyawan->nik . "-" . $namaDepan;
         $folderPath = "uploads/facerecognition/" . $folderName;
 
@@ -276,7 +282,7 @@ class KaryawanController extends Controller
         $karyawan = Karyawan::findOrFail($nik);
         $face = Facerecognition::findOrFail($id);
 
-        $namaDepan = getNamaDepan(strtolower($karyawan->nama_karyawan));
+        $namaDepan = $this->getNamaDepan(strtolower($karyawan->nama_karyawan));
         $folderName = $karyawan->nik . "-" . $namaDepan;
         $filePath = "uploads/facerecognition/" . $folderName . "/" . $face->wajah;
 
