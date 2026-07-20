@@ -857,6 +857,81 @@ export default function Sidebar({
         },
     ];
 
+    const payrollMenus: MenuItem[] = [
+        {
+            name: 'Gaji Pokok',
+            href: '/gaji-pokok',
+            page: 'gaji-pokok',
+            permission: 'karyawan.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            ),
+            gradient: 'from-emerald-500 to-emerald-600',
+        },
+        {
+            name: 'Tunjangan',
+            href: '/tunjangan',
+            page: 'tunjangan',
+            permission: 'karyawan.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            ),
+            gradient: 'from-blue-500 to-blue-600',
+        },
+        {
+            name: 'Denda',
+            href: '/denda',
+            page: 'denda',
+            permission: 'karyawan.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            ),
+            gradient: 'from-red-500 to-red-600',
+        },
+        {
+            name: 'Penyesuaian Gaji',
+            href: '/penyesuaian-gaji',
+            page: 'penyesuaian-gaji',
+            permission: 'karyawan.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+            ),
+            gradient: 'from-indigo-500 to-indigo-600',
+        },
+        {
+            name: 'Slip Gaji',
+            href: '/slip-gaji',
+            page: 'slip-gaji',
+            permission: 'karyawan.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            ),
+            gradient: 'from-pink-500 to-pink-600',
+        },
+        {
+            name: 'PPh 21',
+            href: '/pph21',
+            page: 'pph21',
+            permission: 'karyawan.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+                </svg>
+            ),
+            gradient: 'from-purple-500 to-purple-600',
+        },
+    ];
+
     const { attendanceSettings } = usePage<any>().props;
     const isApprovalRole = auth?.user?.role?.id && attendanceSettings?.cuti_approval_role_id && 
                           (auth.user.role.id === attendanceSettings.cuti_approval_role_id || 
@@ -873,6 +948,10 @@ export default function Sidebar({
     );
 
     let visiblePresensi = presensiMenus.filter(
+        (menu) => !menu.permission || hasPermission(menu.permission),
+    );
+
+    const visiblePayroll = payrollMenus.filter(
         (menu) => !menu.permission || hasPermission(menu.permission),
     );
 
@@ -1027,6 +1106,25 @@ export default function Sidebar({
                                     renderMenuItem(
                                         menu,
                                         visibleMasterData.length + visibleOperations.length + index,
+                                    ),
+                                )}
+                            </ul>
+                        </>
+                    )}
+
+                    {/* Penggajian & Finance Section */}
+                    {visiblePayroll.length > 0 && (
+                        <>
+                            <div className="mt-4 mb-2 border-t border-stone-200 px-1.5 py-3 pt-4">
+                                <p className="text-xs font-bold tracking-wider text-stone-500 uppercase">
+                                    Penggajian & Slip Gaji
+                                </p>
+                            </div>
+                            <ul className="mb-6 space-y-1.5 font-medium font-bold">
+                                {visiblePayroll.map((menu, index) =>
+                                    renderMenuItem(
+                                        menu,
+                                        visibleMasterData.length + visibleOperations.length + visiblePresensi.length + index,
                                     ),
                                 )}
                             </ul>
