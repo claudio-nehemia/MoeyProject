@@ -228,7 +228,7 @@ class SlipgajiController extends Controller
         $jenis_tunjangan = Jenistunjangan::orderBy('kode_jenis_tunjangan')->get();
         $select_tunjangan = [];
         foreach ($jenis_tunjangan as $jt) {
-            $select_tunjangan[] = DB::raw('SUM(IF(karyawan_tunjangan_detail.kode_jenis_tunjangan = "' . $jt->kode_jenis_tunjangan . '", karyawan_tunjangan_detail.jumlah, 0)) as jumlah_' . $jt->kode_jenis_tunjangan);
+            $select_tunjangan[] = DB::raw("SUM(CASE WHEN karyawan_tunjangan_detail.kode_jenis_tunjangan = '" . $jt->kode_jenis_tunjangan . "' THEN karyawan_tunjangan_detail.jumlah ELSE 0 END) as jumlah_" . $jt->kode_jenis_tunjangan);
         }
 
         $tunjangan_sub = Detailtunjangan::join('karyawan_tunjangan', 'karyawan_tunjangan_detail.kode_tunjangan', '=', 'karyawan_tunjangan.kode_tunjangan')

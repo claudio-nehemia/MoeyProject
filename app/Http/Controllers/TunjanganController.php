@@ -18,7 +18,7 @@ class TunjanganController extends Controller
         
         $select_tunjangan = [];
         foreach ($jenis_tunjangan as $d) {
-            $select_tunjangan[] = DB::raw('SUM(IF(karyawan_tunjangan_detail.kode_jenis_tunjangan = "' . $d->kode_jenis_tunjangan . '", karyawan_tunjangan_detail.jumlah, 0)) as jumlah_' . $d->kode_jenis_tunjangan);
+            $select_tunjangan[] = DB::raw("SUM(CASE WHEN karyawan_tunjangan_detail.kode_jenis_tunjangan = '" . $d->kode_jenis_tunjangan . "' THEN karyawan_tunjangan_detail.jumlah ELSE 0 END) as jumlah_" . $d->kode_jenis_tunjangan);
         }
 
         $query = Detailtunjangan::query()
