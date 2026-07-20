@@ -43,7 +43,7 @@ class GajipokokController extends Controller
         try {
             $tahun_gaji = date('Y', strtotime($request->tanggal_berlaku));
             $last_gaji = Gajipokok::orderBy('kode_gaji', 'desc')
-                ->whereRaw('YEAR(tanggal_berlaku) = ' . $tahun_gaji)
+                ->whereYear('tanggal_berlaku', $tahun_gaji)
                 ->first();
             $last_kode_gaji = $last_gaji ? $last_gaji->kode_gaji : '';
             

@@ -42,7 +42,7 @@ class BpjskesehatanController extends Controller
         try {
             $tahun = date('Y', strtotime($request->tanggal_berlaku));
             $last_bpjs = Bpjskesehatan::orderBy('kode_bpjs_kesehatan', 'desc')
-                ->whereRaw('YEAR(tanggal_berlaku) = ' . $tahun)
+                ->whereYear('tanggal_berlaku', $tahun)
                 ->first();
             $last_kode = $last_bpjs ? $last_bpjs->kode_bpjs_kesehatan : '';
 

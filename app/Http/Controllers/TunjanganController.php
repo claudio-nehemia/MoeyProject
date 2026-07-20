@@ -72,7 +72,7 @@ class TunjanganController extends Controller
         try {
             $tahun_gaji = date('Y', strtotime($request->tanggal_berlaku));
             $last_tunjangan = Tunjangan::orderBy('kode_tunjangan', 'desc')
-                ->whereRaw('YEAR(tanggal_berlaku) = ' . $tahun_gaji)
+                ->whereYear('tanggal_berlaku', $tahun_gaji)
                 ->first();
             $last_kode = $last_tunjangan ? $last_tunjangan->kode_tunjangan : '';
 
