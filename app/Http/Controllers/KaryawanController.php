@@ -51,6 +51,18 @@ class KaryawanController extends Controller
             'kode_jabatan' => $resolved['kode_jabatan']
         ]);
 
+        // Ensure status_karyawan exists in database to avoid foreign key violation
+        if ($request->filled('status_karyawan')) {
+            \Illuminate\Support\Facades\DB::table('status_karyawan')->updateOrInsert(
+                ['kode_status_karyawan' => $request->input('status_karyawan')],
+                [
+                    'nama_status_karyawan' => $request->input('status_karyawan') === 'K001' ? 'Kontrak' : ($request->input('status_karyawan') === 'T001' ? 'Tetap' : 'Magang'),
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]
+            );
+        }
+
         $validated = $request->validate([
             'nik' => 'required|string|max:9|unique:karyawan,nik',
             'user_id' => 'nullable|integer|exists:users,id',
@@ -91,6 +103,18 @@ class KaryawanController extends Controller
             'kode_dept' => $resolved['kode_dept'],
             'kode_jabatan' => $resolved['kode_jabatan']
         ]);
+
+        // Ensure status_karyawan exists in database to avoid foreign key violation
+        if ($request->filled('status_karyawan')) {
+            \Illuminate\Support\Facades\DB::table('status_karyawan')->updateOrInsert(
+                ['kode_status_karyawan' => $request->input('status_karyawan')],
+                [
+                    'nama_status_karyawan' => $request->input('status_karyawan') === 'K001' ? 'Kontrak' : ($request->input('status_karyawan') === 'T001' ? 'Tetap' : 'Magang'),
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]
+            );
+        }
 
         \Illuminate\Support\Facades\Log::info("KARYAWAN_UPDATE_REQUEST for NIK $nik:", $request->all());
 
