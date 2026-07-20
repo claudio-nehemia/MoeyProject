@@ -44,11 +44,57 @@ class PengumumanController extends Controller
             $lampiranPath = $request->file('lampiran_file')->store('uploads/pengumuman', 'public');
         }
 
-        Pengumuman::create([
+        $pengumuman = Pengumuman::create([
             'judul' => $validated['judul'],
             'isi' => $validated['isi'],
             'lampiran' => $lampiranPath
         ]);
+
+        // Broadcast to all users
+        try {
+            $users = \App\Models\User::all();
+            $fcmService = new \App\Services\FCMService();
+            $fcmTokens = [];
+            $notificationsData = [];
+
+            $now = now();
+            foreach ($users as $user) {
+                $notificationsData[] = [
+                    'user_id' => $user->id,
+                    'type' => 'pengumuman',
+                    'title' => 'Pengumuman Baru: ' . $pengumuman->judul,
+                    'message' => strip_tags($pengumuman->isi),
+                    'data' => json_encode([
+                        'pengumuman_id' => $pengumuman->id,
+                        'action_url' => '/dashboard',
+                    ]),
+                    'is_read' => false,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+
+                if ($user->fcm_token) {
+                    $fcmTokens[] = $user->fcm_token;
+                }
+            }
+
+            if (!empty($notificationsData)) {
+                \App\Models\Notification::insert($notificationsData);
+            }
+
+            if (!empty($fcmTokens)) {
+                $fcmService->sendMulticast($fcmTokens, [
+                    'title' => 'Pengumuman Baru: ' . $pengumuman->judul,
+                    'body' => strip_tags($pengumuman->isi),
+                    'data' => [
+                        'type' => 'pengumuman',
+                        'pengumuman_id' => (string) $pengumuman->id,
+                    ]
+                ]);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error broadcasting announcement: ' . $e->getMessage());
+        }
 
         return redirect()->back()->with('success', 'Pengumuman berhasil diterbitkan.');
     }
