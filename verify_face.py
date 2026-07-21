@@ -100,20 +100,28 @@ except Exception as e:
     exit_with_json(False, f"Failed to initialize face recognition: {str(e)}")
 
 def extract_feature(img_path):
-    img = cv2.imread(img_path)
-    if img is None:
-        return None
-    h, w, _ = img.shape
-    
-    # Set input size for YuNet detector
-    detector.setInputSize((w, h))
-    _, faces = detector.detect(img)
-    
-    if faces is None or len(faces) == 0:
-        return None
-    
-    # Align and crop the first detected face, then resize to 112x112 (SFace standard input)
     try:
+        img = cv2.imread(img_path)
+        if img is None:
+            return None
+        h, w, _ = img.shape
+        
+        # Round width and height to nearest multiple of 32 to prevent YuNet getMemoryShapes crash on odd dimensions
+        new_w = int(round(w / 32.0) * 32)
+        new_h = int(round(h / 32.0) * 32)
+        new_w = max(new_w, 32)
+        new_h = max(new_h, 32)
+        
+        img = cv2.resize(img, (new_w, new_h))
+        
+        # Set input size for YuNet detector
+        detector.setInputSize((new_w, new_h))
+        _, faces = detector.detect(img)
+        
+        if faces is None or len(faces) == 0:
+            return None
+        
+        # Align and crop the first detected face, then resize to 112x112 (SFace standard input)
         aligned_face = recognizer.alignCrop(img, faces[0])
         aligned_face = cv2.resize(aligned_face, (112, 112))
         feature = recognizer.feature(aligned_face)
