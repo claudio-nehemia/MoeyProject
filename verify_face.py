@@ -58,8 +58,8 @@ if not is_good_exposure:
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'storage', 'models')
 os.makedirs(MODELS_DIR, exist_ok=True)
 
-# Correct GitHub raw URLs using the main branch
-YUNET_URL = "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2022mar.onnx"
+# Correct raw URLs (using Hugging Face mirror for 2022mar to avoid GitHub 404)
+YUNET_URL = "https://huggingface.co/opencv/opencv_zoo/resolve/main/models/face_detection_yunet/face_detection_yunet_2022mar.onnx"
 SFACE_URL = "https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx"
 
 yunet_path = os.path.join(MODELS_DIR, 'yunet_2022.onnx')
