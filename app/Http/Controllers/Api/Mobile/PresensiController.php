@@ -160,6 +160,18 @@ class PresensiController extends Controller
             }
 
             $pythonPath = PHP_OS_FAMILY === 'Windows' ? 'python' : 'python3';
+            if (PHP_OS_FAMILY === 'Windows') {
+                if (file_exists(base_path('venv/Scripts/python.exe'))) {
+                    $pythonPath = escapeshellarg(base_path('venv/Scripts/python.exe'));
+                }
+            } else {
+                if (file_exists(base_path('venv/bin/python'))) {
+                    $pythonPath = escapeshellarg(base_path('venv/bin/python'));
+                } elseif (file_exists(base_path('venv/bin/python3'))) {
+                    $pythonPath = escapeshellarg(base_path('venv/bin/python3'));
+                }
+            }
+
             $scriptPath = base_path('verify_face.py');
             
             $command = $pythonPath . " " . escapeshellarg($scriptPath) . " " . escapeshellarg($selfieFullPath);
