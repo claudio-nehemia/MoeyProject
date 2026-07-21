@@ -112,9 +112,10 @@ def extract_feature(img_path):
     if faces is None or len(faces) == 0:
         return None
     
-    # Align and crop the first detected face
+    # Align and crop the first detected face, then resize to 112x112 (SFace standard input)
     try:
         aligned_face = recognizer.alignCrop(img, faces[0])
+        aligned_face = cv2.resize(aligned_face, (112, 112))
         feature = recognizer.feature(aligned_face)
         return feature
     except Exception:
