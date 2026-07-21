@@ -33,11 +33,12 @@ interface Karyawan {
 interface Props {
     slipgajis: Slipgaji[];
     slipgaji_harian: SlipgajiHarian[];
+    karyawans: Karyawan[];
     list_bulan: { [key: number]: string };
     tahun_harian?: string;
 }
 
-export default function Index({ slipgajis, slipgaji_harian, list_bulan, tahun_harian }: Props) {
+export default function Index({ slipgajis, slipgaji_harian, karyawans, list_bulan, tahun_harian }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 1024;
@@ -57,7 +58,7 @@ export default function Index({ slipgajis, slipgaji_harian, list_bulan, tahun_ha
     const [editModeH, setEditModeH] = useState(false);
     const [selectedH, setSelectedH] = useState<SlipgajiHarian | null>(null);
 
-    const [karyawans, setKaryawans] = useState<Karyawan[]>([]);
+
     const [selectedNiks, setSelectedNiks] = useState<string[]>([]);
     const [filterTahunHarian, setFilterTahunHarian] = useState(tahun_harian || new Date().getFullYear().toString());
 
@@ -88,16 +89,6 @@ export default function Index({ slipgajis, slipgaji_harian, list_bulan, tahun_ha
             }
         };
         window.addEventListener('resize', handleResize);
-        
-        // Fetch karyawans from /gaji-pokok prop JSON
-        fetch('/gaji-pokok', { headers: { 'X-Inertia': 'true', 'X-Inertia-Version': '1.0' } })
-            .then(res => res.json())
-            .then(json => {
-                if (json.props && json.props.karyawans) {
-                    setKaryawans(json.props.karyawans);
-                }
-            })
-            .catch(err => console.error('Error fetching employees list:', err));
 
         return () => window.removeEventListener('resize', handleResize);
     }, []);

@@ -22,6 +22,8 @@ class SlipgajiController extends Controller
         }
         $slipgaji_harian = $queryHarian->orderBy('tanggal_slip', 'desc')->get();
 
+        $karyawans = \App\Models\Karyawan::select('nik', 'nik_show', 'nama_karyawan')->orderBy('nama_karyawan')->get();
+
         $list_bulan = [
             1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
             5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
@@ -31,6 +33,7 @@ class SlipgajiController extends Controller
         return Inertia::render('Slipgaji/Index', [
             'slipgajis' => $slipgaji,
             'slipgaji_harian' => $slipgaji_harian,
+            'karyawans' => $karyawans,
             'list_bulan' => $list_bulan,
             'tahun_harian' => $request->tahun_harian
         ]);
