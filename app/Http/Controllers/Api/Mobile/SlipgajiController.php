@@ -318,17 +318,20 @@ class SlipgajiController extends Controller
             ->keyBy('tanggal')
             ->toArray();
 
-        $cek_group = DB::table('grup_detail')->where('nik', $nik)->first();
+        $cek_group = null;
         $jadwal_grup_bydate = [];
-        if ($cek_group) {
-            $jadwal_grup_bydate = DB::table('grup_jamkerja_bydate')
-                ->join('presensi_jamkerja', 'grup_jamkerja_bydate.kode_jam_kerja', '=', 'presensi_jamkerja.kode_jam_kerja')
-                ->where('kode_grup', $cek_group->kode_grup)
-                ->whereBetween('tanggal', [$periode_dari, $periode_sampai])
-                ->select('tanggal', 'presensi_jamkerja.total_jam', 'presensi_jamkerja.nama_jam_kerja', 'presensi_jamkerja.jam_masuk', 'presensi_jamkerja.jam_pulang')
-                ->get()
-                ->keyBy('tanggal')
-                ->toArray();
+        if (\Illuminate\Support\Facades\Schema::hasTable('grup_detail')) {
+            $cek_group = DB::table('grup_detail')->where('nik', $nik)->first();
+            if ($cek_group && \Illuminate\Support\Facades\Schema::hasTable('grup_jamkerja_bydate')) {
+                $jadwal_grup_bydate = DB::table('grup_jamkerja_bydate')
+                    ->join('presensi_jamkerja', 'grup_jamkerja_bydate.kode_jam_kerja', '=', 'presensi_jamkerja.kode_jam_kerja')
+                    ->where('kode_grup', $cek_group->kode_grup)
+                    ->whereBetween('tanggal', [$periode_dari, $periode_sampai])
+                    ->select('tanggal', 'presensi_jamkerja.total_jam', 'presensi_jamkerja.nama_jam_kerja', 'presensi_jamkerja.jam_masuk', 'presensi_jamkerja.jam_pulang')
+                    ->get()
+                    ->keyBy('tanggal')
+                    ->toArray();
+            }
         }
 
         $jadwal_byday = DB::table('presensi_jamkerja_byday')
@@ -353,12 +356,15 @@ class SlipgajiController extends Controller
         $datalibur = function_exists('getdatalibur') ? getdatalibur($periode_dari, $periode_sampai) : [];
         $datalembur = function_exists('getlembur') ? getlembur($periode_dari, $periode_sampai) : [];
 
-        $libur_nasional_dates = DB::table('hari_libur_detail')
-            ->join('hari_libur', 'hari_libur_detail.kode_libur', '=', 'hari_libur.kode_libur')
-            ->whereBetween('hari_libur.tanggal', [$periode_dari, $periode_sampai])
-            ->pluck('hari_libur.tanggal')
-            ->flip()
-            ->toArray();
+        $libur_nasional_dates = [];
+        if (\Illuminate\Support\Facades\Schema::hasTable('hari_libur_detail') && \Illuminate\Support\Facades\Schema::hasTable('hari_libur')) {
+            $libur_nasional_dates = DB::table('hari_libur_detail')
+                ->join('hari_libur', 'hari_libur_detail.kode_libur', '=', 'hari_libur.kode_libur')
+                ->whereBetween('hari_libur.tanggal', [$periode_dari, $periode_sampai])
+                ->pluck('hari_libur.tanggal')
+                ->flip()
+                ->toArray();
+        }
 
         $datalibur_indexed = [];
         foreach ($datalibur as $item) {
@@ -597,10 +603,13 @@ class SlipgajiController extends Controller
         }
 
         // Overtime wage calculation
-        $lembur_khusus = DB::table('lembur_karyawan_khusus')
-            ->where('nik', $nik)
-            ->where('status', 1)
-            ->first();
+        $lembur_khusus = null;
+        if (\Illuminate\Support\Facades\Schema::hasTable('lembur_karyawan_khusus')) {
+            $lembur_khusus = DB::table('lembur_karyawan_khusus')
+                ->where('nik', $nik)
+                ->where('status', 1)
+                ->first();
+        }
 
         if ($has_lembur_snapshot) {
             $upah_lembur = $total_nominal_lembur_snapshot;
@@ -620,10 +629,13 @@ class SlipgajiController extends Controller
         $pph21_ditanggung_perusahaan = 0;
         $active_metode_tanggungan = 'GROSS';
 
-        $snapshot = DB::table('pph21_slip_detail')
-            ->where('kode_slip_gaji', $slipGajiRecord->kode_slip_gaji)
-            ->where('nik', $nik)
-            ->first();
+        $snapshot = null;
+        if (\Illuminate\Support\Facades\Schema::hasTable('pph21_slip_detail')) {
+            $snapshot = DB::table('pph21_slip_detail')
+                ->where('kode_slip_gaji', $slipGajiRecord->kode_slip_gaji)
+                ->where('nik', $nik)
+                ->first();
+        }
 
         if ($snapshot) {
             $pph21_terutang = $snapshot->pph21_terutang;
@@ -648,7 +660,7 @@ class SlipgajiController extends Controller
 
             $totalPphJanNov = 0;
             $totalBrutoJanNov = 0;
-            if ($bulan == 12) {
+            if ($bulan == 12 && \Illuminate\Support\Facades\Schema::hasTable('pph21_slip_detail')) {
                 $janNovStats = DB::table('pph21_slip_detail')
                     ->join('slip_gaji', 'pph21_slip_detail.kode_slip_gaji', '=', 'slip_gaji.kode_slip_gaji')
                     ->select(
