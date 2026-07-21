@@ -29,7 +29,7 @@ def check_blur(img_path):
     if img is None:
         return False, "Gagal membaca berkas gambar untuk pengecekan blur."
     laplacian_var = cv2.Laplacian(img, cv2.CV_64F).var()
-    if laplacian_var < 80.0:
+    if laplacian_var < 40.0:
         return False, f"Gambar terlalu kabur atau tidak tajam. Mohon ambil foto di tempat yang lebih stabil."
     return True, ""
 
@@ -39,9 +39,9 @@ def check_exposure(img_path):
     if img is None:
         return False, "Gagal membaca berkas gambar untuk pengecekan pencahayaan."
     mean_brightness = img.mean()
-    if mean_brightness < 80.0:
+    if mean_brightness < 50.0:
         return False, f"Pencahayaan terlalu gelap. Mohon cari tempat yang lebih terang."
-    if mean_brightness > 220.0:
+    if mean_brightness > 240.0:
         return False, f"Pencahayaan terlalu silau/terang. Mohon cari tempat dengan pencahayaan stabil."
     return True, ""
 
