@@ -77,16 +77,17 @@ class SlipgajiController extends Controller
 
     public function update(Request $request, $kode_slip_gaji)
     {
-        $slipgaji = Slipgaji::where('kode_slip_gaji', $kode_slip_gaji)->firstOrFail();
-
-        $request->validate([
-            'bulan' => 'required|integer|between:1,12',
-            'tahun' => 'required|integer',
-            'status' => 'required|in:0,1',
-            'jenis_upah' => 'nullable|in:Bulanan,Harian'
-        ]);
-
+        \Illuminate\Support\Facades\Log::info("Slipgaji update request for {$kode_slip_gaji}: ", $request->all());
         try {
+            $slipgaji = Slipgaji::where('kode_slip_gaji', $kode_slip_gaji)->firstOrFail();
+
+            $request->validate([
+                'bulan' => 'required|integer|between:1,12',
+                'tahun' => 'required|integer',
+                'status' => 'required|in:0,1',
+                'jenis_upah' => 'nullable|in:Bulanan,Harian'
+            ]);
+
             $oldStatus = $slipgaji->status;
 
             $slipgaji->update([
@@ -101,7 +102,11 @@ class SlipgajiController extends Controller
             }
 
             return redirect()->back()->with('success', 'Slip gaji berhasil diubah.');
+        } catch (\Illuminate\Validation\ValidationException $ve) {
+            \Illuminate\Support\Facades\Log::error("Slipgaji validation error: ", $ve->errors());
+            return redirect()->back()->with('error', 'Gagal validasi data: ' . json_encode($ve->errors()));
         } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Slipgaji update error: " . $e->getMessage());
             return redirect()->back()->with('error', 'Gagal mengubah slip gaji: ' . $e->getMessage());
         }
     }
