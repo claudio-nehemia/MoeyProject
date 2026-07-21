@@ -80,7 +80,7 @@ class SlipgajiController extends Controller
             'bulan' => 'required|integer|between:1,12',
             'tahun' => 'required|integer',
             'status' => 'required|in:0,1',
-            'jenis_upah' => 'required|in:Bulanan,Harian'
+            'jenis_upah' => 'nullable|in:Bulanan,Harian'
         ]);
 
         try {
@@ -90,7 +90,7 @@ class SlipgajiController extends Controller
                 'bulan' => $request->bulan,
                 'tahun' => $request->tahun,
                 'status' => $request->status,
-                'jenis_upah' => $request->jenis_upah
+                'jenis_upah' => $request->jenis_upah ?? $slipgaji->jenis_upah ?? 'Bulanan'
             ]);
 
             if ($oldStatus != '1' && $request->status == '1') {

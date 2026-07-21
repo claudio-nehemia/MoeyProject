@@ -154,7 +154,7 @@ export default function Index({ slipgajis, slipgaji_harian, list_bulan, tahun_ha
             router.put(`/slip-gaji/${item.kode_slip_gaji}`, {
                 bulan: item.bulan,
                 tahun: item.tahun,
-                jenis_upah: item.jenis_upah,
+                jenis_upah: item.jenis_upah || 'Bulanan',
                 status: newStatus
             });
         }
