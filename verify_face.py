@@ -88,7 +88,7 @@ try:
         yunet_path,      # model
         "",              # config
         (320, 320),      # inputSize
-        0.6,             # scoreThreshold
+        0.5,             # scoreThreshold (relaxed from 0.6 for better detection in low-light/various angles)
         0.3,             # nmsThreshold
         5000             # topK
     )
@@ -103,6 +103,7 @@ def extract_feature(img_path):
     try:
         img = cv2.imread(img_path)
         if img is None:
+            sys.stderr.write(f"Failed to read image path: {img_path}\n")
             return None
         h, w, _ = img.shape
         
@@ -116,17 +117,26 @@ def extract_feature(img_path):
         
         # Set input size for YuNet detector
         detector.setInputSize((new_w, new_h))
-        _, faces = detector.detect(img)
+        try:
+            _, faces = detector.detect(img)
+        except Exception as e:
+            sys.stderr.write(f"YuNet detect error on {img_path}: {str(e)}\n")
+            return None
         
         if faces is None or len(faces) == 0:
             return None
         
         # Align and crop the first detected face, then resize to 112x112 (SFace standard input)
-        aligned_face = recognizer.alignCrop(img, faces[0])
-        aligned_face = cv2.resize(aligned_face, (112, 112))
-        feature = recognizer.feature(aligned_face)
-        return feature
-    except Exception:
+        try:
+            aligned_face = recognizer.alignCrop(img, faces[0])
+            aligned_face = cv2.resize(aligned_face, (112, 112))
+            feature = recognizer.feature(aligned_face)
+            return feature
+        except Exception as e:
+            sys.stderr.write(f"SFace align/feature error on {img_path}: {str(e)}\n")
+            return None
+    except Exception as e:
+        sys.stderr.write(f"extract_feature general error on {img_path}: {str(e)}\n")
         return None
 
 # Extract feature from uploaded selfie
