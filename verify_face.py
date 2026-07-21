@@ -140,8 +140,8 @@ if not registered_files:
 
 best_score = -1.0
 
-# Cosine similarity threshold for SFace (typically >= 0.363 is considered a match)
-COSINE_THRESHOLD = 0.363
+# Cosine similarity threshold for SFace (relaxed from 0.363 to 0.28 for better mobile tolerance)
+COSINE_THRESHOLD = 0.28
 
 for reg_file in registered_files:
     reg_feature = extract_feature(reg_file)
@@ -159,4 +159,4 @@ for reg_file in registered_files:
 if best_score >= COSINE_THRESHOLD:
     exit_with_json(True, "Verifikasi wajah berhasil.", best_score)
 else:
-    exit_with_json(False, "Wajah tidak cocok dengan data wajah yang terdaftar.", best_score)
+    exit_with_json(False, f"Wajah tidak cocok dengan data wajah yang terdaftar (Score: {best_score:.3f}).", best_score)
