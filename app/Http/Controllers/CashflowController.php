@@ -80,7 +80,7 @@ class CashflowController extends Controller
                     'total_received' => $totalReceived,
                     'sisa_piutang' => $sisaPiutang,
                     'has_bast' => !empty($ip?->bast_number),
-                    'status_project' => round($this->calculateStatusProject($order)),
+                    'status_project' => round($this->calculateStatusProject($order, $split['total'], $totalReceived)),
                 ];
             });
 
@@ -1357,12 +1357,17 @@ class CashflowController extends Controller
         return $formatted;
     }
 
-    private function calculateStatusProject(Order $order)
+    private function calculateStatusProject(Order $order, float $totalContract = 0, float $totalReceived = 0)
     {
+        if ($totalContract > 0) {
+            return min(100, max(0, round(($totalReceived / $totalContract) * 100)));
+        }
+
         $manualEntries = CashflowManualEntry::where('order_id', $order->id)->get()->keyBy('category');
         $spkInternal = (float) ($manualEntries->get('spk_internal')->amount_estimasi ?? 0);
         $spkFisik = (float) ($manualEntries->get('spk_fisik')->amount_estimasi ?? 0);
         $spkExternal = (float) ($manualEntries->get('spk_external')->amount_estimasi ?? 0);
+        $totalSpk = $spkInternal + $spkFisik + $spkExternal;
 
         $vendorEntries = CashflowVendorEntry::where('order_id', $order->id)->get();
 
@@ -1407,11 +1412,13 @@ class CashflowController extends Controller
             ->sum('pembayaran_termin');
         $realisasiExternal = $totalDpExternal + $totalTerminExternal;
 
-        $sisaSaldoInternal = $spkInternal - $realisasiInternal;
-        $sisaSaldoFisik = $spkFisik - $realisasiFisik;
-        $sisaSaldoExternal = $spkExternal - $realisasiExternal;
+        $totalRealisasi = $realisasiInternal + $realisasiFisik + $realisasiExternal;
 
-        return $sisaSaldoInternal + $sisaSaldoFisik + $sisaSaldoExternal;
+        if ($totalSpk > 0) {
+            return min(100, max(0, round(($totalRealisasi / $totalSpk) * 100)));
+        }
+
+        return 0;
     }
 
     public function toggleVendorFlag(Request $request, CashflowVendorEntry $entry)
