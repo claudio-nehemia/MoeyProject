@@ -12,9 +12,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        try {
+        $driver = DB::connection()->getDriverName();
+
+        if ($driver === 'pgsql') {
+            DB::statement("ALTER TABLE karyawan ALTER COLUMN no_ktp DROP NOT NULL;");
+        } elseif ($driver === 'mysql') {
             DB::statement("ALTER TABLE karyawan MODIFY no_ktp VARCHAR(16) NULL;");
-        } catch (\Exception $e) {
+        } else {
             Schema::table('karyawan', function (Blueprint $table) {
                 $table->string('no_ktp', 16)->nullable()->change();
             });
@@ -26,9 +30,13 @@ return new class extends Migration
      */
     public function down(): void
     {
-        try {
+        $driver = DB::connection()->getDriverName();
+
+        if ($driver === 'pgsql') {
+            DB::statement("ALTER TABLE karyawan ALTER COLUMN no_ktp SET NOT NULL;");
+        } elseif ($driver === 'mysql') {
             DB::statement("ALTER TABLE karyawan MODIFY no_ktp VARCHAR(16) NOT NULL;");
-        } catch (\Exception $e) {
+        } else {
             Schema::table('karyawan', function (Blueprint $table) {
                 $table->string('no_ktp', 16)->nullable(false)->change();
             });
