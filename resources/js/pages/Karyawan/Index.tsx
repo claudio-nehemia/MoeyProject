@@ -585,7 +585,9 @@ export default function Index({ karyawans, users, cabangs, departemens, jabatans
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-stone-500 mb-1">NIK (Nomor Induk Karyawan)</label>
+                                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-stone-500 mb-1">
+                                    NIK (Nomor Induk Karyawan) <span className="text-stone-400 font-normal lowercase">(opsional)</span>
+                                </label>
                                 <input
                                     type="text"
                                     maxLength={9}
@@ -593,22 +595,22 @@ export default function Index({ karyawans, users, cabangs, departemens, jabatans
                                     value={data.nik}
                                     onChange={e => setData('nik', e.target.value)}
                                     className="w-full px-3 py-2 text-xs border border-stone-250 rounded-xl focus:ring-amber-500 focus:border-amber-500 disabled:bg-stone-50 disabled:text-stone-400"
-                                    required
-                                    placeholder="Masukkan 9 digit NIK..."
+                                    placeholder="Kosongkan untuk otomatis..."
                                 />
                                 {errors.nik && <span className="text-red-500 text-xs mt-1 block">{errors.nik}</span>}
                             </div>
                             
                             <div>
-                                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-stone-500 mb-1">No KTP (16 Digit)</label>
+                                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-stone-500 mb-1">
+                                    No KTP (16 Digit) <span className="text-stone-400 font-normal lowercase">(opsional)</span>
+                                </label>
                                 <input
                                     type="text"
                                     maxLength={16}
                                     value={data.no_ktp}
                                     onChange={e => setData('no_ktp', e.target.value)}
                                     className="w-full px-3 py-2 text-xs border border-stone-250 rounded-xl focus:ring-amber-500 focus:border-amber-500"
-                                    required
-                                    placeholder="Masukkan 16 digit NIK KTP..."
+                                    placeholder="Opsional - 16 digit KTP..."
                                 />
                                 {errors.no_ktp && <span className="text-red-500 text-xs mt-1 block">{errors.no_ktp}</span>}
                             </div>

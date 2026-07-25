@@ -37,11 +37,19 @@ class KaryawanController extends Controller
     {
         // Sanitize empty strings to null
         $inputs = $request->all();
-        foreach (['user_id', 'no_hp', 'email', 'kode_jadwal'] as $field) {
+        foreach (['user_id', 'no_hp', 'email', 'kode_jadwal', 'nik', 'no_ktp'] as $field) {
             if (isset($inputs[$field]) && $inputs[$field] === '') {
                 $inputs[$field] = null;
             }
         }
+
+        // Auto-generate NIK if empty (9 digits)
+        if (empty($inputs['nik'])) {
+            do {
+                $inputs['nik'] = str_pad((string) mt_rand(100000000, 999999999), 9, '0', STR_PAD_LEFT);
+            } while (Karyawan::where('nik', $inputs['nik'])->exists());
+        }
+
         $request->merge($inputs);
 
         // Resolve division and role automatically from linked user
@@ -64,10 +72,10 @@ class KaryawanController extends Controller
         }
 
         $validated = $request->validate([
-            'nik' => 'required|string|max:9|unique:karyawan,nik',
+            'nik' => 'nullable|string|max:9|unique:karyawan,nik',
             'user_id' => 'nullable|integer|exists:users,id',
             'nama_karyawan' => 'required|string|max:100',
-            'no_ktp' => 'required|string|max:16',
+            'no_ktp' => 'nullable|string|max:16',
             'no_hp' => 'nullable|string|max:15',
             'email' => 'nullable|string|email|max:100',
             'jenis_kelamin' => 'required|string|max:1',
@@ -78,6 +86,8 @@ class KaryawanController extends Controller
             'status_karyawan' => 'required|string|max:5',
             'kode_jadwal' => 'nullable|string|max:4|exists:presensi_jamkerja,kode_jam_kerja',
         ]);
+
+        $validated['nik'] = $inputs['nik'];
 
         Karyawan::create($validated);
 
@@ -90,7 +100,7 @@ class KaryawanController extends Controller
 
         // Sanitize empty strings to null
         $inputs = $request->all();
-        foreach (['user_id', 'no_hp', 'email', 'kode_jadwal'] as $field) {
+        foreach (['user_id', 'no_hp', 'email', 'kode_jadwal', 'no_ktp'] as $field) {
             if (isset($inputs[$field]) && $inputs[$field] === '') {
                 $inputs[$field] = null;
             }
@@ -122,7 +132,7 @@ class KaryawanController extends Controller
             $validated = $request->validate([
                 'user_id' => 'nullable|integer|exists:users,id',
                 'nama_karyawan' => 'required|string|max:100',
-                'no_ktp' => 'required|string|max:16',
+                'no_ktp' => 'nullable|string|max:16',
                 'no_hp' => 'nullable|string|max:15',
                 'email' => 'nullable|string|email|max:100',
                 'jenis_kelamin' => 'required|string|max:1',
