@@ -264,7 +264,14 @@ export default function Create({ rabInternal }: Props) {
 
         const cleanedData = formData.map(produk => ({
             ...produk,
-            aksesoris: produk.aksesoris.filter(aks => aks.qty_aksesoris > 0),
+            markup_satuan: typeof produk.markup_satuan === 'string' ? parseFloat(produk.markup_satuan) || 0 : (produk.markup_satuan || 0),
+            diskon_per_produk: typeof produk.diskon_per_produk === 'string' ? parseFloat(produk.diskon_per_produk) || 0 : (produk.diskon_per_produk || 0),
+            aksesoris: produk.aksesoris
+                .filter(aks => aks.qty_aksesoris > 0)
+                .map(aks => ({
+                    ...aks,
+                    markup_aksesoris: typeof aks.markup_aksesoris === 'string' ? parseFloat(aks.markup_aksesoris) || 0 : (aks.markup_aksesoris || 0),
+                })),
         }));
 
         setLoading(true);

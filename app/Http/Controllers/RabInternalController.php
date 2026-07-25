@@ -224,6 +224,7 @@ class RabInternalController extends Controller
                 'produks' => 'required|array',
                 'produks.*.item_pekerjaan_produk_id' => 'required|exists:item_pekerjaan_produks,id',
                 'produks.*.markup_satuan' => 'required|numeric|min:0|max:100',
+                'produks.*.diskon_per_produk' => 'nullable|numeric|min:0|max:100',
                 'produks.*.aksesoris' => 'nullable|array',
                 'produks.*.aksesoris.*.item_pekerjaan_item_id' => 'required|exists:item_pekerjaan_items,id',
                 'produks.*.aksesoris.*.qty_aksesoris' => 'required|integer|min:1',
