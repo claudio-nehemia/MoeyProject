@@ -218,6 +218,9 @@ class RabInternalController extends Controller
 
     public function store(Request $request)
     {
+        Log::info('========== RAB INTERNAL STORE START ==========');
+        Log::info('RAB_STORE: Raw request data:', $request->all());
+
         try {
             $validated = $request->validate([
                 'rab_internal_id' => 'required|exists:rab_internals,id',
@@ -231,34 +234,48 @@ class RabInternalController extends Controller
                 'produks.*.aksesoris.*.markup_aksesoris' => 'required|numeric|min:0|max:100',
             ]);
 
+            Log::info('RAB_STORE: Validation passed. rab_internal_id=' . $validated['rab_internal_id'] . ', jumlah_produks=' . count($validated['produks']));
+
             DB::beginTransaction();
 
-            foreach ($validated['produks'] as $produkData) {
+            foreach ($validated['produks'] as $idx => $produkData) {
+                Log::info("RAB_STORE: === Processing produk index={$idx} ===", $produkData);
+
                 // Get item pekerjaan produk data with selected bahan bakus
                 $itemProduk = ItemPekerjaanProduk::with(['produk', 'bahanBakus', 'jenisItems.items.item'])->findOrFail($produkData['item_pekerjaan_produk_id']);
 
+                Log::info("RAB_STORE: ItemPekerjaanProduk loaded: id={$itemProduk->id}, produk_id={$itemProduk->produk_id}, qty={$itemProduk->quantity}, P={$itemProduk->panjang}, L={$itemProduk->lebar}, T={$itemProduk->tinggi}");
+                Log::info("RAB_STORE: Produk master: nama=" . ($itemProduk->produk->nama_produk ?? 'NULL') . ", harga=" . ($itemProduk->produk->harga ?? 'NULL'));
+                Log::info("RAB_STORE: BahanBakus count=" . $itemProduk->bahanBakus->count() . ", items:", $itemProduk->bahanBakus->map(fn($bb) => ['id' => $bb->id, 'harga_dasar' => $bb->harga_dasar, 'item_id' => $bb->item_id])->toArray());
+
                 // Calculate harga dasar dari selected bahan baku
                 $hargaDasarProduk = $itemProduk->bahanBakus->sum('harga_dasar');
+                Log::info("RAB_STORE: hargaDasarProduk (sum bahan baku) = {$hargaDasarProduk}");
 
                 // Calculate harga items non-aksesoris (exclude Bahan Baku)
                 $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
                 $bahanBakuJenisItem = JenisItem::where('nama_jenis_item', 'Bahan Baku')->first();
                 $hargaItemsNonAksesoris = 0;
 
+                Log::info("RAB_STORE: JenisItem lookup: Aksesoris id=" . ($aksesorisJenisItem->id ?? 'NULL') . ", Bahan Baku id=" . ($bahanBakuJenisItem->id ?? 'NULL'));
+                Log::info("RAB_STORE: jenisItems count=" . $itemProduk->jenisItems->count());
+
                 foreach ($itemProduk->jenisItems as $jenisItem) {
+                    Log::info("RAB_STORE:   jenisItem: jenis_item_id={$jenisItem->jenis_item_id}, items_count=" . $jenisItem->items->count());
                     if ($jenisItem->jenis_item_id !== $aksesorisJenisItem?->id && $jenisItem->jenis_item_id !== $bahanBakuJenisItem?->id) {
                         foreach ($jenisItem->items as $item) {
-                            $hargaItemsNonAksesoris += ($item->item->harga * $item->quantity);
+                            $itemHarga = $item->item->harga ?? 0;
+                            $itemQty = $item->quantity ?? 0;
+                            Log::info("RAB_STORE:     Non-aks item: nama=" . ($item->item->nama_item ?? '?') . ", harga={$itemHarga}, qty={$itemQty}, subtotal=" . ($itemHarga * $itemQty));
+                            $hargaItemsNonAksesoris += ($itemHarga * $itemQty);
                         }
                     }
                 }
+                Log::info("RAB_STORE: hargaItemsNonAksesoris = {$hargaItemsNonAksesoris}");
 
                 // Calculate harga dimensi (P × L × T × Qty)
-                // If all dimensions exist and are not null, use them with minimum value of 1 each
-                // Otherwise default to qty only
                 $hargaDimensi = 1;
                 if ($itemProduk->panjang !== null && $itemProduk->lebar !== null && $itemProduk->tinggi !== null) {
-                    // Use max(1, value) to ensure minimum 1 for calculation
                     $panjangCalc = max(1, (float) $itemProduk->panjang);
                     $lebarCalc = max(1, (float) $itemProduk->lebar);
                     $tinggiCalc = max(1, (float) $itemProduk->tinggi);
@@ -266,41 +283,42 @@ class RabInternalController extends Controller
                 } else {
                     $hargaDimensi = $itemProduk->quantity;
                 }
+                Log::info("RAB_STORE: hargaDimensi = {$hargaDimensi}");
 
-                // ✅ RUMUS RAB INTERNAL (Sesuai Permintaan Klien):
-                // Harga Satuan = [(Harga Bahan Baku + Harga Finishing) × Dimensi × Qty] / (1 - Markup/100)
-                // Contoh: Markup 20% → 1 - 0.2 = 0.8, lalu [(BB + Finishing) × Dimensi] dibagi 0.8
-                // Note: hargaDimensi sudah include qty
                 $markupSatuan = $produkData['markup_satuan'];
-                $markupDivider = 1 - ($markupSatuan / 100); // 20% → 1 - 0.2 = 0.8
+                $markupDivider = 1 - ($markupSatuan / 100);
                 $hargaSatuan = (($hargaDasarProduk + $hargaItemsNonAksesoris) * $hargaDimensi) / $markupDivider;
+
+                Log::info("RAB_STORE: markupSatuan={$markupSatuan}, markupDivider={$markupDivider}, hargaSatuan={$hargaSatuan}");
 
                 // Create RAB Produk
                 $rabProduk = RabProduk::create([
                     'rab_internal_id' => $validated['rab_internal_id'],
                     'item_pekerjaan_produk_id' => $produkData['item_pekerjaan_produk_id'],
                     'markup_satuan' => $markupSatuan,
-                    'harga_dasar' => $hargaDasarProduk, // Total harga_dasar dari selected bahan baku
+                    'harga_dasar' => $hargaDasarProduk,
                     'harga_items_non_aksesoris' => $hargaItemsNonAksesoris,
                     'harga_dimensi' => $hargaDimensi,
                     'harga_satuan' => $hargaSatuan,
-                    'harga_total_aksesoris' => 0, // Will be updated after aksesoris
-                    'harga_akhir' => $hargaSatuan, // Will be updated after aksesoris
+                    'harga_total_aksesoris' => 0,
+                    'harga_akhir' => $hargaSatuan,
                 ]);
+
+                Log::info("RAB_STORE: RabProduk CREATED: id={$rabProduk->id}, rab_internal_id={$rabProduk->rab_internal_id}");
 
                 // Process Aksesoris
                 $totalHargaAksesoris = 0;
                 if (isset($produkData['aksesoris']) && count($produkData['aksesoris']) > 0) {
-                    foreach ($produkData['aksesoris'] as $aksesorisData) {
+                    Log::info("RAB_STORE: Processing " . count($produkData['aksesoris']) . " aksesoris");
+                    foreach ($produkData['aksesoris'] as $aksIdx => $aksesorisData) {
                         $itemPekerjaanItem = ItemPekerjaanItem::with('item')->findOrFail($aksesorisData['item_pekerjaan_item_id']);
-
-                        // ✅ RUMUS AKSESORIS (Sesuai Permintaan Klien):
-                        // Harga Total = (Harga Satuan Aks ÷ (1 - markup/100)) × Qty
                         $hargaSatuanAksesoris = $itemPekerjaanItem->item->harga;
                         $qtyAksesoris = $aksesorisData['qty_aksesoris'];
                         $markupAksesoris = $aksesorisData['markup_aksesoris'];
-                        $markupDivider = 1 - ($markupAksesoris / 100); // 20% → 1-0.2 = 0.8
+                        $markupDivider = 1 - ($markupAksesoris / 100);
                         $hargaTotalAksesoris = ($hargaSatuanAksesoris / $markupDivider) * $qtyAksesoris;
+
+                        Log::info("RAB_STORE:   Aksesoris[{$aksIdx}]: nama=" . $itemPekerjaanItem->item->nama_item . ", harga_satuan={$hargaSatuanAksesoris}, qty={$qtyAksesoris}, markup={$markupAksesoris}, harga_total={$hargaTotalAksesoris}");
 
                         RabAksesoris::create([
                             'rab_produk_id' => $rabProduk->id,
@@ -314,63 +332,76 @@ class RabInternalController extends Controller
 
                         $totalHargaAksesoris += $hargaTotalAksesoris;
                     }
+                } else {
+                    Log::info("RAB_STORE: No aksesoris for this produk");
                 }
 
-                // Update RAB Produk with total aksesoris
-                // ✅ APPLY DISKON: Harga Diskon = Harga Jual - (diskon/100 × Harga Jual)
                 $diskonPerProduk = $produkData['diskon_per_produk'] ?? 0;
                 $hargaSebelumDiskon = $hargaSatuan + $totalHargaAksesoris;
                 $hargaAkhir = $hargaSebelumDiskon - ($hargaSebelumDiskon * $diskonPerProduk / 100);
+
+                Log::info("RAB_STORE: diskon={$diskonPerProduk}%, hargaSebelumDiskon={$hargaSebelumDiskon}, hargaAkhir={$hargaAkhir}");
 
                 $rabProduk->update([
                     'harga_total_aksesoris' => $totalHargaAksesoris,
                     'diskon_per_produk' => $diskonPerProduk,
                     'harga_akhir' => $hargaAkhir,
                 ]);
+
+                Log::info("RAB_STORE: RabProduk UPDATED after diskon: id={$rabProduk->id}");
             }
 
             $rabInternal = RabInternal::with('itemPekerjaan.moodboard.order')
                 ->findOrFail($validated['rab_internal_id']);
 
             // Get Order dari relasi
-            $order = $rabInternal->itemPekerjaan->moodboard->order;
+            $order = $rabInternal->itemPekerjaan->moodboard->order ?? null;
+            Log::info("RAB_STORE: Order lookup: " . ($order ? "id={$order->id}" : "NULL (moodboard chain broken)"));
 
-            $taskResponse = TaskResponse::where('order_id', $order->id)
-                ->where('tahap', 'rab_internal')
-                ->orderByDesc('extend_time')
-                ->orderByDesc('updated_at')
-                ->where('is_marketing', false)
-                ->orderByDesc('id')
-                ->first();
+            if ($order) {
+                $taskResponse = TaskResponse::where('order_id', $order->id)
+                    ->where('tahap', 'rab_internal')
+                    ->orderByDesc('extend_time')
+                    ->orderByDesc('updated_at')
+                    ->where('is_marketing', false)
+                    ->orderByDesc('id')
+                    ->first();
 
-            if ($taskResponse) {
-                if ($taskResponse->isOverdue()) {
-                    $taskResponse->update([
-                        'status' => 'telat_submit',
-                        'update_data_time' => now(),
-                    ]);
+                if ($taskResponse) {
+                    if ($taskResponse->isOverdue()) {
+                        $taskResponse->update([
+                            'status' => 'telat_submit',
+                            'update_data_time' => now(),
+                        ]);
+                    } else {
+                        $taskResponse->update([
+                            'update_data_time' => now(),
+                            'status' => 'selesai',
+                        ]);
+                    }
+                    Log::info("RAB_STORE: TaskResponse updated: id={$taskResponse->id}, status={$taskResponse->status}");
                 } else {
-                    $taskResponse->update([
-                        'update_data_time' => now(),
-                        'status' => 'selesai',
-                    ]);
+                    Log::warning("RAB_STORE: No TaskResponse found for order_id={$order->id} tahap=rab_internal");
                 }
-
-                // Catatan: Task response untuk kontrak akan dibuat saat submit RAB
-                // (di method submit() setelah semua RAB type sudah ada)
-                // Jadi tidak perlu create di sini
             }
 
             DB::commit();
+            Log::info('RAB_STORE: DB COMMITTED successfully');
 
             // Auto-generate/sync other RABs
             $this->syncOtherRabs($validated['rab_internal_id']);
+            Log::info('========== RAB INTERNAL STORE END (SUCCESS) ==========');
 
             return redirect()->route('rab-internal.index')
                 ->with('success', 'RAB Internal berhasil disimpan.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            Log::error('RAB_STORE: VALIDATION ERROR:', $e->errors());
+            throw $e;
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Store RAB Internal error: ' . $e->getMessage());
+            Log::error('RAB_STORE: EXCEPTION: ' . $e->getMessage());
+            Log::error('RAB_STORE: Stack trace: ' . $e->getTraceAsString());
             return back()->with('error', 'Gagal menyimpan RAB Internal: ' . $e->getMessage());
         }
     }
@@ -575,6 +606,10 @@ class RabInternalController extends Controller
 
     public function update(Request $request, $rabInternalId)
     {
+        Log::info('========== RAB INTERNAL UPDATE START ==========');
+        Log::info("RAB_UPDATE: rabInternalId={$rabInternalId}");
+        Log::info('RAB_UPDATE: Raw request data:', $request->all());
+
         try {
             $validated = $request->validate([
                 'produks' => 'required|array|min:1',
@@ -591,59 +626,71 @@ class RabInternalController extends Controller
                 'produks.*.aksesoris.*.markup_aksesoris' => 'required|numeric|min:0|max:100',
             ]);
 
+            Log::info('RAB_UPDATE: Validation passed. jumlah_produks=' . count($validated['produks']));
+
             DB::beginTransaction();
 
-            foreach ($request->input('produks') as $produkData) {
-                // Get item pekerjaan produk data with selected bahan bakus
+            foreach ($request->input('produks') as $idx => $produkData) {
+                Log::info("RAB_UPDATE: === Processing produk index={$idx} ===", $produkData);
+
                 $itemProduk = ItemPekerjaanProduk::with(['produk', 'bahanBakus', 'jenisItems.items.item'])->findOrFail($produkData['item_pekerjaan_produk_id']);
+
+                Log::info("RAB_UPDATE: ItemPekerjaanProduk: id={$itemProduk->id}, produk_id={$itemProduk->produk_id}, qty={$itemProduk->quantity}, P={$itemProduk->panjang}, L={$itemProduk->lebar}, T={$itemProduk->tinggi}");
 
                 // 1. Update Master Produk Price
                 if (isset($produkData['harga_produk'])) {
                     $itemProduk->produk->update(['harga' => $produkData['harga_produk']]);
+                    Log::info("RAB_UPDATE: Master produk harga updated to {$produkData['harga_produk']}");
                 }
 
                 // 2. Update Bahan Baku Prices
                 if (isset($produkData['bahan_bakus'])) {
+                    Log::info("RAB_UPDATE: Updating " . count($produkData['bahan_bakus']) . " bahan bakus");
                     foreach ($produkData['bahan_bakus'] as $bbData) {
                         $localBb = ItemPekerjaanProdukBahanBaku::findOrFail($bbData['id']);
                         $localBb->update(['harga_dasar' => $bbData['harga_dasar']]);
-
                         Item::where('id', $bbData['item_id'])->update(['harga' => $bbData['harga_dasar']]);
-
                         DB::table('produk_items')
                             ->where('produk_id', $itemProduk->produk_id)
                             ->where('item_id', $bbData['item_id'])
                             ->update(['harga_dasar' => $bbData['harga_dasar']]);
+                        Log::info("RAB_UPDATE:   BB id={$bbData['id']}, item_id={$bbData['item_id']}, harga_dasar={$bbData['harga_dasar']}");
                     }
+                } else {
+                    Log::info("RAB_UPDATE: No bahan_bakus in request");
                 }
 
                 // 3. Update Non-Aksesoris Items Prices
                 if (isset($produkData['non_aksesoris_items'])) {
+                    Log::info("RAB_UPDATE: Updating " . count($produkData['non_aksesoris_items']) . " non-aksesoris items");
                     foreach ($produkData['non_aksesoris_items'] as $nonAksData) {
                         $itemPekerjaanItem = ItemPekerjaanItem::findOrFail($nonAksData['id']);
-                        // harga_satuan from frontend is now the pure master unit price
                         $unitPrice = (float) $nonAksData['harga_satuan'];
-
                         $itemPekerjaanItem->item->update(['harga' => $unitPrice]);
+                        Log::info("RAB_UPDATE:   NonAks id={$nonAksData['id']}, harga_satuan={$unitPrice}");
                     }
+                } else {
+                    Log::info("RAB_UPDATE: No non_aksesoris_items in request");
                 }
 
-                // 🔥 Check if produk baru (id = null) atau existing
+                // Check if produk baru (id = null) atau existing
                 if (empty($produkData['id'])) {
                     $rabProduk = new RabProduk();
                     $rabProduk->rab_internal_id = $rabInternalId;
                     $rabProduk->item_pekerjaan_produk_id = $produkData['item_pekerjaan_produk_id'];
+                    Log::info("RAB_UPDATE: Creating NEW RabProduk (id was null)");
                 } else {
                     $rabProduk = RabProduk::findOrFail($produkData['id']);
+                    Log::info("RAB_UPDATE: Updating EXISTING RabProduk id={$produkData['id']}");
                 }
 
                 // Refresh model to get updated prices
                 $itemProduk->load(['produk', 'bahanBakus', 'jenisItems.items.item']);
 
-                // Calculate harga dasar dari selected bahan baku
                 $hargaDasarProduk = $itemProduk->bahanBakus->sum('harga_dasar');
+                Log::info("RAB_UPDATE: hargaDasarProduk (sum bahan baku after reload) = {$hargaDasarProduk}");
+                Log::info("RAB_UPDATE: BahanBakus:", $itemProduk->bahanBakus->map(fn($bb) => ['id' => $bb->id, 'harga_dasar' => $bb->harga_dasar])->toArray());
 
-                // Calculate harga items non-aksesoris (exclude Bahan Baku)
                 $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
                 $bahanBakuJenisItem = JenisItem::where('nama_jenis_item', 'Bahan Baku')->first();
                 $hargaItemsNonAksesoris = 0;
@@ -651,12 +698,15 @@ class RabInternalController extends Controller
                 foreach ($itemProduk->jenisItems as $jenisItem) {
                     if ($jenisItem->jenis_item_id !== $aksesorisJenisItem?->id && $jenisItem->jenis_item_id !== $bahanBakuJenisItem?->id) {
                         foreach ($jenisItem->items as $item) {
-                            $hargaItemsNonAksesoris += ($item->item->harga * $item->quantity);
+                            $itemHarga = $item->item->harga ?? 0;
+                            $itemQty = $item->quantity ?? 0;
+                            Log::info("RAB_UPDATE:   NonAks calc: nama=" . ($item->item->nama_item ?? '?') . ", harga={$itemHarga}, qty={$itemQty}, subtotal=" . ($itemHarga * $itemQty));
+                            $hargaItemsNonAksesoris += ($itemHarga * $itemQty);
                         }
                     }
                 }
+                Log::info("RAB_UPDATE: hargaItemsNonAksesoris = {$hargaItemsNonAksesoris}");
 
-                // Calculate harga dimensi (P × L × T × Qty)
                 $hargaDimensi = 1;
                 if ($itemProduk->panjang !== null && $itemProduk->lebar !== null && $itemProduk->tinggi !== null) {
                     $panjangCalc = max(1, (float) $itemProduk->panjang);
@@ -666,10 +716,13 @@ class RabInternalController extends Controller
                 } else {
                     $hargaDimensi = $itemProduk->quantity;
                 }
+                Log::info("RAB_UPDATE: hargaDimensi = {$hargaDimensi}");
 
                 $markupSatuan = $produkData['markup_satuan'];
                 $markupDivider = 1 - ($markupSatuan / 100);
                 $hargaSatuan = ($hargaDasarProduk + $hargaItemsNonAksesoris) / $markupDivider * $hargaDimensi;
+
+                Log::info("RAB_UPDATE: markupSatuan={$markupSatuan}, markupDivider={$markupDivider}, hargaSatuan={$hargaSatuan}");
 
                 // Save RAB Produk
                 $rabProduk->markup_satuan = $markupSatuan;
@@ -679,25 +732,26 @@ class RabInternalController extends Controller
                 $rabProduk->harga_satuan = $hargaSatuan;
                 $rabProduk->save();
 
+                Log::info("RAB_UPDATE: RabProduk SAVED: id={$rabProduk->id}");
+
                 // Delete existing aksesoris
                 $rabProduk->rabAksesoris()->delete();
 
                 // Process Aksesoris
                 $totalHargaAksesoris = 0;
                 if (isset($produkData['aksesoris']) && count($produkData['aksesoris']) > 0) {
-                    foreach ($produkData['aksesoris'] as $aksesorisData) {
+                    Log::info("RAB_UPDATE: Processing " . count($produkData['aksesoris']) . " aksesoris");
+                    foreach ($produkData['aksesoris'] as $aksIdx => $aksesorisData) {
                         $itemPekerjaanItem = ItemPekerjaanItem::with('item')->findOrFail($aksesorisData['item_pekerjaan_item_id']);
-
-                        // Get and update master item price
                         $hargaSatuanAksesoris = (float)$aksesorisData['harga_satuan_aksesoris'];
                         $itemPekerjaanItem->item->update(['harga' => $hargaSatuanAksesoris]);
 
-                        // ✅ RUMUS AKSESORIS (Sesuai Permintaan Klien):
-                        // Harga Total = (Harga Satuan Aks ÷ (1 - markup/100)) × Qty
                         $qtyAksesoris = $aksesorisData['qty_aksesoris'];
                         $markupAksesoris = $aksesorisData['markup_aksesoris'];
-                        $markupDivider = 1 - ($markupAksesoris / 100); // 20% → 1-0.2 = 0.8
+                        $markupDivider = 1 - ($markupAksesoris / 100);
                         $hargaTotalAksesoris = ($hargaSatuanAksesoris / $markupDivider) * $qtyAksesoris;
+
+                        Log::info("RAB_UPDATE:   Aksesoris[{$aksIdx}]: nama=" . $itemPekerjaanItem->item->nama_item . ", harga_satuan={$hargaSatuanAksesoris}, qty={$qtyAksesoris}, markup={$markupAksesoris}, harga_total={$hargaTotalAksesoris}");
 
                         RabAksesoris::create([
                             'rab_produk_id' => $rabProduk->id,
@@ -711,58 +765,74 @@ class RabInternalController extends Controller
 
                         $totalHargaAksesoris += $hargaTotalAksesoris;
                     }
+                } else {
+                    Log::info("RAB_UPDATE: No aksesoris for this produk");
                 }
 
-                // Update RAB Produk with total aksesoris
-                // ✅ APPLY DISKON: Harga Diskon = Harga Jual - (diskon/100 × Harga Jual)
                 $diskonPerProduk = $produkData['diskon_per_produk'] ?? 0;
                 $hargaSebelumDiskon = $hargaSatuan + $totalHargaAksesoris;
                 $hargaAkhir = $hargaSebelumDiskon - ($hargaSebelumDiskon * $diskonPerProduk / 100);
+
+                Log::info("RAB_UPDATE: diskon={$diskonPerProduk}%, hargaSebelumDiskon={$hargaSebelumDiskon}, hargaAkhir={$hargaAkhir}");
 
                 $rabProduk->update([
                     'harga_total_aksesoris' => $totalHargaAksesoris,
                     'diskon_per_produk' => $diskonPerProduk,
                     'harga_akhir' => $hargaAkhir,
                 ]);
+
+                Log::info("RAB_UPDATE: RabProduk FINAL: id={$rabProduk->id}, harga_akhir={$hargaAkhir}");
             }
 
-            // Update task response: data sudah diisi
+            // Update task response
             $rabInternal = RabInternal::with('itemPekerjaan.moodboard.order')
                 ->findOrFail($rabInternalId);
-            $order = $rabInternal->itemPekerjaan->moodboard->order;
+            $order = $rabInternal->itemPekerjaan->moodboard->order ?? null;
+            Log::info("RAB_UPDATE: Order lookup: " . ($order ? "id={$order->id}" : "NULL"));
 
-            $taskResponse = TaskResponse::where('order_id', $order->id)
-                ->where('tahap', 'rab_internal')
-                ->orderByDesc('extend_time')
-                ->orderByDesc('updated_at')
-                ->where('is_marketing', false)
-                ->orderByDesc('id')
-                ->first();
+            if ($order) {
+                $taskResponse = TaskResponse::where('order_id', $order->id)
+                    ->where('tahap', 'rab_internal')
+                    ->orderByDesc('extend_time')
+                    ->orderByDesc('updated_at')
+                    ->where('is_marketing', false)
+                    ->orderByDesc('id')
+                    ->first();
 
-            if ($taskResponse) {
-                if ($taskResponse->isOverdue()) {
-                    $taskResponse->update([
-                        'status' => 'telat_submit',
-                        'update_data_time' => now(),
-                    ]);
+                if ($taskResponse) {
+                    if ($taskResponse->isOverdue()) {
+                        $taskResponse->update([
+                            'status' => 'telat_submit',
+                            'update_data_time' => now(),
+                        ]);
+                    } else {
+                        $taskResponse->update([
+                            'update_data_time' => now(),
+                            'status' => 'selesai',
+                        ]);
+                    }
+                    Log::info("RAB_UPDATE: TaskResponse updated: id={$taskResponse->id}, status={$taskResponse->status}");
                 } else {
-                    $taskResponse->update([
-                        'update_data_time' => now(),
-                        'status' => 'selesai',
-                    ]);
+                    Log::warning("RAB_UPDATE: No TaskResponse found for order_id={$order->id}");
                 }
             }
 
             DB::commit();
+            Log::info('RAB_UPDATE: DB COMMITTED successfully');
 
-            // Auto-generate/sync other RABs
             $this->syncOtherRabs($rabInternalId);
+            Log::info('========== RAB INTERNAL UPDATE END (SUCCESS) ==========');
 
             return redirect()->route('rab-internal.index')
                 ->with('success', 'RAB Internal berhasil diupdate.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            Log::error('RAB_UPDATE: VALIDATION ERROR:', $e->errors());
+            throw $e;
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Update RAB Internal error: ' . $e->getMessage());
+            Log::error('RAB_UPDATE: EXCEPTION: ' . $e->getMessage());
+            Log::error('RAB_UPDATE: Stack trace: ' . $e->getTraceAsString());
             return back()->with('error', 'Gagal mengupdate RAB Internal: ' . $e->getMessage());
         }
     }
