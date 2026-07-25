@@ -420,13 +420,26 @@ export default function Edit({ rabInternal }: Props) {
             };
         });
 
+        console.log('🚀 [Edit.tsx] Submitting RAB Internal Payload:', {
+            rab_internal_id: rabInternal.id,
+            produks: submitData,
+        });
+
         setLoading(true);
         router.put(
             `/rab-internal/${rabInternal.id}/update`,
             {
-                produks: submitData as any, // UBAH dari formData jadi submitData
+                produks: submitData as any,
             },
             {
+                onStart: () => console.log('⏳ [Edit.tsx] Sending PUT request...'),
+                onSuccess: (page) => {
+                    console.log('✅ [Edit.tsx] Form submit successful:', page);
+                },
+                onError: (errors) => {
+                    console.error('❌ [Edit.tsx] Form submit errors:', errors);
+                    alert('Gagal memperbarui RAB Internal!\n\nDetail Error:\n' + JSON.stringify(errors, null, 2));
+                },
                 onFinish: () => setLoading(false),
             },
         );

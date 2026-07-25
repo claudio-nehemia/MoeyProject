@@ -274,11 +274,24 @@ export default function Create({ rabInternal }: Props) {
                 })),
         }));
 
+        console.log('🚀 [Create.tsx] Submitting RAB Internal Payload:', {
+            rab_internal_id: rabInternal.id,
+            produks: cleanedData,
+        });
+
         setLoading(true);
         router.post('/rab-internal/store', {
             rab_internal_id: rabInternal.id,
             produks: cleanedData as any,
         }, {
+            onStart: () => console.log('⏳ [Create.tsx] Sending POST request...'),
+            onSuccess: (page) => {
+                console.log('✅ [Create.tsx] Form submit successful:', page);
+            },
+            onError: (errors) => {
+                console.error('❌ [Create.tsx] Form submit errors:', errors);
+                alert('Gagal menyimpan RAB Internal!\n\nDetail Error:\n' + JSON.stringify(errors, null, 2));
+            },
             onFinish: () => setLoading(false),
         });
     };
