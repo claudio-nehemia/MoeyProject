@@ -398,9 +398,15 @@ function Index({ itemPekerjaans }: Props) {
                                                         </td>
                                                         <td className="whitespace-nowrap px-6 py-4 text-sm">
                                                             {itemPekerjaan.rabInternal ? (
-                                                                <span className="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                                                    Sudah Ada ({itemPekerjaan.rabInternal.total_produks} produk)
-                                                                </span>
+                                                                itemPekerjaan.rabInternal.total_produks > 0 ? (
+                                                                    <span className="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                                                        Sudah Ada ({itemPekerjaan.rabInternal.total_produks} produk)
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="inline-flex rounded-full bg-amber-100 px-2 text-xs font-semibold leading-5 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                                                                        📝 Draft (Belum Input RAB)
+                                                                    </span>
+                                                                )
                                                             ) : (
                                                                 <span className="inline-flex rounded-full bg-yellow-100 px-2 text-xs font-semibold leading-5 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
                                                                     Belum Ada
@@ -409,21 +415,30 @@ function Index({ itemPekerjaans }: Props) {
                                                         </td>
                                                         <td className="whitespace-nowrap px-6 py-4 text-sm font-medium">
                                                             {itemPekerjaan.rabInternal?.response_time && (
-                                                                <div className="flex space-x-2">
+                                                                itemPekerjaan.rabInternal.total_produks > 0 ? (
+                                                                    <div className="flex space-x-2">
+                                                                        <Link
+                                                                            href={`/rab-internal/${itemPekerjaan.rabInternal.id}/show`}
+                                                                            className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                                                        >
+                                                                            Lihat RAB
+                                                                        </Link>
+                                                                        <span className="text-gray-300">|</span>
+                                                                        <Link
+                                                                            href={`/rab-internal/${itemPekerjaan.rabInternal.id}/edit`}
+                                                                            className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300"
+                                                                        >
+                                                                            Edit
+                                                                        </Link>
+                                                                    </div>
+                                                                ) : (
                                                                     <Link
-                                                                        href={`/rab-internal/${itemPekerjaan.rabInternal.id}/show`}
-                                                                        className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                                                        href={`/rab-internal/${itemPekerjaan.rabInternal.id}/create`}
+                                                                        className="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-600 text-xs font-bold text-white hover:bg-emerald-700 transition-colors shadow-sm"
                                                                     >
-                                                                        Lihat RAB
+                                                                        Input RAB →
                                                                     </Link>
-                                                                    <span className="text-gray-300">|</span>
-                                                                    <Link
-                                                                        href={`/rab-internal/${itemPekerjaan.rabInternal.id}/edit`}
-                                                                        className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300"
-                                                                    >
-                                                                        Edit
-                                                                    </Link>
-                                                                </div>
+                                                                )
                                                             )}
 
                                                             {itemPekerjaan.status === 'published' ? (
