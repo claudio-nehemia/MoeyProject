@@ -166,7 +166,9 @@ class RabInternalController extends Controller
                         $bahanBakuNames = $selectedBahanBakus->map(fn($bb) => $bb->item->nama_item)->toArray();
 
                         // Hitung harga dasar produk = total harga_dasar dari selected bahan baku
-                        $hargaDasarProduk = $selectedBahanBakus->sum('harga_dasar');
+                        // Jika 0 (misal produk jasa/direct price), ambil dari master produk harga
+                        $sumBb = $selectedBahanBakus->sum('harga_dasar');
+                        $hargaDasarProduk = ($sumBb > 0) ? (float)$sumBb : (float)($produk->produk->harga ?? 0);
 
                         foreach ($produk->jenisItems as $jenisItem) {
                             if ($jenisItem->jenis_item_id === $aksesorisJenisItem?->id) {
@@ -204,7 +206,7 @@ class RabInternalController extends Controller
                             'panjang' => $produk->panjang,
                             'lebar' => $produk->lebar,
                             'tinggi' => $produk->tinggi,
-                            'harga_dasar' => $hargaDasarProduk, // Total harga_dasar dari selected bahan baku
+                            'harga_dasar' => $hargaDasarProduk, // Total harga_dasar dari selected bahan baku atau fallback master produk
                             'harga_items_non_aksesoris' => $hargaItemsNonAksesoris,
                             'non_aksesoris_items' => $nonAksesorisList,
                             'bahan_baku_names' => $bahanBakuNames, // Nama bahan baku yang dipilih
@@ -230,7 +232,7 @@ class RabInternalController extends Controller
                 'produks.*.diskon_per_produk' => 'nullable|numeric|min:0|max:100',
                 'produks.*.aksesoris' => 'nullable|array',
                 'produks.*.aksesoris.*.item_pekerjaan_item_id' => 'required|exists:item_pekerjaan_items,id',
-                'produks.*.aksesoris.*.qty_aksesoris' => 'required|integer|min:1',
+                'produks.*.aksesoris.*.qty_aksesoris' => 'required|numeric|min:1',
                 'produks.*.aksesoris.*.markup_aksesoris' => 'required|numeric|min:0|max:100',
             ]);
 
@@ -248,9 +250,10 @@ class RabInternalController extends Controller
                 Log::info("RAB_STORE: Produk master: nama=" . ($itemProduk->produk->nama_produk ?? 'NULL') . ", harga=" . ($itemProduk->produk->harga ?? 'NULL'));
                 Log::info("RAB_STORE: BahanBakus count=" . $itemProduk->bahanBakus->count() . ", items:", $itemProduk->bahanBakus->map(fn($bb) => ['id' => $bb->id, 'harga_dasar' => $bb->harga_dasar, 'item_id' => $bb->item_id])->toArray());
 
-                // Calculate harga dasar dari selected bahan baku
-                $hargaDasarProduk = $itemProduk->bahanBakus->sum('harga_dasar');
-                Log::info("RAB_STORE: hargaDasarProduk (sum bahan baku) = {$hargaDasarProduk}");
+                // Calculate harga dasar dari selected bahan baku atau fallback ke harga produk master jika 0
+                $sumBb = $itemProduk->bahanBakus->sum('harga_dasar');
+                $hargaDasarProduk = ($sumBb > 0) ? (float)$sumBb : (float)($itemProduk->produk->harga ?? 0);
+                Log::info("RAB_STORE: hargaDasarProduk = {$hargaDasarProduk} (sumBb={$sumBb}, masterHarga=" . ($itemProduk->produk->harga ?? 0) . ")");
 
                 // Calculate harga items non-aksesoris (exclude Bahan Baku)
                 $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
@@ -541,7 +544,9 @@ class RabInternalController extends Controller
                         })->toArray();
 
                         // Hitung harga dasar produk = total harga_dasar dari selected bahan baku
-                        $hargaDasarProduk = $selectedBahanBakus->sum('harga_dasar');
+                        // Jika 0 (misal produk jasa/direct price), ambil dari master produk harga
+                        $sumBb = $selectedBahanBakus->sum('harga_dasar');
+                        $hargaDasarProduk = ($sumBb > 0) ? (float)$sumBb : (float)($produk->produk->harga ?? 0);
 
                         // Hitung harga items non-aksesoris (Finishing Dalam/Luar)
                         $hargaItemsNonAksesoris = 0;
@@ -589,7 +594,7 @@ class RabInternalController extends Controller
                             'panjang' => $produk->panjang,
                             'lebar' => $produk->lebar,
                             'tinggi' => $produk->tinggi,
-                            'harga_dasar' => $hargaDasarProduk, // Total harga_dasar dari selected bahan baku
+                            'harga_dasar' => $hargaDasarProduk, // Total harga_dasar dari selected bahan baku atau fallback master produk
                             'harga_items_non_aksesoris' => $hargaItemsNonAksesoris,
                             'non_aksesoris_items' => $nonAksesorisList ?? [],
                             'bahan_baku_names' => $bahanBakuNames,
@@ -622,7 +627,7 @@ class RabInternalController extends Controller
                 'produks.*.non_aksesoris_items' => 'nullable|array',
                 'produks.*.aksesoris' => 'nullable|array',
                 'produks.*.aksesoris.*.item_pekerjaan_item_id' => 'required|exists:item_pekerjaan_items,id',
-                'produks.*.aksesoris.*.qty_aksesoris' => 'required|integer|min:1',
+                'produks.*.aksesoris.*.qty_aksesoris' => 'required|numeric|min:1',
                 'produks.*.aksesoris.*.markup_aksesoris' => 'required|numeric|min:0|max:100',
             ]);
 
@@ -687,8 +692,9 @@ class RabInternalController extends Controller
                 // Refresh model to get updated prices
                 $itemProduk->load(['produk', 'bahanBakus', 'jenisItems.items.item']);
 
-                $hargaDasarProduk = $itemProduk->bahanBakus->sum('harga_dasar');
-                Log::info("RAB_UPDATE: hargaDasarProduk (sum bahan baku after reload) = {$hargaDasarProduk}");
+                $sumBb = $itemProduk->bahanBakus->sum('harga_dasar');
+                $hargaDasarProduk = ($sumBb > 0) ? (float)$sumBb : (float)($itemProduk->produk->harga ?? 0);
+                Log::info("RAB_UPDATE: hargaDasarProduk = {$hargaDasarProduk} (sumBb={$sumBb}, masterHarga=" . ($itemProduk->produk->harga ?? 0) . ")");
                 Log::info("RAB_UPDATE: BahanBakus:", $itemProduk->bahanBakus->map(fn($bb) => ['id' => $bb->id, 'harga_dasar' => $bb->harga_dasar])->toArray());
 
                 $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();

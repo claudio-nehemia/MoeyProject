@@ -96,7 +96,7 @@ export default function Create({ rabInternal }: Props) {
                 nama: aks.nama,
                 harga_satuan: aks.harga_satuan,
                 qty_item_pekerjaan: aks.qty_item_pekerjaan,
-                qty_aksesoris: aks.qty_item_pekerjaan, // Gunakan quantity dari item pekerjaan
+                qty_aksesoris: Math.max(1, Math.round(Number(aks.qty_item_pekerjaan) || 1)),
                 markup_aksesoris: 5,
             })),
         }));
@@ -203,7 +203,7 @@ export default function Create({ rabInternal }: Props) {
 
     const handleAksesorisQtyChange = (produkIndex: number, aksesorisIndex: number, value: string) => {
         const newFormData = [...formData];
-        newFormData[produkIndex].aksesoris[aksesorisIndex].qty_aksesoris = parseInt(value) || 1;
+        newFormData[produkIndex].aksesoris[aksesorisIndex].qty_aksesoris = Math.max(1, parseInt(value, 10) || 1);
         setFormData(newFormData);
     };
 
@@ -217,11 +217,12 @@ export default function Create({ rabInternal }: Props) {
         const markup = typeof markupSatuan === 'string' ? parseFloat(markupSatuan) || 0 : markupSatuan;
 
         // Use Math.max(1, value) to match backend calculation logic
-        // Values are stored as-is (e.g., 0.8), but minimum 1 is used for calculation
-        const panjang = Math.max(1, produk.panjang || 1);
-        const lebar = Math.max(1, produk.lebar || 1);
-        const tinggi = Math.max(1, produk.tinggi || 1);
-        const hargaDimensi = panjang * lebar * tinggi * produk.qty_produk;
+        const panjang = produk.panjang ? Math.max(1, produk.panjang) : 1;
+        const lebar = produk.lebar ? Math.max(1, produk.lebar) : 1;
+        const tinggi = produk.tinggi ? Math.max(1, produk.tinggi) : 1;
+        const hargaDimensi = (produk.panjang && produk.lebar && produk.tinggi)
+            ? (panjang * lebar * tinggi * produk.qty_produk)
+            : produk.qty_produk;
 
         const totalHargaItemsNonAksesoris = formProduk.non_aksesoris_items.reduce((sum, item) => sum + (Number(item.harga_satuan) || 0), 0);
 
@@ -234,9 +235,8 @@ export default function Create({ rabInternal }: Props) {
 
     const calculateHargaAksesoris = (aksesoris: FormAksesoris) => {
         const markup = typeof aksesoris.markup_aksesoris === 'string' ? parseFloat(aksesoris.markup_aksesoris) || 0 : aksesoris.markup_aksesoris;
-        // ✅ RUMUS AKSESORIS: Harga Aks ÷ (1 - markup/100) × Qty
-        const markupDivider = 1 - (markup / 100); // 20% → 1-0.2 = 0.8
-        return (aksesoris.harga_satuan / markupDivider) * aksesoris.qty_aksesoris;
+        const markupDivider = 1 - (markup / 100);
+        return (aksesoris.harga_satuan / markupDivider) * (Number(aksesoris.qty_aksesoris) || 1);
     };
 
     const calculateHargaAkhir = (produk: Produk, formProduk: FormProduk) => {
@@ -244,7 +244,6 @@ export default function Create({ rabInternal }: Props) {
         const totalAksesoris = formProduk.aksesoris.reduce((sum, aks) => sum + calculateHargaAksesoris(aks), 0);
         const hargaSebelumDiskon = hargaSatuan + totalAksesoris;
         
-        // ✅ APPLY DISKON: Harga Diskon = Harga Jual - (diskon/100 × Harga Jual)
         const diskon = typeof formProduk.diskon_per_produk === 'string' ? parseFloat(formProduk.diskon_per_produk) || 0 : formProduk.diskon_per_produk;
         return hargaSebelumDiskon - (hargaSebelumDiskon * diskon / 100);
     };
@@ -267,9 +266,10 @@ export default function Create({ rabInternal }: Props) {
             markup_satuan: typeof produk.markup_satuan === 'string' ? parseFloat(produk.markup_satuan) || 0 : (produk.markup_satuan || 0),
             diskon_per_produk: typeof produk.diskon_per_produk === 'string' ? parseFloat(produk.diskon_per_produk) || 0 : (produk.diskon_per_produk || 0),
             aksesoris: produk.aksesoris
-                .filter(aks => aks.qty_aksesoris > 0)
+                .filter(aks => Math.max(1, Math.round(Number(aks.qty_aksesoris) || 1)) > 0)
                 .map(aks => ({
                     ...aks,
+                    qty_aksesoris: Math.max(1, Math.round(Number(aks.qty_aksesoris) || 1)),
                     markup_aksesoris: typeof aks.markup_aksesoris === 'string' ? parseFloat(aks.markup_aksesoris) || 0 : (aks.markup_aksesoris || 0),
                 })),
         }));
@@ -508,10 +508,9 @@ export default function Create({ rabInternal }: Props) {
                                                     <div className="flex justify-between">
                                                         <span className="text-gray-600 dark:text-gray-400">Dimensi:</span>
                                                         <span className="font-medium text-gray-900 dark:text-gray-100">
-                                                            {(produk.panjang || 0) *
-                                                                (produk.lebar || 0) *
-                                                                (produk.tinggi || 0) *
-                                                                produk.qty_produk}
+                                                            {(produk.panjang && produk.lebar && produk.tinggi)
+                                                                ? (produk.panjang * produk.lebar * produk.tinggi * produk.qty_produk)
+                                                                : produk.qty_produk}
                                                         </span>
                                                     </div>
                                                 </div>

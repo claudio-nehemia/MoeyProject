@@ -414,7 +414,7 @@ export default function Edit({ rabInternal }: Props) {
                     item_pekerjaan_item_id: aks.item_pekerjaan_item_id,
                     nama_aksesoris: aks.nama_aksesoris,
                     harga_satuan_aksesoris: Number(aks.harga_satuan_aksesoris) || 0,
-                    qty_aksesoris: Math.floor(Number(aks.qty_aksesoris)) || 0,
+                    qty_aksesoris: Math.max(1, Math.round(Number(aks.qty_aksesoris) || 1)),
                     markup_aksesoris: Number(aks.markup_aksesoris) || 0,
                 })),
             };
@@ -766,10 +766,9 @@ export default function Edit({ rabInternal }: Props) {
                                                                 <div className="flex justify-between">
                                                                     <span className="text-gray-600 dark:text-gray-400">Dimensi:</span>
                                                                     <span className="font-medium text-gray-900 dark:text-gray-100">
-                                                                        {(produk.panjang || 0) *
-                                                                            (produk.lebar || 0) *
-                                                                            (produk.tinggi || 0) *
-                                                                            produk.qty_produk}
+                                                                        {(produk.panjang && produk.lebar && produk.tinggi)
+                                                                            ? (produk.panjang * produk.lebar * produk.tinggi * produk.qty_produk)
+                                                                            : produk.qty_produk}
                                                                     </span>
                                                                 </div>
                                                             </div>
