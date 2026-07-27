@@ -226,8 +226,13 @@ export default function Index({ itemPekerjaans }: Props) {
                     onStart: () => {
                         console.log('[FE LOG] Request started: /invoice/item-pekerjaan/' + itemPekerjaanId + '/response');
                     },
-                    onSuccess: (page) => {
+                    onSuccess: (page: any) => {
                         console.log('[FE LOG] Response success:', page);
+                        const flashError = page.props?.flash?.error;
+                        if (flashError) {
+                            console.error('[FE LOG] Flash error:', flashError);
+                            alert('Gagal Response Invoice:\n' + flashError);
+                        }
                     },
                     onError: (errors) => {
                         console.error('[FE LOG] Response error callback:', errors);
@@ -251,8 +256,13 @@ export default function Index({ itemPekerjaans }: Props) {
                     onStart: () => {
                         console.log('[FE LOG] Request started: /pm-response/invoice/' + itemPekerjaanId);
                     },
-                    onSuccess: (page) => {
+                    onSuccess: (page: any) => {
                         console.log('[FE LOG] PM Response success:', page);
+                        const flashError = page.props?.flash?.error;
+                        if (flashError) {
+                            console.error('[FE LOG] Flash error:', flashError);
+                            alert('Gagal Marketing Response Invoice:\n' + flashError);
+                        }
                     },
                     onError: (errors) => {
                         console.error('[FE LOG] PM Response error callback:', errors);

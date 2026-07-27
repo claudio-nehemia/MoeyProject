@@ -802,7 +802,7 @@ class PmResponseController extends Controller
                     'invoice_number' => $invoiceNumber,
                     'termin_step' => 1,
                     'total_amount' => 0,
-                    'status' => 'unpaid',
+                    'status' => 'pending',
                     'pm_response_time' => now(),
                     'pm_response_by' => auth()->user()->name,
                 ]);

@@ -953,7 +953,7 @@ class InvoiceController extends Controller
                         'invoice_number' => $invoiceNumber,
                         'termin_step' => 1,
                         'total_amount' => 0,
-                        'status' => 'unpaid',
+                        'status' => 'pending',
                         'response_time' => $responseTime,
                         'response_by' => $responseBy,
                     ]);
