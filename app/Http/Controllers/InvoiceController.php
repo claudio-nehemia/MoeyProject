@@ -910,7 +910,7 @@ class InvoiceController extends Controller
     public function response(Request $request, $itemPekerjaanId)
     {
         try {
-            $itemPekerjaan = ItemPekerjaan::with(['invoices', 'moodboard.order'])->findOrFail($itemPekerjaanId);
+            $itemPekerjaan = ItemPekerjaan::with(['invoices', 'moodboard.order', 'rabKontrak'])->findOrFail($itemPekerjaanId);
 
             // Find invoice termin 1, fallback to legacy records without termin_step
             $invoice = $itemPekerjaan->invoices->firstWhere('termin_step', 1)
@@ -938,11 +938,18 @@ class InvoiceController extends Controller
 
                     $invoice->update($updates);
                 } else {
-                    // Create invoice termin 1 with response info
+                    // Generate safe invoice_number for termin 1 initial response
+                    $lastInvoice = Invoice::whereNotNull('invoice_number')->latest()->first();
+                    $sequence = $lastInvoice ? (intval(substr($lastInvoice->invoice_number, -4)) + 1) : 1;
+                    $invoiceNumber = 'INV/' . date('Ym') . '/' . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+
                     Invoice::create([
                         'item_pekerjaan_id' => $itemPekerjaan->id,
-                        'rab_kontrak_id' => $itemPekerjaan->rabKontrak->id,
+                        'rab_kontrak_id' => $itemPekerjaan->rabKontrak?->id,
+                        'invoice_number' => $invoiceNumber,
                         'termin_step' => 1,
+                        'total_amount' => 0,
+                        'status' => 'unpaid',
                         'response_time' => $responseTime,
                         'response_by' => $responseBy,
                     ]);

@@ -47,8 +47,8 @@ class HandleInertiaRequests extends Middleware
                     ] : null,
                     'permissions' => $request->user() ? 
                         $request->user()->getPermissions()->pluck('name')->toArray() : [],
-                    'isKepalaMarketing' => $request->user()->role ? 
-                        $request->user()->role->nama_role === 'Kepala Marketing' : false,
+                    'isKepalaMarketing' => $request->user() ? 
+                        ($request->user()->role_id == \App\Models\Role::getKepalaMarketingRoleId()) : false,
                     'isAdmin' => $request->user()->role ? 
                         $request->user()->role->nama_role === 'Admin' : false,
                 ] : null,

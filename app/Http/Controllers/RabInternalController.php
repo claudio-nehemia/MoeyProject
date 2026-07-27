@@ -1047,10 +1047,11 @@ class RabInternalController extends Controller
         $rabJasa->rabJasaProduks()->delete();
 
         foreach ($rabInternal->rabProduks as $rabProduk) {
-            $itemPekerjaanProduk = ItemPekerjaanProduk::with('bahanBakus')
+            $itemPekerjaanProduk = ItemPekerjaanProduk::with(['bahanBakus', 'produk'])
                 ->find($rabProduk->item_pekerjaan_produk_id);
 
-            $hargaJasa = $itemPekerjaanProduk->bahanBakus->sum('harga_jasa') ?: 0;
+            $sumJasa = $itemPekerjaanProduk->bahanBakus->sum('harga_jasa');
+            $hargaJasa = ($sumJasa > 0) ? (float)$sumJasa : (float)($itemPekerjaanProduk->produk->harga_jasa ?? 0);
             $hargaItemsOriginal = $rabProduk->harga_items_non_aksesoris;
             $hargaSatuanJasa = ($hargaJasa + $hargaItemsOriginal) * $rabProduk->harga_dimensi;
 

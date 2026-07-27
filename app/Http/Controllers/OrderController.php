@@ -47,8 +47,10 @@ class OrderController extends Controller
      */
     public function create()
     {
-        $marketings = User::whereHas('roles', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
+        $marketings = User::where(function ($query) {
+            $kmId = \App\Models\Role::getKepalaMarketingRoleId();
+            $query->where('role_id', $kmId)
+                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $kmId));
         })->get();
         $drafters = User::whereHas('roles', function ($query) {
             $query->whereIn('nama_role', ['Surveyor', 'Drafter']);
@@ -190,8 +192,10 @@ class OrderController extends Controller
      */
     public function edit(Order $order)
     {
-        $marketings = User::whereHas('roles', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
+        $marketings = User::where(function ($query) {
+            $kmId = \App\Models\Role::getKepalaMarketingRoleId();
+            $query->where('role_id', $kmId)
+                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $kmId));
         })->get();
         $drafters = User::whereHas('roles', function ($query) {
             $query->whereIn('nama_role', ['Surveyor', 'Drafter']);

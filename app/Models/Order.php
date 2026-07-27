@@ -167,6 +167,10 @@ class Order extends Model
 
         // Roles yang hanya bisa melihat order dimana mereka masuk survey schedule
         // Kepala Marketing tidak termasuk karena mereka harus bisa melihat semua
+        if ($user->role_id == \App\Models\Role::getKepalaMarketingRoleId()) {
+            return $query;
+        }
+
         $restrictedRoles = ['Surveyor', 'Drafter', 'Desainer', 'Supervisor'];
         
         // Load role jika belum di-load

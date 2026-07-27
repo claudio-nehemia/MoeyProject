@@ -55,8 +55,9 @@ class NotificationService
         }
 
         // Also send to Kepala Marketing in order teams
-        $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
+        $kmId = \App\Models\Role::getKepalaMarketingRoleId();
+        $pms = $order->users()->where(function ($query) use ($kmId) {
+            $query->where('role_id', $kmId)->orWhereHas('role', fn($q) => $q->where('roles.id', $kmId));
         })->get();
 
         foreach ($pms as $pm) {
@@ -140,7 +141,7 @@ class NotificationService
 
         // Also send to Kepala Marketing in order teams
         $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
+            $query$query->where('role_id', \App\Models\Role::getKepalaMarketingRoleId());
         })->get();
 
         foreach ($pms as $pm) {
@@ -207,7 +208,7 @@ class NotificationService
 
         // Also send to Kepala Marketing in order teams
         $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
+            $query$query->where('role_id', \App\Models\Role::getKepalaMarketingRoleId());
         })->get();
 
         foreach ($pms as $pm) {
@@ -274,7 +275,7 @@ class NotificationService
 
         // Also send to Kepala Marketing in order teams
         $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
+            $query$query->where('role_id', \App\Models\Role::getKepalaMarketingRoleId());
         })->get();
 
         foreach ($pms as $pm) {
@@ -341,7 +342,7 @@ class NotificationService
 
         // Also send to Kepala Marketing in order teams
         $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
+            $query$query->where('role_id', \App\Models\Role::getKepalaMarketingRoleId());
         })->get();
 
         foreach ($pms as $pm) {
@@ -408,7 +409,7 @@ class NotificationService
 
         // Also send to Kepala Marketing in order teams
         $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
+            $query$query->where('role_id', \App\Models\Role::getKepalaMarketingRoleId());
         })->get();
 
         foreach ($pms as $pm) {
@@ -472,7 +473,7 @@ class NotificationService
 
         // Also send to Kepala Marketing in order teams
         $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
+            $query$query->where('role_id', \App\Models\Role::getKepalaMarketingRoleId());
         })->get();
 
         foreach ($pms as $pm) {
@@ -536,7 +537,7 @@ class NotificationService
 
         // Also send to Kepala Marketing in order teams
         $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
+            $query$query->where('role_id', \App\Models\Role::getKepalaMarketingRoleId());
         })->get();
 
         foreach ($pms as $pm) {
@@ -600,7 +601,7 @@ class NotificationService
 
         // Also send to Kepala Marketing in order teams
         $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
+            $query$query->where('role_id', \App\Models\Role::getKepalaMarketingRoleId());
         })->get();
 
         foreach ($pms as $pm) {
@@ -664,7 +665,7 @@ class NotificationService
 
         // Also send to Kepala Marketing in order teams
         $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
+            $query$query->where('role_id', \App\Models\Role::getKepalaMarketingRoleId());
         })->get();
 
         foreach ($pms as $pm) {
@@ -699,7 +700,7 @@ class NotificationService
             $query->where('nama_role', 'Project Manager');
         })->get();
         $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
+            $query$query->where('role_id', \App\Models\Role::getKepalaMarketingRoleId());
         })->get();
 
         foreach ($projectManagers as $pm) {
@@ -791,7 +792,7 @@ class NotificationService
 
         // Also send to Kepala Marketing in order teams
         $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
+            $query$query->where('role_id', \App\Models\Role::getKepalaMarketingRoleId());
         })->get();
 
         foreach ($pms as $pm) {
@@ -855,7 +856,7 @@ class NotificationService
 
         // Also send to Kepala Marketing in order teams
         $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
+            $query$query->where('role_id', \App\Models\Role::getKepalaMarketingRoleId());
         })->get();
 
         foreach ($pms as $pm) {
@@ -918,7 +919,7 @@ class NotificationService
 
         // Also send to Kepala Marketing in order teams
         $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
+            $query$query->where('role_id', \App\Models\Role::getKepalaMarketingRoleId());
         })->get();
 
         foreach ($pms as $pm) {
@@ -954,7 +955,7 @@ class NotificationService
             $query->where('nama_role', 'Project Manager');
         })->get();
         $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
+            $query$query->where('role_id', \App\Models\Role::getKepalaMarketingRoleId());
         })->get();
 
         \Log::info('=== SEND WORKPLAN NOTIFICATION ===');
@@ -1029,7 +1030,7 @@ class NotificationService
     {
         // Get Kepala Marketing from order teams and all Estimators
         $kepalaMarketingInTeam = $order->users()->whereHas('role', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
+            $query$query->where('role_id', \App\Models\Role::getKepalaMarketingRoleId());
         })->get();
 
         $estimators = User::whereHas('role', function ($query) {
@@ -1081,7 +1082,7 @@ class NotificationService
     {
         // Get Kepala Marketing from order teams and all Supervisors
         $kepalaMarketingInTeam = $order->users()->whereHas('role', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
+            $query$query->where('role_id', \App\Models\Role::getKepalaMarketingRoleId());
         })->get();
 
         $supervisors = User::whereHas('role', function ($query) {

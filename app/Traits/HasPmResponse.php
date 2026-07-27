@@ -9,7 +9,7 @@ trait HasPmResponse
      */
     protected function isProjectManager($user): bool
     {
-        return $user && $user->role && $user->role->nama_role === 'Kepala Marketing';
+        return $user && ($user->role_id == \App\Models\Role::getKepalaMarketingRoleId());
     }
 
     /**

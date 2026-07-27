@@ -61,10 +61,12 @@ class KaryawanController extends Controller
 
         // Ensure status_karyawan exists in database to avoid foreign key violation
         if ($request->filled('status_karyawan')) {
+            $statusVal = $request->input('status_karyawan');
+            $statusName = $statusVal === 'K001' ? 'Kontrak' : ($statusVal === 'T001' ? 'Tetap' : ($statusVal === 'M001' ? 'Magang' : $statusVal));
             \Illuminate\Support\Facades\DB::table('status_karyawan')->updateOrInsert(
-                ['kode_status_karyawan' => $request->input('status_karyawan')],
+                ['kode_status_karyawan' => $statusVal],
                 [
-                    'nama_status_karyawan' => $request->input('status_karyawan') === 'K001' ? 'Kontrak' : ($request->input('status_karyawan') === 'T001' ? 'Tetap' : 'Magang'),
+                    'nama_status_karyawan' => $statusName,
                     'created_at' => now(),
                     'updated_at' => now()
                 ]
@@ -83,7 +85,7 @@ class KaryawanController extends Controller
             'kode_dept' => 'required|string|max:3|exists:departemen,kode_dept',
             'kode_jabatan' => 'required|string|max:3|exists:jabatan,kode_jabatan',
             'tanggal_masuk' => 'required|date',
-            'status_karyawan' => 'required|string|max:5',
+            'status_karyawan' => 'required|string|max:20',
             'kode_jadwal' => 'nullable|string|max:4|exists:presensi_jamkerja,kode_jam_kerja',
         ]);
 
@@ -116,10 +118,12 @@ class KaryawanController extends Controller
 
         // Ensure status_karyawan exists in database to avoid foreign key violation
         if ($request->filled('status_karyawan')) {
+            $statusVal = $request->input('status_karyawan');
+            $statusName = $statusVal === 'K001' ? 'Kontrak' : ($statusVal === 'T001' ? 'Tetap' : ($statusVal === 'M001' ? 'Magang' : $statusVal));
             \Illuminate\Support\Facades\DB::table('status_karyawan')->updateOrInsert(
-                ['kode_status_karyawan' => $request->input('status_karyawan')],
+                ['kode_status_karyawan' => $statusVal],
                 [
-                    'nama_status_karyawan' => $request->input('status_karyawan') === 'K001' ? 'Kontrak' : ($request->input('status_karyawan') === 'T001' ? 'Tetap' : 'Magang'),
+                    'nama_status_karyawan' => $statusName,
                     'created_at' => now(),
                     'updated_at' => now()
                 ]
@@ -140,7 +144,7 @@ class KaryawanController extends Controller
                 'kode_dept' => 'required|string|max:3|exists:departemen,kode_dept',
                 'kode_jabatan' => 'required|string|max:3|exists:jabatan,kode_jabatan',
                 'tanggal_masuk' => 'required|date',
-                'status_karyawan' => 'required|string|max:5',
+                'status_karyawan' => 'required|string|max:20',
                 'kode_jadwal' => 'nullable|string|max:4|exists:presensi_jamkerja,kode_jam_kerja',
                 'lock_location' => 'nullable|string|max:1',
                 'lock_jam_kerja' => 'nullable|string|max:1',

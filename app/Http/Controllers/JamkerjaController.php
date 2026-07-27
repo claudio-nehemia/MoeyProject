@@ -31,7 +31,12 @@ class JamkerjaController extends Controller
             'batas_presensi_pulang' => 'nullable|date_format:H:i',
             'keterangan' => 'nullable|string|max:255',
             'color' => 'nullable|string|max:7',
+            'hari' => 'nullable',
         ]);
+
+        if (isset($validated['hari']) && is_array($validated['hari'])) {
+            $validated['hari'] = implode(',', $validated['hari']);
+        }
 
         Jamkerja::create($validated);
 
@@ -54,7 +59,12 @@ class JamkerjaController extends Controller
             'batas_presensi_pulang' => 'nullable|date_format:H:i',
             'keterangan' => 'nullable|string|max:255',
             'color' => 'nullable|string|max:7',
+            'hari' => 'nullable',
         ]);
+
+        if (isset($validated['hari']) && is_array($validated['hari'])) {
+            $validated['hari'] = implode(',', $validated['hari']);
+        }
 
         $jamkerja->update($validated);
 

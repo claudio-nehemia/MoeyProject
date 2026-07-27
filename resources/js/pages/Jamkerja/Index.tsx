@@ -17,6 +17,7 @@ interface Jamkerja {
     batas_presensi_pulang: string | null;
     keterangan: string | null;
     color: string | null;
+    hari: string | null;
 }
 
 interface Props {
@@ -31,6 +32,8 @@ export default function Index({ jamkerjas }: Props) {
     const [searchQuery, setSearchQuery] = useState("");
     const [filteredJamkerjas, setFilteredJamkerjas] = useState<Jamkerja[]>(jamkerjas);
 
+    const ALL_DAYS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+
     const { data, setData, post, put, processing, errors, reset } = useForm({
         kode_jam_kerja: '',
         nama_jam_kerja: '',
@@ -44,6 +47,7 @@ export default function Index({ jamkerjas }: Props) {
         batas_presensi_pulang: '18:00',
         keterangan: '',
         color: '#f59e0b',
+        hari: ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'] as string[],
     });
 
     useEffect(() => {
@@ -58,6 +62,7 @@ export default function Index({ jamkerjas }: Props) {
         setEditMode(false);
         setSelectedJamkerja(null);
         reset();
+        setData('hari', ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat']);
         setShowModal(true);
     };
 
@@ -65,12 +70,13 @@ export default function Index({ jamkerjas }: Props) {
         setEditMode(true);
         setSelectedJamkerja(jk);
         
-        // Helper to format time strings (HH:mm:ss to HH:mm)
         const formatTime = (time: string | null) => {
             if (!time) return '';
             const parts = time.split(':');
             return `${parts[0]}:${parts[1]}`;
         };
+
+        const activeDays = jk.hari ? jk.hari.split(',').map(d => d.trim()) : ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
 
         setData({
             kode_jam_kerja: jk.kode_jam_kerja,
@@ -85,6 +91,7 @@ export default function Index({ jamkerjas }: Props) {
             batas_presensi_pulang: formatTime(jk.batas_presensi_pulang),
             keterangan: jk.keterangan || '',
             color: jk.color || '#f59e0b',
+            hari: activeDays,
         });
         setShowModal(true);
     };
@@ -152,6 +159,7 @@ export default function Index({ jamkerjas }: Props) {
                                     <th className="px-5 py-3 font-semibold">Jam Masuk</th>
                                     <th className="px-5 py-3 font-semibold">Jam Pulang</th>
                                     <th className="px-5 py-3 font-semibold">Istirahat</th>
+                                    <th className="px-5 py-3 font-semibold">Hari Berlaku</th>
                                     <th className="px-5 py-3 font-semibold">Durasi Kerja</th>
                                     <th className="px-5 py-3 font-semibold">Lintas Hari</th>
                                     <th className="px-5 py-3 text-right font-semibold">Aksi</th>
@@ -160,7 +168,7 @@ export default function Index({ jamkerjas }: Props) {
                             <tbody>
                                 {filteredJamkerjas.length === 0 ? (
                                     <tr>
-                                        <td colSpan={8} className="px-5 py-10 text-center text-stone-400">
+                                        <td colSpan={9} className="px-5 py-10 text-center text-stone-400">
                                             Tidak ada data jam kerja ditemukan
                                         </td>
                                     </tr>
@@ -183,6 +191,19 @@ export default function Index({ jamkerjas }: Props) {
                                                     <span className="text-emerald-600 font-medium">Aktif ({jk.jam_awal_istirahat} - {jk.jam_akhir_istirahat})</span>
                                                 ) : (
                                                     <span className="text-stone-400">Tidak ada</span>
+                                                )}
+                                            </td>
+                                            <td className="px-5 py-4 text-stone-600 text-xs">
+                                                {jk.hari ? (
+                                                    <div className="flex flex-wrap gap-1 max-w-xs">
+                                                        {jk.hari.split(',').map((h, i) => (
+                                                            <span key={i} className="px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[10px] font-medium">
+                                                                {h.trim()}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-stone-400">Semua Hari</span>
                                                 )}
                                             </td>
                                             <td className="px-5 py-4 text-stone-600">{jk.total_jam} Jam</td>
@@ -254,6 +275,28 @@ export default function Index({ jamkerjas }: Props) {
                                     required
                                 />
                                 {errors.nama_jam_kerja && <span className="text-red-500 text-xs">{errors.nama_jam_kerja}</span>}
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase">Hari Berlaku</label>
+                                <div className="grid grid-cols-4 gap-2 bg-stone-50 p-2.5 rounded-lg border border-stone-200">
+                                    {ALL_DAYS.map((day) => (
+                                        <label key={day} className="flex items-center space-x-1.5 text-xs text-stone-700 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={data.hari.includes(day)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setData('hari', [...data.hari, day]);
+                                                    } else {
+                                                        setData('hari', data.hari.filter((d) => d !== day));
+                                                    }
+                                                }}
+                                                className="rounded text-amber-600 focus:ring-amber-500 h-3.5 w-3.5 border-stone-300"
+                                            />
+                                            <span>{day}</span>
+                                        </label>
+                                    ))}
+                                </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>

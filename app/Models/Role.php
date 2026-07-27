@@ -43,8 +43,17 @@ class Role extends Model
     /**
      * Get all permission names for this role
      */
-    public function getPermissionNames(): array
+    /**
+     * Get ID of Kepala Marketing role (by ID, robust against name changes)
+     */
+    public static function getKepalaMarketingRoleId(): int
     {
-        return $this->permissions()->pluck('name')->toArray();
+        static $cachedId = null;
+        if ($cachedId !== null) {
+            return $cachedId;
+        }
+        $role = static::where('nama_role', 'Kepala Marketing')->first();
+        $cachedId = $role ? (int) $role->id : 11;
+        return $cachedId;
     }
 }
