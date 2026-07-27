@@ -55,9 +55,7 @@ class OrderController extends Controller
         $drafters = User::whereHas('roles', function ($query) {
             $query->whereIn('nama_role', ['Surveyor', 'Drafter']);
         })->get();
-        $desainers = User::whereHas('roles', function ($query) {
-            $query->where('nama_role', 'Desainer');
-        })->get();
+        $desainers = User::where('role_id', \App\Models\Role::getDesainerRoleId())->get();
         $jenisInteriors = JenisInterior::select('id', 'nama_interior')->get();
 
         return Inertia::render('Order/Create', [
@@ -200,9 +198,7 @@ class OrderController extends Controller
         $drafters = User::whereHas('roles', function ($query) {
             $query->whereIn('nama_role', ['Surveyor', 'Drafter']);
         })->get();
-        $desainers = User::whereHas('roles', function ($query) {
-            $query->where('nama_role', 'Desainer');
-        })->get();
+        $desainers = User::where('role_id', \App\Models\Role::getDesainerRoleId())->get();
         $jenisInteriors = JenisInterior::select('id', 'nama_interior')->get();
 
         // Get existing team members (ambil ID dari User model, bukan dari pivot)

@@ -142,18 +142,23 @@ class AuthController extends Controller
         ];
 
         // Define which roles are responsible for which task stages
+        // Use ID-based lookup for roles that may be renamed (Desainer, Kepala Marketing)
         $roleTasksMap = [
             'Surveyor' => ['survey', 'survey_schedule', 'survey_ulang'],
-            'Desainer' => ['moodboard', 'desain_final', 'approval_material'],
             'Drafter' => ['gambar_kerja'],
-            'Kepala Marketing' => ['estimasi', 'rab_internal', 'kontrak', 'cm_fee', 'item_pekerjaan', 'workplan'],
             'Project Manager' => ['estimasi', 'rab_internal', 'kontrak', 'cm_fee', 'item_pekerjaan', 'workplan'],
             'PM' => ['estimasi', 'rab_internal', 'kontrak', 'cm_fee', 'item_pekerjaan', 'workplan'],
             'Admin' => ['estimasi', 'rab_internal', 'kontrak', 'cm_fee', 'item_pekerjaan', 'workplan'],
             'Supervisor' => ['estimasi', 'rab_internal', 'kontrak', 'cm_fee', 'item_pekerjaan', 'workplan'],
         ];
 
-        $roleTasks = $roleTasksMap[$roleName] ?? [];
+        // ID-based role task mapping (robust against name changes)
+        $roleIdTasksMap = [
+            \App\Models\Role::getDesainerRoleId() => ['moodboard', 'desain_final', 'approval_material'],
+            \App\Models\Role::getKepalaMarketingRoleId() => ['estimasi', 'rab_internal', 'kontrak', 'cm_fee', 'item_pekerjaan', 'workplan'],
+        ];
+
+        $roleTasks = $roleIdTasksMap[$user->role_id] ?? ($roleTasksMap[$roleName] ?? []);
         $overdueTask = null;
         $nearestTask = null;
 

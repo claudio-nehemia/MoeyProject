@@ -140,10 +140,15 @@ class Order extends Model
         }
 
         // Roles yang hanya bisa melihat order dimana mereka adalah team member
-        $restrictedRoles = ['Surveyor', 'Drafter', 'Desainer'];
+        $restrictedRoleIds = [\App\Models\Role::getDesainerRoleId()];
+        // Juga tambahkan Surveyor/Drafter by name (belum ada helper, tapi Desainer sudah pakai ID)
+        $restrictedRoleNames = ['Surveyor', 'Drafter'];
         
         // Cek apakah user memiliki role yang dibatasi
-        if ($roleName && in_array($roleName, $restrictedRoles)) {
+        $isRestricted = in_array($user->role_id, $restrictedRoleIds)
+            || ($roleName && in_array($roleName, $restrictedRoleNames));
+        
+        if ($isRestricted) {
             // Filter hanya order dimana user adalah team member
             return $query->whereHas('users', function($q) use ($user) {
                 $q->where('users.id', $user->id);
@@ -171,7 +176,8 @@ class Order extends Model
             return $query;
         }
 
-        $restrictedRoles = ['Surveyor', 'Drafter', 'Desainer', 'Supervisor'];
+        $restrictedRoleIds = [\App\Models\Role::getDesainerRoleId()];
+        $restrictedRoleNames = ['Surveyor', 'Drafter', 'Supervisor'];
         
         // Load role jika belum di-load
         if (!$user->relationLoaded('role')) {
@@ -179,7 +185,10 @@ class Order extends Model
         }
         
         // Cek apakah user memiliki role yang dibatasi
-        if ($user->role && in_array($user->role->nama_role, $restrictedRoles)) {
+        $isRestricted = in_array($user->role_id, $restrictedRoleIds)
+            || ($user->role && in_array($user->role->nama_role, $restrictedRoleNames));
+        
+        if ($isRestricted) {
             // Filter hanya order dimana user masuk dalam survey schedule users
             return $query->whereHas('surveyUsers', function($q) use ($user) {
                 $q->where('users.id', $user->id);

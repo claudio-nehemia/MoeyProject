@@ -56,4 +56,18 @@ class Role extends Model
         $cachedId = $role ? (int) $role->id : 11;
         return $cachedId;
     }
+
+    /**
+     * Get ID of Desainer role (by ID, robust against name changes)
+     */
+    public static function getDesainerRoleId(): int
+    {
+        static $cachedId = null;
+        if ($cachedId !== null) {
+            return $cachedId;
+        }
+        $role = static::where('nama_role', 'Desainer')->first();
+        $cachedId = $role ? (int) $role->id : 7;
+        return $cachedId;
+    }
 }

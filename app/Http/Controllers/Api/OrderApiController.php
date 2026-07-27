@@ -46,17 +46,15 @@ class OrderApiController extends Controller
      */
     public function getFormData()
     {
-        $marketings = User::whereHas('roles', function ($query) {
-            $query->where('nama_role', 'Kepala Marketing');
-        })->get(['id', 'name', 'email']);
+        $marketings = User::where('role_id', \App\Models\Role::getKepalaMarketingRoleId())
+            ->get(['id', 'name', 'email']);
         
         $drafters = User::whereHas('roles', function ($query) {
             $query->whereIn('nama_role', ['Surveyor', 'Drafter']);
         })->get(['id', 'name', 'email']);
         
-        $desainers = User::whereHas('roles', function ($query) {
-            $query->where('nama_role', 'Desainer');
-        })->get(['id', 'name', 'email']);
+        $desainers = User::where('role_id', \App\Models\Role::getDesainerRoleId())
+            ->get(['id', 'name', 'email']);
         
         $jenisInteriors = JenisInterior::select('id', 'nama_interior')->get();
 

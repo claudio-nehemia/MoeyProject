@@ -14,18 +14,19 @@ class SurveyScheduleController extends Controller
     public function index()
     {
         $user = auth()->user();
-        $isKepalaMarketing = $user->role && $user->role->nama_role === 'Kepala Marketing';
+        $isKepalaMarketing = $user->role_id == \App\Models\Role::getKepalaMarketingRoleId();
 
         // USER YANG BOLEH IKUT SURVEY
-        $surveyUsers = User::whereHas('role', function ($q) {
-            $q->whereIn('nama_role', [
+        $desainerId = \App\Models\Role::getDesainerRoleId();
+        $kmId = \App\Models\Role::getKepalaMarketingRoleId();
+        $surveyUsers = User::where(function ($q) use ($desainerId, $kmId) {
+            $q->whereHas('role', fn($rq) => $rq->whereIn('nama_role', [
                 'Surveyor',
                 'Drafter',
-                'Desainer',
-                'Kepala Marketing',
                 'Supervisi',
                 'Project Manager',
-            ]);
+            ]))
+            ->orWhereIn('role_id', [$desainerId, $kmId]);
         })->select('id', 'name', 'email')->get();
 
         $orders = Order::with(['surveyUsers:id,name'])

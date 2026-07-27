@@ -77,9 +77,8 @@ class CheckTaskDeadlines extends Command
 
             case 'moodboard':
                 // Desainer dari order team
-                $users = $order->users()->whereHas('role', function ($query) {
-                    $query->where('nama_role', 'Desainer');
-                })->get();
+                $desainerId = \App\Models\Role::getDesainerRoleId();
+                $users = $order->users()->where('role_id', $desainerId)->get();
                 break;
 
             case 'estimasi':
@@ -97,24 +96,21 @@ class CheckTaskDeadlines extends Command
                 break;
 
             case 'approval_design':
-                // Project Manager dari order team
-                $users = $order->users()->whereHas('role', function ($query) {
-                    $query->where('nama_role', 'Desainer');
-                })->get();
+                // Desainer dari order team
+                $desainerId = \App\Models\Role::getDesainerRoleId();
+                $users = $order->users()->where('role_id', $desainerId)->get();
                 break;
 
             case 'desain_final':
                 // Desainer dari order team
-                $users = $order->users()->whereHas('role', function ($query) {
-                    $query->where('nama_role', 'Desainer');
-                })->get();
+                $desainerId = \App\Models\Role::getDesainerRoleId();
+                $users = $order->users()->where('role_id', $desainerId)->get();
                 break;
 
             case 'item_pekerjaan':
                 // desainer dari order teams
-                $users = $order->users()->whereHas('role', function ($query) {
-                    $query->where('nama_role', 'Desainer');
-                })->get();
+                $desainerId = \App\Models\Role::getDesainerRoleId();
+                $users = $order->users()->where('role_id', $desainerId)->get();
                 break;
 
             case 'rab_internal':
@@ -146,15 +142,19 @@ class CheckTaskDeadlines extends Command
                 break;
 
             case 'survey_ulang':
-                $users = $order->surveyUsers()->whereHas('role', function ($query) {
-                    $query->whereIn('nama_role', ['Surveyor', 'Drafter', 'Desainer']);
+                $desainerId = \App\Models\Role::getDesainerRoleId();
+                $users = $order->surveyUsers()->where(function ($q) use ($desainerId) {
+                    $q->whereHas('role', fn($rq) => $rq->whereIn('nama_role', ['Surveyor', 'Drafter']))
+                      ->orWhere('role_id', $desainerId);
                 })->get();
                 break;
 
             case 'gambar_kerja':
                 // Drafter dari order team
-                $users = $order->surveyUsers()->whereHas('role', function ($query) {
-                    $query->whereIn('nama_role', ['Surveyor', 'Drafter', 'Desainer']);
+                $desainerId = \App\Models\Role::getDesainerRoleId();
+                $users = $order->surveyUsers()->where(function ($q) use ($desainerId) {
+                    $q->whereHas('role', fn($rq) => $rq->whereIn('nama_role', ['Surveyor', 'Drafter']))
+                      ->orWhere('role_id', $desainerId);
                 })->get();
                 break;
 
