@@ -990,7 +990,7 @@ class InvoiceController extends Controller
                             'is_marketing' => false,
                         ]);
                     } else {
-                        $durationActual = $taskResponse->start_time ? $taskResponse->start_time->diffInDays($responseTime) : 0;
+                        $durationActual = $taskResponse->start_time ? (int) round($taskResponse->start_time->diffInDays($responseTime)) : 0;
                         $taskResponse->update([
                             'response_time' => $responseTime,
                             'response_by' => $responseBy,
