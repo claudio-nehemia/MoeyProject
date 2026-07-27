@@ -108,7 +108,8 @@ export default function Index({ itemPekerjaans }: Props) {
     const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
 
     const { auth } = usePage<PageProps>().props;
-    const isKepalaMarketing = auth.user.role?.nama_role === 'Kepala Marketing';
+    const isKepalaMarketing = (auth as any)?.isKepalaMarketing || (auth as any)?.user?.isKepalaMarketing || auth.user.role?.nama_role === 'Kepala Marketing';
+    const isAdmin = (auth as any)?.isAdmin || auth.user.role?.nama_role === 'Admin';
 
     // Fetch task response untuk semua project (tahap: invoice)
     useEffect(() => {
@@ -571,7 +572,7 @@ export default function Index({ itemPekerjaans }: Props) {
                                                         </td>
                                                         <td className="px-5 py-4 text-right sticky right-0 bg-white border-l border-slate-200">
                                                             <div className="flex flex-col items-end gap-2">
-                                                                {!isKepalaMarketing && (
+                                                                {(!isKepalaMarketing || isAdmin) && (
                                                                     !item.response_time ? (
                                                                         <button
                                                                             onClick={() => handleResponse(item.id)}
@@ -580,10 +581,10 @@ export default function Index({ itemPekerjaans }: Props) {
                                                                             Response
                                                                         </button>
                                                                     ) : (
-                                                                        <span className="text-[10px] font-semibold text-emerald-600">✓ Response</span>
+                                                                        <span className="text-[10px] font-semibold text-emerald-600">✓ Response {item.response_by ? `(${item.response_by})` : ''}</span>
                                                                     )
                                                                 )}
-                                                                {isKepalaMarketing && (
+                                                                {(isKepalaMarketing || isAdmin) && (
                                                                     !item.pm_response_time ? (
                                                                         <button
                                                                             onClick={() => handlePmResponse(item.id)}
@@ -592,7 +593,7 @@ export default function Index({ itemPekerjaans }: Props) {
                                                                             Marketing Response
                                                                         </button>
                                                                     ) : (
-                                                                        <span className="text-[10px] font-semibold text-emerald-600">✓ Marketing</span>
+                                                                        <span className="text-[10px] font-semibold text-emerald-600">✓ Marketing {item.pm_response_by ? `(${item.pm_response_by})` : ''}</span>
                                                                     )
                                                                 )}
                                                                 <button

@@ -153,11 +153,14 @@ class InvoiceController extends Controller
                     $currentPaymentStatus = $tahapan[$lastPaidStep - 1]['text'] ?? "Tahap $lastPaidStep";
                 }
 
-                // Get response info from first invoice (termin 1) if exists
-                $firstInvoice = $allInvoices->firstWhere('termin_step', 1);
-                $responseTime = $firstInvoice?->response_time;
+                // Get response info from first invoice (termin 1) or any existing invoice
+                $firstInvoice = $allInvoices->first(function ($inv) {
+                    return (int) $inv->termin_step === 1 || empty($inv->termin_step);
+                }) ?? $allInvoices->first();
+
+                $responseTime = $firstInvoice?->response_time ? $firstInvoice->response_time->toIso8601String() : null;
                 $responseBy = $firstInvoice?->response_by;
-                $pmResponseTime = $firstInvoice?->pm_response_time;
+                $pmResponseTime = $firstInvoice?->pm_response_time ? $firstInvoice->pm_response_time->toIso8601String() : null;
                 $pmResponseBy = $firstInvoice?->pm_response_by;
 
                 return [
@@ -912,18 +915,19 @@ class InvoiceController extends Controller
         try {
             $itemPekerjaan = ItemPekerjaan::with(['invoices', 'moodboard.order', 'rabKontrak'])->findOrFail($itemPekerjaanId);
 
-            // Find invoice termin 1, fallback to legacy records without termin_step
-            $invoice = $itemPekerjaan->invoices->firstWhere('termin_step', 1)
-                ?? $itemPekerjaan->invoices->firstWhere('termin_step', null);
+            // Find invoice termin 1, fallback to any invoice without termin_step or first invoice
+            $invoice = $itemPekerjaan->invoices->first(function ($inv) {
+                return (int) $inv->termin_step === 1 || empty($inv->termin_step);
+            }) ?? $itemPekerjaan->invoices->first();
 
-            // prevent duplicate response (only if already bound to termin 1)
-            if ($invoice && $invoice->response_time && (int) $invoice->termin_step === 1) {
+            // prevent duplicate response
+            if ($invoice && $invoice->response_time) {
                 return back()->with('info', 'Invoice sudah di-response.');
             }
 
-            DB::transaction(function () use ($invoice, $itemPekerjaan) {
-                $responseTime = $invoice?->response_time ?? now();
-                $responseBy = $invoice?->response_by ?? auth()->user()->name;
+            DB::transaction(function () use (&$invoice, $itemPekerjaan) {
+                $responseTime = now();
+                $responseBy = auth()->user()->name;
 
                 // Update invoice termin 1 if exists
                 if ($invoice) {
@@ -943,7 +947,7 @@ class InvoiceController extends Controller
                     $sequence = $lastInvoice ? (intval(substr($lastInvoice->invoice_number, -4)) + 1) : 1;
                     $invoiceNumber = 'INV/' . date('Ym') . '/' . str_pad($sequence, 4, '0', STR_PAD_LEFT);
 
-                    Invoice::create([
+                    $invoice = Invoice::create([
                         'item_pekerjaan_id' => $itemPekerjaan->id,
                         'rab_kontrak_id' => $itemPekerjaan->rabKontrak?->id,
                         'invoice_number' => $invoiceNumber,
