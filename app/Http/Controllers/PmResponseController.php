@@ -26,7 +26,15 @@ class PmResponseController extends Controller
     private function checkPm()
     {
         $user = auth()->user();
-        if (!$user->role || !in_array($user->role->nama_role, ['Kepala Marketing', 'Admin'])) {
+        if (!$user) {
+            return redirect()->back()->with('error', 'Unauthorized.');
+        }
+
+        $kmId = \App\Models\Role::getKepalaMarketingRoleId();
+        $isKm = $user->role_id == $kmId || ($user->role && $user->role->id == $kmId);
+        $isAdmin = $user->role && $user->role->nama_role === 'Admin';
+
+        if (!$isKm && !$isAdmin) {
             return redirect()->back()->with('error', 'Unauthorized. Only Kepala Marketing or Admin can perform this action.');
         }
         return null;
@@ -35,16 +43,26 @@ class PmResponseController extends Controller
     private function checkOriginalKepalaMarketing(Order $order)
     {
         $user = auth()->user();
-        if (!$user || !$user->role || !in_array($user->role->nama_role, ['Kepala Marketing', 'Admin'])) {
+        if (!$user) {
+            return redirect()->back()->with('error', 'Unauthorized.');
+        }
+
+        $kmId = \App\Models\Role::getKepalaMarketingRoleId();
+        $isKm = $user->role_id == $kmId || ($user->role && $user->role->id == $kmId);
+        $isAdmin = $user->role && $user->role->nama_role === 'Admin';
+
+        if (!$isKm && !$isAdmin) {
             return redirect()->back()->with('error', 'Unauthorized. Only Kepala Marketing or Admin can perform this action.');
         }
 
-        if ($user->role->nama_role === 'Admin') {
+        if ($isAdmin) {
             return null;
         }
 
         $isAssignedKepalaMarketing = $order->users()
-            ->whereHas('role', fn($q) => $q->where('nama_role', 'Kepala Marketing'))
+            ->where(function ($q) use ($kmId) {
+                $q->where('role_id', $kmId)->orWhereHas('role', fn($rq) => $rq->where('id', $kmId));
+            })
             ->where('users.id', $user->id)
             ->exists();
 
@@ -747,55 +765,73 @@ class PmResponseController extends Controller
         \Log::info('=== PM RESPONSE INVOICE START ===');
         \Log::info('Item Pekerjaan ID: ' . $id);
 
-        $itemPekerjaan = ItemPekerjaan::with(['moodboard.order', 'invoices'])->findOrFail($id);
-        $order = $itemPekerjaan->moodboard->order;
+        try {
+            $itemPekerjaan = ItemPekerjaan::with(['moodboard.order', 'invoices', 'rabKontrak'])->findOrFail($id);
+            $order = $itemPekerjaan->moodboard?->order;
 
-        if ($check = $this->checkOriginalKepalaMarketing($order))
-            return $check;
+            if (!$order) {
+                return redirect()->back()->with('error', 'Order tidak ditemukan untuk item pekerjaan ini.');
+            }
 
-        // Find invoice termin 1
-        $invoice = $itemPekerjaan->invoices->firstWhere('termin_step', 1);
+            if ($check = $this->checkOriginalKepalaMarketing($order))
+                return $check;
 
-        // Check if already responded
-        if ($invoice && $invoice->pm_response_time) {
-            return redirect()->back()->with('info', 'Invoice sudah di-response oleh Marketing.');
+            // Find invoice termin 1
+            $invoice = $itemPekerjaan->invoices->firstWhere('termin_step', 1)
+                ?? $itemPekerjaan->invoices->firstWhere('termin_step', null);
+
+            // Check if already responded
+            if ($invoice && $invoice->pm_response_time) {
+                return redirect()->back()->with('info', 'Invoice sudah di-response oleh Marketing.');
+            }
+
+            // If invoice termin 1 exists, update it
+            if ($invoice) {
+                $invoice->update([
+                    'pm_response_time' => now(),
+                    'pm_response_by' => auth()->user()->name,
+                ]);
+            } else {
+                $lastInvoice = Invoice::whereNotNull('invoice_number')->latest()->first();
+                $sequence = $lastInvoice ? (intval(substr($lastInvoice->invoice_number, -4)) + 1) : 1;
+                $invoiceNumber = 'INV/' . date('Ym') . '/' . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+
+                Invoice::create([
+                    'item_pekerjaan_id' => $itemPekerjaan->id,
+                    'rab_kontrak_id' => $itemPekerjaan->rabKontrak?->id,
+                    'invoice_number' => $invoiceNumber,
+                    'termin_step' => 1,
+                    'total_amount' => 0,
+                    'status' => 'unpaid',
+                    'pm_response_time' => now(),
+                    'pm_response_by' => auth()->user()->name,
+                ]);
+            }
+
+            // Update marketing task response (invoice stage)
+            $taskResponse = TaskResponse::where('order_id', $order->id)
+                ->where('tahap', 'invoice')
+                ->where('is_marketing', true)
+                ->orderByDesc('extend_time')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
+                ->first();
+
+            if ($taskResponse && !$taskResponse->response_time) {
+                $taskResponse->update([
+                    'user_id' => auth()->user()->id,
+                    'response_time' => now(),
+                    'response_by' => auth()->user()->name,
+                    'status' => 'selesai',
+                ]);
+            }
+
+            \Log::info('=== PM RESPONSE INVOICE END ===');
+            return redirect()->back()->with('success', 'Marketing Response Invoice berhasil.');
+        } catch (\Exception $e) {
+            \Log::error('PM Response Invoice Error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return redirect()->back()->with('error', 'Gagal PM Response Invoice: ' . $e->getMessage());
         }
-
-        // If invoice termin 1 exists, update it
-        if ($invoice) {
-            $invoice->update([
-                'pm_response_time' => now(),
-                'pm_response_by' => auth()->user()->name,
-            ]);
-        } else {
-            Invoice::create([
-                'item_pekerjaan_id' => $itemPekerjaan->id,
-                'rab_kontrak_id' => $itemPekerjaan->rabKontrak->id,
-                'pm_response_time' => now(),
-                'pm_response_by' => auth()->user()->name,
-            ]);
-        }
-
-        // Update marketing task response (invoice stage)
-        $taskResponse = TaskResponse::where('order_id', $order->id)
-            ->where('tahap', 'invoice')
-            ->where('is_marketing', true)
-            ->orderByDesc('extend_time')
-            ->orderByDesc('updated_at')
-            ->orderByDesc('id')
-            ->first();
-
-        if ($taskResponse && !$taskResponse->response_time) {
-            $taskResponse->update([
-                'user_id' => auth()->user()->id,
-                'response_time' => now(),
-                'response_by' => auth()->user()->name,
-                'status' => 'selesai',
-            ]);
-        }
-
-        \Log::info('=== PM RESPONSE INVOICE END ===');
-        return redirect()->back()->with('success', 'Marketing Response Invoice berhasil.' . (!$invoice ? ' Response akan disimpan di invoice saat di-generate.' : ''));
     }
 
 }

@@ -217,13 +217,51 @@ export default function Index({ itemPekerjaans }: Props) {
 
     const handleResponse = (itemPekerjaanId: number) => {
         if (confirm('Apakah Anda yakin ingin melakukan Response untuk invoice ini?')) {
-            router.post(`/invoice/item-pekerjaan/${itemPekerjaanId}/response`);
+            console.log('[FE LOG] Initiating Response for itemPekerjaanId:', itemPekerjaanId);
+            router.post(
+                `/invoice/item-pekerjaan/${itemPekerjaanId}/response`,
+                {},
+                {
+                    onStart: () => {
+                        console.log('[FE LOG] Request started: /invoice/item-pekerjaan/' + itemPekerjaanId + '/response');
+                    },
+                    onSuccess: (page) => {
+                        console.log('[FE LOG] Response success:', page);
+                    },
+                    onError: (errors) => {
+                        console.error('[FE LOG] Response error callback:', errors);
+                        alert('Gagal Response Invoice:\n' + JSON.stringify(errors, null, 2));
+                    },
+                    onFinish: () => {
+                        console.log('[FE LOG] Request finished');
+                    },
+                }
+            );
         }
     };
 
     const handlePmResponse = (itemPekerjaanId: number) => {
         if (confirm('Apakah Anda yakin ingin melakukan PM Response untuk invoice ini?')) {
-            router.post(`/pm-response/invoice/${itemPekerjaanId}`);
+            console.log('[FE LOG] Initiating PM Response for itemPekerjaanId:', itemPekerjaanId);
+            router.post(
+                `/pm-response/invoice/${itemPekerjaanId}`,
+                {},
+                {
+                    onStart: () => {
+                        console.log('[FE LOG] Request started: /pm-response/invoice/' + itemPekerjaanId);
+                    },
+                    onSuccess: (page) => {
+                        console.log('[FE LOG] PM Response success:', page);
+                    },
+                    onError: (errors) => {
+                        console.error('[FE LOG] PM Response error callback:', errors);
+                        alert('Gagal Marketing Response Invoice:\n' + JSON.stringify(errors, null, 2));
+                    },
+                    onFinish: () => {
+                        console.log('[FE LOG] Request finished');
+                    },
+                }
+            );
         }
     };
 
