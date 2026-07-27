@@ -962,7 +962,7 @@ class InvoiceController extends Controller
                 // Invoice will be created when user clicks generate
 
                 // Update TaskResponse
-                $order = $itemPekerjaan->moodboard->order;
+                $order = $itemPekerjaan->moodboard?->order;
                 if ($order) {
                     $taskResponse = TaskResponse::where('order_id', $order->id)
                         ->where('tahap', 'invoice')
@@ -974,15 +974,28 @@ class InvoiceController extends Controller
                         ->orderByDesc('id')
                         ->first();
 
-                    if ($taskResponse && !$taskResponse->response_time) {
-                        $responseTime = now();
+                    if (!$taskResponse) {
+                        TaskResponse::create([
+                            'order_id' => $order->id,
+                            'user_id' => auth()->user()->id,
+                            'tahap' => 'invoice',
+                            'start_time' => now(),
+                            'deadline' => now()->addDays(3),
+                            'duration' => 3,
+                            'duration_actual' => 0,
+                            'extend_time' => 0,
+                            'status' => 'selesai',
+                            'response_time' => $responseTime,
+                            'response_by' => $responseBy,
+                            'is_marketing' => false,
+                        ]);
+                    } else {
                         $durationActual = $taskResponse->start_time ? $taskResponse->start_time->diffInDays($responseTime) : 0;
-
                         $taskResponse->update([
                             'response_time' => $responseTime,
-                            'response_by' => auth()->user()->name,
+                            'response_by' => $responseBy,
                             'duration_actual' => $durationActual,
-                            'status' => 'on_progress',
+                            'status' => 'selesai',
                         ]);
                     }
                 }
