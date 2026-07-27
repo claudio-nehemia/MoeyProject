@@ -112,9 +112,23 @@ class DashboardController extends Controller
 
         if ($jamkerja == null && $karyawan->kode_jadwal) {
             // Cek Jam Kerja Utama Karyawan (dari kolom kode_jadwal di tabel karyawan)
-            $jamkerja = DB::table('presensi_jamkerja')
+            $jkKandidat = DB::table('presensi_jamkerja')
                 ->where('kode_jam_kerja', $karyawan->kode_jadwal)
                 ->first();
+
+            // Cek apakah hari ini termasuk dalam kolom hari (jika diset)
+            if ($jkKandidat) {
+                if ($jkKandidat->hari) {
+                    $hariBerlaku = array_map('trim', explode(',', strtolower($jkKandidat->hari)));
+                    if (in_array($namahari, $hariBerlaku)) {
+                        $jamkerja = $jkKandidat;
+                    }
+                    // Jika hari ini tidak termasuk, skip — akan fallback ke bydept/global
+                } else {
+                    // Kolom hari kosong = berlaku semua hari
+                    $jamkerja = $jkKandidat;
+                }
+            }
         }
 
         if ($jamkerja == null) {
@@ -236,6 +250,7 @@ class DashboardController extends Controller
                     'istirahat' => (int) ($jamkerja->istirahat ?? 0),
                     'jam_awal_istirahat' => $jamkerja->jam_awal_istirahat ? date('H:i', strtotime($jamkerja->jam_awal_istirahat)) : null,
                     'jam_akhir_istirahat' => $jamkerja->jam_akhir_istirahat ? date('H:i', strtotime($jamkerja->jam_akhir_istirahat)) : null,
+                    'hari' => $jamkerja->hari ?? null,
                 ] : null,
                 'general_setting' => $general_setting ? [
                     'nama_perusahaan' => $general_setting->nama_perusahaan,

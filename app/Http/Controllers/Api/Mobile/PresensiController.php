@@ -101,6 +101,18 @@ class PresensiController extends Controller
                 ], 404);
             }
 
+            // Validasi hari berlaku (jika kolom hari diisi)
+            if ($jam_kerja->hari) {
+                $namaHariIni = strtolower(Carbon::now($timezone_cabang)->locale('id')->dayName);
+                $hariBerlaku = array_map('trim', explode(',', strtolower($jam_kerja->hari)));
+                if (!in_array($namaHariIni, $hariBerlaku)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Jam kerja ' . $jam_kerja->nama_jam_kerja . ' tidak berlaku pada hari ini'
+                    ], 400);
+                }
+            }
+
             // Determine check-in target date
             $tanggal_presensi = $tanggal_sekarang;
             $jam_kerja_pulang = $jam_kerja->jam_pulang;
