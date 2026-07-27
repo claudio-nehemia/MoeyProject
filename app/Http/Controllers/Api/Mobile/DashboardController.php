@@ -152,6 +152,35 @@ class DashboardController extends Controller
             }
         }
 
+        if ($jamkerja == null) {
+            // Auto-resolve: cari semua jam kerja yang berlaku di hari ini berdasarkan kolom 'hari'
+            $allJamkerja = DB::table('presensi_jamkerja')
+                ->whereNotNull('hari')
+                ->where('hari', '!=', '')
+                ->get();
+
+            $candidates = $allJamkerja->filter(function ($jk) use ($namahari) {
+                $hariBerlaku = array_map('trim', explode(',', strtolower($jk->hari)));
+                return in_array($namahari, $hariBerlaku);
+            });
+
+            if ($candidates->count() == 1) {
+                $jamkerja = $candidates->first();
+            } elseif ($candidates->count() > 1) {
+                // Ada lebih dari 1 jam kerja di hari yang sama
+                // Pilih yang jam_masuk-nya paling dekat dengan waktu sekarang
+                $nowMinutes = (int) $carbon_now->format('H') * 60 + (int) $carbon_now->format('i');
+
+                $jamkerja = $candidates->sortBy(function ($jk) use ($nowMinutes) {
+                    $parts = explode(':', $jk->jam_masuk);
+                    $jkMinutes = (int) $parts[0] * 60 + (int) ($parts[1] ?? 0);
+                    $diff = abs($nowMinutes - $jkMinutes);
+                    // Juga hitung jarak wrap-around (misal 23:00 vs 01:00 = 2 jam, bukan 22 jam)
+                    return min($diff, 1440 - $diff);
+                })->first();
+            }
+        }
+
         // 6. Get presence history
         $datapresensi = Presensi::join('presensi_jamkerja', 'presensi.kode_jam_kerja', '=', 'presensi_jamkerja.kode_jam_kerja')
             ->where('presensi.nik', $nik)
