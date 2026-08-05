@@ -144,6 +144,7 @@ def extract_feature(img_path):
         faces = None
         target_img = None
         
+        # Try YuNet detection first
         for scale in scales:
             sw = int(w * scale)
             sh = int(h * scale)
@@ -172,12 +173,45 @@ def extract_feature(img_path):
                 sys.stderr.write(f"YuNet detect error on {img_path} scale {scale}: {str(e)}\n")
                 continue
         
+        # Fallback to OpenCV Haar Cascade if YuNet failed or threw OpenCV 4.6 DNN errors
+        if faces is None or len(faces) == 0:
+            try:
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                haar_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+                if os.path.exists(haar_path):
+                    haar_cascade = cv2.CascadeClassifier(haar_path)
+                    rects = haar_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(40, 40))
+                    if len(rects) > 0:
+                        # Pick largest face
+                        rects = sorted(rects, key=lambda r: r[2] * r[3], reverse=True)
+                        fx, fy, fw, fh = rects[0]
+                        # Synthesize face landmark structure for SFace: [x, y, w, h, r_eye_x, r_eye_y, l_eye_x, l_eye_y, nose_x, nose_y, r_mouth_x, r_mouth_y, l_mouth_x, l_mouth_y, score]
+                        synth_face = np.array([
+                            float(fx), float(fy), float(fw), float(fh),
+                            float(fx + fw * 0.3), float(fy + fh * 0.35),
+                            float(fx + fw * 0.7), float(fy + fh * 0.35),
+                            float(fx + fw * 0.5), float(fy + fh * 0.55),
+                            float(fx + fw * 0.35), float(fy + fh * 0.75),
+                            float(fx + fw * 0.65), float(fy + fh * 0.75),
+                            0.95
+                        ], dtype=np.float32)
+                        faces = np.array([synth_face])
+                        target_img = img
+            except Exception as e:
+                sys.stderr.write(f"Haar Cascade fallback error on {img_path}: {str(e)}\n")
+        
         if faces is None or len(faces) == 0 or target_img is None:
             return None
         
         # Align and crop the first detected face, then resize to 112x112 (SFace standard input)
         try:
-            aligned_face = recognizer.alignCrop(target_img, faces[0])
+            try:
+                aligned_face = recognizer.alignCrop(target_img, faces[0])
+            except Exception:
+                fx, fy, fw, fh = int(faces[0][0]), int(faces[0][1]), int(faces[0][2]), int(faces[0][3])
+                cropped = target_img[max(0, fy):min(target_img.shape[0], fy+fh), max(0, fx):min(target_img.shape[1], fx+fw)]
+                aligned_face = cv2.resize(cropped, (112, 112))
+            
             aligned_face = cv2.resize(aligned_face, (112, 112))
             feature = recognizer.feature(aligned_face)
             return feature
