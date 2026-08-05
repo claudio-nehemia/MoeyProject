@@ -587,7 +587,7 @@ class PresensiController extends Controller
     {
         $namahari = strtolower(\Carbon\Carbon::parse($tanggal)->locale('id')->dayName);
         $kode_dept = $karyawan->kode_dept;
-        $general_setting = \Illuminate\Support\Facades\DB::table('pengaturanumum')->where('id', 1)->first();
+        $general_setting = \Illuminate\Support\Facades\DB::table('pengaturan_umum')->where('id', 1)->first();
 
         // 1. By Date
         $jamkerja = \Illuminate\Support\Facades\DB::table('presensi_jamkerja_bydate')
