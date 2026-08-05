@@ -592,16 +592,16 @@ class PresensiController extends Controller
         // 1. By Date
         $jamkerja = \Illuminate\Support\Facades\DB::table('presensi_jamkerja_bydate')
             ->join('presensi_jamkerja', 'presensi_jamkerja_bydate.kode_jam_kerja', '=', 'presensi_jamkerja.kode_jam_kerja')
-            ->where('nik', $karyawan->nik)
-            ->where('tanggal', $tanggal)
+            ->where('presensi_jamkerja_bydate.nik', $karyawan->nik)
+            ->where('presensi_jamkerja_bydate.tanggal', $tanggal)
             ->first();
 
         // 2. By Day
         if ($jamkerja == null) {
             $jamkerja = \Illuminate\Support\Facades\DB::table('presensi_jamkerja_byday')
                 ->join('presensi_jamkerja', 'presensi_jamkerja_byday.kode_jam_kerja', '=', 'presensi_jamkerja.kode_jam_kerja')
-                ->where('nik', $karyawan->nik)
-                ->where('hari', $namahari)
+                ->where('presensi_jamkerja_byday.nik', $karyawan->nik)
+                ->where('presensi_jamkerja_byday.hari', $namahari)
                 ->first();
         }
 
@@ -628,9 +628,9 @@ class PresensiController extends Controller
             $jamkerja = \Illuminate\Support\Facades\DB::table('presensi_jamkerja_bydept_detail')
                 ->join('presensi_jamkerja_bydept', 'presensi_jamkerja_bydept_detail.kode_jk_dept', '=', 'presensi_jamkerja_bydept.kode_jk_dept')
                 ->join('presensi_jamkerja', 'presensi_jamkerja_bydept_detail.kode_jam_kerja', '=', 'presensi_jamkerja.kode_jam_kerja')
-                ->where('kode_dept', $kode_dept)
-                ->where('kode_cabang', $karyawan->kode_cabang)
-                ->where('hari', $namahari)
+                ->where('presensi_jamkerja_bydept.kode_dept', $kode_dept)
+                ->where('presensi_jamkerja_bydept.kode_cabang', $karyawan->kode_cabang)
+                ->where('presensi_jamkerja_bydept_detail.hari', $namahari)
                 ->first();
         }
 
