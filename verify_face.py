@@ -58,37 +58,61 @@ if not is_good_exposure:
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'storage', 'models')
 os.makedirs(MODELS_DIR, exist_ok=True)
 
-# Correct raw URLs — use 2022mar YuNet model for OpenCV 4.x compatibility
-YUNET_URL = "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2022mar.onnx"
-SFACE_URL = "https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx"
+# Correct download URLs — use Hugging Face mirrors (GitHub raw fails for LFS files)
+YUNET_URL = "https://huggingface.co/opencv/face_detection_yunet/resolve/main/face_detection_yunet_2023mar.onnx"
+YUNET_URL_FALLBACK = "https://github.com/opencv/opencv_zoo/raw/refs/heads/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx"
+SFACE_URL = "https://huggingface.co/opencv/face_recognition_sface/resolve/main/face_recognition_sface_2021dec.onnx"
+SFACE_URL_FALLBACK = "https://github.com/opencv/opencv_zoo/raw/refs/heads/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx"
 
-yunet_path = os.path.join(MODELS_DIR, 'yunet_2022mar.onnx')
+yunet_path = os.path.join(MODELS_DIR, 'yunet_2023mar.onnx')
 sface_path = os.path.join(MODELS_DIR, 'sface.onnx')
 
-# Remove old incompatible yunet.onnx (2023mar) if it exists
-old_yunet = os.path.join(MODELS_DIR, 'yunet.onnx')
-if os.path.exists(old_yunet):
-    try:
-        os.remove(old_yunet)
-    except Exception:
-        pass
+# Remove old incompatible model files if they exist
+for old_name in ['yunet.onnx', 'yunet_2022mar.onnx']:
+    old_path = os.path.join(MODELS_DIR, old_name)
+    if os.path.exists(old_path):
+        try:
+            os.remove(old_path)
+        except Exception:
+            pass
 
-def download_file(url, path):
-    # If file exists but is too small (e.g. LFS pointer file), remove it and re-download
-    if os.path.exists(path) and os.path.getsize(path) < 10000:
+def download_file(url, path, fallback_url=None):
+    # If file exists but is too small (e.g. LFS pointer file or HTML error page), remove and re-download
+    if os.path.exists(path) and os.path.getsize(path) < 100000:
         try:
             os.remove(path)
         except Exception:
             pass
 
     if not os.path.exists(path):
-        try:
-            urllib.request.urlretrieve(url, path)
-        except Exception as e:
-            exit_with_json(False, f"Failed to download face model: {str(e)}")
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        download_success = False
+        
+        urls_to_try = [url]
+        if fallback_url:
+            urls_to_try.append(fallback_url)
+            
+        for target_url in urls_to_try:
+            try:
+                req = urllib.request.Request(target_url, headers=headers)
+                with urllib.request.urlopen(req) as response, open(path, 'wb') as out_file:
+                    out_file.write(response.read())
+                if os.path.exists(path) and os.path.getsize(path) >= 100000:
+                    download_success = True
+                    break
+            except Exception as e:
+                sys.stderr.write(f"Download attempt failed for {target_url}: {str(e)}\n")
+                if os.path.exists(path):
+                    try:
+                        os.remove(path)
+                    except Exception:
+                        pass
+                        
+        if not download_success:
+            exit_with_json(False, f"Failed to download face model from primary and fallback sources.")
 
-download_file(YUNET_URL, yunet_path)
-download_file(SFACE_URL, sface_path)
+download_file(YUNET_URL, yunet_path, YUNET_URL_FALLBACK)
+download_file(SFACE_URL, sface_path, SFACE_URL_FALLBACK)
 
 # Initialize OpenCV face detector and recognizer using positional arguments
 try:
@@ -96,7 +120,7 @@ try:
         yunet_path,      # model
         "",              # config
         (320, 320),      # inputSize
-        0.5,             # scoreThreshold (relaxed from 0.6 for better detection in low-light/various angles)
+        0.4,             # scoreThreshold (relaxed to 0.4 for better mobile selfie detection)
         0.3,             # nmsThreshold
         5000             # topK
     )
@@ -116,27 +140,44 @@ def extract_feature(img_path):
         h, w, _ = img.shape
         
         # Round width and height to nearest multiple of 32 to prevent YuNet getMemoryShapes crash on odd dimensions
-        new_w = int(round(w / 32.0) * 32)
-        new_h = int(round(h / 32.0) * 32)
-        new_w = max(new_w, 32)
-        new_h = max(new_h, 32)
+        scales = [1.0, 0.5, 0.75]
+        faces = None
+        target_img = None
         
-        img = cv2.resize(img, (new_w, new_h))
+        for scale in scales:
+            sw = int(w * scale)
+            sh = int(h * scale)
+            new_w = max(int(round(sw / 32.0) * 32), 32)
+            new_h = max(int(round(sh / 32.0) * 32), 32)
+            
+            scaled_img = cv2.resize(img, (new_w, new_h))
+            detector.setInputSize((new_w, new_h))
+            
+            try:
+                detector.setScoreThreshold(0.4)
+                _, detected = detector.detect(scaled_img)
+                if detected is not None and len(detected) > 0:
+                    faces = detected
+                    target_img = scaled_img
+                    break
+                
+                # Secondary try with lower threshold if normal detection misses
+                detector.setScoreThreshold(0.25)
+                _, detected_low = detector.detect(scaled_img)
+                if detected_low is not None and len(detected_low) > 0:
+                    faces = detected_low
+                    target_img = scaled_img
+                    break
+            except Exception as e:
+                sys.stderr.write(f"YuNet detect error on {img_path} scale {scale}: {str(e)}\n")
+                continue
         
-        # Set input size for YuNet detector
-        detector.setInputSize((new_w, new_h))
-        try:
-            _, faces = detector.detect(img)
-        except Exception as e:
-            sys.stderr.write(f"YuNet detect error on {img_path}: {str(e)}\n")
-            return None
-        
-        if faces is None or len(faces) == 0:
+        if faces is None or len(faces) == 0 or target_img is None:
             return None
         
         # Align and crop the first detected face, then resize to 112x112 (SFace standard input)
         try:
-            aligned_face = recognizer.alignCrop(img, faces[0])
+            aligned_face = recognizer.alignCrop(target_img, faces[0])
             aligned_face = cv2.resize(aligned_face, (112, 112))
             feature = recognizer.feature(aligned_face)
             return feature
