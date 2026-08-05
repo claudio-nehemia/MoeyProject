@@ -663,6 +663,7 @@ class PresensiController extends Controller
                     $diff = abs($nowMinutes - $jkMinutes);
                     return min($diff, 1440 - $diff);
                 })->first();
+            }
         }
 
         if ($jamkerja) {
