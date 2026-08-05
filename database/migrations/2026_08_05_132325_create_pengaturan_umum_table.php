@@ -11,40 +11,45 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pengaturan_umum', function (Blueprint $table) {
-            $table->id();
-            $table->string('nama_perusahaan')->nullable();
-            $table->string('timezone')->default('Asia/Jakarta');
-            $table->boolean('face_recognition')->default(false);
-            $table->boolean('batasi_absen')->default(false);
-            $table->string('batas_jam_absen')->default('01:00:00')->comment('Toleransi menit sebelum jam masuk');
-            $table->string('batas_jam_absen_pulang')->default('01:00:00')->comment('Toleransi menit sebelum jam pulang');
-            $table->string('batas_presensi_lintashari')->default('08:00:00')->comment('Batas checkout shift lintas hari');
-            $table->boolean('global_jamkerja_aktif')->default(false);
-            $table->boolean('feature_visit_tracking')->default(false);
-            $table->boolean('feature_daily_activity')->default(false);
-            $table->boolean('feature_wa_notification')->default(false);
-            $table->unsignedBigInteger('cuti_approval_role_id')->nullable();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('pengaturan_umum')) {
+            Schema::create('pengaturan_umum', function (Blueprint $table) {
+                $table->id();
+                $table->string('nama_perusahaan')->nullable();
+                $table->string('timezone')->default('Asia/Jakarta');
+                $table->boolean('face_recognition')->default(false);
+                $table->boolean('batasi_absen')->default(false);
+                $table->string('batas_jam_absen')->default('01:00:00');
+                $table->string('batas_jam_absen_pulang')->default('01:00:00');
+                $table->string('batas_presensi_lintashari')->default('08:00:00');
+                $table->boolean('global_jamkerja_aktif')->default(false);
+                $table->boolean('feature_visit_tracking')->default(false);
+                $table->boolean('feature_daily_activity')->default(false);
+                $table->boolean('feature_wa_notification')->default(false);
+                $table->unsignedBigInteger('cuti_approval_role_id')->nullable();
+                $table->timestamps();
+            });
+        }
 
-        // Insert default row
-        \Illuminate\Support\Facades\DB::table('pengaturan_umum')->insert([
-            'id' => 1,
-            'nama_perusahaan' => 'Moey Project',
-            'timezone' => 'Asia/Jakarta',
-            'face_recognition' => false,
-            'batasi_absen' => false,
-            'batas_jam_absen' => '01:00:00',
-            'batas_jam_absen_pulang' => '01:00:00',
-            'batas_presensi_lintashari' => '08:00:00',
-            'global_jamkerja_aktif' => true,
-            'feature_visit_tracking' => true,
-            'feature_daily_activity' => true,
-            'feature_wa_notification' => false,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        // Ensure default row exists
+        $exists = \Illuminate\Support\Facades\DB::table('pengaturan_umum')->where('id', 1)->exists();
+        if (!$exists) {
+            \Illuminate\Support\Facades\DB::table('pengaturan_umum')->insert([
+                'id' => 1,
+                'nama_perusahaan' => 'Moey Project',
+                'timezone' => 'Asia/Jakarta',
+                'face_recognition' => false,
+                'batasi_absen' => false,
+                'batas_jam_absen' => '01:00:00',
+                'batas_jam_absen_pulang' => '01:00:00',
+                'batas_presensi_lintashari' => '08:00:00',
+                'global_jamkerja_aktif' => false,
+                'feature_visit_tracking' => true,
+                'feature_daily_activity' => true,
+                'feature_wa_notification' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
     }
 
     /**
