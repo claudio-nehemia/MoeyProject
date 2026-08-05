@@ -58,12 +58,20 @@ if not is_good_exposure:
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'storage', 'models')
 os.makedirs(MODELS_DIR, exist_ok=True)
 
-# Correct raw URLs (using 2023mar model)
-YUNET_URL = "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx"
+# Correct raw URLs — use 2022mar YuNet model for OpenCV 4.x compatibility
+YUNET_URL = "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2022mar.onnx"
 SFACE_URL = "https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx"
 
-yunet_path = os.path.join(MODELS_DIR, 'yunet.onnx')
+yunet_path = os.path.join(MODELS_DIR, 'yunet_2022mar.onnx')
 sface_path = os.path.join(MODELS_DIR, 'sface.onnx')
+
+# Remove old incompatible yunet.onnx (2023mar) if it exists
+old_yunet = os.path.join(MODELS_DIR, 'yunet.onnx')
+if os.path.exists(old_yunet):
+    try:
+        os.remove(old_yunet)
+    except Exception:
+        pass
 
 def download_file(url, path):
     # If file exists but is too small (e.g. LFS pointer file), remove it and re-download
