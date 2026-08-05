@@ -150,4 +150,22 @@ class User extends Authenticatable
     {
         return $this->hasOne(Karyawan::class, 'user_id');
     }
+
+    public function getKaryawanAttribute()
+    {
+        $karyawan = $this->hasOne(Karyawan::class, 'user_id')->first();
+        if (!$karyawan) {
+            $karyawan = Karyawan::where(function ($query) {
+                if (!empty($this->email)) {
+                    $query->where('email', $this->email);
+                }
+                $query->orWhereRaw('LOWER(nama_karyawan) = ?', [strtolower($this->name)]);
+            })->first();
+
+            if ($karyawan && empty($karyawan->user_id)) {
+                $karyawan->update(['user_id' => $this->id]);
+            }
+        }
+        return $karyawan;
+    }
 }

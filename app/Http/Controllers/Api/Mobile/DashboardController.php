@@ -154,12 +154,10 @@ class DashboardController extends Controller
 
         if ($jamkerja == null) {
             // Auto-resolve: cari semua jam kerja yang berlaku di hari ini berdasarkan kolom 'hari'
-            $allJamkerja = DB::table('presensi_jamkerja')
-                ->whereNotNull('hari')
-                ->where('hari', '!=', '')
-                ->get();
+            $allJamkerja = DB::table('presensi_jamkerja')->get();
 
             $candidates = $allJamkerja->filter(function ($jk) use ($namahari) {
+                if (empty($jk->hari)) return true;
                 $hariBerlaku = array_map('trim', explode(',', strtolower($jk->hari)));
                 return in_array($namahari, $hariBerlaku);
             });
@@ -175,7 +173,6 @@ class DashboardController extends Controller
                     $parts = explode(':', $jk->jam_masuk);
                     $jkMinutes = (int) $parts[0] * 60 + (int) ($parts[1] ?? 0);
                     $diff = abs($nowMinutes - $jkMinutes);
-                    // Juga hitung jarak wrap-around (misal 23:00 vs 01:00 = 2 jam, bukan 22 jam)
                     return min($diff, 1440 - $diff);
                 })->first();
             }

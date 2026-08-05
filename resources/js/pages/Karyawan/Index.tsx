@@ -700,7 +700,7 @@ export default function Index({ karyawans, users, cabangs, departemens, jabatans
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-[10px] font-extrabold uppercase tracking-wider text-stone-500 mb-1">Tanggal Masuk</label>
                                 <input
@@ -724,21 +724,6 @@ export default function Index({ karyawans, users, cabangs, departemens, jabatans
                                     placeholder="Contoh: KONTRAK / TETAP"
                                 />
                                 {errors.status_karyawan && <span className="text-red-500 text-xs mt-1 block">{errors.status_karyawan}</span>}
-                            </div>
-
-                            <div>
-                                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-stone-500 mb-1">Jam Kerja Khusus</label>
-                                <select
-                                    value={data.kode_jadwal}
-                                    onChange={e => setData('kode_jadwal', e.target.value)}
-                                    className="w-full px-3 py-2 text-xs border border-stone-250 rounded-xl focus:ring-amber-500 focus:border-amber-500 bg-white"
-                                >
-                                    <option value="">-- Gunakan Jadwal Global --</option>
-                                    {jamkerjas.map(jk => (
-                                        <option key={jk.kode_jam_kerja} value={jk.kode_jam_kerja}>{jk.nama_jam_kerja}</option>
-                                    ))}
-                                </select>
-                                {errors.kode_jadwal && <span className="text-red-500 text-xs mt-1 block">{errors.kode_jadwal}</span>}
                             </div>
                         </div>
 
@@ -849,8 +834,8 @@ export default function Index({ karyawans, users, cabangs, departemens, jabatans
                                             <img
                                                 src={`/storage/uploads/facerecognition/${selectedKaryawan.nik}-${selectedKaryawan.nama_karyawan.split(' ')[0].toLowerCase()}/${face.wajah}`}
                                                 onError={(e) => {
-                                                    // Fallback to placeholder if not yet linked in public storage
-                                                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150';
+                                                    // Fallback to name initials placeholder if storage link is missing or image fails to load
+                                                    (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedKaryawan.nama_karyawan)}&background=f59e0b&color=fff`;
                                                 }}
                                                 className="w-18 h-18 rounded-full object-cover shadow-sm bg-white mb-2 border border-stone-150"
                                                 alt="Master Face"

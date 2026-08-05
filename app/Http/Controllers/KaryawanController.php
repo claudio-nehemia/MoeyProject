@@ -50,6 +50,22 @@ class KaryawanController extends Controller
             } while (Karyawan::where('nik', $inputs['nik'])->exists());
         }
 
+        // Auto-link user_id if empty but email/name matches a User account
+        if (empty($inputs['user_id'])) {
+            if (!empty($inputs['email'])) {
+                $matchedUser = User::where('email', $inputs['email'])->first();
+                if ($matchedUser) {
+                    $inputs['user_id'] = $matchedUser->id;
+                }
+            }
+            if (empty($inputs['user_id']) && !empty($inputs['nama_karyawan'])) {
+                $matchedUser = User::whereRaw('LOWER(name) = ?', [strtolower($inputs['nama_karyawan'])])->first();
+                if ($matchedUser) {
+                    $inputs['user_id'] = $matchedUser->id;
+                }
+            }
+        }
+
         $request->merge($inputs);
 
         // Resolve division and role automatically from linked user
@@ -107,6 +123,22 @@ class KaryawanController extends Controller
                 $inputs[$field] = null;
             }
         }
+        // Auto-link user_id if empty but email/name matches a User account
+        if (empty($inputs['user_id'])) {
+            if (!empty($inputs['email'])) {
+                $matchedUser = User::where('email', $inputs['email'])->first();
+                if ($matchedUser) {
+                    $inputs['user_id'] = $matchedUser->id;
+                }
+            }
+            if (empty($inputs['user_id']) && !empty($inputs['nama_karyawan'])) {
+                $matchedUser = User::whereRaw('LOWER(name) = ?', [strtolower($inputs['nama_karyawan'])])->first();
+                if ($matchedUser) {
+                    $inputs['user_id'] = $matchedUser->id;
+                }
+            }
+        }
+
         $request->merge($inputs);
 
         // Resolve division and role automatically from linked user

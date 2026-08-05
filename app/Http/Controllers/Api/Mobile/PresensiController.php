@@ -49,7 +49,7 @@ class PresensiController extends Controller
 
         $validator = Validator::make($request->all(), [
             'lokasi' => 'required|string', // "latitude,longitude"
-            'kode_jam_kerja' => 'required|string',
+            'kode_jam_kerja' => 'nullable|string',
             'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:4096',
         ]);
 
@@ -93,7 +93,18 @@ class PresensiController extends Controller
                 ? $presensi_kemarin->batas_presensi_pulang
                 : ($generalsetting ? $generalsetting->batas_presensi_lintashari : '08:00:00');
 
-            $jam_kerja = Jamkerja::where('kode_jam_kerja', $kode_jam_kerja)->first();
+            $jam_kerja = null;
+            if (!empty($kode_jam_kerja)) {
+                $jam_kerja = Jamkerja::where('kode_jam_kerja', $kode_jam_kerja)->first();
+            }
+
+            if (!$jam_kerja) {
+                $jam_kerja = $this->resolveJamKerjaForEmployee($karyawan, $tanggal_sekarang, $carbon_now);
+                if ($jam_kerja) {
+                    $kode_jam_kerja = $jam_kerja->kode_jam_kerja;
+                }
+            }
+
             if (!$jam_kerja) {
                 return response()->json([
                     'success' => false,
@@ -430,7 +441,7 @@ class PresensiController extends Controller
         $validator = Validator::make($request->all(), [
             'status' => 'required|in:1,2', // 1 = Mulai Istirahat, 2 = Selesai Istirahat
             'lokasi' => 'required|string',
-            'kode_jam_kerja' => 'required|string',
+            'kode_jam_kerja' => 'nullable|string',
             'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:4096',
         ]);
 
@@ -471,7 +482,14 @@ class PresensiController extends Controller
                 ], 400);
             }
 
-            $jam_kerja = Jamkerja::where('kode_jam_kerja', $kode_jam_kerja)->first();
+            $jam_kerja = null;
+            if (!empty($kode_jam_kerja)) {
+                $jam_kerja = Jamkerja::where('kode_jam_kerja', $kode_jam_kerja)->first();
+            }
+
+            if (!$jam_kerja) {
+                $jam_kerja = $this->resolveJamKerjaForEmployee($karyawan, $tanggal_presensi, Carbon::now(config('app.timezone')));
+            }
             if (!$jam_kerja || $jam_kerja->istirahat == 0) {
                 return response()->json([
                     'success' => false,
@@ -563,5 +581,94 @@ class PresensiController extends Controller
                 'message' => 'Terjadi kesalahan: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    private function resolveJamKerjaForEmployee($karyawan, $tanggal, $carbonNow)
+    {
+        $namahari = strtolower(\Carbon\Carbon::parse($tanggal)->locale('id')->dayName);
+        $kode_dept = $karyawan->kode_dept;
+        $general_setting = \Illuminate\Support\Facades\DB::table('pengaturanumum')->where('id', 1)->first();
+
+        // 1. By Date
+        $jamkerja = \Illuminate\Support\Facades\DB::table('presensi_jamkerja_bydate')
+            ->join('presensi_jamkerja', 'presensi_jamkerja_bydate.kode_jam_kerja', '=', 'presensi_jamkerja.kode_jam_kerja')
+            ->where('nik', $karyawan->nik)
+            ->where('tanggal', $tanggal)
+            ->first();
+
+        // 2. By Day
+        if ($jamkerja == null) {
+            $jamkerja = \Illuminate\Support\Facades\DB::table('presensi_jamkerja_byday')
+                ->join('presensi_jamkerja', 'presensi_jamkerja_byday.kode_jam_kerja', '=', 'presensi_jamkerja.kode_jam_kerja')
+                ->where('nik', $karyawan->nik)
+                ->where('hari', $namahari)
+                ->first();
+        }
+
+        // 3. Main Schedule
+        if ($jamkerja == null && $karyawan->kode_jadwal) {
+            $jkKandidat = \Illuminate\Support\Facades\DB::table('presensi_jamkerja')
+                ->where('kode_jam_kerja', $karyawan->kode_jadwal)
+                ->first();
+
+            if ($jkKandidat) {
+                if ($jkKandidat->hari) {
+                    $hariBerlaku = array_map('trim', explode(',', strtolower($jkKandidat->hari)));
+                    if (in_array($namahari, $hariBerlaku)) {
+                        $jamkerja = $jkKandidat;
+                    }
+                } else {
+                    $jamkerja = $jkKandidat;
+                }
+            }
+        }
+
+        // 4. By Dept
+        if ($jamkerja == null) {
+            $jamkerja = \Illuminate\Support\Facades\DB::table('presensi_jamkerja_bydept_detail')
+                ->join('presensi_jamkerja_bydept', 'presensi_jamkerja_bydept_detail.kode_jk_dept', '=', 'presensi_jamkerja_bydept.kode_jk_dept')
+                ->join('presensi_jamkerja', 'presensi_jamkerja_bydept_detail.kode_jam_kerja', '=', 'presensi_jamkerja.kode_jam_kerja')
+                ->where('kode_dept', $kode_dept)
+                ->where('kode_cabang', $karyawan->kode_cabang)
+                ->where('hari', $namahari)
+                ->first();
+        }
+
+        // 5. Global
+        if ($jamkerja == null) {
+            if ($general_setting && isset($general_setting->global_jamkerja_aktif) && $general_setting->global_jamkerja_aktif) {
+                $globalJk = \Illuminate\Support\Facades\DB::table('global_jamkerja')->where('hari', $namahari)->first();
+                if ($globalJk && $globalJk->kode_jam_kerja) {
+                    $jamkerja = \Illuminate\Support\Facades\DB::table('presensi_jamkerja')->where('kode_jam_kerja', $globalJk->kode_jam_kerja)->first();
+                }
+            }
+        }
+
+        // 6. Day match
+        if ($jamkerja == null) {
+            $allJamkerja = \Illuminate\Support\Facades\DB::table('presensi_jamkerja')->get();
+            $candidates = $allJamkerja->filter(function ($jk) use ($namahari) {
+                if (empty($jk->hari)) return true;
+                $hariBerlaku = array_map('trim', explode(',', strtolower($jk->hari)));
+                return in_array($namahari, $hariBerlaku);
+            });
+
+            if ($candidates->count() == 1) {
+                $jamkerja = $candidates->first();
+            } elseif ($candidates->count() > 1) {
+                $nowMinutes = (int) $carbonNow->format('H') * 60 + (int) $carbonNow->format('i');
+                $jamkerja = $candidates->sortBy(function ($jk) use ($nowMinutes) {
+                    $parts = explode(':', $jk->jam_masuk);
+                    $jkMinutes = (int) $parts[0] * 60 + (int) ($parts[1] ?? 0);
+                    $diff = abs($nowMinutes - $jkMinutes);
+                    return min($diff, 1440 - $diff);
+                })->first();
+        }
+
+        if ($jamkerja) {
+            return Jamkerja::where('kode_jam_kerja', $jamkerja->kode_jam_kerja)->first();
+        }
+
+        return null;
     }
 }
