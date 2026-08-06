@@ -871,7 +871,7 @@ export default function Sidebar({
             name: 'Persetujuan Cuti/Izin',
             href: '/approve-cuti',
             page: 'approve-cuti',
-            permission: 'karyawan.index',
+            permission: 'approve-cuti.index',
             icon: (
                 <svg
                     className="h-3.5 w-3.5 text-white"

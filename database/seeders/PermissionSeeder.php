@@ -945,6 +945,16 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Delete Karyawan',
                 'group' => 'Master Data - Karyawan'
             ],
+            [
+                'name' => 'approve-cuti.index',
+                'display_name' => 'View Persetujuan Cuti/Izin',
+                'group' => 'Master Data - Karyawan'
+            ],
+            [
+                'name' => 'approve-cuti.approve',
+                'display_name' => 'Proses Persetujuan Cuti/Izin',
+                'group' => 'Master Data - Karyawan'
+            ],
 
             // Jam Kerja Permissions
             [

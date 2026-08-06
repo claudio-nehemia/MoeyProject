@@ -21,7 +21,11 @@ class CutiApprovalController extends Controller
         $general = Pengaturanumum::first();
         $allowedRoleId = $general ? $general->cuti_approval_role_id : null;
 
-        if (!$allowedRoleId || $user->role_id != $allowedRoleId) {
+        $isAdmin = $user->role?->nama_role === 'Admin' || $user->role?->nama_role === 'Super Admin';
+        $hasPermission = $user->hasPermission('approve-cuti.index') || $user->hasPermission('karyawan.index');
+        $isRoleAllowed = $allowedRoleId && ($user->role_id == $allowedRoleId || $user->roles()->where('roles.id', $allowedRoleId)->exists());
+
+        if (!$isAdmin && !$hasPermission && !$isRoleAllowed) {
             abort(403, 'Anda tidak memiliki hak akses untuk menyetujui pengajuan.');
         }
 
@@ -99,6 +103,17 @@ class CutiApprovalController extends Controller
 
     public function approve(Request $request)
     {
+        $user = auth()->user();
+        $general = Pengaturanumum::first();
+        $allowedRoleId = $general ? $general->cuti_approval_role_id : null;
+
+        $isAdmin = $user->role?->nama_role === 'Admin' || $user->role?->nama_role === 'Super Admin';
+        $hasPermission = $user->hasPermission('approve-cuti.approve') || $user->hasPermission('approve-cuti.index') || $user->hasPermission('karyawan.index');
+        $isRoleAllowed = $allowedRoleId && ($user->role_id == $allowedRoleId || $user->roles()->where('roles.id', $allowedRoleId)->exists());
+
+        if (!$isAdmin && !$hasPermission && !$isRoleAllowed) {
+            abort(403, 'Anda tidak memiliki hak akses untuk memproses pengajuan.');
+        }
         $request->validate([
             'id' => 'required',
             'tipe' => 'required|string',
