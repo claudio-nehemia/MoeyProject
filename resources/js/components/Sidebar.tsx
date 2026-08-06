@@ -868,6 +868,28 @@ export default function Sidebar({
             gradient: 'from-pink-500 to-pink-600',
         },
         {
+            name: 'Persetujuan Cuti/Izin',
+            href: '/approve-cuti',
+            page: 'approve-cuti',
+            permission: 'karyawan.index',
+            icon: (
+                <svg
+                    className="h-3.5 w-3.5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                </svg>
+            ),
+            gradient: 'from-rose-500 to-rose-600',
+        },
+        {
             name: 'Persetujuan Resign',
             href: '/resign',
             page: 'resign',
@@ -968,12 +990,6 @@ export default function Sidebar({
         },
     ];
 
-    const { attendanceSettings } = usePage<any>().props;
-    const isApprovalRole = auth?.user?.role?.id && attendanceSettings?.cuti_approval_role_id && 
-                          (auth.user.role.id === attendanceSettings.cuti_approval_role_id || 
-                           auth.user.role.nama_role === 'Admin' || 
-                           auth.user.role.nama_role === 'Super Admin');
-
     // Filter menus based on permissions
     const visibleMasterData = masterDataMenus.filter(
         (menu) => !menu.permission || hasPermission(menu.permission),
@@ -983,41 +999,13 @@ export default function Sidebar({
         (menu) => !menu.permission || hasPermission(menu.permission),
     );
 
-    let visiblePresensi = presensiMenus.filter(
+    const visiblePresensi = presensiMenus.filter(
         (menu) => !menu.permission || hasPermission(menu.permission),
     );
 
     const visiblePayroll = payrollMenus.filter(
         (menu) => !menu.permission || hasPermission(menu.permission),
     );
-
-    if (isApprovalRole) {
-        visiblePresensi = [
-            ...visiblePresensi,
-            {
-                name: 'Persetujuan Cuti',
-                href: '/approve-cuti',
-                page: 'approve-cuti',
-                permission: null,
-                icon: (
-                    <svg
-                        className="h-3.5 w-3.5 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                    </svg>
-                ),
-                gradient: 'from-rose-500 to-rose-600',
-            }
-        ];
-    }
 
     const renderMenuItem = (
         menu: MenuItem,
