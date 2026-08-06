@@ -87,11 +87,14 @@ function hitungpulangcepat($tanggal_presensi, $jam_out, $jam_pulang, $istirahat,
 
 function hitungjamterlambat($jam_in, $jam_mulai)
 {
-    if (!empty($jam_in)) {
-        if ($jam_in > $jam_mulai) {
-            $j1 = strtotime($jam_mulai);
-            $j2 = strtotime($jam_in);
+    if (!empty($jam_in) && !empty($jam_mulai)) {
+        $time_in = (strpos($jam_in, ' ') !== false) ? explode(' ', $jam_in)[1] : $jam_in;
+        $time_mulai = (strpos($jam_mulai, ' ') !== false) ? explode(' ', $jam_mulai)[1] : $jam_mulai;
 
+        $j1 = strtotime($time_mulai);
+        $j2 = strtotime($time_in);
+
+        if ($j2 > $j1) {
             $diffterlambat = $j2 - $j1;
 
             $jamterlambat = floor($diffterlambat / (60 * 60));

@@ -228,16 +228,18 @@ export default function Index({ karyawans, users, cabangs, departemens, jabatans
     };
 
     const toggleLockLocation = (kar: Karyawan) => {
+        const { user, cabang, departemen, jabatan, jamkerja, facerecognition, ...payload } = kar;
         router.put(`/karyawan/${kar.nik}`, {
-            ...kar,
+            ...payload,
             lock_location: kar.lock_location === '1' ? '0' : '1',
             kode_jadwal: kar.kode_jadwal || '',
         }, { preserveScroll: true });
     };
 
     const toggleLockJamKerja = (kar: Karyawan) => {
+        const { user, cabang, departemen, jabatan, jamkerja, facerecognition, ...payload } = kar;
         router.put(`/karyawan/${kar.nik}`, {
-            ...kar,
+            ...payload,
             lock_jam_kerja: kar.lock_jam_kerja === '1' ? '0' : '1',
             kode_jadwal: kar.kode_jadwal || '',
         }, { preserveScroll: true });

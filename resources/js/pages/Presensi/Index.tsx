@@ -110,6 +110,21 @@ export default function Index({ presensiData, filters }: Props) {
         window.open(`/presensi-karyawan/export?${queryParams}`, '_blank');
     };
 
+    const getMinutesFromTime = (timeStr?: string | null) => {
+        if (!timeStr) return null;
+        const timeOnly = timeStr.includes(' ') ? timeStr.split(' ')[1] : timeStr;
+        const parts = timeOnly.split(':').map(Number);
+        if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) return null;
+        return parts[0] * 60 + parts[1] + (parts[2] ? parts[2] / 60 : 0);
+    };
+
+    const isCheckInLate = (jamIn?: string | null, jkJamMasuk?: string | null) => {
+        const inMin = getMinutesFromTime(jamIn);
+        const masukMin = getMinutesFromTime(jkJamMasuk);
+        if (inMin === null || masukMin === null) return false;
+        return inMin > masukMin;
+    };
+
     const openDetails = (item: PresenceItem, type: 'in' | 'out') => {
         setSelectedPresence(item);
         setActiveDetailType(type);
@@ -262,7 +277,7 @@ export default function Index({ presensiData, filters }: Props) {
                             </div>
                         ) : (
                             presensiData.data.map((item) => {
-                                const isLate = item.jam_in && item.jam_in > item.jk_jam_masuk;
+                                const isLate = isCheckInLate(item.jam_in, item.jk_jam_masuk);
                                 const formattedDate = new Date(item.tanggal).toLocaleDateString('id-ID', { 
                                     weekday: 'long', 
                                     day: 'numeric', 
@@ -501,9 +516,7 @@ export default function Index({ presensiData, filters }: Props) {
                                             </div>
                                         )
                                     )}
-                                </div>
-
-                                {/* Profile detail information Table */}
+                                                                 {/* Profile detail information Table */}
                                 <div className="border border-stone-200/80 rounded-2xl overflow-hidden bg-stone-50/30">
                                     <table className="w-full text-xs text-left">
                                         <tbody>
@@ -527,7 +540,7 @@ export default function Index({ presensiData, filters }: Props) {
                                                     {getStatusBadge(selectedPresence.status)}
                                                 </td>
                                             </tr>
-                                            {activeDetailType === 'in' && selectedPresence.jam_in && selectedPresence.jam_in > selectedPresence.jk_jam_masuk && (
+                                            {activeDetailType === 'in' && isCheckInLate(selectedPresence.jam_in, selectedPresence.jk_jam_masuk) && (
                                                 <tr>
                                                     <th className="px-4 py-2.5 font-bold text-stone-500 bg-stone-50/50">Keterlambatan</th>
                                                     <td className="px-4 py-2.5 text-xs font-extrabold text-rose-600 bg-rose-50/40">
@@ -537,7 +550,7 @@ export default function Index({ presensiData, filters }: Props) {
                                             )}
                                         </tbody>
                                     </table>
-                                </div>
+                                </div>  </div>
 
                             </div>
 
