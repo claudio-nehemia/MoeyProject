@@ -260,6 +260,7 @@ class DashboardController extends Controller
                     'judul' => $pengumuman->judul,
                     'isi' => strip_tags($pengumuman->isi),
                     'created_at' => Carbon::parse($pengumuman->created_at)->translatedFormat('d F Y'),
+                    'lampiran' => $pengumuman->lampiran ? asset('storage/' . $pengumuman->lampiran) : null,
                 ] : null,
                 'cabang' => $cabang ? [
                     'nama_cabang' => $cabang->nama_cabang,
