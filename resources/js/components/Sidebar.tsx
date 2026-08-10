@@ -270,7 +270,7 @@ export default function Sidebar({
             name: 'Supplier/Vendor',
             href: '/suppliers',
             page: 'suppliers',
-            permission: 'item.index',
+            permission: 'supplier.index',
             icon: (
                 <svg
                     className="h-3.5 w-3.5 text-white"

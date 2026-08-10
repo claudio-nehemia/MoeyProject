@@ -213,7 +213,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ]);
 
     // Supplier Routes
-    Route::resource('suppliers', SupplierController::class);
+    Route::resource('suppliers', SupplierController::class)
+        ->middleware([
+            'index' => 'permission:supplier.index',
+            'show' => 'permission:supplier.show',
+            'create' => 'permission:supplier.create',
+            'store' => 'permission:supplier.create',
+            'edit' => 'permission:supplier.edit',
+            'update' => 'permission:supplier.edit',
+            'destroy' => 'permission:supplier.delete',
+        ]);
 
     Route::get('produk', [ProdukController::class, 'index'])
         ->middleware('permission:produk.index')->name('produk.index');

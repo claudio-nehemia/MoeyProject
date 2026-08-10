@@ -260,6 +260,33 @@ class PermissionSeeder extends Seeder
                 'group' => 'Master Data - Jenis Pengukuran'
             ],
             
+            // Supplier / Vendor Permissions
+            [
+                'name' => 'supplier.index',
+                'display_name' => 'View Supplier List',
+                'group' => 'Master Data - Supplier'
+            ],
+            [
+                'name' => 'supplier.show',
+                'display_name' => 'View Supplier Detail',
+                'group' => 'Master Data - Supplier'
+            ],
+            [
+                'name' => 'supplier.create',
+                'display_name' => 'Create Supplier',
+                'group' => 'Master Data - Supplier'
+            ],
+            [
+                'name' => 'supplier.edit',
+                'display_name' => 'Edit Supplier',
+                'group' => 'Master Data - Supplier'
+            ],
+            [
+                'name' => 'supplier.delete',
+                'display_name' => 'Delete Supplier',
+                'group' => 'Master Data - Supplier'
+            ],
+            
             // ==================== OPERATIONS ====================
             
             // Order Permissions

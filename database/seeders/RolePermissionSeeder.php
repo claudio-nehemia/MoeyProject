@@ -69,6 +69,7 @@ class RolePermissionSeeder extends Seeder
         $estimator = Role::where('nama_role', 'Estimator')->first();
         if ($estimator) {
             $estimatorPermissions = Permission::whereIn('group', [
+                'Master Data - Supplier',
                 'Operations - Estimasi',
                 'Operations - RAB Internal',
                 'Operations - RAB Jasa',
