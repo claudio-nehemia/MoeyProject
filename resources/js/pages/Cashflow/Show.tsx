@@ -68,6 +68,15 @@ interface ExternalEntry {
     flag_jw_termin: string|null;
 }
 
+interface SupplierItem {
+    id: number;
+    name: string;
+    code?: string | null;
+    category: 'internal' | 'fisik' | 'eksternal';
+    phone?: string | null;
+    address?: string | null;
+}
+
 interface Props {
     order: OrderInfo;
     split: Split;
@@ -96,6 +105,7 @@ interface Props {
         addendums: ExternalEntry[];
         pengeluaran_luar: ExternalEntry[];
     };
+    suppliers?: SupplierItem[];
 }
 
 const fmt = (v: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v);
@@ -103,13 +113,19 @@ const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
 
 export default function Show({
     order, split, pembayaran, spk, realisasi, margin, rpk, status_project,
-    vendor_internal, vendor_fisik, vendor_external
+    vendor_internal, vendor_fisik, vendor_external, suppliers = []
 }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
     const [activeTab, setActiveTab] = useState<'kontrak'|'spk'|'margin'|'rpk'|'vendor_internal'|'vendor_fisik'|'vendor_external'>('kontrak');
     const [newGroupName, setNewGroupName] = useState('');
     const [showGroupModal, setShowGroupModal] = useState(false);
     const [modalTargetType, setModalTargetType] = useState<'internal'|'fisik'>('internal');
+
+    // Supplier List Selection Modal State
+    const [showSupplierModal, setShowSupplierModal] = useState(false);
+    const [supplierModalCategory, setSupplierModalCategory] = useState<'internal' | 'fisik' | 'eksternal'>('internal');
+    const [tempSelectedVendorNames, setTempSelectedVendorNames] = useState<string[]>([]);
+    const [supplierSearchQuery, setSupplierSearchQuery] = useState('');
 
     useEffect(() => {
         const h = () => setSidebarOpen(window.innerWidth >= 1024);
@@ -305,6 +321,69 @@ export default function Show({
         const current = [...generalForm.data.margin_breakdown_items];
         current[idx] = { ...current[idx], [key]: val };
         generalForm.setData('margin_breakdown_items', current);
+    };
+
+    // ──────────────────────────────────────────
+    // VENDOR SELECTION MODAL HANDLERS
+    // ──────────────────────────────────────────
+    const openSupplierModal = (cat: 'internal' | 'fisik' | 'eksternal') => {
+        setSupplierModalCategory(cat);
+        setSupplierSearchQuery('');
+        let currentNames: string[] = [];
+        if (cat === 'internal') {
+            currentNames = vendorForm.data.material_groups_internal.map(g => g.name);
+        } else if (cat === 'fisik') {
+            currentNames = vendorForm.data.material_groups_fisik.map(g => g.name);
+        } else if (cat === 'eksternal') {
+            currentNames = Array.from(new Set(vendorForm.data.external_items.map(i => i.vendor_name).filter(Boolean)));
+        }
+        setTempSelectedVendorNames(currentNames);
+        setShowSupplierModal(true);
+    };
+
+    const handleSaveSupplierSelection = () => {
+        if (supplierModalCategory === 'internal' || supplierModalCategory === 'fisik') {
+            const key = supplierModalCategory === 'internal' ? 'material_groups_internal' : 'material_groups_fisik';
+            const currentGroups = [...vendorForm.data[key]];
+
+            const updatedGroups = currentGroups.filter(g => tempSelectedVendorNames.includes(g.name));
+
+            tempSelectedVendorNames.forEach(name => {
+                if (!updatedGroups.some(g => g.name === name)) {
+                    updatedGroups.push({ name, items: [] });
+                }
+            });
+
+            vendorForm.setData(key, updatedGroups);
+        } else if (supplierModalCategory === 'eksternal') {
+            const currentItems = [...vendorForm.data.external_items];
+            const updatedItems = currentItems.filter(item => !item.vendor_name || tempSelectedVendorNames.includes(item.vendor_name));
+
+            tempSelectedVendorNames.forEach(name => {
+                if (!updatedItems.some(i => i.vendor_name === name)) {
+                    updatedItems.push({
+                        label: '',
+                        vendor_name: name,
+                        nilai: 0,
+                        spk_amount: 0,
+                        tanggal_perencanaan: null,
+                        pembayaran: 0,
+                        tanggal_pembayaran: null,
+                        pembayaran_termin: 0,
+                        tanggal_pembayaran_termin: null,
+                        flag_af: null,
+                        flag_fb: null,
+                        flag_jw: null,
+                        flag_af_termin: null,
+                        flag_fb_termin: null,
+                        flag_jw_termin: null,
+                    });
+                }
+            });
+            vendorForm.setData('external_items', updatedItems);
+        }
+
+        setShowSupplierModal(false);
     };
 
     // ──────────────────────────────────────────
@@ -1057,17 +1136,30 @@ export default function Show({
                                                 <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">1B. Material Hutang (Dinamis)</h3>
                                                 <span className="text-[10px] text-stone-400 mt-1 block">Status PO: <span className={`font-bold uppercase ${vendor_internal.status_po === 'Bisa PO' ? 'text-emerald-600' : 'text-rose-500'}`}>{vendor_internal.status_po}</span></span>
                                             </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => { setModalTargetType('internal'); setShowGroupModal(true); }}
-                                                className="text-xs font-bold text-amber-600 hover:text-amber-700"
-                                            >
-                                                + Tambah Vendor Group
-                                            </button>
+                                            {vendorForm.data.material_groups_internal.length > 0 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openSupplierModal('internal')}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition"
+                                                >
+                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                                    Ubah List Vendor
+                                                </button>
+                                            )}
                                         </div>
 
                                         {vendorForm.data.material_groups_internal.length === 0 ? (
-                                            <div className="text-center py-6 text-stone-400 text-xs">Belum ada vendor group material. Silakan tambahkan group baru.</div>
+                                            <div className="text-center py-8 bg-stone-50/50 border border-dashed border-stone-200 rounded-2xl space-y-3">
+                                                <p className="text-xs text-stone-500 font-medium">Belum ada vendor group material. Silakan tetapkan vendor terlebih dahulu.</p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openSupplierModal('internal')}
+                                                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                                                    Tetapkan Vendor
+                                                </button>
+                                            </div>
                                         ) : (
                                             vendorForm.data.material_groups_internal.map((group, groupIdx) => (
                                                 <div key={groupIdx} className="bg-stone-50/50 border border-stone-200 rounded-xl p-4 space-y-3">
@@ -1595,12 +1687,16 @@ export default function Show({
                                 </div>
                             )}
 
-                            {/* Save Vendor Footer */}
-                            <div className="sticky bottom-4 z-10 flex justify-end bg-white/90 backdrop-blur-sm border border-stone-200/80 p-3 rounded-2xl shadow-lg">
-                                <button type="submit" disabled={vendorForm.processing} className="bg-amber-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl hover:bg-amber-600 transition disabled:opacity-50">
-                                    {vendorForm.processing ? 'Menyimpan...' : 'Simpan Rincian Vendor'}
-                                </button>
-                            </div>
+                            {/* Save Vendor Footer (visible when vendor list is set for active tab) */}
+                            {((activeTab === 'vendor_internal' && vendorForm.data.material_groups_internal.length > 0) ||
+                              (activeTab === 'vendor_fisik' && vendorForm.data.material_groups_fisik.length > 0) ||
+                              (activeTab === 'vendor_external' && vendorForm.data.external_items.length > 0)) && (
+                                <div className="sticky bottom-4 z-10 flex justify-end bg-white/90 backdrop-blur-sm border border-stone-200/80 p-3 rounded-2xl shadow-lg">
+                                    <button type="submit" disabled={vendorForm.processing} className="bg-amber-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl hover:bg-amber-600 transition disabled:opacity-50">
+                                        {vendorForm.processing ? 'Menyimpan...' : 'Simpan Rincian Vendor'}
+                                    </button>
+                                </div>
+                            )}
                         </form>
                     )}
 
@@ -1624,6 +1720,114 @@ export default function Show({
                         <div className="flex justify-end gap-3.5">
                             <button type="button" onClick={() => { setShowGroupModal(false); setNewGroupName(''); }} className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-xl text-xs font-semibold">Batal</button>
                             <button type="button" onClick={handleAddMaterialGroup} className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow-md shadow-amber-500/10">Buat Group</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Supplier List Selection Checklist Modal */}
+            {showSupplierModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm">
+                    <div className="w-full max-w-lg bg-white border border-stone-200 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-150">
+                        <div className="flex justify-between items-center px-6 py-4 border-b border-stone-150 bg-stone-50">
+                            <div>
+                                <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">
+                                    Pilih List Vendor ({
+                                        supplierModalCategory === 'internal' ? 'Workshop / Internal' :
+                                        supplierModalCategory === 'fisik' ? 'Fisik / Kontraktor' : 'Vendor Eksternal'
+                                    })
+                                </h3>
+                                <p className="text-[11px] text-stone-500 mt-0.5">Centang vendor yang digunakan dalam proyek ini.</p>
+                            </div>
+                            <button type="button" onClick={() => setShowSupplierModal(false)} className="text-stone-400 hover:text-stone-600 text-lg font-bold">×</button>
+                        </div>
+
+                        <div className="p-4 border-b border-stone-100">
+                            <input
+                                type="text"
+                                value={supplierSearchQuery}
+                                onChange={(e) => setSupplierSearchQuery(e.target.value)}
+                                placeholder="Cari nama vendor..."
+                                className="w-full px-3 py-1.5 text-xs border border-stone-200 rounded-xl focus:outline-none focus:border-amber-500"
+                            />
+                        </div>
+
+                        <div className="p-6 space-y-3 max-h-[50vh] overflow-y-auto">
+                            {(() => {
+                                const categorySuppliers = suppliers.filter(s => s.category === supplierModalCategory);
+                                const filtered = categorySuppliers.filter(s => s.name.toLowerCase().includes(supplierSearchQuery.toLowerCase()));
+
+                                if (categorySuppliers.length === 0) {
+                                    return (
+                                        <div className="text-center py-8 text-stone-400 text-xs">
+                                            Belum ada data supplier di Master Data untuk kategori ini.
+                                        </div>
+                                    );
+                                }
+
+                                if (filtered.length === 0) {
+                                    return (
+                                        <div className="text-center py-6 text-stone-400 text-xs">
+                                            Vendor "{supplierSearchQuery}" tidak ditemukan.
+                                        </div>
+                                    );
+                                }
+
+                                return filtered.map((sup) => {
+                                    const isChecked = tempSelectedVendorNames.includes(sup.name);
+                                    return (
+                                        <label
+                                            key={sup.id}
+                                            className={`flex items-start gap-3 p-3 rounded-xl border transition cursor-pointer ${
+                                                isChecked ? 'border-amber-400 bg-amber-50/50' : 'border-stone-200 hover:bg-stone-50'
+                                            }`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={isChecked}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setTempSelectedVendorNames([...tempSelectedVendorNames, sup.name]);
+                                                    } else {
+                                                        setTempSelectedVendorNames(tempSelectedVendorNames.filter(n => n !== sup.name));
+                                                    }
+                                                }}
+                                                className="mt-0.5 rounded border-stone-300 text-amber-500 focus:ring-amber-500"
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-bold text-stone-900">{sup.name}</span>
+                                                    {sup.code && <span className="text-[10px] font-mono bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded">{sup.code}</span>}
+                                                </div>
+                                                {sup.phone && <p className="text-[10px] text-stone-500 mt-0.5">📞 {sup.phone}</p>}
+                                                {sup.address && <p className="text-[10px] text-stone-400 truncate mt-0.5">{sup.address}</p>}
+                                            </div>
+                                        </label>
+                                    );
+                                });
+                            })()}
+                        </div>
+
+                        <div className="flex justify-between items-center px-6 py-4 bg-stone-50 border-t border-stone-150">
+                            <span className="text-xs text-stone-500 font-medium">
+                                Terpilih: <b className="text-amber-600">{tempSelectedVendorNames.length}</b> vendor
+                            </span>
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowSupplierModal(false)}
+                                    className="px-4 py-2 text-xs font-bold text-stone-500 hover:bg-stone-200/60 rounded-xl transition"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSaveSupplierSelection}
+                                    className="px-5 py-2 text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 rounded-xl shadow-sm transition"
+                                >
+                                    Simpan Rincian Vendor
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

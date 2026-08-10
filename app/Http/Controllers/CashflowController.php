@@ -775,6 +775,7 @@ class CashflowController extends Controller
                 'addendums' => $externalAddendums,
                 'pengeluaran_luar' => $externalPengeluaranLuar,
             ],
+            'suppliers' => \App\Models\Supplier::orderBy('name')->get(['id', 'name', 'code', 'category', 'phone', 'address']),
         ]);
     }
 
