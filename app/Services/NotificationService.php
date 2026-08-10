@@ -18,7 +18,45 @@ class NotificationService
     }
 
     /**
-     * Send survey request notification to drafter/surveyor AND project managers
+     * Send notification copy to management team members (Kepala Marketing, Project Manager, Supervisor) assigned to order
+     */
+    private function sendToManagementTeam(Order $order, string $type, string $title, string $message, array $data = [])
+    {
+        $roleIds = [
+            \App\Models\Role::getKepalaMarketingRoleId(),
+            \App\Models\Role::getProjectManagerRoleId(),
+            \App\Models\Role::getSupervisorRoleId(),
+        ];
+
+        $managers = $order->users()->where(function ($query) use ($roleIds) {
+            $query->whereIn('role_id', $roleIds)
+                ->orWhereHas('roles', fn($q) => $q->whereIn('roles.id', $roleIds));
+        })->get();
+
+        foreach ($managers as $manager) {
+            $notification = Notification::create([
+                'user_id' => $manager->id,
+                'order_id' => $order->id,
+                'type' => $type,
+                'title' => $title,
+                'message' => $message,
+                'data' => $data,
+            ]);
+
+            $this->fcmService->sendToUser($manager->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
+    }
+
+    /**
+     * Send survey request notification to drafter/surveyor AND management team (KM, PM, Supervisor)
      */
     public function sendSurveyRequestNotification(Order $order)
     {
@@ -54,37 +92,19 @@ class NotificationService
             ]);
         }
 
-        // Also send to Kepala Marketing in order teams
-        $kmId = \App\Models\Role::getKepalaMarketingRoleId();
-        $pms = $order->users()->where(function ($query) use ($kmId) {
-            $query->where('role_id', $kmId)->orWhereHas('role', fn($q) => $q->where('roles.id', $kmId));
-        })->get();
-
-        foreach ($pms as $pm) {
-            $notification = Notification::create([
-                'user_id' => $pm->id,
-                'order_id' => $order->id,
-                'type' => Notification::TYPE_SURVEY_REQUEST,
-                'title' => 'Survey Request - ' . $order->nama_project,
-                'message' => 'Survey dimulai untuk project "' . $order->nama_project . '". Team survey telah ditugaskan.',
-                'data' => [
-                    'order_name' => $order->nama_project,
-                    'customer_name' => $order->customer_name,
-                    'tanggal_survey' => $order->tanggal_survey,
-                    'action_url' => '/survey-results',
-                ],
-            ]);
-
-            $this->fcmService->sendToUser($pm->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
-                ],
-            ]);
-        }
+        // Also send to management team in order teams (KM, PM, Supervisor)
+        $this->sendToManagementTeam(
+            $order,
+            Notification::TYPE_SURVEY_REQUEST,
+            'Survey Request - ' . $order->nama_project,
+            'Survey dimulai untuk project "' . $order->nama_project . '". Team survey telah ditugaskan.',
+            [
+                'order_name' => $order->nama_project,
+                'customer_name' => $order->customer_name,
+                'tanggal_survey' => $order->tanggal_survey,
+                'action_url' => '/survey-results',
+            ]
+        );
     }
 
     /**
@@ -139,35 +159,18 @@ class NotificationService
 
         \Log::info('=== END SEND MOODBOARD NOTIFICATION ===');
 
-        // Also send to Kepala Marketing in order teams
-        $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('id', \App\Models\Role::getKepalaMarketingRoleId());
-        })->get();
-
-        foreach ($pms as $pm) {
-            $notification = Notification::create([
-                'user_id' => $pm->id,
-                'order_id' => $order->id,
-                'type' => Notification::TYPE_MOODBOARD_REQUEST,
-                'title' => 'Moodboard Request - ' . $order->nama_project,
-                'message' => 'Survey telah selesai untuk project "' . $order->nama_project . '". Designer sedang membuat moodboard.',
-                'data' => [
-                    'order_name' => $order->nama_project,
-                    'customer_name' => $order->customer_name,
-                    'action_url' => '/moodboard',
-                ],
-            ]);
-
-            $this->fcmService->sendToUser($pm->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
-                ],
-            ]);
-        }
+        // Also send to management team in order teams (KM, PM, Supervisor)
+        $this->sendToManagementTeam(
+            $order,
+            Notification::TYPE_MOODBOARD_REQUEST,
+            'Moodboard Request - ' . $order->nama_project,
+            'Survey telah selesai untuk project "' . $order->nama_project . '". Designer sedang membuat moodboard.',
+            [
+                'order_name' => $order->nama_project,
+                'customer_name' => $order->customer_name,
+                'action_url' => '/moodboard',
+            ]
+        );
     }
 
     /**
@@ -206,35 +209,18 @@ class NotificationService
             ]);
         }
 
-        // Also send to Kepala Marketing in order teams
-        $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('id', \App\Models\Role::getKepalaMarketingRoleId());
-        })->get();
-
-        foreach ($pms as $pm) {
-            $notification = Notification::create([
-                'user_id' => $pm->id,
-                'order_id' => $order->id,
-                'type' => Notification::TYPE_ESTIMASI_REQUEST,
-                'title' => 'Estimasi Request - ' . $order->nama_project,
-                'message' => 'Moodboard telah selesai untuk project "' . $order->nama_project . '". Team estimator sedang membuat estimasi.',
-                'data' => [
-                    'order_name' => $order->nama_project,
-                    'customer_name' => $order->customer_name,
-                    'action_url' => '/estimasi',
-                ],
-            ]);
-
-            $this->fcmService->sendToUser($pm->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
-                ],
-            ]);
-        }
+        // Also send to management team in order teams (KM, PM, Supervisor)
+        $this->sendToManagementTeam(
+            $order,
+            Notification::TYPE_ESTIMASI_REQUEST,
+            'Estimasi Request - ' . $order->nama_project,
+            'Moodboard telah selesai untuk project "' . $order->nama_project . '". Team estimator sedang membuat estimasi.',
+            [
+                'order_name' => $order->nama_project,
+                'customer_name' => $order->customer_name,
+                'action_url' => '/estimasi',
+            ]
+        );
     }
 
     /**
@@ -273,35 +259,18 @@ class NotificationService
             ]);
         }
 
-        // Also send to Kepala Marketing in order teams
-        $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('id', \App\Models\Role::getKepalaMarketingRoleId());
-        })->get();
-
-        foreach ($pms as $pm) {
-            $notification = Notification::create([
-                'user_id' => $pm->id,
-                'order_id' => $order->id,
-                'type' => Notification::TYPE_COMMITMENT_FEE_REQUEST,
-                'title' => 'Commitment Fee Request - ' . $order->nama_project,
-                'message' => 'Moodboard kasar telah di-approve untuk project "' . $order->nama_project . '". Legal admin sedang mengisi commitment fee.',
-                'data' => [
-                    'order_name' => $order->nama_project,
-                    'customer_name' => $order->customer_name,
-                    'action_url' => '/commitment-fee',
-                ],
-            ]);
-
-            $this->fcmService->sendToUser($pm->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
-                ],
-            ]);
-        }
+        // Also send to management team in order teams (KM, PM, Supervisor)
+        $this->sendToManagementTeam(
+            $order,
+            Notification::TYPE_COMMITMENT_FEE_REQUEST,
+            'Commitment Fee Request - ' . $order->nama_project,
+            'Moodboard kasar telah di-approve untuk project "' . $order->nama_project . '". Legal admin sedang mengisi commitment fee.',
+            [
+                'order_name' => $order->nama_project,
+                'customer_name' => $order->customer_name,
+                'action_url' => '/commitment-fee',
+            ]
+        );
     }
 
     /**
@@ -340,35 +309,18 @@ class NotificationService
             ]);
         }
 
-        // Also send to Kepala Marketing in order teams
-        $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('id', \App\Models\Role::getKepalaMarketingRoleId());
-        })->get();
-
-        foreach ($pms as $pm) {
-            $notification = Notification::create([
-                'user_id' => $pm->id,
-                'order_id' => $order->id,
-                'type' => Notification::TYPE_DESIGN_APPROVAL,
-                'title' => 'Design Approval - ' . $order->nama_project,
-                'message' => 'Estimasi telah selesai untuk project "' . $order->nama_project . '". Designer sedang review dan approve design.',
-                'data' => [
-                    'order_name' => $order->nama_project,
-                    'customer_name' => $order->customer_name,
-                    'action_url' => '/moodboard',
-                ],
-            ]);
-
-            $this->fcmService->sendToUser($pm->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
-                ],
-            ]);
-        }
+        // Also send to management team in order teams (KM, PM, Supervisor)
+        $this->sendToManagementTeam(
+            $order,
+            Notification::TYPE_DESIGN_APPROVAL,
+            'Design Approval - ' . $order->nama_project,
+            'Estimasi telah selesai untuk project "' . $order->nama_project . '". Designer sedang review dan approve design.',
+            [
+                'order_name' => $order->nama_project,
+                'customer_name' => $order->customer_name,
+                'action_url' => '/moodboard',
+            ]
+        );
     }
 
     /**
@@ -407,35 +359,18 @@ class NotificationService
             ]);
         }
 
-        // Also send to Kepala Marketing in order teams
-        $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('id', \App\Models\Role::getKepalaMarketingRoleId());
-        })->get();
-
-        foreach ($pms as $pm) {
-            $notification = Notification::create([
-                'user_id' => $pm->id,
-                'order_id' => $order->id,
-                'type' => Notification::TYPE_FINAL_DESIGN_REQUEST,
-                'title' => 'Final Design Request - ' . $order->nama_project,
-                'message' => 'Commitment fee telah selesai untuk project "' . $order->nama_project . '". Designer sedang membuat final design.',
-                'data' => [
-                    'order_name' => $order->nama_project,
-                    'customer_name' => $order->customer_name,
-                    'action_url' => '/moodboard',
-                ],
-            ]);
-
-            $this->fcmService->sendToUser($pm->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
-                ],
-            ]);
-        }
+        // Also send to management team in order teams (KM, PM, Supervisor)
+        $this->sendToManagementTeam(
+            $order,
+            Notification::TYPE_FINAL_DESIGN_REQUEST,
+            'Final Design Request - ' . $order->nama_project,
+            'Commitment fee telah selesai untuk project "' . $order->nama_project . '". Designer sedang membuat final design.',
+            [
+                'order_name' => $order->nama_project,
+                'customer_name' => $order->customer_name,
+                'action_url' => '/moodboard',
+            ]
+        );
     }
 
     public function sendItemPekerjaanRequestNotification(Order $order)
@@ -471,35 +406,18 @@ class NotificationService
             ]);
         }
 
-        // Also send to Kepala Marketing in order teams
-        $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('id', \App\Models\Role::getKepalaMarketingRoleId());
-        })->get();
-
-        foreach ($pms as $pm) {
-            $notification = Notification::create([
-                'user_id' => $pm->id,
-                'order_id' => $order->id,
-                'type' => Notification::TYPE_ITEM_PEKERJAAN_REQUEST,
-                'title' => 'Item Pekerjaan Request - ' . $order->nama_project,
-                'message' => 'Desain Final telah selesai untuk project "' . $order->nama_project . '". Designer sedang membuat Item Pekerjaan.',
-                'data' => [
-                    'order_name' => $order->nama_project,
-                    'customer_name' => $order->customer_name,
-                    'action_url' => '/item-pekerjaan',
-                ],
-            ]);
-
-            $this->fcmService->sendToUser($pm->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
-                ],
-            ]);
-        }
+        // Also send to management team in order teams (KM, PM, Supervisor)
+        $this->sendToManagementTeam(
+            $order,
+            Notification::TYPE_ITEM_PEKERJAAN_REQUEST,
+            'Item Pekerjaan Request - ' . $order->nama_project,
+            'Desain Final telah selesai untuk project "' . $order->nama_project . '". Designer sedang membuat Item Pekerjaan.',
+            [
+                'order_name' => $order->nama_project,
+                'customer_name' => $order->customer_name,
+                'action_url' => '/item-pekerjaan',
+            ]
+        );
     }
 
     public function sendRabInternalRequestNotification(Order $order)
@@ -535,35 +453,18 @@ class NotificationService
             ]);
         }
 
-        // Also send to Kepala Marketing in order teams
-        $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('id', \App\Models\Role::getKepalaMarketingRoleId());
-        })->get();
-
-        foreach ($pms as $pm) {
-            $notification = Notification::create([
-                'user_id' => $pm->id,
-                'order_id' => $order->id,
-                'type' => Notification::TYPE_RAB_INTERNAL_REQUEST,
-                'title' => 'RAB Internal Request - ' . $order->nama_project,
-                'message' => 'Item Pekerjaan telah selesai untuk project "' . $order->nama_project . '". Estimator sedang membuat RAB Internal.',
-                'data' => [
-                    'order_name' => $order->nama_project,
-                    'customer_name' => $order->customer_name,
-                    'action_url' => '/rab-internal',
-                ],
-            ]);
-
-            $this->fcmService->sendToUser($pm->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
-                ],
-            ]);
-        }
+        // Also send to management team in order teams (KM, PM, Supervisor)
+        $this->sendToManagementTeam(
+            $order,
+            Notification::TYPE_RAB_INTERNAL_REQUEST,
+            'RAB Internal Request - ' . $order->nama_project,
+            'Item Pekerjaan telah selesai untuk project "' . $order->nama_project . '". Estimator sedang membuat RAB Internal.',
+            [
+                'order_name' => $order->nama_project,
+                'customer_name' => $order->customer_name,
+                'action_url' => '/rab-internal',
+            ]
+        );
     }
 
     public function sendKontrakRequestNotification(Order $order)
@@ -599,35 +500,18 @@ class NotificationService
             ]);
         }
 
-        // Also send to Kepala Marketing in order teams
-        $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('id', \App\Models\Role::getKepalaMarketingRoleId());
-        })->get();
-
-        foreach ($pms as $pm) {
-            $notification = Notification::create([
-                'user_id' => $pm->id,
-                'order_id' => $order->id,
-                'type' => Notification::TYPE_KONTRAK_REQUEST,
-                'title' => 'Kontrak Request - ' . $order->nama_project,
-                'message' => 'RAB Internal telah submit untuk project "' . $order->nama_project . '". Legal admin sedang membuat Kontrak.',
-                'data' => [
-                    'order_name' => $order->nama_project,
-                    'customer_name' => $order->customer_name,
-                    'action_url' => '/kontrak',
-                ],
-            ]);
-
-            $this->fcmService->sendToUser($pm->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
-                ],
-            ]);
-        }
+        // Also send to management team in order teams (KM, PM, Supervisor)
+        $this->sendToManagementTeam(
+            $order,
+            Notification::TYPE_KONTRAK_REQUEST,
+            'Kontrak Request - ' . $order->nama_project,
+            'RAB Internal telah submit untuk project "' . $order->nama_project . '". Legal admin sedang membuat Kontrak.',
+            [
+                'order_name' => $order->nama_project,
+                'customer_name' => $order->customer_name,
+                'action_url' => '/kontrak',
+            ]
+        );
     }
 
     public function sendInvoiceRequestNotification(Order $order)
@@ -663,35 +547,18 @@ class NotificationService
             ]);
         }
 
-        // Also send to Kepala Marketing in order teams
-        $pms = $order->users()->whereHas('role', function ($query) {
-            $query->where('id', \App\Models\Role::getKepalaMarketingRoleId());
-        })->get();
-
-        foreach ($pms as $pm) {
-            $notification = Notification::create([
-                'user_id' => $pm->id,
-                'order_id' => $order->id,
-                'type' => Notification::TYPE_INVOICE_REQUEST,
-                'title' => 'Invoice Request - ' . $order->nama_project,
-                'message' => 'Kontrak telah submit untuk project "' . $order->nama_project . '". Finance sedang membuat Invoice.',
-                'data' => [
-                    'order_name' => $order->nama_project,
-                    'customer_name' => $order->customer_name,
-                    'action_url' => '/invoice',
-                ],
-            ]);
-
-            $this->fcmService->sendToUser($pm->id, [
-                'title' => $notification->title,
-                'body' => $notification->message,
-                'data' => [
-                    'notification_id' => $notification->id,
-                    'type' => $notification->type,
-                    'order_id' => $order->id,
-                ],
-            ]);
-        }
+        // Also send to management team in order teams (KM, PM, Supervisor)
+        $this->sendToManagementTeam(
+            $order,
+            Notification::TYPE_INVOICE_REQUEST,
+            'Invoice Request - ' . $order->nama_project,
+            'Kontrak telah submit untuk project "' . $order->nama_project . '". Finance sedang membuat Invoice.',
+            [
+                'order_name' => $order->nama_project,
+                'customer_name' => $order->customer_name,
+                'action_url' => '/invoice',
+            ]
+        );
     }
 
     public function sendSurveyScheduleRequestNotification(Order $order)

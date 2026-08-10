@@ -15,6 +15,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\OrderExport;
 use App\Services\ImageService;
+use App\Models\Role;
 
 class OrderController extends Controller
 {
@@ -43,27 +44,62 @@ class OrderController extends Controller
     }
 
     /**
+     * Helper to get team users grouped by role ID
+     */
+    private function getOrderTeamUsers()
+    {
+        $kmId = Role::getKepalaMarketingRoleId();
+        $desainerId = Role::getDesainerRoleId();
+        $surveyorId = Role::getSurveyorRoleId();
+        $drafterId = Role::getDrafterRoleId();
+        $supervisorId = Role::getSupervisorRoleId();
+        $pmId = Role::getProjectManagerRoleId();
+
+        $marketings = User::where(function ($query) use ($kmId) {
+            $query->where('role_id', $kmId)
+                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $kmId));
+        })->get();
+
+        $drafters = User::where(function ($query) use ($surveyorId, $drafterId) {
+            $query->whereIn('role_id', [$surveyorId, $drafterId])
+                ->orWhereHas('roles', fn($q) => $q->whereIn('roles.id', [$surveyorId, $drafterId]));
+        })->get();
+
+        $desainers = User::where(function ($query) use ($desainerId) {
+            $query->where('role_id', $desainerId)
+                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $desainerId));
+        })->get();
+
+        $supervisors = User::where(function ($query) use ($supervisorId) {
+            $query->where('role_id', $supervisorId)
+                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $supervisorId));
+        })->get();
+
+        $projectManagers = User::where(function ($query) use ($pmId) {
+            $query->where('role_id', $pmId)
+                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $pmId));
+        })->get();
+
+        return [
+            'marketings' => $marketings,
+            'drafters' => $drafters,
+            'desainers' => $desainers,
+            'supervisors' => $supervisors,
+            'projectManagers' => $projectManagers,
+        ];
+    }
+
+    /**
      * Show the form for creating a new resource.
      */
     public function create()
     {
-        $marketings = User::where(function ($query) {
-            $kmId = \App\Models\Role::getKepalaMarketingRoleId();
-            $query->where('role_id', $kmId)
-                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $kmId));
-        })->get();
-        $drafters = User::whereHas('roles', function ($query) {
-            $query->whereIn('nama_role', ['Surveyor', 'Drafter']);
-        })->get();
-        $desainers = User::where('role_id', \App\Models\Role::getDesainerRoleId())->get();
+        $teams = $this->getOrderTeamUsers();
         $jenisInteriors = JenisInterior::select('id', 'nama_interior')->get();
 
-        return Inertia::render('Order/Create', [
-            'marketings' => $marketings,
-            'drafters' => $drafters,
-            'desainers' => $desainers,
+        return Inertia::render('Order/Create', array_merge($teams, [
             'jenisInteriors' => $jenisInteriors,
-        ]);
+        ]));
     }
 
     /**
@@ -190,28 +226,17 @@ class OrderController extends Controller
      */
     public function edit(Order $order)
     {
-        $marketings = User::where(function ($query) {
-            $kmId = \App\Models\Role::getKepalaMarketingRoleId();
-            $query->where('role_id', $kmId)
-                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $kmId));
-        })->get();
-        $drafters = User::whereHas('roles', function ($query) {
-            $query->whereIn('nama_role', ['Surveyor', 'Drafter']);
-        })->get();
-        $desainers = User::where('role_id', \App\Models\Role::getDesainerRoleId())->get();
+        $teams = $this->getOrderTeamUsers();
         $jenisInteriors = JenisInterior::select('id', 'nama_interior')->get();
 
         // Get existing team members (ambil ID dari User model, bukan dari pivot)
         $existingUserIds = $order->users->pluck('id')->toArray();
 
-        return Inertia::render('Order/Edit', [
+        return Inertia::render('Order/Edit', array_merge($teams, [
             'order' => $order,
-            'marketings' => $marketings,
-            'drafters' => $drafters,
-            'desainers' => $desainers,
             'jenisInteriors' => $jenisInteriors,
             'existingUserIds' => $existingUserIds,
-        ]);
+        ]));
     }
 
     /**

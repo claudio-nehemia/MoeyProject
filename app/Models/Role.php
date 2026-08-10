@@ -70,4 +70,60 @@ class Role extends Model
         $cachedId = $role ? (int) $role->id : 7;
         return $cachedId;
     }
+
+    /**
+     * Get ID of Surveyor role
+     */
+    public static function getSurveyorRoleId(): int
+    {
+        static $cachedId = null;
+        if ($cachedId !== null) {
+            return $cachedId;
+        }
+        $role = static::where('nama_role', 'Surveyor')->first();
+        $cachedId = $role ? (int) $role->id : 4;
+        return $cachedId;
+    }
+
+    /**
+     * Get ID of Drafter role
+     */
+    public static function getDrafterRoleId(): int
+    {
+        static $cachedId = null;
+        if ($cachedId !== null) {
+            return $cachedId;
+        }
+        $role = static::where('nama_role', 'Drafter')->first();
+        $cachedId = $role ? (int) $role->id : 5;
+        return $cachedId;
+    }
+
+    /**
+     * Get ID of Supervisor role
+     */
+    public static function getSupervisorRoleId(): int
+    {
+        static $cachedId = null;
+        if ($cachedId !== null) {
+            return $cachedId;
+        }
+        $role = static::where('nama_role', 'Supervisor')->first();
+        $cachedId = $role ? (int) $role->id : 9;
+        return $cachedId;
+    }
+
+    /**
+     * Get ID of Project Manager role
+     */
+    public static function getProjectManagerRoleId(): int
+    {
+        static $cachedId = null;
+        if ($cachedId !== null) {
+            return $cachedId;
+        }
+        $role = static::where('nama_role', 'Project Manager')->first();
+        $cachedId = $role ? (int) $role->id : 10;
+        return $cachedId;
+    }
 }

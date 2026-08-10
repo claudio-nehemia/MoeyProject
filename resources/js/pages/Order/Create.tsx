@@ -20,14 +20,18 @@ interface Props {
     marketings: User[];
     drafters: User[];
     desainers: User[];
+    supervisors?: User[];
+    projectManagers?: User[];
     jenisInteriors: JenisInterior[];
 }
 
 export default function Create({
-    marketings,
-    drafters,
-    desainers,
-    jenisInteriors,
+    marketings = [],
+    drafters = [],
+    desainers = [],
+    supervisors = [],
+    projectManagers = [],
+    jenisInteriors = [],
 }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
@@ -39,6 +43,8 @@ export default function Create({
     const [selectedMarketings, setSelectedMarketings] = useState<number[]>([]);
     const [selectedDrafters, setSelectedDrafters] = useState<number[]>([]);
     const [selectedDesainers, setSelectedDesainers] = useState<number[]>([]);
+    const [selectedSupervisors, setSelectedSupervisors] = useState<number[]>([]);
+    const [selectedProjectManagers, setSelectedProjectManagers] = useState<number[]>([]);
 
     const [showMissingFieldsModal, setShowMissingFieldsModal] = useState(false);
     const [missingFields, setMissingFields] = useState<string[]>([]);
@@ -80,18 +86,19 @@ export default function Create({
 
     const handleUserToggle = (
         userId: number,
-        category: 'marketing' | 'drafter' | 'desainer',
+        category: 'marketing' | 'drafter' | 'desainer' | 'supervisor' | 'projectManager',
     ) => {
         if (category === 'marketing') {
             setSelectedMarketings((prev) => {
                 const newSelection = prev.includes(userId)
                     ? prev.filter((id) => id !== userId)
                     : [...prev, userId];
-                // Update user_ids immediately
                 updateUserIds(
                     newSelection,
                     selectedDrafters,
                     selectedDesainers,
+                    selectedSupervisors,
+                    selectedProjectManagers,
                 );
                 return newSelection;
             });
@@ -100,23 +107,53 @@ export default function Create({
                 const newSelection = prev.includes(userId)
                     ? prev.filter((id) => id !== userId)
                     : [...prev, userId];
-                // Update user_ids immediately
                 updateUserIds(
                     selectedMarketings,
                     newSelection,
                     selectedDesainers,
+                    selectedSupervisors,
+                    selectedProjectManagers,
                 );
                 return newSelection;
             });
-        } else {
+        } else if (category === 'desainer') {
             setSelectedDesainers((prev) => {
                 const newSelection = prev.includes(userId)
                     ? prev.filter((id) => id !== userId)
                     : [...prev, userId];
-                // Update user_ids immediately
                 updateUserIds(
                     selectedMarketings,
                     selectedDrafters,
+                    newSelection,
+                    selectedSupervisors,
+                    selectedProjectManagers,
+                );
+                return newSelection;
+            });
+        } else if (category === 'supervisor') {
+            setSelectedSupervisors((prev) => {
+                const newSelection = prev.includes(userId)
+                    ? prev.filter((id) => id !== userId)
+                    : [...prev, userId];
+                updateUserIds(
+                    selectedMarketings,
+                    selectedDrafters,
+                    selectedDesainers,
+                    newSelection,
+                    selectedProjectManagers,
+                );
+                return newSelection;
+            });
+        } else if (category === 'projectManager') {
+            setSelectedProjectManagers((prev) => {
+                const newSelection = prev.includes(userId)
+                    ? prev.filter((id) => id !== userId)
+                    : [...prev, userId];
+                updateUserIds(
+                    selectedMarketings,
+                    selectedDrafters,
+                    selectedDesainers,
+                    selectedSupervisors,
                     newSelection,
                 );
                 return newSelection;
@@ -128,8 +165,16 @@ export default function Create({
         marketings: number[],
         drafters: number[],
         designers: number[],
+        supervisors: number[],
+        projectManagers: number[],
     ) => {
-        const allUserIds = [...marketings, ...drafters, ...designers];
+        const allUserIds = [
+            ...marketings,
+            ...drafters,
+            ...designers,
+            ...supervisors,
+            ...projectManagers,
+        ];
         setData('user_ids', allUserIds);
         console.log('Updated user_ids in form data:', allUserIds);
     };
@@ -844,7 +889,7 @@ export default function Create({
                                 </div>
 
                                 {/* Designer Selection */}
-                                <div>
+                                <div className="mb-8">
                                     <div className="mb-4 flex items-center justify-between rounded-xl border border-rose-200 bg-gradient-to-r from-rose-50 to-pink-50 p-4">
                                         <div className="flex items-center gap-3">
                                             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-rose-400 to-rose-600 text-xs font-bold text-white shadow-sm">
@@ -906,10 +951,138 @@ export default function Create({
                                     )}
                                 </div>
 
+                                {/* Supervisor Selection */}
+                                <div className="mb-8">
+                                    <div className="mb-4 flex items-center justify-between rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50 p-4">
+                                        <div className="flex items-center gap-3">
+                                            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white shadow-sm">
+                                                S
+                                            </span>
+                                            <h3 className="text-sm font-bold text-stone-800">
+                                                Supervisor Team
+                                            </h3>
+                                        </div>
+                                        <span className="text-xs font-semibold text-indigo-600">
+                                            Selected: {selectedSupervisors.length}{' '}
+                                            member
+                                            {selectedSupervisors.length !== 1
+                                                ? 's'
+                                                : ''}
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                        {supervisors.map((user) => (
+                                            <div
+                                                key={user.id}
+                                                onClick={() =>
+                                                    handleUserToggle(
+                                                        user.id,
+                                                        'supervisor',
+                                                    )
+                                                }
+                                                className={`user-card flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition-all ${
+                                                    selectedSupervisors.includes(
+                                                        user.id,
+                                                    )
+                                                        ? 'selected border-indigo-400 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-md'
+                                                        : 'border-stone-200 bg-white hover:border-indigo-300 hover:shadow-sm'
+                                                }`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedSupervisors.includes(
+                                                        user.id,
+                                                    )}
+                                                    onChange={() => {}}
+                                                    className="checkbox-custom mt-0.5"
+                                                />
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="truncate text-sm font-semibold text-stone-900">
+                                                        {user.name}
+                                                    </p>
+                                                    <p className="truncate text-xs text-stone-500">
+                                                        {user.email}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {supervisors.length === 0 && (
+                                        <p className="text-sm text-stone-400 italic">
+                                            No supervisor staff available
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Project Manager Selection */}
+                                <div>
+                                    <div className="mb-4 flex items-center justify-between rounded-xl border border-sky-200 bg-gradient-to-r from-sky-50 to-blue-50 p-4">
+                                        <div className="flex items-center gap-3">
+                                            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 text-xs font-bold text-white shadow-sm">
+                                                PM
+                                            </span>
+                                            <h3 className="text-sm font-bold text-stone-800">
+                                                Project Manager Team
+                                            </h3>
+                                        </div>
+                                        <span className="text-xs font-semibold text-sky-600">
+                                            Selected: {selectedProjectManagers.length}{' '}
+                                            member
+                                            {selectedProjectManagers.length !== 1
+                                                ? 's'
+                                                : ''}
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                        {projectManagers.map((user) => (
+                                            <div
+                                                key={user.id}
+                                                onClick={() =>
+                                                    handleUserToggle(
+                                                        user.id,
+                                                        'projectManager',
+                                                    )
+                                                }
+                                                className={`user-card flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition-all ${
+                                                    selectedProjectManagers.includes(
+                                                        user.id,
+                                                    )
+                                                        ? 'selected border-sky-400 bg-gradient-to-br from-sky-50 to-blue-50 shadow-md'
+                                                        : 'border-stone-200 bg-white hover:border-sky-300 hover:shadow-sm'
+                                                }`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedProjectManagers.includes(
+                                                        user.id,
+                                                    )}
+                                                    onChange={() => {}}
+                                                    className="checkbox-custom mt-0.5"
+                                                />
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="truncate text-sm font-semibold text-stone-900">
+                                                        {user.name}
+                                                    </p>
+                                                    <p className="truncate text-xs text-stone-500">
+                                                        {user.email}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {projectManagers.length === 0 && (
+                                        <p className="text-sm text-stone-400 italic">
+                                            No project manager staff available
+                                        </p>
+                                    )}
+                                </div>
+
                                 {/* Team Summary */}
                                 {(selectedMarketings.length > 0 ||
                                     selectedDrafters.length > 0 ||
-                                    selectedDesainers.length > 0) && (
+                                    selectedDesainers.length > 0 ||
+                                    selectedSupervisors.length > 0 ||
+                                    selectedProjectManagers.length > 0) && (
                                     <div className="mt-6 rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50 p-5 shadow-sm">
                                         <div className="flex items-center gap-3">
                                             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 shadow-sm">
@@ -930,12 +1103,16 @@ export default function Create({
                                                     <span className="font-semibold">
                                                         {selectedMarketings.length +
                                                             selectedDrafters.length +
-                                                            selectedDesainers.length}
+                                                            selectedDesainers.length +
+                                                            selectedSupervisors.length +
+                                                            selectedProjectManagers.length}
                                                     </span>{' '}
                                                     total member
                                                     {selectedMarketings.length +
                                                         selectedDrafters.length +
-                                                        selectedDesainers.length !==
+                                                        selectedDesainers.length +
+                                                        selectedSupervisors.length +
+                                                        selectedProjectManagers.length !==
                                                     1
                                                         ? 's'
                                                         : ''}{' '}
@@ -944,28 +1121,31 @@ export default function Create({
                                                         •
                                                     </span>
                                                     <span className="text-amber-600">
-                                                        {
-                                                            selectedMarketings.length
-                                                        }{' '}
-                                                        Marketing
+                                                        {selectedMarketings.length} Marketing
                                                     </span>
                                                     <span className="mx-2">
                                                         •
                                                     </span>
                                                     <span className="text-emerald-600">
-                                                        {
-                                                            selectedDrafters.length
-                                                        }{' '}
-                                                        Drafter
+                                                        {selectedDrafters.length} Drafter
                                                     </span>
                                                     <span className="mx-2">
                                                         •
                                                     </span>
                                                     <span className="text-rose-600">
-                                                        {
-                                                            selectedDesainers.length
-                                                        }{' '}
-                                                        Designer
+                                                        {selectedDesainers.length} Designer
+                                                    </span>
+                                                    <span className="mx-2">
+                                                        •
+                                                    </span>
+                                                    <span className="text-indigo-600">
+                                                        {selectedSupervisors.length} Supervisor
+                                                    </span>
+                                                    <span className="mx-2">
+                                                        •
+                                                    </span>
+                                                    <span className="text-sky-600">
+                                                        {selectedProjectManagers.length} PM
                                                     </span>
                                                 </p>
                                             </div>

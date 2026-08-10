@@ -140,13 +140,21 @@ class Order extends Model
         }
 
         // Roles yang hanya bisa melihat order dimana mereka adalah team member
-        $restrictedRoleIds = [\App\Models\Role::getDesainerRoleId()];
-        // Juga tambahkan Surveyor/Drafter by name (belum ada helper, tapi Desainer sudah pakai ID)
-        $restrictedRoleNames = ['Surveyor', 'Drafter'];
+        $restrictedRoleIds = [
+            Role::getDesainerRoleId(),
+            Role::getSurveyorRoleId(),
+            Role::getDrafterRoleId(),
+            Role::getSupervisorRoleId(),
+            Role::getProjectManagerRoleId(),
+        ];
         
-        // Cek apakah user memiliki role yang dibatasi
-        $isRestricted = in_array($user->role_id, $restrictedRoleIds)
-            || ($roleName && in_array($roleName, $restrictedRoleNames));
+        // Cek apakah user memiliki role yang dibatasi (berdasarkan role_id atau roles pivot)
+        $userRoleIds = array_filter([$user->role_id]);
+        if ($user->relationLoaded('roles')) {
+            $userRoleIds = array_merge($userRoleIds, $user->roles->pluck('id')->toArray());
+        }
+        
+        $isRestricted = count(array_intersect($userRoleIds, $restrictedRoleIds)) > 0;
         
         if ($isRestricted) {
             // Filter hanya order dimana user adalah team member
@@ -172,21 +180,30 @@ class Order extends Model
 
         // Roles yang hanya bisa melihat order dimana mereka masuk survey schedule
         // Kepala Marketing tidak termasuk karena mereka harus bisa melihat semua
-        if ($user->role_id == \App\Models\Role::getKepalaMarketingRoleId()) {
+        if ($user->role_id == Role::getKepalaMarketingRoleId()) {
             return $query;
         }
 
-        $restrictedRoleIds = [\App\Models\Role::getDesainerRoleId()];
-        $restrictedRoleNames = ['Surveyor', 'Drafter', 'Supervisor'];
+        $restrictedRoleIds = [
+            Role::getDesainerRoleId(),
+            Role::getSurveyorRoleId(),
+            Role::getDrafterRoleId(),
+            Role::getSupervisorRoleId(),
+            Role::getProjectManagerRoleId(),
+        ];
         
         // Load role jika belum di-load
         if (!$user->relationLoaded('role')) {
             $user->load('role');
         }
         
+        $userRoleIds = array_filter([$user->role_id]);
+        if ($user->relationLoaded('roles')) {
+            $userRoleIds = array_merge($userRoleIds, $user->roles->pluck('id')->toArray());
+        }
+
         // Cek apakah user memiliki role yang dibatasi
-        $isRestricted = in_array($user->role_id, $restrictedRoleIds)
-            || ($user->role && in_array($user->role->nama_role, $restrictedRoleNames));
+        $isRestricted = count(array_intersect($userRoleIds, $restrictedRoleIds)) > 0;
         
         if ($isRestricted) {
             // Filter hanya order dimana user masuk dalam survey schedule users

@@ -38,11 +38,22 @@ interface Props {
     marketings: User[];
     drafters: User[];
     desainers: User[];
+    supervisors?: User[];
+    projectManagers?: User[];
     jenisInteriors: JenisInterior[];
     existingUserIds: number[];
 }
 
-export default function Edit({ order, marketings, drafters, desainers, jenisInteriors, existingUserIds }: Props) {
+export default function Edit({
+    order,
+    marketings = [],
+    drafters = [],
+    desainers = [],
+    supervisors = [],
+    projectManagers = [],
+    jenisInteriors = [],
+    existingUserIds = [],
+}: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 1024;
@@ -53,6 +64,8 @@ export default function Edit({ order, marketings, drafters, desainers, jenisInte
     const [selectedMarketings, setSelectedMarketings] = useState<number[]>([]);
     const [selectedDrafters, setSelectedDrafters] = useState<number[]>([]);
     const [selectedDesainers, setSelectedDesainers] = useState<number[]>([]);
+    const [selectedSupervisors, setSelectedSupervisors] = useState<number[]>([]);
+    const [selectedProjectManagers, setSelectedProjectManagers] = useState<number[]>([]);
 
     const { data, setData, post, processing, errors } = useForm({
         nama_project: order.nama_project,
@@ -74,48 +87,75 @@ export default function Edit({ order, marketings, drafters, desainers, jenisInte
     useEffect(() => {
         setMounted(true);
         // Set existing team members from order
-        const marketingIds = marketings
+        const marketingIds = (marketings || [])
             .filter(m => existingUserIds.includes(m.id))
             .map(m => m.id);
-        const drafterIds = drafters
+        const drafterIds = (drafters || [])
             .filter(d => existingUserIds.includes(d.id))
             .map(d => d.id);
-        const desainerIds = desainers
+        const desainerIds = (desainers || [])
             .filter(d => existingUserIds.includes(d.id))
             .map(d => d.id);
-        
+        const supervisorIds = (supervisors || [])
+            .filter(s => existingUserIds.includes(s.id))
+            .map(s => s.id);
+        const pmIds = (projectManagers || [])
+            .filter(p => existingUserIds.includes(p.id))
+            .map(p => p.id);
+
         setSelectedMarketings(marketingIds);
         setSelectedDrafters(drafterIds);
         setSelectedDesainers(desainerIds);
+        setSelectedSupervisors(supervisorIds);
+        setSelectedProjectManagers(pmIds);
+        updateUserIds(marketingIds, drafterIds, desainerIds, supervisorIds, pmIds);
     }, []);
 
-    const handleUserToggle = (userId: number, category: 'marketing' | 'drafter' | 'desainer') => {
+    const handleUserToggle = (
+        userId: number,
+        category: 'marketing' | 'drafter' | 'desainer' | 'supervisor' | 'projectManager',
+    ) => {
         if (category === 'marketing') {
             setSelectedMarketings(prev => {
                 const newSelection = prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId];
-                // Update user_ids immediately
-                updateUserIds(newSelection, selectedDrafters, selectedDesainers);
+                updateUserIds(newSelection, selectedDrafters, selectedDesainers, selectedSupervisors, selectedProjectManagers);
                 return newSelection;
             });
         } else if (category === 'drafter') {
             setSelectedDrafters(prev => {
                 const newSelection = prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId];
-                // Update user_ids immediately
-                updateUserIds(selectedMarketings, newSelection, selectedDesainers);
+                updateUserIds(selectedMarketings, newSelection, selectedDesainers, selectedSupervisors, selectedProjectManagers);
                 return newSelection;
             });
-        } else {
+        } else if (category === 'desainer') {
             setSelectedDesainers(prev => {
                 const newSelection = prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId];
-                // Update user_ids immediately
-                updateUserIds(selectedMarketings, selectedDrafters, newSelection);
+                updateUserIds(selectedMarketings, selectedDrafters, newSelection, selectedSupervisors, selectedProjectManagers);
+                return newSelection;
+            });
+        } else if (category === 'supervisor') {
+            setSelectedSupervisors(prev => {
+                const newSelection = prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId];
+                updateUserIds(selectedMarketings, selectedDrafters, selectedDesainers, newSelection, selectedProjectManagers);
+                return newSelection;
+            });
+        } else if (category === 'projectManager') {
+            setSelectedProjectManagers(prev => {
+                const newSelection = prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId];
+                updateUserIds(selectedMarketings, selectedDrafters, selectedDesainers, selectedSupervisors, newSelection);
                 return newSelection;
             });
         }
     };
 
-    const updateUserIds = (marketings: number[], drafters: number[], designers: number[]) => {
-        const allUserIds = [...marketings, ...drafters, ...designers];
+    const updateUserIds = (
+        marketings: number[],
+        drafters: number[],
+        designers: number[],
+        supervisors: number[],
+        projectManagers: number[],
+    ) => {
+        const allUserIds = [...marketings, ...drafters, ...designers, ...supervisors, ...projectManagers];
         setData('user_ids', allUserIds);
         console.log('Updated user_ids in form data:', allUserIds);
     };
@@ -582,7 +622,7 @@ export default function Edit({ order, marketings, drafters, desainers, jenisInte
                                 </div>
 
                                 {/* Designer Selection */}
-                                <div>
+                                <div className="mb-8">
                                     <div className="bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 rounded-xl p-4 mb-4 flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-rose-400 to-rose-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
@@ -623,8 +663,92 @@ export default function Edit({ order, marketings, drafters, desainers, jenisInte
                                     )}
                                 </div>
 
+                                {/* Supervisor Selection */}
+                                <div className="mb-8">
+                                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-4 mb-4 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                                                S
+                                            </span>
+                                            <h3 className="text-sm font-bold text-stone-800">Supervisor Team</h3>
+                                        </div>
+                                        <span className="text-xs font-semibold text-indigo-600">
+                                            Selected: {selectedSupervisors.length} member{selectedSupervisors.length !== 1 ? 's' : ''}
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {supervisors.map(user => (
+                                            <div
+                                                key={user.id}
+                                                onClick={() => handleUserToggle(user.id, 'supervisor')}
+                                                className={`user-card p-4 border-2 rounded-xl cursor-pointer flex items-start gap-3 transition-all ${
+                                                    selectedSupervisors.includes(user.id)
+                                                        ? 'selected border-indigo-400 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-md'
+                                                        : 'border-stone-200 hover:border-indigo-300 hover:shadow-sm bg-white'
+                                                }`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedSupervisors.includes(user.id)}
+                                                    onChange={() => {}}
+                                                    className="checkbox-custom mt-0.5"
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-semibold text-sm text-stone-900 truncate">{user.name}</p>
+                                                    <p className="text-xs text-stone-500 truncate">{user.email}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {supervisors.length === 0 && (
+                                        <p className="text-sm text-stone-400 italic">No supervisor staff available</p>
+                                    )}
+                                </div>
+
+                                {/* Project Manager Selection */}
+                                <div>
+                                    <div className="bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200 rounded-xl p-4 mb-4 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                                                PM
+                                            </span>
+                                            <h3 className="text-sm font-bold text-stone-800">Project Manager Team</h3>
+                                        </div>
+                                        <span className="text-xs font-semibold text-sky-600">
+                                            Selected: {selectedProjectManagers.length} member{selectedProjectManagers.length !== 1 ? 's' : ''}
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {projectManagers.map(user => (
+                                            <div
+                                                key={user.id}
+                                                onClick={() => handleUserToggle(user.id, 'projectManager')}
+                                                className={`user-card p-4 border-2 rounded-xl cursor-pointer flex items-start gap-3 transition-all ${
+                                                    selectedProjectManagers.includes(user.id)
+                                                        ? 'selected border-sky-400 bg-gradient-to-br from-sky-50 to-blue-50 shadow-md'
+                                                        : 'border-stone-200 hover:border-sky-300 hover:shadow-sm bg-white'
+                                                }`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedProjectManagers.includes(user.id)}
+                                                    onChange={() => {}}
+                                                    className="checkbox-custom mt-0.5"
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-semibold text-sm text-stone-900 truncate">{user.name}</p>
+                                                    <p className="text-xs text-stone-500 truncate">{user.email}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {projectManagers.length === 0 && (
+                                        <p className="text-sm text-stone-400 italic">No project manager staff available</p>
+                                    )}
+                                </div>
+
                                 {/* Team Summary */}
-                                {(selectedMarketings.length > 0 || selectedDrafters.length > 0 || selectedDesainers.length > 0) && (
+                                {(selectedMarketings.length > 0 || selectedDrafters.length > 0 || selectedDesainers.length > 0 || selectedSupervisors.length > 0 || selectedProjectManagers.length > 0) && (
                                     <div className="mt-6 p-5 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl shadow-sm">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-sm">
@@ -635,13 +759,17 @@ export default function Edit({ order, marketings, drafters, desainers, jenisInte
                                             <div>
                                                 <p className="text-sm font-bold text-indigo-900">Team Summary</p>
                                                 <p className="text-xs text-indigo-700">
-                                                    <span className="font-semibold">{selectedMarketings.length + selectedDrafters.length + selectedDesainers.length}</span> total member{(selectedMarketings.length + selectedDrafters.length + selectedDesainers.length) !== 1 ? 's' : ''} selected
+                                                    <span className="font-semibold">{selectedMarketings.length + selectedDrafters.length + selectedDesainers.length + selectedSupervisors.length + selectedProjectManagers.length}</span> total member{(selectedMarketings.length + selectedDrafters.length + selectedDesainers.length + selectedSupervisors.length + selectedProjectManagers.length) !== 1 ? 's' : ''} selected
                                                     <span className="mx-2">•</span>
                                                     <span className="text-amber-600">{selectedMarketings.length} Marketing</span>
                                                     <span className="mx-2">•</span>
                                                     <span className="text-emerald-600">{selectedDrafters.length} Drafter</span>
                                                     <span className="mx-2">•</span>
                                                     <span className="text-rose-600">{selectedDesainers.length} Designer</span>
+                                                    <span className="mx-2">•</span>
+                                                    <span className="text-indigo-600">{selectedSupervisors.length} Supervisor</span>
+                                                    <span className="mx-2">•</span>
+                                                    <span className="text-sky-600">{selectedProjectManagers.length} PM</span>
                                                 </p>
                                             </div>
                                         </div>

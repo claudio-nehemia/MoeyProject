@@ -46,15 +46,37 @@ class OrderApiController extends Controller
      */
     public function getFormData()
     {
-        $marketings = User::where('role_id', \App\Models\Role::getKepalaMarketingRoleId())
-            ->get(['id', 'name', 'email']);
-        
-        $drafters = User::whereHas('roles', function ($query) {
-            $query->whereIn('nama_role', ['Surveyor', 'Drafter']);
+        $kmId = \App\Models\Role::getKepalaMarketingRoleId();
+        $desainerId = \App\Models\Role::getDesainerRoleId();
+        $surveyorId = \App\Models\Role::getSurveyorRoleId();
+        $drafterId = \App\Models\Role::getDrafterRoleId();
+        $supervisorId = \App\Models\Role::getSupervisorRoleId();
+        $pmId = \App\Models\Role::getProjectManagerRoleId();
+
+        $marketings = User::where(function ($query) use ($kmId) {
+            $query->where('role_id', $kmId)
+                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $kmId));
         })->get(['id', 'name', 'email']);
         
-        $desainers = User::where('role_id', \App\Models\Role::getDesainerRoleId())
-            ->get(['id', 'name', 'email']);
+        $drafters = User::where(function ($query) use ($surveyorId, $drafterId) {
+            $query->whereIn('role_id', [$surveyorId, $drafterId])
+                ->orWhereHas('roles', fn($q) => $q->whereIn('roles.id', [$surveyorId, $drafterId]));
+        })->get(['id', 'name', 'email']);
+        
+        $desainers = User::where(function ($query) use ($desainerId) {
+            $query->where('role_id', $desainerId)
+                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $desainerId));
+        })->get(['id', 'name', 'email']);
+
+        $supervisors = User::where(function ($query) use ($supervisorId) {
+            $query->where('role_id', $supervisorId)
+                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $supervisorId));
+        })->get(['id', 'name', 'email']);
+
+        $projectManagers = User::where(function ($query) use ($pmId) {
+            $query->where('role_id', $pmId)
+                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $pmId));
+        })->get(['id', 'name', 'email']);
         
         $jenisInteriors = JenisInterior::select('id', 'nama_interior')->get();
 
@@ -64,6 +86,8 @@ class OrderApiController extends Controller
                 'marketings' => $marketings,
                 'drafters' => $drafters,
                 'desainers' => $desainers,
+                'supervisors' => $supervisors,
+                'project_managers' => $projectManagers,
                 'jenis_interiors' => $jenisInteriors,
             ]
         ]);
