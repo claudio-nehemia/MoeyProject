@@ -9,20 +9,22 @@ use Inertia\Inertia;
 class DashboardController extends Controller
 {
     public function index() {
-        $totalOrders = Order::count();
-        $activeOrders = Order::has('surveyResults')
+        // Get current user with role and divisi
+        $user = auth()->user()->load('role.divisi');
+
+        $ordersQuery = Order::visibleToUser($user);
+
+        $totalOrders = (clone $ordersQuery)->count();
+        $activeOrders = (clone $ordersQuery)->has('surveyResults')
             ->where('tahapan_proyek', '!=', 'selesai')
             ->count();
-        $completeProjects = Order::where('tahapan_proyek', 'selesai')->count();
+        $completeProjects = (clone $ordersQuery)->where('tahapan_proyek', 'selesai')->count();
         $completePercentage = $totalOrders > 0 ? ($completeProjects / $totalOrders) * 100 : 0;
 
-        $recentOrders = Order::with('jenisInterior')
+        $recentOrders = (clone $ordersQuery)->with('jenisInterior')
             ->orderBy('created_at', 'desc')
             ->take(4)
             ->get();
-
-        // Get current user with role and divisi
-        $user = auth()->user()->load('role.divisi');
 
         return Inertia::render('dashboard', [
             'totalOrders' => $totalOrders,
