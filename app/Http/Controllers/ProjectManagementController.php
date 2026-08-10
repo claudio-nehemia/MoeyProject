@@ -375,13 +375,18 @@ class ProjectManagementController extends Controller
             return back()->withErrors(['bast' => 'Semua produk harus selesai Install QC terlebih dahulu']);
         }
 
-        // Check if BAST already exists
-        if ($itemPekerjaan->has_bast) {
-            return back()->withErrors(['bast' => 'BAST sudah dibuat sebelumnya']);
-        }
+        $isRegenerate = (bool) $itemPekerjaan->has_bast;
 
-        // Generate BAST number
-        $bastNumber = 'BAST/' . date('Y') . '/' . str_pad($itemPekerjaan->id, 5, '0', STR_PAD_LEFT);
+        // BAST number & date
+        $bastNumber = $isRegenerate
+            ? $itemPekerjaan->bast_number
+            : 'BAST/' . date('Y') . '/' . str_pad($itemPekerjaan->id, 5, '0', STR_PAD_LEFT);
+
+        $bastDateRaw = $isRegenerate && $itemPekerjaan->bast_date
+            ? $itemPekerjaan->bast_date
+            : now();
+
+        $bastDateFormatted = \Carbon\Carbon::parse($bastDateRaw)->format('d F Y');
 
         // Get order info
         $order = $itemPekerjaan->moodboard->order;
@@ -407,7 +412,7 @@ class ProjectManagementController extends Controller
         // Generate PDF
         $data = [
             'bast_number' => $bastNumber,
-            'bast_date' => now()->format('d F Y'),
+            'bast_date' => $bastDateFormatted,
             'order' => $order,
             'item_pekerjaan' => $itemPekerjaan,
             'produks' => $itemPekerjaan->produks,
@@ -418,32 +423,77 @@ class ProjectManagementController extends Controller
             'direkturName' => $direkturName,
         ];
 
-        $pdf = PDF::loadView('pdf.bast', $data);
+        $pdf = Pdf::loadView('pdf.bast', $data);
         $pdf->setPaper('a4', 'portrait');
 
         $filename = 'BAST-' . str_replace('/', '-', $bastNumber) . '-' . date('YmdHis') . '.pdf';
         $pdfPath = 'bast/' . $filename;
 
+        // Delete old PDF file if regenerating
+        if ($isRegenerate && $itemPekerjaan->bast_pdf_path) {
+            Storage::disk('public')->delete($itemPekerjaan->bast_pdf_path);
+        }
+
         // Save PDF to storage
         Storage::disk('public')->put($pdfPath, $pdf->output());
 
         // Update item pekerjaan with BAST info
-        $itemPekerjaan->update([
+        $updateData = [
             'bast_number' => $bastNumber,
-            'bast_date' => now(),
             'bast_pdf_path' => $pdfPath,
-        ]);
+        ];
 
-        return back()->with('success', 'BAST berhasil dibuat');
+        if (!$isRegenerate) {
+            $updateData['bast_date'] = $bastDateRaw;
+        }
+
+        $itemPekerjaan->update($updateData);
+
+        return back()->with('success', $isRegenerate ? 'BAST berhasil di-regenerate dengan data terbaru' : 'BAST berhasil dibuat');
     }
 
     public function downloadBast($itemPekerjaanId)
     {
-        $itemPekerjaan = \App\Models\ItemPekerjaan::findOrFail($itemPekerjaanId);
+        $itemPekerjaan = \App\Models\ItemPekerjaan::with([
+            'moodboard.order',
+            'produks.produk',
+            'produks.stageEvidences',
+        ])->findOrFail($itemPekerjaanId);
 
         if (!$itemPekerjaan->bast_pdf_path) {
             return back()->withErrors(['bast' => 'BAST belum dibuat']);
         }
+
+        $order = $itemPekerjaan->moodboard->order;
+
+        $allStageEvidences = collect();
+        foreach ($itemPekerjaan->produks as $produk) {
+            $grouped = $produk->stageEvidences->groupBy('stage');
+            foreach ($grouped as $stage => $evidences) {
+                if (!$allStageEvidences->has($stage)) {
+                    $allStageEvidences[$stage] = collect();
+                }
+                $allStageEvidences[$stage] = $allStageEvidences[$stage]->merge($evidences);
+            }
+        }
+
+        $data = [
+            'bast_number' => $itemPekerjaan->bast_number,
+            'bast_date' => $itemPekerjaan->bast_date ? \Carbon\Carbon::parse($itemPekerjaan->bast_date)->format('d F Y') : now()->format('d F Y'),
+            'order' => $order,
+            'item_pekerjaan' => $itemPekerjaan,
+            'produks' => $itemPekerjaan->produks,
+            'stage_evidences' => $allStageEvidences,
+            'kop_path' => public_path('kop-moey.jpeg'),
+            'companyName' => "PT. Moey Living Indonesia",
+            'companyAddress' => "Tangerang",
+            'direkturName' => "Aniq Infanuddin",
+        ];
+
+        $pdf = Pdf::loadView('pdf.bast', $data);
+        $pdf->setPaper('a4', 'portrait');
+
+        Storage::disk('public')->put($itemPekerjaan->bast_pdf_path, $pdf->output());
 
         $filePath = storage_path('app/public/' . $itemPekerjaan->bast_pdf_path);
         

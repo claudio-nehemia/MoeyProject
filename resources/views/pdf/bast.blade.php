@@ -191,15 +191,32 @@
                 </tr>
                 <tr>
                     <td class="label" style="vertical-align: top;">3. Hasil Pekerjaan yang Diserahkan:</td>
-                    <td class="separator" style="vertical-align: top;"></td>
+                    <td class="separator" style="vertical-align: top;">:</td>
                     <td style="vertical-align: top;">
-                        <ul style="margin: 0; padding-left: 20px;">
-                            @foreach($produks as $index => $produk)
-                            <li style="margin-bottom: 5px;">
-                                Pembuatan {{ $produk->nama_produk ?? 'produk ' . ($index + 1) }}
-                            </li>
+                        @php
+                            $groupedProduks = $produks->groupBy(function($item) {
+                                return trim($item->nama_ruangan) ? trim($item->nama_ruangan) : 'Lainnya';
+                            });
+                        @endphp
+
+                        <div style="margin: 0; padding: 0;">
+                            @foreach($groupedProduks as $ruangan => $items)
+                                <div style="margin-bottom: 8px;">
+                                    <strong>Ruangan: {{ $ruangan }}</strong>
+                                    <ul style="margin-top: 3px; padding-left: 20px;">
+                                        @foreach($items as $item)
+                                            @php
+                                                $namaProduk = $item->produk?->nama_produk ?? 'Produk';
+                                                $qty = $item->quantity ? ' (' . (float)$item->quantity . ' unit)' : '';
+                                            @endphp
+                                            <li style="margin-bottom: 3px;">
+                                                Pembuatan {{ $namaProduk }}{{ $qty }}
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
                             @endforeach
-                        </ul>
+                        </div>
                     </td>
                 </tr>
             </table>
