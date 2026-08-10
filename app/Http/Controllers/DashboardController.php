@@ -10,7 +10,9 @@ class DashboardController extends Controller
 {
     public function index() {
         $totalOrders = Order::count();
-        $activeOrders = Order::where('project_status', 'deal')->count();
+        $activeOrders = Order::has('surveyResults')
+            ->where('tahapan_proyek', '!=', 'selesai')
+            ->count();
         $completeProjects = Order::where('tahapan_proyek', 'selesai')->count();
         $completePercentage = $totalOrders > 0 ? ($completeProjects / $totalOrders) * 100 : 0;
 
