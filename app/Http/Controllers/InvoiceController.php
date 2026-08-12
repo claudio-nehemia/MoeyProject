@@ -808,7 +808,13 @@ class InvoiceController extends Controller
             'bast_foto_klien' => 'required|image|mimes:jpeg,png,jpg|max:5120', // 5MB
         ]);
 
-        $itemPekerjaan = ItemPekerjaan::findOrFail($itemPekerjaanId);
+        $itemPekerjaan = ItemPekerjaan::with('produks')->findOrFail($itemPekerjaanId);
+
+        // Check if all produks completed Install QC
+        $allCompleted = $itemPekerjaan->produks->every(fn($p) => $p->current_stage === 'Install QC');
+        if (!$allCompleted) {
+            return back()->with('error', 'Semua tahapan produksi harus selesai terlebih dahulu');
+        }
 
         // Check if BAST document exists first
         if (!$itemPekerjaan->has_bast) {

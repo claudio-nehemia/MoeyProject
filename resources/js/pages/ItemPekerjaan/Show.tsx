@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { router, Head, Link } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
@@ -39,6 +39,13 @@ interface ItemPekerjaan {
     id: number;
     response_by: string;
     response_time: string;
+    bast_number: string | null;
+    bast_date: string | null;
+    bast_pdf_path: string | null;
+    has_bast: boolean;
+    is_all_produk_completed: boolean;
+    bast_foto_klien: string | null;
+    bast_foto_klien_uploaded_at: string | null;
     moodboard: {
         order: {
             nama_project: string;
@@ -58,6 +65,26 @@ export default function Show({ itemPekerjaan }: Props) {
     const [expandedRuangan, setExpandedRuangan] = useState<string[]>([]);
     const [expandedProduk, setExpandedProduk] = useState<number[]>([]);
     const [expandedJenisItem, setExpandedJenisItem] = useState<number[]>([]);
+    const [uploadingBastFoto, setUploadingBastFoto] = useState(false);
+    const [showBastFotoPreview, setShowBastFotoPreview] = useState(false);
+    const bastFotoInputRef = useRef<HTMLInputElement>(null);
+
+    const handleUploadBastFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('bast_foto_klien', file);
+
+        setUploadingBastFoto(true);
+        router.post(`/invoice/${itemPekerjaan.id}/upload-bast-foto-klien`, formData, {
+            forceFormData: true,
+            onFinish: () => {
+                setUploadingBastFoto(false);
+                if (bastFotoInputRef.current) bastFotoInputRef.current.value = '';
+            },
+        });
+    };
 
     // Group produks by ruangan
     const ruanganGroups = useMemo((): RuanganGroup[] => {
@@ -142,16 +169,29 @@ export default function Show({ itemPekerjaan }: Props) {
                                     {itemPekerjaan.moodboard.order.nama_project}
                                 </p>
                             </div>
-                            <Link
-                                href={`/item-pekerjaan/${itemPekerjaan.id}/edit`}
-                                className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-                            >
-                                Edit Item Pekerjaan
-                            </Link>
+                            <div className="flex items-center gap-2">
+                                <a
+                                    href={`/item-pekerjaan/${itemPekerjaan.id}/export-pdf`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 text-sm font-medium text-white shadow transition-colors hover:bg-red-700"
+                                >
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    Export PDF
+                                </a>
+                                <Link
+                                    href={`/item-pekerjaan/${itemPekerjaan.id}/edit`}
+                                    className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                                >
+                                    Edit Item Pekerjaan
+                                </Link>
+                            </div>
                         </div>
 
                         {/* Order & Response Info */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                             {/* Order Info */}
                             <div className="rounded-lg border border-stone-200 bg-white p-6">
                                 <h3 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-4">
@@ -211,8 +251,109 @@ export default function Show({ itemPekerjaan }: Props) {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Foto BAST / Serah Terima */}
+                            <div className="rounded-lg border border-amber-200 bg-amber-50 p-6">
+                                <h3 className="text-sm font-semibold text-amber-700 uppercase tracking-wider mb-4">
+                                    Foto Serah Terima (BAST)
+                                </h3>
+
+                                {itemPekerjaan.bast_foto_klien ? (
+                                    <div className="space-y-3">
+                                        <div
+                                            className="relative cursor-pointer group"
+                                            onClick={() => setShowBastFotoPreview(true)}
+                                        >
+                                            <img
+                                                src={itemPekerjaan.bast_foto_klien}
+                                                alt="Foto BAST"
+                                                className="w-full h-40 object-cover rounded-lg border border-amber-200 group-hover:opacity-90 transition-opacity"
+                                            />
+                                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <span className="bg-black/60 text-white text-xs px-3 py-1.5 rounded-full">
+                                                    Klik untuk perbesar
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-amber-600">
+                                            Diupload: {itemPekerjaan.bast_foto_klien_uploaded_at}
+                                        </p>
+                                        <label className="flex items-center justify-center gap-2 w-full rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-700 cursor-pointer hover:bg-amber-100 transition-colors">
+                                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                            {uploadingBastFoto ? 'Mengupload...' : 'Ganti Foto'}
+                                            <input
+                                                ref={bastFotoInputRef}
+                                                type="file"
+                                                accept="image/jpeg,image/png,image/jpg"
+                                                className="hidden"
+                                                onChange={handleUploadBastFoto}
+                                                disabled={uploadingBastFoto}
+                                            />
+                                        </label>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        <div className="flex flex-col items-center justify-center h-40 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50/50">
+                                            <svg className="h-10 w-10 text-amber-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                            <p className="text-sm text-amber-600">Belum ada foto</p>
+                                        </div>
+                                        <label className={`flex items-center justify-center gap-2 w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white cursor-pointer transition-colors ${
+                                            (!itemPekerjaan.has_bast || !itemPekerjaan.is_all_produk_completed)
+                                                ? 'bg-stone-300 cursor-not-allowed'
+                                                : 'bg-amber-600 hover:bg-amber-700'
+                                        }`}>
+                                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                            </svg>
+                                            {uploadingBastFoto ? 'Mengupload...' : 'Upload Foto BAST'}
+                                            <input
+                                                ref={bastFotoInputRef}
+                                                type="file"
+                                                accept="image/jpeg,image/png,image/jpg"
+                                                className="hidden"
+                                                onChange={handleUploadBastFoto}
+                                                disabled={uploadingBastFoto || !itemPekerjaan.has_bast || !itemPekerjaan.is_all_produk_completed}
+                                            />
+                                        </label>
+                                        {!itemPekerjaan.is_all_produk_completed && (
+                                            <p className="text-xs text-stone-400 text-center">Semua tahapan produksi harus selesai terlebih dahulu</p>
+                                        )}
+                                        {itemPekerjaan.is_all_produk_completed && !itemPekerjaan.has_bast && (
+                                            <p className="text-xs text-stone-400 text-center">BAST dokumen harus dibuat terlebih dahulu di Project Management</p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
+
+                    {/* BAST Foto Preview Modal */}
+                    {showBastFotoPreview && itemPekerjaan.bast_foto_klien && (
+                        <div
+                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+                            onClick={() => setShowBastFotoPreview(false)}
+                        >
+                            <div className="relative max-w-4xl max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                    onClick={() => setShowBastFotoPreview(false)}
+                                    className="absolute -top-3 -right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white text-stone-600 shadow-lg hover:bg-stone-100"
+                                >
+                                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                                <img
+                                    src={itemPekerjaan.bast_foto_klien}
+                                    alt="Foto BAST"
+                                    className="max-h-[85vh] rounded-lg object-contain"
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     {/* Ruangan List */}
                     <div className="space-y-6">

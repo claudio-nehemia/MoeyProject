@@ -417,7 +417,7 @@ class RabInternalController extends Controller
             'rabProduks.itemPekerjaanProduk.bahanBakus.item', // Selected bahan baku
             'rabProduks.itemPekerjaanProduk.jenisItems.jenisItem',
             'rabProduks.itemPekerjaanProduk.jenisItems.items.item',
-            'rabProduks.rabAksesoris'
+            'rabProduks.rabAksesoris.itemPekerjaanItem.item'
         ])->findOrFail($rabInternalId);
 
         // Get Aksesoris jenis_item_id
@@ -453,6 +453,7 @@ class RabInternalController extends Controller
                                     'harga_satuan' => $item->item->harga,
                                     'qty' => $item->quantity,
                                     'harga_total' => $item->item->harga * $item->quantity,
+                                    'kategori' => strtolower($item->item->kategori ?? 'internal'),
                                 ];
                             }
 
@@ -466,6 +467,7 @@ class RabInternalController extends Controller
                     return [
                         'id' => $rabProduk->id,
                         'nama_produk' => $rabProduk->itemPekerjaanProduk->produk->nama_produk,
+                        'kategori' => strtolower($rabProduk->itemPekerjaanProduk->produk->kategori ?? 'internal'),
                         'nama_ruangan' => $rabProduk->itemPekerjaanProduk->nama_ruangan,
                         'qty_produk' => $rabProduk->itemPekerjaanProduk->quantity,
                         'panjang' => $rabProduk->itemPekerjaanProduk->panjang,
@@ -489,6 +491,7 @@ class RabInternalController extends Controller
                                 'markup_aksesoris' => $aksesoris->markup_aksesoris,
                                 'harga_satuan_aksesoris' => $aksesoris->harga_satuan_aksesoris,
                                 'harga_total' => $aksesoris->harga_total,
+                                'kategori' => strtolower($aksesoris->itemPekerjaanItem?->item?->kategori ?? 'internal'),
                             ];
                         }),
                     ];

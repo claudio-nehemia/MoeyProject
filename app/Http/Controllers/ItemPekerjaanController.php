@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use App\Services\NotificationService;
 use App\Models\ItemPekerjaanJenisItem;
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\ItemPekerjaanProdukBahanBaku;
 
 class ItemPekerjaanController extends Controller
@@ -478,6 +479,15 @@ class ItemPekerjaanController extends Controller
                 'id' => $itemPekerjaan->id,
                 'response_by' => $itemPekerjaan->response_by,
                 'response_time' => $itemPekerjaan->response_time,
+                'bast_number' => $itemPekerjaan->bast_number,
+                'bast_date' => $itemPekerjaan->bast_date?->format('d M Y'),
+                'bast_pdf_path' => $itemPekerjaan->bast_pdf_path,
+                'has_bast' => $itemPekerjaan->has_bast,
+                'is_all_produk_completed' => $itemPekerjaan->produks->every(fn($p) => $p->current_stage === 'Install QC'),
+                'bast_foto_klien' => $itemPekerjaan->bast_foto_klien
+                    ? \Illuminate\Support\Facades\Storage::url($itemPekerjaan->bast_foto_klien)
+                    : null,
+                'bast_foto_klien_uploaded_at' => $itemPekerjaan->bast_foto_klien_uploaded_at?->format('d M Y H:i'),
                 'moodboard' => [
                     'order' => [
                         'nama_project' => $itemPekerjaan->moodboard->order->nama_project,
@@ -823,5 +833,120 @@ class ItemPekerjaanController extends Controller
             Log::error('Delete item error: ' . $e->getMessage());
             return back()->with('error', 'Gagal hapus item: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Export PDF Item Pekerjaan grouped by Ruangan
+     */
+    public function exportPdf($itemPekerjaanId)
+    {
+        $itemPekerjaan = ItemPekerjaan::with([
+            'moodboard.order',
+            'produks.produk',
+            'produks.jenisItems.jenisItem',
+            'produks.jenisItems.items.item',
+            'produks.bahanBakus.item',
+        ])->findOrFail($itemPekerjaanId);
+
+        $order = $itemPekerjaan->moodboard->order;
+
+        // Group produks by nama_ruangan
+        $ruanganGroups = [];
+
+        $formatSpek = function ($spekRaw) {
+            if (is_array($spekRaw)) {
+                return implode(', ', array_filter($spekRaw));
+            }
+            return is_string($spekRaw) ? trim($spekRaw) : '';
+        };
+
+        foreach ($itemPekerjaan->produks as $produkItem) {
+            $ruanganName = $produkItem->nama_ruangan ?: 'Tanpa Ruangan';
+
+            if (!isset($ruanganGroups[$ruanganName])) {
+                $ruanganGroups[$ruanganName] = [];
+            }
+
+            // Extract Finishing Dalam items
+            $finishingDalam = [];
+            // Extract Finishing Luar items
+            $finishingLuar = [];
+            // Extract Aksesoris items
+            $aksesoris = [];
+
+            foreach ($produkItem->jenisItems as $jenisItemRel) {
+                $namaJenis = strtolower(trim($jenisItemRel->jenisItem->nama_jenis_item ?? ''));
+
+                foreach ($jenisItemRel->items as $itemDetail) {
+                    $itemName = $itemDetail->item->nama_item ?? '-';
+                    $qty = $itemDetail->quantity ?? null;
+                    $spekRaw = $itemDetail->brand_spek ?? $itemDetail->keterangan_material ?? '';
+                    $spek = $formatSpek($spekRaw);
+
+                    $formatted = $itemName;
+                    if (!empty($spek)) {
+                        $formatted .= ' (' . $spek . ')';
+                    }
+
+                    if ($namaJenis === 'finishing dalam') {
+                        $finishingDalam[] = $formatted;
+                    } elseif ($namaJenis === 'finishing luar') {
+                        $finishingLuar[] = $formatted;
+                    } elseif ($namaJenis === 'aksesoris') {
+                        $accText = $itemName;
+                        if ($qty && $qty > 0) {
+                            $accText .= ' - ' . $qty . ' pcs';
+                        }
+                        if (!empty($spek)) {
+                            $accText .= ' (' . $spek . ')';
+                        }
+                        $aksesoris[] = $accText;
+                    } else {
+                        if (str_contains($namaJenis, 'dalam')) {
+                            $finishingDalam[] = $formatted;
+                        } elseif (str_contains($namaJenis, 'luar')) {
+                            $finishingLuar[] = $formatted;
+                        } else {
+                            $aksesoris[] = $formatted;
+                        }
+                    }
+                }
+            }
+
+            // Extract Bahan Baku
+            $bahanBaku = [];
+            foreach ($produkItem->bahanBakus as $bahan) {
+                $bName = $bahan->item->nama_item ?? '-';
+                $bSpek = $formatSpek($bahan->brand_spek ?? $bahan->keterangan_bahan_baku ?? '');
+                if (!empty($bSpek)) {
+                    $bName .= ' (' . $bSpek . ')';
+                }
+                $bahanBaku[] = $bName;
+            }
+
+            $ruanganGroups[$ruanganName][] = [
+                'nama_produk' => $produkItem->produk->nama_produk ?? 'Produk #' . $produkItem->produk_id,
+                'quantity' => $produkItem->quantity ?? 1,
+                'panjang' => $produkItem->panjang,
+                'lebar' => $produkItem->lebar,
+                'tinggi' => $produkItem->tinggi,
+                'finishing_dalam' => $finishingDalam,
+                'finishing_luar' => $finishingLuar,
+                'aksesoris' => $aksesoris,
+                'bahan_baku' => $bahanBaku,
+            ];
+        }
+
+        $pdf = Pdf::loadView('pdf.item-pekerjaan', [
+            'itemPekerjaan' => $itemPekerjaan,
+            'order' => $order,
+            'ruanganGroups' => $ruanganGroups,
+            'tanggal' => now()->translatedFormat('d F Y'),
+        ]);
+
+        $pdf->setPaper('A4', 'portrait');
+
+        $filename = 'Item_Pekerjaan_' . str_replace(' ', '_', $order->nama_project) . '.pdf';
+        return $pdf->stream($filename);
     }
 }

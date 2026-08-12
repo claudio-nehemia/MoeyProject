@@ -20,6 +20,9 @@ interface Repair {
     is_approved: boolean;
     approved_by: string | null;
     approved_at: string | null;
+    rejection_notes: string | null;
+    rejected_by: string | null;
+    rejected_at: string | null;
 }
 interface Defect {
     nama_project: string;
@@ -35,8 +38,10 @@ interface Defect {
 export default function Show({ defect }: { defect: Defect }) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [showRepairModal, setShowRepairModal] = useState<number | null>(null);
+    const [showRejectModal, setShowRejectModal] = useState<number | null>(null);
     const [repairPhoto, setRepairPhoto] = useState<File | null>(null);
     const [repairNotes, setRepairNotes] = useState('');
+    const [rejectionNotesInput, setRejectionNotesInput] = useState('');
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [approvingRepair, setApprovingRepair] = useState<number | null>(null);
     
@@ -76,18 +81,24 @@ export default function Show({ defect }: { defect: Defect }) {
         }
     };
 
-    const handleRejectRepair = (repairId: number) => {
-        if (confirm('Apakah Anda yakin ingin menolak perbaikan ini? Foto perbaikan akan dihapus dan harus diupload ulang.')) {
-            setApprovingRepair(repairId);
-            router.post(`/defect-repairs/${repairId}/reject`, {}, {
-                onFinish: () => setApprovingRepair(null)
-            });
-        }
+    const submitRejectRepair = (repairId: number) => {
+        if (!rejectionNotesInput.trim()) return;
+        setApprovingRepair(repairId);
+        router.post(`/defect-repairs/${repairId}/reject`, {
+            rejection_notes: rejectionNotesInput
+        }, {
+            onSuccess: () => {
+                setShowRejectModal(null);
+                setRejectionNotesInput('');
+            },
+            onFinish: () => setApprovingRepair(null)
+        });
     };
 
     const getStatusColor = (status: string) => {
         switch(status) {
-            case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+            case 'pending': return 'bg-amber-100 text-amber-800 border-amber-300';
+            case 'rejected': return 'bg-red-100 text-red-800 border-red-300';
             case 'in_repair': return 'bg-blue-100 text-blue-800 border-blue-300';
             case 'completed': return 'bg-green-100 text-green-800 border-green-300';
             default: return 'bg-gray-100 text-gray-800 border-gray-300';
@@ -96,9 +107,10 @@ export default function Show({ defect }: { defect: Defect }) {
     
     const getStatusLabel = (status: string) => {
         switch(status) {
-            case 'pending': return 'Menunggu Perbaikan';
+            case 'pending': return 'Belum Diperbaiki';
+            case 'rejected': return 'Perbaikan Ditolak dan Direvisi';
             case 'in_repair': return 'Sedang Diperbaiki';
-            case 'completed': return 'Selesai';
+            case 'completed': return 'Perbaikan Diterima';
             default: return status;
         }
     };
@@ -198,11 +210,11 @@ export default function Show({ defect }: { defect: Defect }) {
                                                     </svg>
                                                     Foto Cacat
                                                 </h4>
-                                                <div className="relative overflow-hidden rounded-lg shadow-lg">
+                                                <div className="relative overflow-hidden rounded-lg shadow-lg flex justify-center bg-gray-900/5">
                                                     <img 
                                                         src={item.photo_url} 
                                                         alt="Defect" 
-                                                        className="w-full rounded-lg border-2 border-red-300 transition-transform duration-300 hover:scale-105"
+                                                        className="w-full max-h-72 object-contain rounded-lg border-2 border-red-300 transition-transform duration-300 hover:scale-105"
                                                     />
                                                 </div>
                                                 <div className="mt-4 rounded-lg border-2 border-red-200 bg-white p-4 shadow-sm">
@@ -234,19 +246,29 @@ export default function Show({ defect }: { defect: Defect }) {
                                                     <div className="space-y-4">
                                                         {item.repairs.map(repair => (
                                                             <div key={repair.id} className={`rounded-lg border-2 ${repair.is_approved ? 'border-green-400 bg-green-50' : 'border-yellow-400 bg-yellow-50'} p-4 shadow-sm`}>
-                                                                <div className="relative overflow-hidden rounded-lg shadow-lg mb-3">
+                                                                <div className="relative overflow-hidden rounded-lg shadow-lg mb-3 flex justify-center bg-gray-900/5">
                                                                     <img 
                                                                         src={repair.photo_url} 
                                                                         alt="Repair" 
-                                                                        className={`w-full rounded-lg border-2 ${repair.is_approved ? 'border-green-300' : 'border-yellow-300'} transition-transform duration-300 hover:scale-105`}
+                                                                        className={`w-full max-h-72 object-contain rounded-lg border-2 ${repair.is_approved ? 'border-green-300' : 'border-yellow-300'} transition-transform duration-300 hover:scale-105`}
                                                                     />
                                                                     {/* Approval Status Badge */}
-                                                                    <div className={`absolute top-2 right-2 px-3 py-1 rounded-full text-xs font-bold ${repair.is_approved ? 'bg-green-500 text-white' : 'bg-yellow-500 text-white'}`}>
-                                                                        {repair.is_approved ? '✓ Approved' : '⏳ Pending Approval'}
+                                                                    <div className={`absolute top-2 right-2 px-3 py-1 rounded-full text-xs font-bold ${
+                                                                        repair.is_approved
+                                                                            ? 'bg-green-500 text-white'
+                                                                            : repair.rejection_notes
+                                                                            ? 'bg-red-500 text-white'
+                                                                            : 'bg-yellow-500 text-white'
+                                                                    }`}>
+                                                                        {repair.is_approved
+                                                                            ? '✓ Approved'
+                                                                            : repair.rejection_notes
+                                                                            ? '❌ Ditolak / Revisi'
+                                                                            : '⏳ Pending Approval'}
                                                                     </div>
                                                                 </div>
                                                                 <div className={`rounded-lg ${repair.is_approved ? 'bg-white' : 'bg-white/80'} p-3`}>
-                                                                    <p className="mb-2 text-sm"><strong className="text-green-700">Catatan:</strong> <span className="text-gray-700">{repair.notes}</span></p>
+                                                                    <p className="mb-2 text-sm"><strong className="text-green-700">Catatan Perbaikan:</strong> <span className="text-gray-700">{repair.notes}</span></p>
                                                                     <p className="text-xs text-gray-600 flex items-center">
                                                                         <svg className="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -276,6 +298,24 @@ export default function Show({ defect }: { defect: Defect }) {
                                                                             )}
                                                                         </div>
                                                                     )}
+
+                                                                    {/* Rejection Info */}
+                                                                    {!repair.is_approved && repair.rejection_notes && (
+                                                                        <div className="mt-3 pt-3 border-t border-red-200 bg-red-50/80 p-3 rounded-lg border border-red-200">
+                                                                            <p className="text-xs font-bold text-red-800 flex items-center">
+                                                                                <svg className="mr-1 h-4 w-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                                </svg>
+                                                                                Alasan Penolakan ({repair.rejected_by || 'QC'}):
+                                                                            </p>
+                                                                            <p className="text-xs text-red-700 font-semibold mt-1 bg-white p-2 rounded border border-red-100">{repair.rejection_notes}</p>
+                                                                            {repair.rejected_at && (
+                                                                                <p className="text-[10px] text-red-500 mt-1">
+                                                                                    Ditolak pada: {new Date(repair.rejected_at).toLocaleString('id-ID')}
+                                                                                </p>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                                 
                                                                 {/* Action Buttons */}
@@ -300,20 +340,27 @@ export default function Show({ defect }: { defect: Defect }) {
                                                                                 Approve
                                                                             </button>
                                                                             <button
-                                                                                onClick={() => handleRejectRepair(repair.id)}
+                                                                                onClick={() => {
+                                                                                    setRejectionNotesInput(repair.rejection_notes || '');
+                                                                                    setShowRejectModal(repair.id);
+                                                                                }}
                                                                                 disabled={approvingRepair === repair.id}
                                                                                 className="flex items-center justify-center rounded-lg border-2 border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition-all duration-200 hover:bg-red-50 disabled:opacity-50"
-                                                                                title="Tolak perbaikan - harus upload ulang"
+                                                                                title="Tolak perbaikan dan berikan alasan"
                                                                             >
                                                                                 <svg className="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                                                                 </svg>
-                                                                                Tolak & Hapus
+                                                                                Tolak Perbaikan
                                                                             </button>
                                                                         </>
                                                                     )}
                                                                     <button
-                                                                        onClick={() => router.delete(`/defect-repairs/${repair.id}`)}
+                                                                        onClick={() => {
+                                                                            if (confirm('Apakah Anda yakin ingin menghapus perbaikan ini?')) {
+                                                                                router.delete(`/defect-repairs/${repair.id}`);
+                                                                            }
+                                                                        }}
                                                                         className="flex items-center text-sm font-semibold text-red-600 transition-colors hover:text-red-800"
                                                                     >
                                                                         <svg className="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -343,8 +390,8 @@ export default function Show({ defect }: { defect: Defect }) {
             {/* Modal Upload Perbaikan */}
             {showRepairModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-                    <div className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white shadow-2xl transition-all">
-                        <div className="border-b-2 border-gray-200 bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4">
+                    <div className="w-full max-w-md max-h-[90vh] flex flex-col transform overflow-hidden rounded-2xl bg-white shadow-2xl transition-all">
+                        <div className="border-b-2 border-gray-200 bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4 flex-shrink-0">
                             <h2 className="text-2xl font-bold text-white flex items-center">
                                 <svg className="mr-2 h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -353,7 +400,7 @@ export default function Show({ defect }: { defect: Defect }) {
                             </h2>
                         </div>
                         
-                        <div className="p-6 space-y-4">
+                        <div className="p-6 space-y-4 overflow-y-auto flex-1 max-h-[calc(90vh-140px)]">
                             <div>
                                 <label className="mb-2 block text-sm font-semibold text-gray-700">Foto Hasil Perbaikan</label>
                                 <div className="relative">
@@ -365,8 +412,8 @@ export default function Show({ defect }: { defect: Defect }) {
                                     />
                                 </div>
                                 {photoPreview && (
-                                    <div className="mt-3 overflow-hidden rounded-lg border-2 border-green-300 shadow-md">
-                                        <img src={photoPreview} alt="Preview" className="w-full" />
+                                    <div className="mt-3 overflow-hidden rounded-lg border-2 border-green-300 shadow-md bg-gray-900/5 p-2 flex justify-center">
+                                        <img src={photoPreview} alt="Preview" className="max-h-64 w-auto object-contain rounded-lg shadow" />
                                     </div>
                                 )}
                             </div>
@@ -383,7 +430,7 @@ export default function Show({ defect }: { defect: Defect }) {
                             </div>
                         </div>
                         
-                        <div className="flex gap-3 border-t-2 border-gray-200 bg-gray-50 px-6 py-4">
+                        <div className="flex gap-3 border-t-2 border-gray-200 bg-gray-50 px-6 py-4 flex-shrink-0">
                             <button
                                 onClick={() => {
                                     setShowRepairModal(null);
@@ -399,6 +446,55 @@ export default function Show({ defect }: { defect: Defect }) {
                                 className="flex-1 transform rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 px-4 py-2 font-semibold text-white shadow-md transition-all duration-200 hover:scale-105 hover:from-green-600 hover:to-emerald-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
                             >
                                 Upload
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Input Alasan Penolakan */}
+            {showRejectModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white shadow-2xl transition-all">
+                        <div className="border-b-2 border-red-200 bg-gradient-to-r from-red-600 to-rose-600 px-6 py-4">
+                            <h2 className="text-xl font-bold text-white flex items-center">
+                                <svg className="mr-2 h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                Tolak Perbaikan Defect
+                            </h2>
+                        </div>
+                        
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="mb-2 block text-sm font-semibold text-gray-700">Catatan Alasan Penolakan</label>
+                                <textarea
+                                    value={rejectionNotesInput}
+                                    onChange={(e) => setRejectionNotesInput(e.target.value)}
+                                    className="w-full rounded-lg border-2 border-red-200 p-3 text-sm transition-all focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                                    rows={4}
+                                    placeholder="Jelaskan alasan mengapa perbaikan ini ditolak / aspek yang perlu diperbaiki ulang..."
+                                    required
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="flex gap-3 border-t-2 border-gray-200 bg-gray-50 px-6 py-4">
+                            <button
+                                onClick={() => {
+                                    setShowRejectModal(null);
+                                    setRejectionNotesInput('');
+                                }}
+                                className="flex-1 rounded-lg border-2 border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={() => submitRejectRepair(showRejectModal)}
+                                disabled={!rejectionNotesInput.trim() || approvingRepair === showRejectModal}
+                                className="flex-1 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:from-red-700 hover:to-rose-700 disabled:opacity-50"
+                            >
+                                {approvingRepair === showRejectModal ? 'Menyimpan...' : 'Tolak Perbaikan'}
                             </button>
                         </div>
                     </div>

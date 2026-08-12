@@ -233,6 +233,24 @@
             sebagaimana mestinya.
         </div>
         
+        <!-- Dokumentasi Foto BAST (jika ada) -->
+        @php
+            $bastFotoFullPath = !empty($item_pekerjaan->bast_foto_klien) ? storage_path('app/public/' . $item_pekerjaan->bast_foto_klien) : null;
+        @endphp
+        @if($bastFotoFullPath && file_exists($bastFotoFullPath))
+            <div style="margin: 20px 0; page-break-inside: avoid;">
+                <div class="product-section-title">Dokumentasi Serah Terima Pekerjaan (Foto dengan Klien):</div>
+                <div style="text-align: center; margin-top: 10px; background-color: #f8fafc; padding: 10px; border: 1px solid #e2e8f0; border-radius: 4px;">
+                    <img src="{{ $bastFotoFullPath }}" style="max-width: 90%; max-height: 280px; height: auto; border-radius: 4px;">
+                    @if($item_pekerjaan->bast_foto_klien_uploaded_at)
+                        <div style="font-size: 10px; color: #64748b; margin-top: 6px;">
+                            Diupload: {{ \Carbon\Carbon::parse($item_pekerjaan->bast_foto_klien_uploaded_at)->translatedFormat('d F Y H:i') }} WIB
+                        </div>
+                    @endif
+                </div>
+            </div>
+        @endif
+
         <!-- Signature Section -->
         <div class="signature-section">
             <div class="signature-date">

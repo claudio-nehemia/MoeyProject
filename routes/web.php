@@ -372,6 +372,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('item-pekerjaan', [ItemPekerjaanController::class, 'index'])->name('item-pekerjaan.index');
         Route::get('item-pekerjaan/{itemPekerjaanId}/show', [ItemPekerjaanController::class, 'show'])
             ->name('item-pekerjaan.show');
+        Route::get('item-pekerjaan/{itemPekerjaanId}/export-pdf', [ItemPekerjaanController::class, 'exportPdf'])
+            ->name('item-pekerjaan.export-pdf');
 
         Route::middleware(['permission:item-pekerjaan.create'])->group(function () {
             Route::post('item-pekerjaan/response/{moodboardId}', [ItemPekerjaanController::class, 'responseItemPekerjaan'])

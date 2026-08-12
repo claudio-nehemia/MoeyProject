@@ -40,7 +40,8 @@ export default function Index({ defects }: { defects: Defect[] }) {
     // Status badge colors
     const getStatusColor = (status: string) => {
         switch(status) {
-            case 'pending': return 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-orange-500';
+            case 'pending': return 'bg-gradient-to-r from-amber-500 to-orange-600 text-white border-amber-600';
+            case 'rejected': return 'bg-gradient-to-r from-red-600 to-rose-600 text-white border-red-600';
             case 'in_repair': return 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-indigo-600';
             case 'completed': return 'bg-gradient-to-r from-emerald-500 to-green-600 text-white border-green-600';
             default: return 'bg-gray-100 text-gray-800 border-gray-300';
@@ -49,9 +50,10 @@ export default function Index({ defects }: { defects: Defect[] }) {
     
     const getStatusLabel = (status: string) => {
         switch(status) {
-            case 'pending': return 'Menunggu Perbaikan';
+            case 'pending': return 'Belum Diperbaiki';
+            case 'rejected': return 'Perbaikan Ditolak dan Direvisi';
             case 'in_repair': return 'Sedang Diperbaiki';
-            case 'completed': return 'Selesai';
+            case 'completed': return 'Perbaikan Diterima';
             default: return status;
         }
     };
@@ -139,12 +141,13 @@ export default function Index({ defects }: { defects: Defect[] }) {
                                 <select
                                     value={statusFilter}
                                     onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-red-400 min-w-[150px]"
+                                    className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-red-400 min-w-[180px]"
                                 >
                                     <option value="semua">Semua Status</option>
-                                    <option value="pending">Menunggu Perbaikan</option>
+                                    <option value="pending">Belum Diperbaiki</option>
+                                    <option value="rejected">Perbaikan Ditolak dan Direvisi</option>
                                     <option value="in_repair">Sedang Diperbaiki</option>
-                                    <option value="completed">Selesai</option>
+                                    <option value="completed">Perbaikan Diterima</option>
                                 </select>
                             </div>
                         </div>

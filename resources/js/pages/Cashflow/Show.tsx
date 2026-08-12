@@ -4,7 +4,7 @@ import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 
 interface OrderInfo { id: number; nama_project: string; customer_name: string; company_name: string; payment_status: string; tahapan_proyek: string; pm_name: string; }
-interface Split { internal: number; fisik: number; eksternal: number; total: number; }
+interface Split { internal: number; fisik: number; eksternal: number; total: number; is_manual?: boolean; }
 interface Pembayaran { amount_dp?: number; amount_termin?: number; amount_pelunasan?: number; dp: { amount: number; pct: number; proyeksi: number; tanggal: string|null }; termin: { amount: number; pct: number; proyeksi: number; tanggal: string|null }; pelunasan: { amount: number; pct: number; proyeksi: number; tanggal: string|null }; total_diterima: number; sisa_piutang: number; }
 interface Spk { internal: number; fisik: number; external: number; internal_fix: number; upgrade_material: number; fisik_fix: number; external_fix: number; saldo_efisiensi_internal: number; saldo_efisiensi_fisik: number; saldo_efisiensi_external: number; total_fix: number; total_saldo_efisiensi: number; }
 interface Realisasi { internal: number; fisik: number; external: number; addendum: number; sisa_saldo_internal: number; sisa_saldo_fisik: number; sisa_saldo_external: number; total: number; }
@@ -137,6 +137,10 @@ export default function Show({
     // FORM 1: GENERAL MANUAL ENTRIES
     // ──────────────────────────────────────────
     const generalForm = useForm({
+        kontrak_internal: split.internal.toString(),
+        kontrak_fisik: split.fisik.toString(),
+        kontrak_external: split.eksternal.toString(),
+        reset_kontrak_split: false,
         spk_internal: spk.internal.toString(),
         spk_fisik: spk.fisik.toString(),
         spk_external: spk.external.toString(),
@@ -172,6 +176,11 @@ export default function Show({
     // REACTIVE CALCULATOR ENGINE (GENERAL FORM)
     // ──────────────────────────────────────────
     const computed = useMemo(() => {
+        const split_internal = parseFloat(generalForm.data.kontrak_internal) || 0;
+        const split_fisik = parseFloat(generalForm.data.kontrak_fisik) || 0;
+        const split_external = parseFloat(generalForm.data.kontrak_external) || 0;
+        const split_total = split_internal + split_fisik + split_external;
+
         const spk_internal = parseFloat(generalForm.data.spk_internal) || 0;
         const spk_fisik = parseFloat(generalForm.data.spk_fisik) || 0;
         const spk_external = parseFloat(generalForm.data.spk_external) || 0;
@@ -186,17 +195,17 @@ export default function Show({
         const saldo_efisiensi_external = spk_external_fix > 0 ? spk_external - spk_external_fix : 0;
         const total_saldo_efisiensi = saldo_efisiensi_internal + saldo_efisiensi_fisik + saldo_efisiensi_external;
 
-        const target_internal = split.internal - spk_internal;
-        const target_fisik = split.fisik - spk_fisik;
-        const target_external = split.eksternal - spk_external;
+        const target_internal = split_internal - spk_internal;
+        const target_fisik = split_fisik - spk_fisik;
+        const target_external = split_external - spk_external;
         const total_target = target_internal + target_fisik + target_external;
 
-        const pct_internal = split.internal > 0 ? target_internal / split.internal : 0;
-        const pct_fisik = split.fisik > 0 ? target_fisik / split.fisik : 0;
-        const pct_external = split.eksternal > 0 ? target_external / split.eksternal : 0;
-        const pct_total = split.total > 0 ? total_target / split.total : 0;
+        const pct_internal = split_internal > 0 ? target_internal / split_internal : 0;
+        const pct_fisik = split_fisik > 0 ? target_fisik / split_fisik : 0;
+        const pct_external = split_external > 0 ? target_external / split_external : 0;
+        const pct_total = split_total > 0 ? total_target / split_total : 0;
 
-        const marginBase = (pct_internal <= 0.30) ? target_internal : (0.30 * split.internal);
+        const marginBase = (pct_internal <= 0.30) ? target_internal : (0.30 * split_internal);
 
         let total_breakdown_amount = 0;
         const breakdown_list_computed = generalForm.data.margin_breakdown_items.map(item => {
@@ -205,9 +214,9 @@ export default function Show({
             if (item.base === 'internal_margin') {
                 amount = marginBase * (pctVal / 100);
             } else if (item.base === 'fisik_eksternal') {
-                amount = (split.fisik + split.eksternal) * (pctVal / 100);
+                amount = (split_fisik + split_external) * (pctVal / 100);
             } else if (item.base === 'total_kontrak') {
-                amount = split.total * (pctVal / 100);
+                amount = split_total * (pctVal / 100);
             } else if (item.base === 'fixed') {
                 amount = pctVal;
             }
@@ -244,12 +253,16 @@ export default function Show({
         });
 
         const total_fee_team = calculated_fee_team_items.reduce((sum, item) => sum + (item.amount || 0), 0);
-        const pct_fee_team = split.internal > 0 ? (total_fee_team / split.internal) * 100 : 0;
+        const pct_fee_team = split_internal > 0 ? (total_fee_team / split_internal) * 100 : 0;
 
         const sisa_margin = total_target - total_breakdown_amount - total_fee_team;
-        const pct_sisa_margin = split.total > 0 ? sisa_margin / split.total : 0;
+        const pct_sisa_margin = split_total > 0 ? sisa_margin / split_total : 0;
 
         return {
+            split_internal,
+            split_fisik,
+            split_external,
+            split_total,
             calculated_fee_team_items,
             marginBase,
             total_fix,
@@ -552,7 +565,7 @@ export default function Show({
 
     const pctPayment = split.total > 0 ? (pembayaran.total_diterima / split.total) * 100 : 0;
 
-    const isPaymentOverdue = (dateStr: string | null, isApproved: boolean) => {
+    const isPaymentOverdue = (dateStr?: string | null, isApproved?: boolean) => {
         if (!dateStr || isApproved) return false;
         const target = new Date(dateStr);
         const today = new Date();
@@ -679,12 +692,76 @@ export default function Show({
                                 <div className="space-y-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm overflow-hidden">
-                                            <div className="px-5 py-4 border-b border-stone-100 bg-stone-50/50"><h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">Pembagian Kontrak</h3></div>
-                                            <div className="p-5 space-y-4">
-                                                <div className="flex justify-between items-center py-2 border-b border-stone-100"><span className="text-xs font-semibold text-stone-600">Kontrak Internal</span><span className="text-xs font-mono font-bold text-stone-800">{fmt(split.internal)}</span></div>
-                                                <div className="flex justify-between items-center py-2 border-b border-stone-100"><span className="text-xs font-semibold text-stone-600">Kontrak Fisik</span><span className="text-xs font-mono font-bold text-stone-800">{fmt(split.fisik)}</span></div>
-                                                <div className="flex justify-between items-center py-2 border-b border-stone-100"><span className="text-xs font-semibold text-stone-600">Kontrak Eksternal</span><span className="text-xs font-mono font-bold text-stone-800">{fmt(split.eksternal)}</span></div>
-                                                <div className="flex justify-between items-center pt-2 font-bold text-stone-900"><span className="text-xs">Total Kontrak</span><span className="text-sm font-mono">{fmt(split.total)}</span></div>
+                                            <div className="px-5 py-4 border-b border-stone-100 bg-stone-50/50 flex justify-between items-center">
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">Pembagian Kontrak</h3>
+                                                    {split.is_manual ? (
+                                                        <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full">Manual Override</span>
+                                                    ) : (
+                                                        <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">Auto RAB</span>
+                                                    )}
+                                                </div>
+                                                {split.is_manual && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (confirm('Kembalikan pembagian kontrak ke kalkulasi otomatis RAB?')) {
+                                                                router.post(`/cashflow/${order.id}/manual-entry`, {
+                                                                    ...generalForm.data,
+                                                                    reset_kontrak_split: true,
+                                                                });
+                                                            }
+                                                        }}
+                                                        className="text-[11px] text-amber-600 hover:text-amber-700 font-bold hover:underline flex items-center gap-1"
+                                                    >
+                                                        <span>🔄</span> Reset Auto RAB
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div className="p-5 space-y-3">
+                                                <div className="flex justify-between items-center py-1 border-b border-stone-100">
+                                                    <span className="text-xs font-semibold text-stone-600">Kontrak Internal</span>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-xs text-stone-400 font-bold">Rp</span>
+                                                        <input
+                                                            type="number"
+                                                            value={generalForm.data.kontrak_internal}
+                                                            onChange={(e) => generalForm.setData('kontrak_internal', e.target.value)}
+                                                            className="w-40 px-2.5 py-1 text-xs text-right font-mono font-bold text-stone-800 bg-white border border-stone-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                                            placeholder="0"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-between items-center py-1 border-b border-stone-100">
+                                                    <span className="text-xs font-semibold text-stone-600">Kontrak Fisik</span>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-xs text-stone-400 font-bold">Rp</span>
+                                                        <input
+                                                            type="number"
+                                                            value={generalForm.data.kontrak_fisik}
+                                                            onChange={(e) => generalForm.setData('kontrak_fisik', e.target.value)}
+                                                            className="w-40 px-2.5 py-1 text-xs text-right font-mono font-bold text-stone-800 bg-white border border-stone-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                                            placeholder="0"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-between items-center py-1 border-b border-stone-100">
+                                                    <span className="text-xs font-semibold text-stone-600">Kontrak Eksternal</span>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-xs text-stone-400 font-bold">Rp</span>
+                                                        <input
+                                                            type="number"
+                                                            value={generalForm.data.kontrak_external}
+                                                            onChange={(e) => generalForm.setData('kontrak_external', e.target.value)}
+                                                            className="w-40 px-2.5 py-1 text-xs text-right font-mono font-bold text-stone-800 bg-white border border-stone-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                                            placeholder="0"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-between items-center pt-2 font-bold text-stone-900">
+                                                    <span className="text-xs">Total Kontrak</span>
+                                                    <span className="text-sm font-mono">{fmt(computed.split_total)}</span>
+                                                </div>
                                             </div>
                                         </div>
 

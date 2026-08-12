@@ -302,6 +302,7 @@ export default function Detail({
             `/produk/${showStageUpdateModal.produkId}/update-stage`,
             formData,
             {
+                preserveScroll: true,
                 onFinish: () => {
                     setTimeout(() => setUpdatingProduk(null), 500);
                     setShowStageUpdateModal(null);
@@ -322,6 +323,7 @@ export default function Detail({
                 `/item-pekerjaan/${itemPekerjaanId}/generate-bast`,
                 {},
                 {
+                    preserveScroll: true,
                     onFinish: () => {
                         setGeneratingBast(null);
                     },
@@ -344,6 +346,7 @@ export default function Detail({
                 `/item-pekerjaan/${itemPekerjaanId}/unlock-next-step`,
                 {},
                 {
+                    preserveScroll: true,
                     onFinish: () => {
                         setUnlockingPayment(null);
                     },

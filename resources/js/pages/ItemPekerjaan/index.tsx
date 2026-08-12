@@ -677,6 +677,14 @@ function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: Props) {
                                                                 >
                                                                     EDIT
                                                                 </Link>
+                                                                <a
+                                                                    href={`/item-pekerjaan/${moodboard.itemPekerjaan.id}/export-pdf`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="w-full rounded-lg bg-red-600 px-3 py-1.5 text-[10px] font-bold text-white transition-colors hover:bg-red-700 whitespace-nowrap"
+                                                                >
+                                                                    EXPORT PDF
+                                                                </a>
                                                             </>
                                                         ) : (
                                                             <span className="text-[10px] text-stone-400 font-medium">No Actions</span>

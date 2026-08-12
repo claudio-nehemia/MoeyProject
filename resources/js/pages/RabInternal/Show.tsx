@@ -8,6 +8,7 @@ interface Item {
     harga_satuan: number;
     qty: number;
     harga_total: number;
+    kategori?: 'internal' | 'fisik' | 'eksternal';
 }
 
 interface JenisItem {
@@ -22,11 +23,13 @@ interface Aksesoris {
     markup_aksesoris: number;
     harga_satuan_aksesoris: number;
     harga_total: number;
+    kategori?: 'internal' | 'fisik' | 'eksternal';
 }
 
 interface Produk {
     id: number;
     nama_produk: string;
+    kategori?: 'internal' | 'fisik' | 'eksternal';
     nama_ruangan: string | null;
     qty_produk: number;
     panjang: number | null;
@@ -37,84 +40,106 @@ interface Produk {
     harga_items_non_aksesoris: number;
     harga_dimensi: number;
     harga_satuan: number;
-     harga_total_aksesoris: number;
-     harga_akhir: number;
-     diskon_per_produk?: number;
-     jenis_items: JenisItem[];
-     aksesoris: Aksesoris[];
-     bahan_baku_names: string[];
- }
+    harga_total_aksesoris: number;
+    harga_akhir: number;
+    diskon_per_produk?: number;
+    jenis_items: JenisItem[];
+    aksesoris: Aksesoris[];
+    bahan_baku_names: string[];
+}
 
- interface RabInternal {
-     id: number;
-     response_by: string;
-     response_time: string;
-     is_submitted: boolean;
-     submitted_by?: string;
-     submitted_at?: string;
-     order: {
-         nama_project: string;
-         company_name: string;
-         customer_name: string;
-     };
-     produks: Produk[];
- }
+interface RabInternal {
+    id: number;
+    response_by: string;
+    response_time: string;
+    is_submitted: boolean;
+    submitted_by?: string;
+    submitted_at?: string;
+    order: {
+        nama_project: string;
+        company_name: string;
+        customer_name: string;
+    };
+    produks: Produk[];
+}
 
- interface Props {
-     rabInternal: RabInternal;
- }
+interface Props {
+    rabInternal: RabInternal;
+}
 
- export default function Show({ rabInternal }: Props) {
-     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
+export default function Show({ rabInternal }: Props) {
+    const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
+    const [activeCategoryTab, setActiveCategoryTab] = useState<'semua' | 'internal' | 'fisik' | 'eksternal'>('semua');
 
-     useEffect(() => {
-         const handleResize = () => setSidebarOpen(window.innerWidth >= 1024);
-         window.addEventListener('resize', handleResize);
-         return () => window.removeEventListener('resize', handleResize);
-     }, []);
+    useEffect(() => {
+        const handleResize = () => setSidebarOpen(window.innerWidth >= 1024);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
-     const handleSubmit = () => {
-         if (confirm('Submit RAB Internal?')) {
-             router.post(`/rab-internal/${rabInternal.id}/submit`);
-         }
-     };
+    const handleSubmit = () => {
+        if (confirm('Submit RAB Internal?')) {
+            router.post(`/rab-internal/${rabInternal.id}/submit`);
+        }
+    };
 
-     const formatCurrency = (value: number) =>
-         new Intl.NumberFormat('id-ID', {
-             style: 'currency',
-             currency: 'IDR',
-             minimumFractionDigits: 0,
-         }).format(value);
+    const formatCurrency = (value: number) =>
+        new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+        }).format(value);
 
-     const formatDate = (dateString: string) =>
-         new Date(dateString).toLocaleString('id-ID', {
-             year: 'numeric',
-             month: 'long',
-             day: 'numeric',
-             hour: '2-digit',
-             minute: '2-digit',
-         });
+    const formatDate = (dateString: string) =>
+        new Date(dateString).toLocaleString('id-ID', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
 
-     const totalSemuaProduk = rabInternal.produks.reduce(
-         (sum, produk) => sum + Number(produk.harga_akhir),
-         0,
-     );
+    const categoryTotals = useMemo(() => {
+        let internal = 0;
+        let fisik = 0;
+        let eksternal = 0;
 
-     const groupedByRuangan = useMemo(() => {
-         const groups: { [key: string]: typeof rabInternal.produks } = {};
-         rabInternal.produks.forEach((produk) => {
-             const ruangan = produk.nama_ruangan || 'Tanpa Ruangan';
-             if (!groups[ruangan]) {
-                 groups[ruangan] = [];
-             }
-             groups[ruangan].push(produk);
-         });
-         return Object.entries(groups).map(([nama_ruangan, produks]) => ({
-             nama_ruangan,
-             produks,
-             total: produks.reduce((sum, p) => sum + Number(p.harga_akhir), 0),
-         }));
-     }, [rabInternal.produks]);
+        rabInternal.produks.forEach((produk) => {
+            const cat = (produk.kategori || 'internal').toLowerCase();
+            const harga = Number(produk.harga_akhir) || 0;
+            if (cat === 'fisik') fisik += harga;
+            else if (cat === 'eksternal') eksternal += harga;
+            else internal += harga;
+        });
+
+        return {
+            internal,
+            fisik,
+            eksternal,
+            total: internal + fisik + eksternal,
+        };
+    }, [rabInternal.produks]);
+
+    const filteredProduks = useMemo(() => {
+        if (activeCategoryTab === 'semua') return rabInternal.produks;
+        return rabInternal.produks.filter((p) => (p.kategori || 'internal').toLowerCase() === activeCategoryTab);
+    }, [rabInternal.produks, activeCategoryTab]);
+
+    const groupedByRuangan = useMemo(() => {
+        const groups: { [key: string]: typeof filteredProduks } = {};
+        filteredProduks.forEach((produk) => {
+            const ruangan = produk.nama_ruangan || 'Tanpa Ruangan';
+            if (!groups[ruangan]) {
+                groups[ruangan] = [];
+            }
+            groups[ruangan].push(produk);
+        });
+        return Object.entries(groups).map(([nama_ruangan, produks]) => ({
+            nama_ruangan,
+            produks,
+            total: produks.reduce((sum, p) => sum + Number(p.harga_akhir), 0),
+        }));
+    }, [filteredProduks]);
 
      return (
          <>
@@ -191,6 +216,41 @@ interface Produk {
                                 </div>
                             </div>
                         </div>
+
+                    {/* Category Subtotal Cards */}
+                    <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 shadow-sm">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold uppercase text-emerald-800 tracking-wider">🏭 RAB Internal</span>
+                                <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-extrabold text-emerald-900">Internal</span>
+                            </div>
+                            <p className="mt-2 font-mono text-xl font-bold text-emerald-950">{formatCurrency(categoryTotals.internal)}</p>
+                        </div>
+
+                        <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold uppercase text-amber-800 tracking-wider">🏗️ RAB Fisik</span>
+                                <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-extrabold text-amber-900">Fisik</span>
+                            </div>
+                            <p className="mt-2 font-mono text-xl font-bold text-amber-950">{formatCurrency(categoryTotals.fisik)}</p>
+                        </div>
+
+                        <div className="rounded-xl border border-purple-200 bg-purple-50/70 p-4 shadow-sm">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold uppercase text-purple-800 tracking-wider">🌐 RAB Eksternal</span>
+                                <span className="rounded-full bg-purple-200 px-2 py-0.5 text-[10px] font-extrabold text-purple-900">Eksternal</span>
+                            </div>
+                            <p className="mt-2 font-mono text-xl font-bold text-purple-950">{formatCurrency(categoryTotals.eksternal)}</p>
+                        </div>
+
+                        <div className="rounded-xl border border-indigo-200 bg-indigo-600 p-4 text-white shadow-md">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold uppercase text-indigo-100 tracking-wider">📊 Grand Total RAB</span>
+                                <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-extrabold text-white">Total</span>
+                            </div>
+                            <p className="mt-2 font-mono text-xl font-bold text-white">{formatCurrency(categoryTotals.total)}</p>
+                        </div>
+                    </div>
 
                     {/* Formula Breakdown Card */}
                     <div className="mb-6 overflow-hidden bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 shadow-lg sm:rounded-lg border-2 border-indigo-200 dark:border-indigo-700">
@@ -294,6 +354,34 @@ interface Produk {
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Category Filter Tab Bar */}
+                    <div className="mb-4 flex flex-wrap items-center gap-2 border-b border-gray-200 bg-white p-2 rounded-xl shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                        {[
+                            { key: 'semua', label: '📊 Semua Produk', count: rabInternal.produks.length },
+                            { key: 'internal', label: '🏭 Internal (Workshop)', count: rabInternal.produks.filter(p => (p.kategori || 'internal').toLowerCase() === 'internal').length },
+                            { key: 'fisik', label: '🏗️ Fisik (Kontraktor)', count: rabInternal.produks.filter(p => (p.kategori || 'internal').toLowerCase() === 'fisik').length },
+                            { key: 'eksternal', label: '🌐 Eksternal (Vendor)', count: rabInternal.produks.filter(p => (p.kategori || 'internal').toLowerCase() === 'eksternal').length },
+                        ].map((tab) => (
+                            <button
+                                key={tab.key}
+                                type="button"
+                                onClick={() => setActiveCategoryTab(tab.key as any)}
+                                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-lg transition-all ${
+                                    activeCategoryTab === tab.key
+                                        ? 'bg-amber-500 text-white shadow-md'
+                                        : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                                }`}
+                            >
+                                <span>{tab.label}</span>
+                                <span className={`px-1.5 py-0.5 text-[10px] rounded-full font-mono ${
+                                    activeCategoryTab === tab.key ? 'bg-white/30 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200'
+                                }`}>
+                                    {tab.count}
+                                </span>
+                            </button>
+                        ))}
                     </div>
 
                     {/* Full Table - All Products */}
@@ -430,8 +518,15 @@ interface Produk {
                                                         {/* Produk Column */}
                                                         {rowIndex === 0 && (
                                                             <td rowSpan={maxRows} className="px-4 py-3 align-top border-r border-gray-200 dark:border-gray-700">
-                                                                <div className="font-bold text-gray-900 dark:text-gray-100">
-                                                                    {produkIndex + 1}. {produk.nama_produk}
+                                                                <div className="flex items-center flex-wrap gap-1.5 font-bold text-gray-900 dark:text-gray-100">
+                                                                    <span>{produkIndex + 1}. {produk.nama_produk}</span>
+                                                                    <span className={`inline-block px-1.5 py-0.5 text-[9px] font-extrabold uppercase rounded ${
+                                                                        (produk.kategori || 'internal') === 'fisik' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                                                                        (produk.kategori || 'internal') === 'eksternal' ? 'bg-purple-100 text-purple-800 border border-purple-300' :
+                                                                        'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                                                    }`}>
+                                                                        {produk.kategori || 'internal'}
+                                                                    </span>
                                                                 </div>
                                                                 {produk.panjang && produk.lebar && produk.tinggi && (
                                                                     <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
@@ -588,7 +683,7 @@ interface Produk {
                                     </div>
                                     <div className="text-right">
                                         <div className="text-4xl font-bold text-white">
-                                            {formatCurrency(totalSemuaProduk)}
+                                            {formatCurrency(categoryTotals.total)}
                                         </div>
                                     </div>
                                 </div>

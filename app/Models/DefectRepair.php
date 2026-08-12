@@ -15,11 +15,15 @@ class DefectRepair extends Model
         'is_approved',
         'approved_by',
         'approved_at',
+        'rejection_notes',
+        'rejected_by',
+        'rejected_at',
     ];
 
     protected $casts = [
         'repaired_at' => 'datetime',
         'approved_at' => 'datetime',
+        'rejected_at' => 'datetime',
         'is_approved' => 'boolean',
     ];
 

@@ -784,7 +784,16 @@ class CashflowController extends Controller
      */
     public function storeManualEntry(Request $request, Order $order)
     {
+        // Handle reset contract split
+        if ($request->boolean('reset_kontrak_split')) {
+            CashflowManualEntry::where('order_id', $order->id)
+                ->whereIn('category', ['kontrak_internal', 'kontrak_fisik', 'kontrak_external'])
+                ->delete();
+        }
+
         $fields = [
+            // Pembagian Kontrak Manual Override
+            'kontrak_internal', 'kontrak_fisik', 'kontrak_external',
             // SPK
             'spk_internal', 'spk_fisik', 'spk_external',
             'spk_internal_fix', 'upgrade_material', 'spk_fisik_fix', 'spk_external_fix',
@@ -803,6 +812,10 @@ class CashflowController extends Controller
         ];
 
         foreach ($fields as $field) {
+            if ($request->boolean('reset_kontrak_split') && in_array($field, ['kontrak_internal', 'kontrak_fisik', 'kontrak_external'])) {
+                continue;
+            }
+
             $value = $request->input($field);
             if ($value !== null && $value !== '') {
                 CashflowManualEntry::updateOrCreate(
@@ -883,6 +896,25 @@ class CashflowController extends Controller
      */
     private function getContractSplit(Order $order)
     {
+        // Check for manual split entries first
+        $manualEntries = CashflowManualEntry::where('order_id', $order->id)
+            ->whereIn('category', ['kontrak_internal', 'kontrak_fisik', 'kontrak_external'])
+            ->pluck('amount_estimasi', 'category');
+
+        if ($manualEntries->isNotEmpty()) {
+            $internal = (float) ($manualEntries->get('kontrak_internal') ?? 0);
+            $fisik = (float) ($manualEntries->get('kontrak_fisik') ?? 0);
+            $eksternal = (float) ($manualEntries->get('kontrak_external') ?? 0);
+
+            return [
+                'internal' => $internal,
+                'fisik' => $fisik,
+                'eksternal' => $eksternal,
+                'total' => $internal + $fisik + $eksternal,
+                'is_manual' => true,
+            ];
+        }
+
         $kontrakInternal = 0;
         $kontrakFisik = 0;
         $kontrakExternal = 0;
@@ -957,6 +989,7 @@ class CashflowController extends Controller
             'fisik' => $kontrakFisik,
             'eksternal' => $kontrakExternal,
             'total' => $kontrakInternal + $kontrakFisik + $kontrakExternal,
+            'is_manual' => false,
         ];
     }
 

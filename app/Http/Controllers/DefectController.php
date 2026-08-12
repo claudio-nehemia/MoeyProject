@@ -34,17 +34,30 @@ class DefectController extends Controller
                 $produk = $defect->itemPekerjaanProduk;
                 $order = $produk->itemPekerjaan->moodboard->order;
 
+                $hasRejection = $defect->defectItems->flatMap->repairs->contains(fn($r) => !$r->is_approved && !empty($r->rejection_notes));
+                $hasPendingApproval = $defect->defectItems->flatMap->repairs->contains(fn($r) => !$r->is_approved && empty($r->rejection_notes));
+                $totalRepaired = $defect->defectItems->filter(fn($item) => $item->repairs->count() > 0)->count();
+
+                $displayStatus = 'pending';
+                if ($defect->status === 'completed') {
+                    $displayStatus = 'completed';
+                } else if ($hasRejection) {
+                    $displayStatus = 'rejected';
+                } else if ($hasPendingApproval || $totalRepaired > 0) {
+                    $displayStatus = 'in_repair';
+                }
+
                 return [
                     'id' => $defect->id,
                     'nama_project' => $order->nama_project,
                     'company_name' => $order->company_name,
                     'nama_produk' => $produk->produk->nama_produk,
                     'qc_stage' => $defect->qc_stage,
-                    'status' => $defect->status,
+                    'status' => $displayStatus,
                     'reported_by' => $defect->reported_by,
                     'reported_at' => $defect->reported_at,
                     'total_defects' => $defect->defectItems->count(),
-                    'total_repaired' => $defect->defectItems->filter(fn($item) => $item->repairs->count() > 0)->count(),
+                    'total_repaired' => $totalRepaired,
                 ];
             });
 
@@ -65,6 +78,18 @@ class DefectController extends Controller
         $produk = $defect->itemPekerjaanProduk;
         $order = $produk->itemPekerjaan->moodboard->order;
 
+        $hasRejection = $defect->defectItems->flatMap->repairs->contains(fn($r) => !$r->is_approved && !empty($r->rejection_notes));
+        $hasPendingApproval = $defect->defectItems->flatMap->repairs->contains(fn($r) => !$r->is_approved && empty($r->rejection_notes));
+
+        $displayStatus = 'pending';
+        if ($defect->status === 'completed') {
+            $displayStatus = 'completed';
+        } else if ($hasRejection) {
+            $displayStatus = 'rejected';
+        } else if ($hasPendingApproval || $defect->defectItems->flatMap->repairs->count() > 0) {
+            $displayStatus = 'in_repair';
+        }
+
         return inertia('DefectManagement/Show', [
             'defect' => [
                 'id' => $defect->id,
@@ -73,7 +98,7 @@ class DefectController extends Controller
                 'customer_name' => $order->customer_name,
                 'nama_produk' => $produk->produk->nama_produk,
                 'qc_stage' => $defect->qc_stage,
-                'status' => $defect->status,
+                'status' => $displayStatus,
                 'reported_by' => $defect->reported_by,
                 'reported_at' => $defect->reported_at,
                 'defect_items' => $defect->defectItems->map(function ($item) {
@@ -92,6 +117,9 @@ class DefectController extends Controller
                                 'is_approved' => $repair->is_approved,
                                 'approved_by' => $repair->approved_by,
                                 'approved_at' => $repair->approved_at,
+                                'rejection_notes' => $repair->rejection_notes,
+                                'rejected_by' => $repair->rejected_by,
+                                'rejected_at' => $repair->rejected_at,
                             ];
                         }),
                     ];
@@ -112,13 +140,23 @@ class DefectController extends Controller
             'defect_items.*.notes' => 'required|string',
         ]);
 
-        $defect = Defect::create([
-            'item_pekerjaan_produk_id' => $request->item_pekerjaan_produk_id,
-            'qc_stage' => $request->qc_stage,
-            'reported_by' => Auth::user()->name,
-            'reported_at' => now(),
-            'status' => 'pending',
-        ]);
+        // Cek apakah sudah ada defect aktif (pending/in_repair) untuk produk & stage ini
+        $defect = Defect::where('item_pekerjaan_produk_id', $request->item_pekerjaan_produk_id)
+            ->where('qc_stage', $request->qc_stage)
+            ->whereIn('status', ['pending', 'in_repair'])
+            ->first();
+
+        if (!$defect) {
+            $defect = Defect::create([
+                'item_pekerjaan_produk_id' => $request->item_pekerjaan_produk_id,
+                'qc_stage' => $request->qc_stage,
+                'reported_by' => Auth::user()->name,
+                'reported_at' => now(),
+                'status' => 'pending',
+            ]);
+        }
+
+        $existingCount = $defect->defectItems()->count();
 
         foreach ($request->defect_items as $index => $item) {
             $photoPath = $item['photo']->store('defects', 'public');
@@ -127,7 +165,7 @@ class DefectController extends Controller
                 'defect_id' => $defect->id,
                 'photo_path' => $photoPath,
                 'notes' => $item['notes'],
-                'order' => $index,
+                'order' => $existingCount + $index,
             ]);
         }
 
@@ -209,6 +247,9 @@ class DefectController extends Controller
             'is_approved' => true,
             'approved_by' => Auth::user()->name,
             'approved_at' => now(),
+            'rejection_notes' => null,
+            'rejected_by' => null,
+            'rejected_at' => null,
         ]);
 
         // Cek apakah semua defect items sudah diperbaiki DAN di-approve
@@ -220,30 +261,27 @@ class DefectController extends Controller
         return redirect()->back()->with('success', 'Perbaikan berhasil di-approve');
     }
 
-    // Reject Repair - Tolak perbaikan (hapus repair, harus upload ulang)
+    // Reject Repair - Tolak perbaikan dengan catatan
     public function rejectRepair(Request $request, $repairId)
     {
         $request->validate([
-            'rejection_notes' => 'nullable|string|max:500',
+            'rejection_notes' => 'required|string|max:500',
         ]);
 
         $repair = DefectRepair::findOrFail($repairId);
+
+        $repair->update([
+            'is_approved' => false,
+            'rejection_notes' => $request->rejection_notes,
+            'rejected_by' => Auth::user()->name,
+            'rejected_at' => now(),
+        ]);
+
         $defect = $repair->defectItem->defect;
-
-        // Hapus foto dari storage
-        Storage::disk('public')->delete($repair->photo_path);
-
-        // Hapus repair record - user harus upload ulang
-        $repair->delete();
-
-        // Update status defect back to pending atau in_repair
-        $remainingRepairs = $defect->defectItems->flatMap->repairs->count();
-        if ($remainingRepairs === 0) {
-            $defect->update(['status' => 'pending']);
-        } else {
+        if ($defect->status === 'completed') {
             $defect->update(['status' => 'in_repair']);
         }
 
-        return redirect()->back()->with('success', 'Perbaikan ditolak. Silakan upload ulang foto perbaikan.');
+        return redirect()->back()->with('success', 'Perbaikan berhasil ditolak dengan catatan.');
     }
 }
