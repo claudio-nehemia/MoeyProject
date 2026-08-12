@@ -921,27 +921,31 @@ class RabInternalController extends Controller
             ->with('success', 'RAB berhasil di-submit! Semua RAB (Internal, Kontrak, Vendor, Jasa) telah ACC.');
     }
 
-    public function exportPdf($rabInternalId)
+    public function exportPdf(Request $request, $rabInternalId)
     {
-        $data = $this->getExportData($rabInternalId);
+        $category = $request->query('category') ?? $request->query('kategori');
+        $data = $this->getExportData($rabInternalId, $category);
 
         $pdf = Pdf::loadView('pdf.rab-internal', $data);
         $pdf->setPaper('a4', 'landscape');
 
-        $filename = 'RAB-Internal-' . str_replace(' ', '-', $data['rabInternal']->itemPekerjaan->moodboard->order->nama_project) . '-' . date('YmdHis') . '.pdf';
+        $catTag = $data['category'] ? '-' . ucfirst($data['category']) : '';
+        $filename = 'RAB-Internal' . $catTag . '-' . str_replace(' ', '-', $data['rabInternal']->itemPekerjaan->moodboard->order->nama_project) . '-' . date('YmdHis') . '.pdf';
 
         return $pdf->download($filename);
     }
 
-    public function exportExcel($rabInternalId)
+    public function exportExcel(Request $request, $rabInternalId)
     {
-        $data = $this->getExportData($rabInternalId);
-        $filename = 'RAB-Internal-' . str_replace(' ', '-', $data['rabInternal']->itemPekerjaan->moodboard->order->nama_project) . '-' . date('YmdHis') . '.xlsx';
+        $category = $request->query('category') ?? $request->query('kategori');
+        $data = $this->getExportData($rabInternalId, $category);
+        $catTag = $data['category'] ? '-' . ucfirst($data['category']) : '';
+        $filename = 'RAB-Internal' . $catTag . '-' . str_replace(' ', '-', $data['rabInternal']->itemPekerjaan->moodboard->order->nama_project) . '-' . date('YmdHis') . '.xlsx';
 
         return Excel::download(new RabInternalExport($data), $filename);
     }
 
-    private function getExportData($rabInternalId)
+    private function getExportData($rabInternalId, $category = null)
     {
         $rabInternal = RabInternal::with([
             'itemPekerjaan.moodboard.order',
@@ -969,6 +973,7 @@ class RabInternalController extends Controller
                             'harga_satuan' => $item->item->harga,
                             'qty' => $item->quantity,
                             'harga_total' => $item->item->harga * $item->quantity,
+                            'kategori' => strtolower($item->item->kategori ?? 'internal'),
                         ];
                     }
 
@@ -982,6 +987,7 @@ class RabInternalController extends Controller
             return [
                 'id' => $rabProduk->id,
                 'nama_produk' => $rabProduk->itemPekerjaanProduk->produk->nama_produk,
+                'kategori' => strtolower($rabProduk->itemPekerjaanProduk->produk->kategori ?? 'internal'),
                 'nama_ruangan' => $rabProduk->itemPekerjaanProduk->nama_ruangan,
                 'qty_produk' => $rabProduk->itemPekerjaanProduk->quantity,
                 'panjang' => $rabProduk->itemPekerjaanProduk->panjang,
@@ -1006,10 +1012,18 @@ class RabInternalController extends Controller
                         'markup_aksesoris' => $aksesoris->markup_aksesoris,
                         'harga_satuan_aksesoris' => $aksesoris->harga_satuan_aksesoris,
                         'harga_total' => $aksesoris->harga_total,
+                        'kategori' => strtolower($aksesoris->itemPekerjaanItem?->item?->kategori ?? 'internal'),
                     ];
                 })->toArray(),
             ];
         });
+
+        $selectedCategory = strtolower(trim($category ?? ''));
+        if (!empty($selectedCategory) && !in_array($selectedCategory, ['semua', 'all'])) {
+            $produks = $produks->filter(function ($p) use ($selectedCategory) {
+                return ($p['kategori'] ?? 'internal') === $selectedCategory;
+            })->values();
+        }
 
         $totalSemuaProduk = $produks->sum('harga_akhir');
 
@@ -1017,6 +1031,7 @@ class RabInternalController extends Controller
             'rabInternal' => $rabInternal,
             'produks' => $produks,
             'totalSemuaProduk' => $totalSemuaProduk,
+            'category' => (!empty($selectedCategory) && !in_array($selectedCategory, ['semua', 'all'])) ? $selectedCategory : null,
         ];
     }
 

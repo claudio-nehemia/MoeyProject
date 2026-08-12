@@ -174,16 +174,42 @@ export default function Show({ rabInternal }: Props) {
                                                 )}
                                             </div>
                                         </div>
-                                        <div className="mt-4 flex flex-wrap gap-2 border-t border-amber-400/30 pt-4">
+                                        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-amber-400/30 pt-4">
+                                            <span className="text-xs font-bold text-amber-100 uppercase tracking-wider mr-1">Export PDF:</span>
                                             <a
                                                 href={`/rab-internal/${rabInternal.id}/pdf`}
-                                                className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-red-700 transition"
+                                                className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-md hover:bg-red-700 transition"
+                                                title="Export PDF Semua Kategori"
                                             >
-                                                📄 Export PDF
+                                                📄 Semua
                                             </a>
                                             <a
+                                                href={`/rab-internal/${rabInternal.id}/pdf?category=internal`}
+                                                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white shadow-md hover:bg-emerald-800 transition"
+                                                title="Export PDF Kategori Internal"
+                                            >
+                                                🏭 Internal
+                                            </a>
+                                            <a
+                                                href={`/rab-internal/${rabInternal.id}/pdf?category=fisik`}
+                                                className="inline-flex items-center gap-1.5 rounded-lg bg-amber-700 px-3 py-1.5 text-xs font-bold text-white shadow-md hover:bg-amber-800 transition"
+                                                title="Export PDF Kategori Fisik"
+                                            >
+                                                🏗️ Fisik
+                                            </a>
+                                            <a
+                                                href={`/rab-internal/${rabInternal.id}/pdf?category=eksternal`}
+                                                className="inline-flex items-center gap-1.5 rounded-lg bg-purple-700 px-3 py-1.5 text-xs font-bold text-white shadow-md hover:bg-purple-800 transition"
+                                                title="Export PDF Kategori Eksternal"
+                                            >
+                                                🌐 Eksternal
+                                            </a>
+
+                                            <div className="h-4 w-px bg-amber-300/40 mx-1 hidden sm:block"></div>
+
+                                            <a
                                                 href={`/rab-internal/${rabInternal.id}/excel`}
-                                                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-emerald-700 transition"
+                                                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-md hover:bg-emerald-700 transition ml-auto sm:ml-0"
                                             >
                                                 📊 Export Excel
                                             </a>
@@ -219,36 +245,76 @@ export default function Show({ rabInternal }: Props) {
 
                     {/* Category Subtotal Cards */}
                     <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 shadow-sm">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold uppercase text-emerald-800 tracking-wider">🏭 RAB Internal</span>
-                                <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-extrabold text-emerald-900">Internal</span>
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 shadow-sm flex flex-col justify-between">
+                            <div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold uppercase text-emerald-800 tracking-wider">🏭 RAB Internal</span>
+                                    <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-extrabold text-emerald-900">Internal</span>
+                                </div>
+                                <p className="mt-2 font-mono text-xl font-bold text-emerald-950">{formatCurrency(categoryTotals.internal)}</p>
                             </div>
-                            <p className="mt-2 font-mono text-xl font-bold text-emerald-950">{formatCurrency(categoryTotals.internal)}</p>
+                            <div className="mt-3 pt-2 border-t border-emerald-200/60">
+                                <a
+                                    href={`/rab-internal/${rabInternal.id}/pdf?category=internal`}
+                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-900 transition"
+                                >
+                                    📄 Export PDF Internal →
+                                </a>
+                            </div>
                         </div>
 
-                        <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold uppercase text-amber-800 tracking-wider">🏗️ RAB Fisik</span>
-                                <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-extrabold text-amber-900">Fisik</span>
+                        <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm flex flex-col justify-between">
+                            <div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold uppercase text-amber-800 tracking-wider">🏗️ RAB Fisik</span>
+                                    <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-extrabold text-amber-900">Fisik</span>
+                                </div>
+                                <p className="mt-2 font-mono text-xl font-bold text-amber-950">{formatCurrency(categoryTotals.fisik)}</p>
                             </div>
-                            <p className="mt-2 font-mono text-xl font-bold text-amber-950">{formatCurrency(categoryTotals.fisik)}</p>
+                            <div className="mt-3 pt-2 border-t border-amber-200/60">
+                                <a
+                                    href={`/rab-internal/${rabInternal.id}/pdf?category=fisik`}
+                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:text-amber-900 transition"
+                                >
+                                    📄 Export PDF Fisik →
+                                </a>
+                            </div>
                         </div>
 
-                        <div className="rounded-xl border border-purple-200 bg-purple-50/70 p-4 shadow-sm">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold uppercase text-purple-800 tracking-wider">🌐 RAB Eksternal</span>
-                                <span className="rounded-full bg-purple-200 px-2 py-0.5 text-[10px] font-extrabold text-purple-900">Eksternal</span>
+                        <div className="rounded-xl border border-purple-200 bg-purple-50/70 p-4 shadow-sm flex flex-col justify-between">
+                            <div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold uppercase text-purple-800 tracking-wider">🌐 RAB Eksternal</span>
+                                    <span className="rounded-full bg-purple-200 px-2 py-0.5 text-[10px] font-extrabold text-purple-900">Eksternal</span>
+                                </div>
+                                <p className="mt-2 font-mono text-xl font-bold text-purple-950">{formatCurrency(categoryTotals.eksternal)}</p>
                             </div>
-                            <p className="mt-2 font-mono text-xl font-bold text-purple-950">{formatCurrency(categoryTotals.eksternal)}</p>
+                            <div className="mt-3 pt-2 border-t border-purple-200/60">
+                                <a
+                                    href={`/rab-internal/${rabInternal.id}/pdf?category=eksternal`}
+                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 hover:text-purple-900 transition"
+                                >
+                                    📄 Export PDF Eksternal →
+                                </a>
+                            </div>
                         </div>
 
-                        <div className="rounded-xl border border-indigo-200 bg-indigo-600 p-4 text-white shadow-md">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold uppercase text-indigo-100 tracking-wider">📊 Grand Total RAB</span>
-                                <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-extrabold text-white">Total</span>
+                        <div className="rounded-xl border border-indigo-200 bg-indigo-600 p-4 text-white shadow-md flex flex-col justify-between">
+                            <div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold uppercase text-indigo-100 tracking-wider">📊 Grand Total RAB</span>
+                                    <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-extrabold text-white">Total</span>
+                                </div>
+                                <p className="mt-2 font-mono text-xl font-bold text-white">{formatCurrency(categoryTotals.total)}</p>
                             </div>
-                            <p className="mt-2 font-mono text-xl font-bold text-white">{formatCurrency(categoryTotals.total)}</p>
+                            <div className="mt-3 pt-2 border-t border-indigo-500">
+                                <a
+                                    href={`/rab-internal/${rabInternal.id}/pdf`}
+                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-100 hover:text-white transition"
+                                >
+                                    📄 Export PDF Semua →
+                                </a>
+                            </div>
                         </div>
                     </div>
 
@@ -357,31 +423,41 @@ export default function Show({ rabInternal }: Props) {
                     </div>
 
                     {/* Category Filter Tab Bar */}
-                    <div className="mb-4 flex flex-wrap items-center gap-2 border-b border-gray-200 bg-white p-2 rounded-xl shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                        {[
-                            { key: 'semua', label: '📊 Semua Produk', count: rabInternal.produks.length },
-                            { key: 'internal', label: '🏭 Internal (Workshop)', count: rabInternal.produks.filter(p => (p.kategori || 'internal').toLowerCase() === 'internal').length },
-                            { key: 'fisik', label: '🏗️ Fisik (Kontraktor)', count: rabInternal.produks.filter(p => (p.kategori || 'internal').toLowerCase() === 'fisik').length },
-                            { key: 'eksternal', label: '🌐 Eksternal (Vendor)', count: rabInternal.produks.filter(p => (p.kategori || 'internal').toLowerCase() === 'eksternal').length },
-                        ].map((tab) => (
-                            <button
-                                key={tab.key}
-                                type="button"
-                                onClick={() => setActiveCategoryTab(tab.key as any)}
-                                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-lg transition-all ${
-                                    activeCategoryTab === tab.key
-                                        ? 'bg-amber-500 text-white shadow-md'
-                                        : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
-                                }`}
-                            >
-                                <span>{tab.label}</span>
-                                <span className={`px-1.5 py-0.5 text-[10px] rounded-full font-mono ${
-                                    activeCategoryTab === tab.key ? 'bg-white/30 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200'
-                                }`}>
-                                    {tab.count}
-                                </span>
-                            </button>
-                        ))}
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 bg-white p-2 rounded-xl shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                        <div className="flex flex-wrap items-center gap-2">
+                            {[
+                                { key: 'semua', label: '📊 Semua Produk', count: rabInternal.produks.length },
+                                { key: 'internal', label: '🏭 Internal (Workshop)', count: rabInternal.produks.filter(p => (p.kategori || 'internal').toLowerCase() === 'internal').length },
+                                { key: 'fisik', label: '🏗️ Fisik (Kontraktor)', count: rabInternal.produks.filter(p => (p.kategori || 'internal').toLowerCase() === 'fisik').length },
+                                { key: 'eksternal', label: '🌐 Eksternal (Vendor)', count: rabInternal.produks.filter(p => (p.kategori || 'internal').toLowerCase() === 'eksternal').length },
+                            ].map((tab) => (
+                                <button
+                                    key={tab.key}
+                                    type="button"
+                                    onClick={() => setActiveCategoryTab(tab.key as any)}
+                                    className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-lg transition-all ${
+                                        activeCategoryTab === tab.key
+                                            ? 'bg-amber-500 text-white shadow-md'
+                                            : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                                    }`}
+                                >
+                                    <span>{tab.label}</span>
+                                    <span className={`px-1.5 py-0.5 text-[10px] rounded-full font-mono ${
+                                        activeCategoryTab === tab.key ? 'bg-white/30 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200'
+                                    }`}>
+                                        {tab.count}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+
+                        <a
+                            href={`/rab-internal/${rabInternal.id}/pdf${activeCategoryTab !== 'semua' ? `?category=${activeCategoryTab}` : ''}`}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3.5 py-2 text-xs font-bold text-white shadow hover:bg-red-700 transition ml-auto"
+                            title={`Export PDF Tab ${activeCategoryTab.toUpperCase()}`}
+                        >
+                            📄 Export PDF {activeCategoryTab === 'semua' ? 'Semua' : activeCategoryTab.toUpperCase()}
+                        </a>
                     </div>
 
                     {/* Full Table - All Products */}

@@ -205,7 +205,12 @@
             <img src="{{ public_path('kop-moey.jpeg') }}" alt="MOEY Logo">
         </div>
         <div class="kop-judul">
-            <div class="judul-utama">RANCANGAN ANGGARAN BIAYA INTERNAL</div>
+            <div class="judul-utama">
+                RANCANGAN ANGGARAN BIAYA INTERNAL
+                @if(isset($category) && $category)
+                    - KATEGORI {{ strtoupper($category) }}
+                @endif
+            </div>
             <div class="judul-sub">MOEY INTERIOR</div>
         </div>
     </div>
@@ -232,6 +237,12 @@
             <span class="info-label">Response Time:</span>
             {{ \Carbon\Carbon::parse($rabInternal->response_time)->format('d F Y H:i') }}
         </div>
+        @if(isset($category) && $category)
+        <div class="info-row">
+            <span class="info-label">Kategori Filter:</span>
+            <span style="font-weight: bold; color: #b45309; text-transform: uppercase;">{{ $category }}</span>
+        </div>
+        @endif
     </div>
 
     <!-- Table -->
@@ -406,8 +417,12 @@
         <table class="final-total-table">
             <tr>
                 <td style="width: 65%;">
-                    <div class="final-total-label">GRAND TOTAL</div>
-                    <div class="final-total-sublabel">Total semua produk ({{ count($produks) }} produk)</div>
+                    <div class="final-total-label">
+                        GRAND TOTAL {{ isset($category) && $category ? '- ' . strtoupper($category) : '' }}
+                    </div>
+                    <div class="final-total-sublabel">
+                        Total produk {{ isset($category) && $category ? 'kategori ' . strtoupper($category) : 'semua' }} ({{ count($produks) }} produk)
+                    </div>
                 </td>
                 <td style="width: 35%;" class="final-total-amount">
                     Rp {{ number_format($totalSemuaProduk, 0, ',', '.') }}
