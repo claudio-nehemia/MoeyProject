@@ -130,7 +130,12 @@ class GambarKerjaController extends Controller
             'approved_by' => auth()->user()->name,
         ]);
 
-        $taskResponse = TaskResponse::where('order_id', $gambarKerja->order->id)
+        $order = $gambarKerja->order;
+        $order->update([
+            'tahapan_proyek' => 'meeting_vendor',
+        ]);
+
+        $taskResponse = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'gambar_kerja')
             ->orderByDesc('extend_time')
             ->orderByDesc('updated_at')
@@ -150,32 +155,32 @@ class GambarKerjaController extends Controller
                 ]);
             }
 
-            // Create task response untuk tahap selanjutnya (cm_fee)
-            $nextTaskExists = TaskResponse::where('order_id', $gambarKerja->order->id)
-                ->where('tahap', 'approval_material')
+            // Create task response untuk tahap selanjutnya (meeting_vendor)
+            $nextTaskExists = TaskResponse::where('order_id', $order->id)
+                ->where('tahap', 'meeting_vendor')
                 ->exists();
 
             if (!$nextTaskExists) {
                 TaskResponse::create([
-                    'order_id' => $gambarKerja->order->id,
+                    'order_id' => $order->id,
                     'user_id' => null,
-                    'tahap' => 'approval_material',
+                    'tahap' => 'meeting_vendor',
                     'start_time' => now(),
-                    'deadline' => now()->addDays(6), // Deadline untuk approval_material
-                    'duration' => 6,
-                    'duration_actual' => 6,
+                    'deadline' => now()->addDays(3), // Deadline untuk meeting_vendor
+                    'duration' => 3,
+                    'duration_actual' => 3,
                     'extend_time' => 0,
                     'status' => 'menunggu_response',
                 ]);
 
                 TaskResponse::create([
-                    'order_id' => $gambarKerja->order->id,
+                    'order_id' => $order->id,
                     'user_id' => null,
-                    'tahap' => 'approval_material',
+                    'tahap' => 'meeting_vendor',
                     'start_time' => now(),
-                    'deadline' => now()->addDays(6), // Deadline untuk approval_material
-                    'duration' => 6,
-                    'duration_actual' => 6,
+                    'deadline' => now()->addDays(3), // Deadline untuk meeting_vendor
+                    'duration' => 3,
+                    'duration_actual' => 3,
                     'extend_time' => 0,
                     'status' => 'menunggu_response',
                     'is_marketing' => true,
@@ -183,10 +188,19 @@ class GambarKerjaController extends Controller
             }
         }
 
+        // Send notification to Drafter and PM/Marketing to set meeting schedule
         $notificationService = new NotificationService();
-        $notificationService->sendApprovalMaterialRequestNotification($gambarKerja->order);
+        $notificationService->sendMeetingVendorRequestNotification($order);
 
-        return back()->with('success', 'Gambar kerja disetujui.');
+        \App\Services\ActivityLogService::log(
+            $order->id,
+            $gambarKerja,
+            'approved_gambar_kerja',
+            'Approve Gambar Kerja',
+            'Gambar kerja project ' . $order->nama_project . ' telah disetujui. Tahapan berlanjut ke Jadwal Meeting Vendor.'
+        );
+
+        return back()->with('success', 'Gambar kerja disetujui. Notifikasi Jadwal Meeting Approval telah dikirim ke drafter.');
     }
 
     /* ================= REVISI ================= */

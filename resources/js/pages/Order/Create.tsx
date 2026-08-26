@@ -66,6 +66,8 @@ export default function Create({
         user_ids: [] as number[],
     });
 
+    const [jamSurvey, setJamSurvey] = useState('');
+
     useEffect(() => {
         setMounted(true);
 
@@ -228,8 +230,17 @@ export default function Create({
         console.log('Full form data:', data);
         console.log('Has file:', data.mom_file ? 'Yes' : 'No');
 
+        const combinedTanggalSurvey = data.tanggal_survey
+            ? (jamSurvey ? `${data.tanggal_survey} ${jamSurvey}` : data.tanggal_survey)
+            : '';
+
+        const submitPayload = {
+            ...data,
+            tanggal_survey: combinedTanggalSurvey,
+        };
+
         // Submit menggunakan router.post agar otomatis convert ke FormData jika ada file
-        router.post('/order', data, {
+        router.post('/order', submitPayload, {
             preserveScroll: true,
             onError: (errors) => {
                 console.log('Validation errors received:', errors);
@@ -657,19 +668,27 @@ export default function Create({
 
                                     <div>
                                         <label className="mb-2 block text-sm font-semibold text-stone-700">
-                                            Survey Date
+                                            Survey Date & Time
                                         </label>
-                                        <input
-                                            type="date"
-                                            value={data.tanggal_survey}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'tanggal_survey',
-                                                    e.target.value,
-                                                )
-                                            }
-                                            className="w-full rounded-lg border border-stone-300 px-4 py-2.5 transition-all outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                                        />
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            <input
+                                                type="date"
+                                                value={data.tanggal_survey}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'tanggal_survey',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm transition-all outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            <input
+                                                type="time"
+                                                value={jamSurvey}
+                                                onChange={(e) => setJamSurvey(e.target.value)}
+                                                className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm transition-all outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
                                         {errors.tanggal_survey && (
                                             <p className="mt-1 text-xs text-red-500">
                                                 {errors.tanggal_survey}

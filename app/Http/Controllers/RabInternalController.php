@@ -413,11 +413,12 @@ class RabInternalController extends Controller
     {
         $rabInternal = RabInternal::with([
             'itemPekerjaan.moodboard.order',
+            'rabProduks.itemPekerjaanProduk.produk.supplier',
             'rabProduks.itemPekerjaanProduk.produk.bahanBakus',
-            'rabProduks.itemPekerjaanProduk.bahanBakus.item', // Selected bahan baku
+            'rabProduks.itemPekerjaanProduk.bahanBakus.item.supplier',
             'rabProduks.itemPekerjaanProduk.jenisItems.jenisItem',
-            'rabProduks.itemPekerjaanProduk.jenisItems.items.item',
-            'rabProduks.rabAksesoris.itemPekerjaanItem.item'
+            'rabProduks.itemPekerjaanProduk.jenisItems.items.item.supplier',
+            'rabProduks.rabAksesoris.itemPekerjaanItem.item.supplier'
         ])->findOrFail($rabInternalId);
 
         // Get Aksesoris jenis_item_id
@@ -442,6 +443,14 @@ class RabInternalController extends Controller
                     $selectedBahanBakus = $rabProduk->itemPekerjaanProduk->bahanBakus;
                     $bahanBakuNames = $selectedBahanBakus->map(fn($bb) => $bb->item->nama_item)->toArray();
 
+                    // Resolve vendor / supplier
+                    $supplier = $rabProduk->itemPekerjaanProduk->produk->supplier
+                        ?? $selectedBahanBakus->first()?->item?->supplier
+                        ?? $rabProduk->itemPekerjaanProduk->jenisItems->flatMap->items->first()?->item?->supplier;
+
+                    $vendorName = $supplier ? $supplier->name : 'Tanpa Vendor / Vendor Umum';
+                    $vendorId = $supplier ? $supplier->id : null;
+
                     // Collect jenis items & items (Finishing Dalam/Luar only, exclude Aksesoris & Bahan Baku)
                     $jenisItemsList = [];
                     foreach ($rabProduk->itemPekerjaanProduk->jenisItems as $jenisItem) {
@@ -454,6 +463,7 @@ class RabInternalController extends Controller
                                     'qty' => $item->quantity,
                                     'harga_total' => $item->item->harga * $item->quantity,
                                     'kategori' => strtolower($item->item->kategori ?? 'internal'),
+                                    'vendor_name' => $item->item->supplier->name ?? null,
                                 ];
                             }
 
@@ -468,6 +478,10 @@ class RabInternalController extends Controller
                         'id' => $rabProduk->id,
                         'nama_produk' => $rabProduk->itemPekerjaanProduk->produk->nama_produk,
                         'kategori' => strtolower($rabProduk->itemPekerjaanProduk->produk->kategori ?? 'internal'),
+                        'vendor_id' => $vendorId,
+                        'vendor_name' => $vendorName,
+                        'vendor_phone' => $supplier?->phone ?? null,
+                        'vendor_code' => $supplier?->code ?? null,
                         'nama_ruangan' => $rabProduk->itemPekerjaanProduk->nama_ruangan,
                         'qty_produk' => $rabProduk->itemPekerjaanProduk->quantity,
                         'panjang' => $rabProduk->itemPekerjaanProduk->panjang,
@@ -492,6 +506,7 @@ class RabInternalController extends Controller
                                 'harga_satuan_aksesoris' => $aksesoris->harga_satuan_aksesoris,
                                 'harga_total' => $aksesoris->harga_total,
                                 'kategori' => strtolower($aksesoris->itemPekerjaanItem?->item?->kategori ?? 'internal'),
+                                'vendor_name' => $aksesoris->itemPekerjaanItem?->item?->supplier?->name ?? null,
                             ];
                         }),
                     ];
@@ -848,7 +863,7 @@ class RabInternalController extends Controller
 
     public function submit($rabInternalId)
     {
-        $rabInternal = RabInternal::with(['itemPekerjaan'])->findOrFail($rabInternalId);
+        $rabInternal = RabInternal::with(['itemPekerjaan.moodboard.order'])->findOrFail($rabInternalId);
 
         // Check if already submitted
         if ($rabInternal->is_submitted) {
@@ -881,40 +896,55 @@ class RabInternalController extends Controller
             'submitted_at' => now(),
         ]);
 
-        $notificationService = new NotificationService();
-        $notificationService->sendKontrakRequestNotification($itemPekerjaan->moodboard->order);
+        $order = $itemPekerjaan->moodboard?->order;
+
+        if ($order) {
+            $order->update(['tahapan_proyek' => 'kontrak']);
+
+            $notificationService = new NotificationService();
+            $notificationService->sendKontrakRequestNotification($order);
+
+            \App\Services\ActivityLogService::log(
+                $order->id,
+                $rabInternal,
+                'submit_rab',
+                'Submit RAB ke Legal',
+                (auth()->user()->name ?? 'Estimator') . ' submit semua RAB (Internal, Kontrak, Vendor, Jasa) ke Legal untuk pembuatan kontrak.'
+            );
+        }
 
         // Create task response untuk kontrak (setelah semua RAB submit)
-        $order = $itemPekerjaan->moodboard->order;
-        $nextTaskExists = TaskResponse::where('order_id', $order->id)
-            ->where('tahap', 'kontrak')
-            ->exists();
+        if ($order) {
+            $nextTaskExists = TaskResponse::where('order_id', $order->id)
+                ->where('tahap', 'kontrak')
+                ->exists();
 
-        if (!$nextTaskExists) {
-            TaskResponse::create([
-                'order_id' => $order->id,
-                'user_id' => null,
-                'tahap' => 'kontrak',
-                'start_time' => now(),
-                'deadline' => now()->addDays(3), // Deadline untuk kontrak
-                'duration' => 3,
-                'duration_actual' => 3,
-                'extend_time' => 0,
-                'status' => 'menunggu_response',
-            ]);
+            if (!$nextTaskExists) {
+                TaskResponse::create([
+                    'order_id' => $order->id,
+                    'user_id' => null,
+                    'tahap' => 'kontrak',
+                    'start_time' => now(),
+                    'deadline' => now()->addDays(3), // Deadline untuk kontrak
+                    'duration' => 3,
+                    'duration_actual' => 3,
+                    'extend_time' => 0,
+                    'status' => 'menunggu_response',
+                ]);
 
-            TaskResponse::create([
-                'order_id' => $order->id,
-                'user_id' => null,
-                'tahap' => 'kontrak',
-                'start_time' => now(),
-                'deadline' => now()->addDays(3), // Deadline untuk kontrak
-                'duration' => 3,
-                'duration_actual' => 3,
-                'extend_time' => 0,
-                'status' => 'menunggu_response',
-                'is_marketing' => true,
-            ]);
+                TaskResponse::create([
+                    'order_id' => $order->id,
+                    'user_id' => null,
+                    'tahap' => 'kontrak',
+                    'start_time' => now(),
+                    'deadline' => now()->addDays(3), // Deadline untuk kontrak
+                    'duration' => 3,
+                    'duration_actual' => 3,
+                    'extend_time' => 0,
+                    'status' => 'menunggu_response',
+                    'is_marketing' => true,
+                ]);
+            }
         }
 
         return redirect()->back()
@@ -924,13 +954,17 @@ class RabInternalController extends Controller
     public function exportPdf(Request $request, $rabInternalId)
     {
         $category = $request->query('category') ?? $request->query('kategori');
-        $data = $this->getExportData($rabInternalId, $category);
+        $vendorId = $request->query('vendor_id');
+        $vendorName = $request->query('vendor_name');
+
+        $data = $this->getExportData($rabInternalId, $category, $vendorId, $vendorName);
 
         $pdf = Pdf::loadView('pdf.rab-internal', $data);
         $pdf->setPaper('a4', 'landscape');
 
         $catTag = $data['category'] ? '-' . ucfirst($data['category']) : '';
-        $filename = 'RAB-Internal' . $catTag . '-' . str_replace(' ', '-', $data['rabInternal']->itemPekerjaan->moodboard->order->nama_project) . '-' . date('YmdHis') . '.pdf';
+        $vendorTag = !empty($data['selectedVendorName']) ? '-Vendor-' . str_replace(' ', '-', $data['selectedVendorName']) : '';
+        $filename = 'RAB-Internal' . $catTag . $vendorTag . '-' . str_replace(' ', '-', $data['rabInternal']->itemPekerjaan->moodboard->order->nama_project) . '-' . date('YmdHis') . '.pdf';
 
         return $pdf->download($filename);
     }
@@ -938,22 +972,27 @@ class RabInternalController extends Controller
     public function exportExcel(Request $request, $rabInternalId)
     {
         $category = $request->query('category') ?? $request->query('kategori');
-        $data = $this->getExportData($rabInternalId, $category);
+        $vendorId = $request->query('vendor_id');
+        $vendorName = $request->query('vendor_name');
+
+        $data = $this->getExportData($rabInternalId, $category, $vendorId, $vendorName);
         $catTag = $data['category'] ? '-' . ucfirst($data['category']) : '';
-        $filename = 'RAB-Internal' . $catTag . '-' . str_replace(' ', '-', $data['rabInternal']->itemPekerjaan->moodboard->order->nama_project) . '-' . date('YmdHis') . '.xlsx';
+        $vendorTag = !empty($data['selectedVendorName']) ? '-Vendor-' . str_replace(' ', '-', $data['selectedVendorName']) : '';
+        $filename = 'RAB-Internal' . $catTag . $vendorTag . '-' . str_replace(' ', '-', $data['rabInternal']->itemPekerjaan->moodboard->order->nama_project) . '-' . date('YmdHis') . '.xlsx';
 
         return Excel::download(new RabInternalExport($data), $filename);
     }
 
-    private function getExportData($rabInternalId, $category = null)
+    private function getExportData($rabInternalId, $category = null, $vendorId = null, $vendorName = null)
     {
         $rabInternal = RabInternal::with([
             'itemPekerjaan.moodboard.order',
+            'rabProduks.itemPekerjaanProduk.produk.supplier',
             'rabProduks.itemPekerjaanProduk.produk.bahanBakus',
-            'rabProduks.itemPekerjaanProduk.bahanBakus.item',
+            'rabProduks.itemPekerjaanProduk.bahanBakus.item.supplier',
             'rabProduks.itemPekerjaanProduk.jenisItems.jenisItem',
-            'rabProduks.itemPekerjaanProduk.jenisItems.items.item',
-            'rabProduks.rabAksesoris'
+            'rabProduks.itemPekerjaanProduk.jenisItems.items.item.supplier',
+            'rabProduks.rabAksesoris.itemPekerjaanItem.item.supplier'
         ])->findOrFail($rabInternalId);
 
         $aksesorisJenisItem = JenisItem::where('nama_jenis_item', 'Aksesoris')->first();
@@ -962,6 +1001,13 @@ class RabInternalController extends Controller
         $produks = $rabInternal->rabProduks->map(function ($rabProduk) use ($aksesorisJenisItem, $bahanBakuJenisItem) {
             $selectedBahanBakus = $rabProduk->itemPekerjaanProduk->bahanBakus;
             $bahanBakuNames = $selectedBahanBakus->map(fn($bb) => $bb->item->nama_item)->toArray();
+
+            $supplier = $rabProduk->itemPekerjaanProduk->produk->supplier
+                ?? $selectedBahanBakus->first()?->item?->supplier
+                ?? $rabProduk->itemPekerjaanProduk->jenisItems->flatMap->items->first()?->item?->supplier;
+
+            $vendorNameResolved = $supplier ? $supplier->name : 'Tanpa Vendor / Vendor Umum';
+            $vendorIdResolved = $supplier ? $supplier->id : null;
 
             $jenisItemsList = [];
             foreach ($rabProduk->itemPekerjaanProduk->jenisItems as $jenisItem) {
@@ -974,6 +1020,7 @@ class RabInternalController extends Controller
                             'qty' => $item->quantity,
                             'harga_total' => $item->item->harga * $item->quantity,
                             'kategori' => strtolower($item->item->kategori ?? 'internal'),
+                            'vendor_name' => $item->item->supplier->name ?? null,
                         ];
                     }
 
@@ -988,6 +1035,10 @@ class RabInternalController extends Controller
                 'id' => $rabProduk->id,
                 'nama_produk' => $rabProduk->itemPekerjaanProduk->produk->nama_produk,
                 'kategori' => strtolower($rabProduk->itemPekerjaanProduk->produk->kategori ?? 'internal'),
+                'vendor_id' => $vendorIdResolved,
+                'vendor_name' => $vendorNameResolved,
+                'vendor_phone' => $supplier?->phone ?? null,
+                'vendor_code' => $supplier?->code ?? null,
                 'nama_ruangan' => $rabProduk->itemPekerjaanProduk->nama_ruangan,
                 'qty_produk' => $rabProduk->itemPekerjaanProduk->quantity,
                 'panjang' => $rabProduk->itemPekerjaanProduk->panjang,
@@ -1013,6 +1064,7 @@ class RabInternalController extends Controller
                         'harga_satuan_aksesoris' => $aksesoris->harga_satuan_aksesoris,
                         'harga_total' => $aksesoris->harga_total,
                         'kategori' => strtolower($aksesoris->itemPekerjaanItem?->item?->kategori ?? 'internal'),
+                        'vendor_name' => $aksesoris->itemPekerjaanItem?->item?->supplier?->name ?? null,
                     ];
                 })->toArray(),
             ];
@@ -1025,6 +1077,19 @@ class RabInternalController extends Controller
             })->values();
         }
 
+        $selectedVendorName = null;
+        if (!empty($vendorId)) {
+            $produks = $produks->filter(function ($p) use ($vendorId) {
+                return (string)($p['vendor_id'] ?? '') === (string)$vendorId;
+            })->values();
+            $selectedVendorName = $produks->first()['vendor_name'] ?? ('Vendor #' . $vendorId);
+        } elseif (!empty($vendorName)) {
+            $produks = $produks->filter(function ($p) use ($vendorName) {
+                return strtolower($p['vendor_name'] ?? '') === strtolower($vendorName);
+            })->values();
+            $selectedVendorName = $vendorName;
+        }
+
         $totalSemuaProduk = $produks->sum('harga_akhir');
 
         return [
@@ -1032,6 +1097,7 @@ class RabInternalController extends Controller
             'produks' => $produks,
             'totalSemuaProduk' => $totalSemuaProduk,
             'category' => (!empty($selectedCategory) && !in_array($selectedCategory, ['semua', 'all'])) ? $selectedCategory : null,
+            'selectedVendorName' => $selectedVendorName,
         ];
     }
 

@@ -3,7 +3,10 @@
 
 <head>
     <meta charset="utf-8">
-    <title>RAB Internal - {{ $rabInternal->itemPekerjaan->moodboard->order->nama_project }}</title>
+    @php
+        $isPoRequest = isset($category) && in_array(strtolower($category), ['fisik', 'eksternal']);
+    @endphp
+    <title>{{ $isPoRequest ? (isset($selectedVendorName) && $selectedVendorName ? 'PO ' . $selectedVendorName : 'PO ' . strtoupper($category)) : 'RAB Internal' }} - {{ $rabInternal->itemPekerjaan->moodboard->order->nama_project }}</title>
     <style>
         @page {
             margin: 10mm;
@@ -47,7 +50,7 @@
             color: #334155;
             font-weight: bold;
             text-align: left;
-            padding: 5px 3px;
+            padding: 5px 4px;
             border: 1px solid #cbd5e1;
             font-size: 8px;
             text-transform: uppercase;
@@ -82,7 +85,7 @@
         }
 
         table td {
-            padding: 4px 3px;
+            padding: 4px 4px;
             border: 1px solid #cbd5e1;
             vertical-align: top;
         }
@@ -150,43 +153,43 @@
         .final-total {
             background: #d97706;
             color: white;
-            padding: 12px;
+            padding: 10px;
             border-radius: 5px;
-            margin-top: 15px;
+            margin-top: 12px;
         }
 
         .final-total-table { width: 100%; border: none; }
         .final-total-table td { border: none; padding: 0; vertical-align: middle; }
-        .final-total-label { font-size: 13px; font-weight: bold; }
-        .final-total-sublabel { font-size: 8.5px; margin-top: 2px; }
-        .final-total-amount { font-size: 17px; font-weight: bold; text-align: right; }
+        .final-total-label { font-size: 12px; font-weight: bold; }
+        .final-total-sublabel { font-size: 8px; margin-top: 2px; }
+        .final-total-amount { font-size: 15px; font-weight: bold; text-align: right; }
 
         .kop-surat {
             width: 100%;
             border-bottom: 3px solid #d97706;
-            padding-bottom: 12px;
-            margin-bottom: 15px;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
         }
 
-        .kop-logo { width: 100%; text-align: center; margin-bottom: 8px; }
+        .kop-logo { width: 100%; text-align: center; margin-bottom: 6px; }
         .kop-logo img {
             width: 100%;
             max-width: 100%;
-            height: 100px;
+            height: 90px;
             object-fit: contain;
             display: block;
             margin: 0 auto;
         }
 
-        .kop-judul { text-align: center; margin-top: 5px; }
+        .kop-judul { text-align: center; margin-top: 4px; }
         .judul-utama {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
             color: #d97706;
             margin: 0 0 2px 0;
             letter-spacing: 0.5px;
         }
-        .judul-sub { font-size: 12px; font-weight: bold; color: #1e293b; margin: 0; }
+        .judul-sub { font-size: 11px; font-weight: bold; color: #1e293b; margin: 0; }
         
         .room-header {
             background: #06b6d4;
@@ -195,6 +198,16 @@
             font-size: 9px;
             padding: 5px;
         }
+
+        .signatures-section {
+            margin-top: 18px;
+            width: 100%;
+            page-break-inside: avoid;
+        }
+        .signature-table { width: 100%; border: none; }
+        .signature-table td { border: none; text-align: center; vertical-align: top; width: 33.33%; padding: 4px; font-size: 8.5px; }
+        .signature-space { height: 45px; }
+        .signature-name { font-weight: bold; border-top: 1px solid #94a3b8; display: inline-block; padding-top: 3px; min-width: 120px; }
     </style>
 </head>
 
@@ -206,9 +219,17 @@
         </div>
         <div class="kop-judul">
             <div class="judul-utama">
-                RANCANGAN ANGGARAN BIAYA INTERNAL
-                @if(isset($category) && $category)
-                    - KATEGORI {{ strtoupper($category) }}
+                @if($isPoRequest)
+                    @if(isset($selectedVendorName) && $selectedVendorName)
+                        PO VENDOR - {{ strtoupper($selectedVendorName) }}
+                    @else
+                        REQUEST PURCHASE ORDER (PO) - {{ strtoupper($category) }}
+                    @endif
+                @else
+                    RANCANGAN ANGGARAN BIAYA INTERNAL
+                    @if(isset($category) && $category)
+                        - KATEGORI {{ strtoupper($category) }}
+                    @endif
                 @endif
             </div>
             <div class="judul-sub">MOEY INTERIOR</div>
@@ -234,202 +255,365 @@
             {{ $rabInternal->response_by }}
         </div>
         <div class="info-row">
-            <span class="info-label">Response Time:</span>
+            <span class="info-label">Tanggal:</span>
             {{ \Carbon\Carbon::parse($rabInternal->response_time)->format('d F Y H:i') }}
         </div>
-        @if(isset($category) && $category)
+        @if(isset($selectedVendorName) && $selectedVendorName)
         <div class="info-row">
-            <span class="info-label">Kategori Filter:</span>
-            <span style="font-weight: bold; color: #b45309; text-transform: uppercase;">{{ $category }}</span>
+            <span class="info-label">Vendor:</span>
+            <span style="font-weight: bold; color: #6b21a8; text-transform: uppercase;">
+                {{ $selectedVendorName }}
+            </span>
+        </div>
+        @elseif(isset($category) && $category)
+        <div class="info-row">
+            <span class="info-label">Kategori:</span>
+            <span style="font-weight: bold; color: #b45309; text-transform: uppercase;">
+                {{ $category }}
+            </span>
         </div>
         @endif
     </div>
 
-    <!-- Table -->
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 10%;">Produk</th>
-                <th style="width: 9%;">Bahan Baku</th>
-                <th style="width: 9%;">Finishing Dalam</th>
-                <th class="header-finishing text-right" style="width: 6%;">Harga FD</th>
-                <th style="width: 9%;">Finishing Luar</th>
-                <th class="header-finishing text-right" style="width: 6%;">Harga FL</th>
-                <th class="text-center" style="width: 3%;">Qty</th>
-                <th class="header-dasar text-right" style="width: 7%;">Harga Dasar</th>
-                <th class="header-satuan text-right" style="width: 7%;">Total BB+Fin</th>
-                <th class="text-center" style="width: 4%;">Markup</th>
-                <th class="header-satuan text-right" style="width: 7%;">Harga Satuan</th>
-                <th style="width: 9%;">Aksesoris</th>
-                <th class="header-aksesoris text-center" style="width: 3%;">Qty</th>
-                <th class="header-aksesoris text-center" style="width: 4%;">Markup</th>
-                <th class="header-aksesoris text-right" style="width: 7%;">Total Aks</th>
-                <th class="text-center" style="width: 4%;">Diskon</th>
-                <th class="header-grand-total text-right" style="width: 8%;">Grand Total</th>
-            </tr>
-        </thead>
-        <tbody>
-            @php
-                $grouped = [];
-                foreach ($produks as $produk) {
-                    $ruangan = $produk['nama_ruangan'] ?: 'Tanpa Ruangan';
-                    $grouped[$ruangan][] = $produk;
-                }
-            @endphp
+    @php
+        $grouped = [];
+        foreach ($produks as $produk) {
+            $ruangan = $produk['nama_ruangan'] ?: 'Tanpa Ruangan';
+            $grouped[$ruangan][] = $produk;
+        }
+    @endphp
 
-            @foreach ($grouped as $roomName => $roomProduks)
+    @if($isPoRequest)
+        <!-- ================= PO REQUEST TABLE (NON-HARGA: FISIK & EKSTERNAL) ================= -->
+        <table>
+            <thead>
                 <tr>
-                    <td colspan="17" class="room-header">
-                        {{ $roomName }}
-                    </td>
+                    <th style="width: 25%;">Produk</th>
+                    <th style="width: 20%;">Bahan Baku</th>
+                    <th style="width: 17%;">Finishing Dalam</th>
+                    <th style="width: 17%;">Finishing Luar</th>
+                    <th style="width: 5%;" class="text-center">Qty</th>
+                    <th style="width: 12%;">Aksesoris</th>
+                    <th style="width: 4%;" class="text-center">Qty</th>
                 </tr>
+            </thead>
+            <tbody>
+                @foreach ($grouped as $roomName => $roomProduks)
+                    <tr>
+                        <td colspan="7" class="room-header">
+                            📍 {{ $roomName }} ({{ count($roomProduks) }} Produk)
+                        </td>
+                    </tr>
 
-                @foreach ($roomProduks as $index => $produk)
-                    @php
-                        $bahanBakuNames = $produk['bahan_baku_names'] ?? [];
+                    @foreach ($roomProduks as $index => $produk)
+                        @php
+                            $bahanBakuNames = $produk['bahan_baku_names'] ?? [];
+                            $finishingDalamItems = [];
+                            $finishingLuarItems = [];
 
-                        $finishingDalamItems = [];
-                        $finishingLuarItems = [];
-                        $finishingDalamTotal = 0;
-                        $finishingLuarTotal = 0;
-
-                        foreach ($produk['jenis_items'] as $jenisItem) {
-                            $namaJenis = strtolower($jenisItem['nama_jenis']);
-                            foreach ($jenisItem['items'] as $item) {
-                                if ($namaJenis === 'finishing dalam') {
-                                    $finishingDalamItems[] = $item['nama_item'];
-                                    $finishingDalamTotal += $item['harga_total'];
-                                } elseif ($namaJenis === 'finishing luar') {
-                                    $finishingLuarItems[] = $item['nama_item'];
-                                    $finishingLuarTotal += $item['harga_total'];
+                            foreach ($produk['jenis_items'] as $jenisItem) {
+                                $namaJenis = strtolower($jenisItem['nama_jenis']);
+                                foreach ($jenisItem['items'] as $item) {
+                                    if ($namaJenis === 'finishing dalam') {
+                                        $finishingDalamItems[] = $item['nama_item'];
+                                    } elseif ($namaJenis === 'finishing luar') {
+                                        $finishingLuarItems[] = $item['nama_item'];
+                                    }
                                 }
                             }
-                        }
 
-                        $totalBBPlusFinishing = $produk['harga_dasar'] + $finishingDalamTotal + $finishingLuarTotal;
-                        $aksesorisData = $produk['aksesoris'] ?? [];
+                            $aksesorisData = $produk['aksesoris'] ?? [];
+                            $maxRows = max(
+                                count($bahanBakuNames),
+                                count($finishingDalamItems),
+                                count($finishingLuarItems),
+                                count($aksesorisData),
+                                1
+                            );
+                        @endphp
 
-                        $maxRows = max(
-                            count($bahanBakuNames),
-                            count($finishingDalamItems),
-                            count($finishingLuarItems),
-                            count($aksesorisData),
-                            1
-                        );
-                    @endphp
+                        @for ($rowIndex = 0; $rowIndex < $maxRows; $rowIndex++)
+                            <tr class="{{ $rowIndex === 0 ? 'produk-row' : '' }}">
+                                @if ($rowIndex === 0)
+                                    <td rowspan="{{ $maxRows }}">
+                                        <div class="produk-name">{{ $index + 1 }}. {{ $produk['nama_produk'] }}</div>
+                                        @if ($produk['panjang'] && $produk['lebar'] && $produk['tinggi'])
+                                            <div class="produk-dim">
+                                                {{ $produk['panjang'] }} × {{ $produk['lebar'] }} × {{ $produk['tinggi'] }} m
+                                            </div>
+                                        @endif
+                                    </td>
+                                @endif
 
-                    @for ($rowIndex = 0; $rowIndex < $maxRows; $rowIndex++)
-                        <tr class="{{ $rowIndex === 0 ? 'produk-row' : '' }}">
-                            @if ($rowIndex === 0)
-                                <td rowspan="{{ $maxRows }}">
-                                    <div class="produk-name">{{ $index + 1 }}. {{ $produk['nama_produk'] }}</div>
-                                    @if ($produk['panjang'] && $produk['lebar'] && $produk['tinggi'])
-                                        <div class="produk-dim">
-                                            {{ $produk['panjang'] }} × {{ $produk['lebar'] }} × {{ $produk['tinggi'] }} m
-                                        </div>
+                                <td>
+                                    @if (isset($bahanBakuNames[$rowIndex]))
+                                        • {{ $bahanBakuNames[$rowIndex] }}
                                     @endif
                                 </td>
-                            @endif
 
-                            <td>
-                                @if (isset($bahanBakuNames[$rowIndex]))
-                                    • {{ $bahanBakuNames[$rowIndex] }}
-                                @endif
-                            </td>
+                                <td class="finishing-cell">
+                                    @if (isset($finishingDalamItems[$rowIndex]))
+                                        • {{ $finishingDalamItems[$rowIndex] }}
+                                    @endif
+                                </td>
 
-                            <td class="finishing-cell">
-                                @if (isset($finishingDalamItems[$rowIndex]))
-                                    • {{ $finishingDalamItems[$rowIndex] }}
-                                @endif
-                            </td>
+                                <td class="finishing-cell">
+                                    @if (isset($finishingLuarItems[$rowIndex]))
+                                        • {{ $finishingLuarItems[$rowIndex] }}
+                                    @endif
+                                </td>
 
-                            @if ($rowIndex === 0)
-                                <td rowspan="{{ $maxRows }}" class="harga-finishing-cell">
-                                    Rp {{ number_format($finishingDalamTotal, 0, ',', '.') }}
-                                </td>
-                            @endif
+                                @if ($rowIndex === 0)
+                                    <td rowspan="{{ $maxRows }}" class="text-center" style="font-weight: bold;">
+                                        {{ $produk['qty_produk'] }}
+                                    </td>
+                                @endif
 
-                            <td class="finishing-cell">
-                                @if (isset($finishingLuarItems[$rowIndex]))
-                                    • {{ $finishingLuarItems[$rowIndex] }}
-                                @endif
-                            </td>
+                                <td>
+                                    @if (isset($aksesorisData[$rowIndex]))
+                                        • {{ $aksesorisData[$rowIndex]['nama_aksesoris'] }}
+                                    @endif
+                                </td>
 
-                            @if ($rowIndex === 0)
-                                <td rowspan="{{ $maxRows }}" class="harga-finishing-cell">
-                                    Rp {{ number_format($finishingLuarTotal, 0, ',', '.') }}
+                                <td class="text-center">
+                                    @if (isset($aksesorisData[$rowIndex]))
+                                        {{ $aksesorisData[$rowIndex]['qty_aksesoris'] }}
+                                    @endif
                                 </td>
-                                <td rowspan="{{ $maxRows }}" class="text-center">
-                                    {{ $produk['qty_produk'] }}
-                                </td>
-                                <td rowspan="{{ $maxRows }}" class="harga-dasar-cell">
-                                    Rp {{ number_format($produk['harga_dasar'], 0, ',', '.') }}
-                                </td>
-                                <td rowspan="{{ $maxRows }}" class="harga-satuan-cell">
-                                    Rp {{ number_format($totalBBPlusFinishing, 0, ',', '.') }}
-                                </td>
-                                <td rowspan="{{ $maxRows }}" class="text-center">
-                                    {{ $produk['markup_satuan'] }}%
-                                </td>
-                                <td rowspan="{{ $maxRows }}" class="harga-akhir-cell">
-                                    Rp {{ number_format($produk['harga_satuan'], 0, ',', '.') }}
-                                </td>
-                            @endif
-
-                            <td>
-                                @if (isset($aksesorisData[$rowIndex]))
-                                    • {{ $aksesorisData[$rowIndex]['nama_aksesoris'] }}
-                                @endif
-                            </td>
-                            <td class="text-center">
-                                @if (isset($aksesorisData[$rowIndex]))
-                                    {{ $aksesorisData[$rowIndex]['qty_aksesoris'] }}
-                                @endif
-                            </td>
-                            <td class="text-center">
-                                @if (isset($aksesorisData[$rowIndex]))
-                                    {{ $aksesorisData[$rowIndex]['markup_aksesoris'] }}%
-                                @endif
-                            </td>
-                            <td class="text-right">
-                                @if (isset($aksesorisData[$rowIndex]))
-                                    Rp {{ number_format($aksesorisData[$rowIndex]['harga_total'], 0, ',', '.') }}
-                                @endif
-                            </td>
-
-                            @if ($rowIndex === 0)
-                                <td rowspan="{{ $maxRows }}" class="text-center">
-                                    {{ $produk['diskon_per_produk'] }}%
-                                </td>
-                                <td rowspan="{{ $maxRows }}" class="grand-total-cell">
-                                    Rp {{ number_format($produk['harga_akhir'], 0, ',', '.') }}
-                                </td>
-                            @endif
-                        </tr>
-                    @endfor
+                            </tr>
+                        @endfor
+                    @endforeach
                 @endforeach
-            @endforeach
-        </tbody>
-    </table>
-
-    <!-- Grand Total -->
-    <div class="final-total">
-        <table class="final-total-table">
-            <tr>
-                <td style="width: 65%;">
-                    <div class="final-total-label">
-                        GRAND TOTAL {{ isset($category) && $category ? '- ' . strtoupper($category) : '' }}
-                    </div>
-                    <div class="final-total-sublabel">
-                        Total produk {{ isset($category) && $category ? 'kategori ' . strtoupper($category) : 'semua' }} ({{ count($produks) }} produk)
-                    </div>
-                </td>
-                <td style="width: 35%;" class="final-total-amount">
-                    Rp {{ number_format($totalSemuaProduk, 0, ',', '.') }}
-                </td>
-            </tr>
+            </tbody>
         </table>
-    </div>
+
+        <!-- PO Total Summary -->
+        <div class="final-total" style="background: #475569;">
+            <table class="final-total-table">
+                <tr>
+                    <td style="width: 70%;">
+                        <div class="final-total-label">
+                            TOTAL PURCHASE ORDER (PO) {{ isset($selectedVendorName) && $selectedVendorName ? '- ' . strtoupper($selectedVendorName) : '- ' . strtoupper($category) }}
+                        </div>
+                        <div class="final-total-sublabel">
+                            Spesifikasi item & kuantitas
+                        </div>
+                    </td>
+                    <td style="width: 30%;" class="final-total-amount">
+                        Total {{ count($produks) }} Produk
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Signatures -->
+        <div class="signatures-section">
+            <table class="signature-table">
+                <tr>
+                    <td>
+                        <div>Dibuat Oleh,</div>
+                        <div class="signature-space"></div>
+                        <div class="signature-name">Drafter / Estimator</div>
+                    </td>
+                    <td>
+                        <div>Diperiksa Oleh,</div>
+                        <div class="signature-space"></div>
+                        <div class="signature-name">Project Manager</div>
+                    </td>
+                    <td>
+                        <div>Disetujui Oleh,</div>
+                        <div class="signature-space"></div>
+                        <div class="signature-name">{{ isset($selectedVendorName) && $selectedVendorName ? $selectedVendorName : 'Vendor / Kontraktor' }}</div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+    @else
+        <!-- ================= FULL RAB INTERNAL CALCULATION TABLE ================= -->
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 10%;">Produk</th>
+                    <th style="width: 9%;">Bahan Baku</th>
+                    <th style="width: 9%;">Finishing Dalam</th>
+                    <th class="header-finishing text-right" style="width: 6%;">Harga FD</th>
+                    <th style="width: 9%;">Finishing Luar</th>
+                    <th class="header-finishing text-right" style="width: 6%;">Harga FL</th>
+                    <th class="text-center" style="width: 3%;">Qty</th>
+                    <th class="header-dasar text-right" style="width: 7%;">Harga Dasar</th>
+                    <th class="header-satuan text-right" style="width: 7%;">Total BB+Fin</th>
+                    <th class="text-center" style="width: 4%;">Markup</th>
+                    <th class="header-satuan text-right" style="width: 7%;">Harga Satuan</th>
+                    <th style="width: 9%;">Aksesoris</th>
+                    <th class="header-aksesoris text-center" style="width: 3%;">Qty</th>
+                    <th class="header-aksesoris text-center" style="width: 4%;">Markup</th>
+                    <th class="header-aksesoris text-right" style="width: 7%;">Total Aks</th>
+                    <th class="text-center" style="width: 4%;">Diskon</th>
+                    <th class="header-grand-total text-right" style="width: 8%;">Grand Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($grouped as $roomName => $roomProduks)
+                    <tr>
+                        <td colspan="17" class="room-header">
+                            {{ $roomName }}
+                        </td>
+                    </tr>
+
+                    @foreach ($roomProduks as $index => $produk)
+                        @php
+                            $bahanBakuNames = $produk['bahan_baku_names'] ?? [];
+                            $isItemInternal = strtolower($produk['kategori'] ?? 'internal') === 'internal';
+
+                            $finishingDalamItems = [];
+                            $finishingLuarItems = [];
+                            $finishingDalamTotal = 0;
+                            $finishingLuarTotal = 0;
+
+                            foreach ($produk['jenis_items'] as $jenisItem) {
+                                $namaJenis = strtolower($jenisItem['nama_jenis']);
+                                foreach ($jenisItem['items'] as $item) {
+                                    if ($namaJenis === 'finishing dalam') {
+                                        $finishingDalamItems[] = $item['nama_item'];
+                                        $finishingDalamTotal += $item['harga_total'];
+                                    } elseif ($namaJenis === 'finishing luar') {
+                                        $finishingLuarItems[] = $item['nama_item'];
+                                        $finishingLuarTotal += $item['harga_total'];
+                                    }
+                                }
+                            }
+
+                            $totalBBPlusFinishing = $produk['harga_dasar'] + $finishingDalamTotal + $finishingLuarTotal;
+                            $aksesorisData = $produk['aksesoris'] ?? [];
+
+                            $maxRows = max(
+                                count($bahanBakuNames),
+                                count($finishingDalamItems),
+                                count($finishingLuarItems),
+                                count($aksesorisData),
+                                1
+                            );
+                        @endphp
+
+                        @for ($rowIndex = 0; $rowIndex < $maxRows; $rowIndex++)
+                            <tr class="{{ $rowIndex === 0 ? 'produk-row' : '' }}">
+                                @if ($rowIndex === 0)
+                                    <td rowspan="{{ $maxRows }}">
+                                        <div class="produk-name">{{ $index + 1 }}. {{ $produk['nama_produk'] }}</div>
+                                        @if ($produk['panjang'] && $produk['lebar'] && $produk['tinggi'])
+                                            <div class="produk-dim">
+                                                {{ $produk['panjang'] }} × {{ $produk['lebar'] }} × {{ $produk['tinggi'] }} m
+                                            </div>
+                                        @endif
+                                        @if(isset($produk['kategori']) && $produk['kategori'])
+                                            <div style="font-size: 8px; font-weight: bold; text-transform: uppercase; color: #475569;">
+                                                [{{ $produk['kategori'] }}]
+                                            </div>
+                                        @endif
+                                    </td>
+                                @endif
+
+                                <td>
+                                    @if (isset($bahanBakuNames[$rowIndex]))
+                                        • {{ $bahanBakuNames[$rowIndex] }}
+                                    @endif
+                                </td>
+
+                                <td class="finishing-cell">
+                                    @if (isset($finishingDalamItems[$rowIndex]))
+                                        • {{ $finishingDalamItems[$rowIndex] }}
+                                    @endif
+                                </td>
+
+                                @if ($rowIndex === 0)
+                                    <td rowspan="{{ $maxRows }}" class="harga-finishing-cell">
+                                        {{ $isItemInternal ? 'Rp ' . number_format($finishingDalamTotal, 0, ',', '.') : '-' }}
+                                    </td>
+                                @endif
+
+                                <td class="finishing-cell">
+                                    @if (isset($finishingLuarItems[$rowIndex]))
+                                        • {{ $finishingLuarItems[$rowIndex] }}
+                                    @endif
+                                </td>
+
+                                @if ($rowIndex === 0)
+                                    <td rowspan="{{ $maxRows }}" class="harga-finishing-cell">
+                                        {{ $isItemInternal ? 'Rp ' . number_format($finishingLuarTotal, 0, ',', '.') : '-' }}
+                                    </td>
+                                    <td rowspan="{{ $maxRows }}" class="text-center">
+                                        {{ $produk['qty_produk'] }}
+                                    </td>
+                                    <td rowspan="{{ $maxRows }}" class="harga-dasar-cell">
+                                        {{ $isItemInternal ? 'Rp ' . number_format($produk['harga_dasar'], 0, ',', '.') : '-' }}
+                                    </td>
+                                    <td rowspan="{{ $maxRows }}" class="harga-satuan-cell">
+                                        {{ $isItemInternal ? 'Rp ' . number_format($totalBBPlusFinishing, 0, ',', '.') : '-' }}
+                                    </td>
+                                    <td rowspan="{{ $maxRows }}" class="text-center">
+                                        {{ $isItemInternal ? $produk['markup_satuan'] . '%' : '-' }}
+                                    </td>
+                                    <td rowspan="{{ $maxRows }}" class="harga-akhir-cell">
+                                        {{ $isItemInternal ? 'Rp ' . number_format($produk['harga_satuan'], 0, ',', '.') : '-' }}
+                                    </td>
+                                @endif
+
+                                <td>
+                                    @if (isset($aksesorisData[$rowIndex]))
+                                        • {{ $aksesorisData[$rowIndex]['nama_aksesoris'] }}
+                                    @endif
+                                </td>
+                                <td class="text-center">
+                                    @if (isset($aksesorisData[$rowIndex]))
+                                        {{ $aksesorisData[$rowIndex]['qty_aksesoris'] }}
+                                    @endif
+                                </td>
+                                <td class="text-center">
+                                    @if (isset($aksesorisData[$rowIndex]))
+                                        {{ $isItemInternal ? $aksesorisData[$rowIndex]['markup_aksesoris'] . '%' : '-' }}
+                                    @endif
+                                </td>
+                                <td class="text-right">
+                                    @if (isset($aksesorisData[$rowIndex]))
+                                        {{ $isItemInternal ? 'Rp ' . number_format($aksesorisData[$rowIndex]['harga_total'], 0, ',', '.') : '-' }}
+                                    @endif
+                                </td>
+
+                                @if ($rowIndex === 0)
+                                    <td rowspan="{{ $maxRows }}" class="text-center">
+                                        {{ $isItemInternal ? ($produk['diskon_per_produk'] ?? 0) . '%' : '-' }}
+                                    </td>
+                                    <td rowspan="{{ $maxRows }}" class="grand-total-cell">
+                                        {{ $isItemInternal ? 'Rp ' . number_format($produk['harga_akhir'], 0, ',', '.') : '-' }}
+                                    </td>
+                                @endif
+                            </tr>
+                        @endfor
+                    @endforeach
+                @endforeach
+            </tbody>
+        </table>
+
+        <!-- Grand Total -->
+        <div class="final-total">
+            <table class="final-total-table">
+                <tr>
+                    <td style="width: 65%;">
+                        <div class="final-total-label">
+                            GRAND TOTAL RAB INTERNAL
+                        </div>
+                        <div class="final-total-sublabel">
+                            Total produk internal ({{ count(array_filter($produks, fn($p) => strtolower($p['kategori'] ?? 'internal') === 'internal')) }} produk)
+                        </div>
+                    </td>
+                    <td style="width: 35%;" class="final-total-amount">
+                        Rp {{ number_format($totalSemuaProduk, 0, ',', '.') }}
+                    </td>
+                </tr>
+            </table>
+        </div>
+    @endif
 </body>
 
 </html>

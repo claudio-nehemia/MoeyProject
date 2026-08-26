@@ -287,6 +287,8 @@ class KontrakController extends Controller
             'bln_terbilang' => now()->translatedFormat('F'),
             'thn_terbilang' => terbilang((int)now()->format('Y')),
             'nominal_terbilang' => terbilang((int)$kontrak->harga_kontrak) . ' Rupiah',
+            'durasi_kontrak' => $kontrak->durasi_kontrak ?? 90,
+            'durasi_terbilang' => ucwords(terbilang((int)($kontrak->durasi_kontrak ?? 90))),
 
             // ======================================
             // COMMITMENT FEE DATA
@@ -377,6 +379,8 @@ class KontrakController extends Controller
                 'bln_terbilang' => now()->translatedFormat('F'),
                 'thn_terbilang' => terbilang((int)now()->format('Y')) ?? '2024',
                 'nominal_terbilang' => $nominalTerbilang . ' Rupiah',
+                'durasi_kontrak' => $kontrak->durasi_kontrak ?? 90,
+                'durasi_terbilang' => ucwords(terbilang((int)($kontrak->durasi_kontrak ?? 90))),
 
                 // ======================================
                 // COMMITMENT FEE DATA
@@ -635,7 +639,9 @@ class KontrakController extends Controller
         $this->addArticleTitle($section, 'Pasal 4', 'JANGKA WAKTU PELAKSANAAN');
         $section->addText('1. Pelaksanaan pada Pasal 2 diatas dimulai setelah Surat Perjanjian ini ditandatangani oleh kedua belah pihak, Gambar kerja & Persetujuan Material sudah disetujui oleh PIHAK KEDUA dan area kerja dinyatakan sudah siap oleh PARA PIHAK.');
         $section->addText('2. Terhitung pelaksanaan pekerjaan dimulai H+7, setelah Gambar kerja & tanda tangan approval material oleh PIHAK KEDUA.');
-        $section->addText('3. Pelaksanaan pekerjaan, harus sudah selesai 100% paling lambat 90 (Sembilah Puluh Hari Kerja) setelah pekerjaan dimulai ( sesuai poin pertama ).');
+        $durasiKontrak = $contractData['durasi_kontrak'] ?? ($kontrak->durasi_kontrak ?? 90);
+        $durasiTerbilang = $contractData['durasi_terbilang'] ?? ucwords(terbilang((int)$durasiKontrak));
+        $section->addText('3. Pelaksanaan pekerjaan, harus sudah selesai 100% paling lambat ' . $durasiKontrak . ' (' . $durasiTerbilang . ' Hari Kerja) setelah pekerjaan dimulai ( sesuai poin pertama ).');
         $section->addText('4. Waktu penyelesaian tersebut tidak dapat dirubah oleh PIHAK KEDUA kecuali dalam keadaan memaksa.');
         $section->addText('5. Masa kontrak adalah diluar penyelesaian keluhan/complaint, pekerjaan free dan pekerjaan tambah.');
         $section->addText('6. Masa kontrak berjalan berjalan normal sesuai dengan pasal 4 point 2 apabila :');

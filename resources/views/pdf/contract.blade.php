@@ -313,7 +313,7 @@
         <div class="article-content">
             1. Pelaksanaan pada Pasal 2 diatas dimulai setelah Surat Perjanjian ini ditandatangani oleh kedua belah pihak, Gambar kerja & Persetujuan Material sudah disetujui oleh PIHAK KEDUA dan area kerja dinyatakan sudah siap oleh PARA PIHAK.<br/>
             2. Terhitung pelaksanaan pekerjaan dimulai H+7, setelah Gambar kerja & tanda tangan approval material oleh PIHAK KEDUA.<br/>
-            3. Pelaksanaan pekerjaan, harus sudah selesai 100% paling lambat 90 (Sembilah Puluh Hari Kerja) setelah pekerjaan dimulai ( sesuai poin pertama ).<br/>
+            3. Pelaksanaan pekerjaan, harus sudah selesai 100% paling lambat {{ $contractData['durasi_kontrak'] ?? $kontrak->durasi_kontrak ?? 90 }} ({{ $contractData['durasi_terbilang'] ?? ucwords(terbilang((int)($kontrak->durasi_kontrak ?? 90))) }} Hari Kerja) setelah pekerjaan dimulai ( sesuai poin pertama ).<br/>
             4. Waktu penyelesaian tersebut tidak dapat dirubah oleh PIHAK KEDUA kecuali dalam keadaan memaksa.<br/>
             5. Masa kontrak adalah diluar penyelesaian keluhan/complaint, pekerjaan free dan pekerjaan tambah.<br/>
             6. Masa kontrak berjalan berjalan normal sesuai dengan pasal 4 point 2 apabila :<br/>

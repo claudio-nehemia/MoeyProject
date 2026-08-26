@@ -15,6 +15,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\OrderExport;
 use App\Services\ImageService;
+use App\Services\ActivityLogService;
 use App\Models\Role;
 
 class OrderController extends Controller
@@ -167,15 +168,36 @@ class OrderController extends Controller
         $order = Order::create($validated);
         \Log::info('Order created with ID:', ['order_id' => $order->id]);
 
+        $teamNames = [];
         if (!empty($userIds)) {
             \Log::info('Attaching users to order:', ['user_ids' => $userIds]);
             $order->users()->attach($userIds);
             \Log::info('Users attached successfully');
+            $teamNames = User::whereIn('id', $userIds)->pluck('name')->toArray();
             $notificationService = new NotificationService();
             $notificationService->sendSurveyRequestNotification($order);
         } else {
             \Log::warning('No user_ids to attach - skipping team assignment');
         }
+
+        ActivityLogService::log(
+            $order->id,
+            $order,
+            'create',
+            'Order Dibuat',
+            "Membuat order baru #{$order->id}: {$order->nama_project} (Customer: {$order->customer_name})",
+            [
+                'order' => [
+                    'nama_project' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'company_name' => $order->company_name,
+                    'phone_number' => $order->phone_number,
+                    'alamat' => $order->alamat,
+                ],
+                'team' => $teamNames,
+                'has_mom' => !empty($order->mom_file) || !empty($order->mom_files),
+            ]
+        );
 
         $nextTaskExist = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'survey')
@@ -215,9 +237,10 @@ class OrderController extends Controller
      */
     public function show(Order $order)
     {
-        $order->load('users.role', 'jenisInterior');
+        $order->load(['users.role', 'jenisInterior', 'activityLogs.user']);
         return Inertia::render('Order/Show', [
             'order' => $order,
+            'activityLogs' => $order->activityLogs,
         ]);
     }
 
@@ -300,20 +323,65 @@ class OrderController extends Controller
             \Log::info('New MOM file uploaded:', ['file' => $validated['mom_file'], 'original_name' => $result['original_name'] ?? null]);
         }
 
-        // Remove user_ids from validated data before updating order
-        $userIds = $validated['user_ids'] ?? [];
-        unset($validated['user_ids']);
+        // Capture dirty attributes before saving
+        $order->fill($validated);
+        $changedAttributes = ActivityLogService::getChangedAttributes($order);
 
-        $order->update($validated);
+        // Previous team
+        $previousUserIds = $order->users->pluck('id')->toArray();
+        $teamChanged = false;
+        $newTeamNames = [];
+
+        $order->save();
         \Log::info('Order updated successfully');
 
         if ($request->has('user_ids')) {
+            $userIds = $request->input('user_ids', []);
             \Log::info('Syncing users to order:', ['user_ids' => $userIds]);
             $order->users()->sync($userIds);
             \Log::info('Users synced successfully');
+
+            sort($previousUserIds);
+            $sortedNewUserIds = $userIds;
+            sort($sortedNewUserIds);
+            if ($previousUserIds !== $sortedNewUserIds) {
+                $teamChanged = true;
+                $newTeamNames = User::whereIn('id', $userIds)->pluck('name')->toArray();
+            }
         } else {
             \Log::info('Skipping team sync - user_ids not provided in request');
         }
+
+
+        $logDescriptionParts = [];
+        if (!empty($changedAttributes)) {
+            $logDescriptionParts[] = ActivityLogService::formatChangesSummary($changedAttributes);
+        }
+        if ($request->hasFile('mom_file')) {
+            $logDescriptionParts[] = "Mengunggah file MoM baru: " . ($validated['mom_file'] ?? 'file');
+        }
+        if ($teamChanged) {
+            $logDescriptionParts[] = "Memperbarui tim project (" . count($newTeamNames) . " anggota)";
+        }
+
+        $logDescription = !empty($logDescriptionParts)
+            ? implode(' | ', $logDescriptionParts)
+            : "Memperbarui data order #{$order->id}";
+
+        ActivityLogService::log(
+            $order->id,
+            $order,
+            'update',
+            'Order Diperbarui',
+            $logDescription,
+            [
+                'changes' => $changedAttributes,
+                'team_changed' => $teamChanged,
+                'team' => $teamChanged ? $newTeamNames : null,
+                'uploaded_mom' => $request->hasFile('mom_file'),
+            ]
+        );
+
 
         $nextTaskExist = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'survey')

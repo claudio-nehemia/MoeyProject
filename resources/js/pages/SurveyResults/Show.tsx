@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import ActivityLogTimeline, { ActivityLogItem } from '@/components/ActivityLogTimeline';
 
 interface User {
     id: number;
@@ -60,9 +61,10 @@ interface Survey {
 
 interface Props {
     survey: Survey;
+    activityLogs?: ActivityLogItem[];
 }
 
-export default function Show({ survey }: Props) {
+export default function Show({ survey, activityLogs = [] }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 1024;
@@ -684,7 +686,7 @@ export default function Show({ survey }: Props) {
                     )}
 
                     {/* Metadata */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
                         <div className="bg-white rounded-lg shadow-md border border-stone-200 p-3 sm:p-4 text-center">
                             <p className="text-xs font-semibold text-stone-600 uppercase">Created</p>
                             <p className="text-xs sm:text-sm text-stone-900 mt-2">{formatDate(survey.created_at)}</p>
@@ -694,8 +696,12 @@ export default function Show({ survey }: Props) {
                             <p className="text-xs sm:text-sm text-stone-900 mt-2">{formatDate(survey.updated_at)}</p>
                         </div>
                     </div>
+
+                    {/* Activity & Change Log */}
+                    <ActivityLogTimeline logs={activityLogs} title="Log Perubahan & Riwayat Survey Result" />
                 </div>
             </div>
         </>
     );
 }
+

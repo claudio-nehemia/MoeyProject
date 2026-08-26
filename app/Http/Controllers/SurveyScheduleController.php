@@ -14,7 +14,9 @@ class SurveyScheduleController extends Controller
     public function index()
     {
         $user = auth()->user();
-        $isKepalaMarketing = $user->role_id == \App\Models\Role::getKepalaMarketingRoleId();
+        $isKepalaMarketing = $user->role_id == \App\Models\Role::getKepalaMarketingRoleId() || ($user->role && $user->role->nama_role === 'Kepala Marketing');
+        $isProjectManager = $user->role_id == \App\Models\Role::getProjectManagerRoleId() || ($user->role && $user->role->nama_role === 'Project Manager');
+        $isAdmin = $user->role && $user->role->nama_role === 'Admin';
 
         // USER YANG BOLEH IKUT SURVEY
         $desainerId = \App\Models\Role::getDesainerRoleId();
@@ -59,6 +61,8 @@ class SurveyScheduleController extends Controller
             'orders' => $orders,
             'surveyUsers' => $surveyUsers,
             'isKepalaMarketing' => $isKepalaMarketing,
+            'isProjectManager' => $isProjectManager,
+            'isAdmin' => $isAdmin,
         ]);
     }
 
@@ -137,6 +141,18 @@ class SurveyScheduleController extends Controller
                 ]);
             }
         }
+
+        \App\Services\ActivityLogService::log(
+            $order->id,
+            $order,
+            'schedule_survey',
+            'Penjadwalan Survey',
+            auth()->user()->name . ' mengatur jadwal survey pada ' . $validated['tanggal_survey'] . ' dengan ' . count($validated['survey_schedule_users']) . ' anggota tim',
+            [
+                'tanggal_survey' => $validated['tanggal_survey'],
+                'survey_schedule_users' => $validated['survey_schedule_users'],
+            ]
+        );
 
         $notificationService = new NotificationService();
         $notificationService->sendSurveyUlangRequestNotification($order);

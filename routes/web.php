@@ -40,6 +40,7 @@ use App\Http\Controllers\SurveyScheduleController;
 use App\Http\Controllers\JenisPengukuranController;
 use App\Http\Controllers\ProjectManagementController;
 use App\Http\Controllers\CashflowController;
+use App\Http\Controllers\MeetingVendorController;
 use App\Http\Controllers\SupplierController;
 
 Route::get('/', function () {
@@ -636,6 +637,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('delete');
     });
 
+    Route::prefix('meeting-vendor')->name('meeting-vendor.')->group(function () {
+        Route::get('/', [MeetingVendorController::class, 'index'])
+            ->middleware('permission:meeting-vendor.index')
+            ->name('index');
+        Route::post('/{order}/response', [MeetingVendorController::class, 'response'])
+            ->middleware('permission:meeting-vendor.response')
+            ->name('response');
+        Route::post('/{order}/schedule', [MeetingVendorController::class, 'storeSchedule'])
+            ->middleware('permission:meeting-vendor.store')
+            ->name('schedule');
+    });
+
     Route::prefix('approval-material')->name('approval-material.')->group(function () {
         Route::get('/', [ApprovalRabController::class, 'index'])
             ->middleware('permission:approval-material.index')
@@ -668,6 +681,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/survey-ulang/{orderId}', [PmResponseController::class, 'surveyUlang'])->name('survey-ulang');
         Route::post('/survey-schedule/{orderId}', [PmResponseController::class, 'surveySchedule'])->name('pm-response.survey-schedule');
         Route::post('/gambar-kerja/{id}', [PmResponseController::class, 'gambarKerja'])->name('gambar-kerja');
+        Route::post('/meeting-vendor/{orderId}', [PmResponseController::class, 'meetingVendor'])->name('meeting-vendor');
+        Route::post('/meeting-approval/{orderId}', [PmResponseController::class, 'meetingVendor'])->name('meeting-approval');
         Route::post('/kontrak/{id}', [PmResponseController::class, 'kontrak'])->name('kontrak');
         Route::post('/survey-result/{orderId}', [PmResponseController::class, 'surveyResult'])->name('survey-result');
         Route::post('/approval-rab/{id}', [PmResponseController::class, 'approvalRab'])->name('approval-rab');

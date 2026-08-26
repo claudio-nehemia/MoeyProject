@@ -38,6 +38,8 @@ export default function ExtendModal({
         survey_schedule: 'Survey Schedule',
         survey_ulang: 'Survey Ulang',
         gambar_kerja: 'Gambar Kerja',
+        meeting_vendor: 'Meeting Vendor',
+        meeting_approval: 'Meeting Vendor',
         approval_material: 'Approval Material',
         workplan: 'Workplan',
         produksi: 'Produksi',

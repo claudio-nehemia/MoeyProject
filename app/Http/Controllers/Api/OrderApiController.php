@@ -6,9 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Order;
 use App\Models\TaskResponse;
-use App\Models\JenisInterior;
 use App\Services\NotificationService;
 use App\Services\ImageService;
+use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 
 class OrderApiController extends Controller
@@ -148,8 +148,10 @@ class OrderApiController extends Controller
 
         $order = Order::create($validated);
 
+        $teamNames = [];
         if (!empty($userIds)) {
             $order->users()->attach($userIds);
+            $teamNames = User::whereIn('id', $userIds)->pluck('name')->toArray();
             try {
                 $notificationService = new NotificationService();
                 $notificationService->sendSurveyRequestNotification($order);
@@ -157,6 +159,25 @@ class OrderApiController extends Controller
                 \Log::error('Failed to send survey notification: ' . $e->getMessage());
             }
         }
+
+        ActivityLogService::log(
+            $order->id,
+            $order,
+            'create',
+            'Order Dibuat (Mobile)',
+            "Membuat order baru via Mobile #{$order->id}: {$order->nama_project}",
+            [
+                'order' => [
+                    'nama_project' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'company_name' => $order->company_name,
+                ],
+                'team' => $teamNames,
+                'source' => 'mobile_app',
+            ],
+            $request->user()
+        );
+
 
         // Create Task Responses for Survey
         TaskResponse::create([

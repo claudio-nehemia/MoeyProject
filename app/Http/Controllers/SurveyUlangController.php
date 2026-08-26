@@ -9,6 +9,7 @@ use App\Models\SurveyUlang;
 use App\Models\TaskResponse;
 use Illuminate\Http\Request;
 use App\Services\NotificationService;
+use App\Services\ActivityLogService;
 
 class SurveyUlangController extends Controller
 {
@@ -119,6 +120,18 @@ class SurveyUlangController extends Controller
 
         $order->update(['tahapan_proyek' => 'survey_ulang']);
 
+        ActivityLogService::log(
+            $order->id,
+            $order->surveyUlang,
+            'response',
+            'Respon Survey Ulang Dicatat',
+            'Mencatat respon survey ulang oleh ' . (auth()->user()->name ?? 'System'),
+            [
+                'response_by' => auth()->user()->name ?? 'System',
+                'response_time' => now()->toIso8601String(),
+            ]
+        );
+
         return back()->with('success', 'Permintaan survey ulang berhasil diterima. Silakan input hasil survey.');
     }
 
@@ -170,6 +183,20 @@ class SurveyUlangController extends Controller
                 'status' => 'pending',
             ]);
         }
+
+        ActivityLogService::log(
+            $order->id,
+            $surveyUlang,
+            'store',
+            'Hasil Survey Ulang Disimpan',
+            'Menyimpan hasil survey ulang (Foto: ' . count($fotoPaths) . ' file)',
+            [
+                'catatan' => $validated['catatan'] ?? null,
+                'temuan_count' => count($validated['temuan'] ?? []),
+                'foto_count' => count($fotoPaths),
+            ]
+        );
+
 
         $taskResponse = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'survey_ulang')
@@ -240,8 +267,10 @@ class SurveyUlangController extends Controller
     // 📌 Halaman Show
     public function show(SurveyUlang $surveyUlang)
     {
+        $surveyUlang->load(['order', 'activityLogs.user']);
         return Inertia::render('SurveyUlang/Show', [
-            'survey' => $surveyUlang->load('order'),
+            'survey' => $surveyUlang,
+            'activityLogs' => $surveyUlang->activityLogs,
         ]);
     }
 
@@ -269,9 +298,11 @@ class SurveyUlangController extends Controller
         $fotoPaths = $fotoLama;
 
         // append new photos
+        $newPhotoCount = 0;
         if ($request->hasFile('foto')) {
             foreach ($request->file('foto') as $file) {
                 $fotoPaths[] = $file->store('survey_ulang', 'public');
+                $newPhotoCount++;
             }
         }
 
@@ -281,12 +312,27 @@ class SurveyUlangController extends Controller
             'foto' => $fotoPaths,
         ]);
 
+        ActivityLogService::log(
+            $order->id,
+            $surveyUlang,
+            'update',
+            'Hasil Survey Ulang Diperbarui',
+            'Memperbarui hasil survey ulang' . ($newPhotoCount > 0 ? " (Menambah {$newPhotoCount} foto baru)" : ''),
+            [
+                'catatan' => $validated['catatan'],
+                'temuan_count' => count($validated['temuan'] ?? []),
+                'total_foto_count' => count($fotoPaths),
+                'new_photo_count' => $newPhotoCount,
+            ]
+        );
+
         if (!$order->gambarKerja) {
             GambarKerja::create([
                 'order_id' => $order->id,
                 'status' => 'pending',
             ]);
         }
+
 
         $taskResponse = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'survey_ulang')

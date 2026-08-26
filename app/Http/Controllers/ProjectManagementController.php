@@ -538,39 +538,89 @@ class ProjectManagementController extends Controller
             'reason' => 'nullable|string|max:1000',
         ]);
 
-        $itemPekerjaan = \App\Models\ItemPekerjaan::with('pengajuanPerpanjanganTimelines')->findOrFail($itemPekerjaanId);
+        $itemPekerjaan = \App\Models\ItemPekerjaan::with(['pengajuanPerpanjanganTimelines', 'moodboard.order'])->findOrFail($itemPekerjaanId);
 
         // Cari pengajuan dengan status 'none' atau 'rejected' (bisa diajukan ulang)
         $pengajuanPerpanjangan = $itemPekerjaan->pengajuanPerpanjanganTimelines
             ->whereIn('status', ['none', 'rejected'])
             ->sortByDesc('created_at')
             ->first();
-            
 
         if (!$pengajuanPerpanjangan) {
-            return back()->withErrors(['pengajuan' => 'Tidak dapat mengajukan perpanjangan saat ini']);
+            $pengajuanPerpanjangan = PengajuanPerpanjanganTimeline::create([
+                'item_pekerjaan_id' => $itemPekerjaan->id,
+                'status' => 'pending',
+                'reason' => $request->reason,
+            ]);
+        } else {
+            $pengajuanPerpanjangan->update([
+                'status' => 'pending',
+                'reason' => $request->reason,
+            ]);
         }
 
-        // Update status ke pending
-        $pengajuanPerpanjangan->update([
-            'status' => 'pending',
-            'reason' => $request->reason,
-        ]);
+        $order = $itemPekerjaan->moodboard?->order;
+        if ($order) {
+            // Notifikasi ke Legal Admin
+            $legalAdmins = \App\Models\User::whereHas('role', function ($query) {
+                $query->where('nama_role', 'Legal Admin')->orWhere('nama_role', 'LIKE', '%Legal%');
+            })->get();
 
-        return back()->with('success', 'Permohonan perpanjangan timeline berhasil diajukan');
+            foreach ($legalAdmins as $legalAdmin) {
+                \App\Models\Notification::create([
+                    'user_id' => $legalAdmin->id,
+                    'order_id' => $order->id,
+                    'type' => 'project_management_request',
+                    'title' => 'Pengajuan Perpanjangan Timeline - ' . $order->nama_project,
+                    'message' => 'Project Manager (' . (auth()->user()->name ?? 'PM') . ') mengajukan perpanjangan timeline untuk project "' . $order->nama_project . '". Silakan review dan berikan persetujuan.',
+                    'data' => [
+                        'order_name' => $order->nama_project,
+                        'customer_name' => $order->customer_name,
+                        'action_url' => '/project-management/' . $order->id,
+                    ],
+                ]);
+            }
+
+            \App\Services\ActivityLogService::log(
+                $order->id,
+                $itemPekerjaan,
+                'request_perpanjangan_timeline',
+                'Pengajuan Perpanjangan Timeline',
+                (auth()->user()->name ?? 'PM') . ' (Project Manager) mengajukan perpanjangan timeline untuk project ' . $order->nama_project,
+                [
+                    'reason' => $request->reason,
+                    'item_pekerjaan_id' => $itemPekerjaan->id,
+                ]
+            );
+        }
+
+        return back()->with('success', 'Permohonan perpanjangan timeline berhasil diajukan ke Legal Admin');
     }
 
     public function acceptPerpanjanganTimeline($pengajuanId)
     {
-        $pengajuan = PengajuanPerpanjanganTimeline::findOrFail($pengajuanId);
+        $pengajuan = PengajuanPerpanjanganTimeline::with('itemPekerjaan.moodboard.order')->findOrFail($pengajuanId);
 
         $pengajuan->update([
             'status' => 'approved',
         ]);
 
+        $order = $pengajuan->itemPekerjaan?->moodboard?->order;
+        if ($order) {
+            \App\Services\ActivityLogService::log(
+                $order->id,
+                $pengajuan->itemPekerjaan,
+                'approve_perpanjangan_timeline',
+                'Persetujuan Perpanjangan Timeline',
+                (auth()->user()->name ?? 'Legal Admin') . ' (Legal) menyetujui permohonan perpanjangan timeline untuk project ' . $order->nama_project,
+                [
+                    'pengajuan_id' => $pengajuan->id,
+                ]
+            );
+        }
+
         return back()->with('success', 'Permohonan perpanjangan timeline disetujui');
     }
-
 
     public function rejectPerpanjanganTimeline(Request $request, $pengajuanId)
     {
@@ -578,12 +628,27 @@ class ProjectManagementController extends Controller
             'reason' => 'nullable|string|max:1000',
         ]);
 
-        $pengajuan = PengajuanPerpanjanganTimeline::findOrFail($pengajuanId);
+        $pengajuan = PengajuanPerpanjanganTimeline::with('itemPekerjaan.moodboard.order')->findOrFail($pengajuanId);
 
         $pengajuan->update([
             'status' => 'rejected',
             'reason' => $request->reason,
         ]);
+
+        $order = $pengajuan->itemPekerjaan?->moodboard?->order;
+        if ($order) {
+            \App\Services\ActivityLogService::log(
+                $order->id,
+                $pengajuan->itemPekerjaan,
+                'reject_perpanjangan_timeline',
+                'Penolakan Perpanjangan Timeline',
+                (auth()->user()->name ?? 'Legal Admin') . ' (Legal) menolak permohonan perpanjangan timeline untuk project ' . $order->nama_project . ($request->reason ? ': ' . $request->reason : ''),
+                [
+                    'pengajuan_id' => $pengajuan->id,
+                    'reason' => $request->reason,
+                ]
+            );
+        }
 
         return back()->with('success', 'Permohonan perpanjangan timeline ditolak');
     }

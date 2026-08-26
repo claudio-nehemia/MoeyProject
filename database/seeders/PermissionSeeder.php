@@ -902,6 +902,23 @@ class PermissionSeeder extends Seeder
                 'group' => 'drafters - Gambar Kerja'
             ],
 
+            // Meeting Vendor
+            [
+                'name' => 'meeting-vendor.index',
+                'display_name' => 'View Meeting Vendor',
+                'group' => 'Operations - Meeting Vendor'
+            ],
+            [
+                'name' => 'meeting-vendor.store',
+                'display_name' => 'Store Meeting Vendor',
+                'group' => 'Operations - Meeting Vendor'
+            ],
+            [
+                'name' => 'meeting-vendor.response',
+                'display_name' => 'Response Meeting Vendor',
+                'group' => 'Operations - Meeting Vendor'
+            ],
+
             // Approval Material
             [
                 'name' => 'approval-material.index',

@@ -31,4 +31,15 @@ class SurveyUlang extends Model
     {
         return $this->belongsTo(Order::class);
     }
+
+    public function activityLogs()
+    {
+        return $this->hasMany(ActivityLog::class, 'order_id', 'order_id')
+            ->where(function ($q) {
+                $q->where('subject_type', 'SurveyUlang')
+                    ->orWhere('action', 'like', '%survey_ulang%');
+            })
+            ->orderBy('created_at', 'desc');
+    }
 }
+

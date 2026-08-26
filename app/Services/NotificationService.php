@@ -471,7 +471,7 @@ class NotificationService
     {
         // Get legal admin from order team
         $legalAdmins = User::whereHas('role', function ($query) {
-            $query->where('nama_role', 'Legal Admin');
+            $query->where('nama_role', 'Legal Admin')->orWhere('nama_role', 'LIKE', '%Legal%');
         })->get();
 
         foreach ($legalAdmins as $legalAdmin) {
@@ -756,6 +756,83 @@ class NotificationService
                 ],
             ]);
         }
+    }
+
+    public function sendMeetingVendorRequestNotification(Order $order)
+    {
+        $drafters = $order->surveyUsers()->whereHas('role', function ($query) {
+            $query->whereIn('nama_role', ['Drafter', 'Surveyor']);
+        })->get();
+
+        if ($drafters->isEmpty()) {
+            $drafters = $order->users()->whereHas('role', function ($query) {
+                $query->whereIn('nama_role', ['Drafter', 'Surveyor']);
+            })->get();
+        }
+
+        foreach ($drafters as $drafter) {
+            $notification = Notification::create([
+                'user_id' => $drafter->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_JADWAL_MEETING_VENDOR_REQUEST,
+                'title' => 'Buat Jadwal Meeting Vendor - ' . $order->nama_project,
+                'message' => 'Gambar kerja telah disetujui untuk project "' . $order->nama_project . '". Silakan buat Jadwal Meeting Vendor.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/meeting-vendor',
+                ],
+            ]);
+
+            // 🔥 Send FCM push notification
+            $this->fcmService->sendToUser($drafter->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
+
+        // Also send to Kepala Marketing and PM in order teams
+        $pms = $order->users()->whereHas('role', function ($query) {
+            $query->whereIn('id', [
+                \App\Models\Role::getKepalaMarketingRoleId(),
+                \App\Models\Role::getProjectManagerRoleId(),
+            ]);
+        })->get();
+
+        foreach ($pms as $pm) {
+            $notification = Notification::create([
+                'user_id' => $pm->id,
+                'order_id' => $order->id,
+                'type' => Notification::TYPE_JADWAL_MEETING_VENDOR_REQUEST,
+                'title' => 'Buat Jadwal Meeting Vendor - ' . $order->nama_project,
+                'message' => 'Gambar kerja telah disetujui untuk project "' . $order->nama_project . '". Drafter sedang membuat Jadwal Meeting Vendor.',
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'action_url' => '/meeting-vendor',
+                ],
+            ]);
+
+            $this->fcmService->sendToUser($pm->id, [
+                'title' => $notification->title,
+                'body' => $notification->message,
+                'data' => [
+                    'notification_id' => $notification->id,
+                    'type' => $notification->type,
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
+    }
+
+    public function sendMeetingApprovalRequestNotification(Order $order)
+    {
+        $this->sendMeetingVendorRequestNotification($order);
     }
 
     public function sendApprovalMaterialRequestNotification(Order $order)
@@ -1074,6 +1151,8 @@ class NotificationService
             'survey_schedule' => 'Jadwal Survey',
             'survey_ulang' => 'Survey Ulang',
             'gambar_kerja' => 'Gambar Kerja',
+            'meeting_vendor' => 'Meeting Vendor',
+            'meeting_approval' => 'Meeting Vendor',
             'approval_material' => 'Approval Material',
             'workplan' => 'Workplan',
             'produksi' => 'Produksi',
@@ -1131,6 +1210,8 @@ class NotificationService
             'survey_schedule' => '/survey-schedule',
             'survey_ulang' => '/survey-ulang',
             'gambar_kerja' => '/gambar-kerja',
+            'meeting_vendor' => '/meeting-vendor',
+            'meeting_approval' => '/meeting-vendor',
             'approval_material' => '/approval-material',
             'workplan' => '/workplan',
             'produksi' => '/project-management',

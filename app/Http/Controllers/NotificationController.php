@@ -190,6 +190,9 @@ class NotificationController extends Controller
             case Notification::TYPE_GAMBAR_KERJA_REQUEST:
                 return $this->handleGambarKerjaRequest($order);
 
+            case Notification::TYPE_JADWAL_MEETING_VENDOR_REQUEST:
+                return $this->handleMeetingVendorRequest($order);
+
             case Notification::TYPE_APPROVAL_MATERIAL_REQUEST:
                 return $this->handleApprovalMaterialRequest($order);
 
@@ -905,6 +908,63 @@ class NotificationController extends Controller
     }
 
     /**
+     * Handle meeting vendor request notification
+     * CREATES RECORD with response info
+     */
+    private function handleMeetingVendorRequest($order)
+    {
+        $meeting = $order->meetingVendor;
+        if ($meeting) {
+            if (!$meeting->response_time) {
+                $meeting->update([
+                    'response_time' => now(),
+                    'response_by' => auth()->user()->name ?? 'Admin',
+                    'status' => 'waiting_input',
+                ]);
+            }
+        } else {
+            \App\Models\MeetingVendor::create([
+                'order_id' => $order->id,
+                'response_time' => now(),
+                'response_by' => auth()->user()->name ?? 'Admin',
+                'status' => 'waiting_input',
+            ]);
+        }
+
+        $taskResponse = TaskResponse::where('order_id', $order->id)
+            ->where('tahap', 'meeting_vendor')
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->where('is_marketing', false)
+            ->first();
+
+        if ($taskResponse && $taskResponse->status === 'menunggu_response') {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+                'deadline' => now()->addDays(3),
+                'duration' => 3,
+                'duration_actual' => $taskResponse->duration_actual,
+                'status' => 'menunggu_input',
+            ]);
+        } elseif ($taskResponse && $taskResponse->isOverdue()) {
+            $taskResponse->update([
+                'user_id' => auth()->user()->id,
+                'response_time' => now(),
+            ]);
+        }
+
+        return redirect()->route('meeting-vendor.index')
+            ->with('success', 'Response berhasil dicatat. Silakan buat jadwal meeting vendor.');
+    }
+
+    private function handleMeetingApprovalRequest($order)
+    {
+        return $this->handleMeetingVendorRequest($order);
+    }
+
+    /**
      * Handle approval material request notification
      * CREATES RECORD with response info
      */
@@ -1427,6 +1487,25 @@ class NotificationController extends Controller
 
                 $this->markMarketingTaskResponseDone($order, 'workplan');
                 return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Workplan).');
+            }
+
+            case Notification::TYPE_JADWAL_MEETING_VENDOR_REQUEST: {
+                $meeting = $order->meetingVendor;
+                if ($meeting) {
+                    $meeting->update([
+                        'pm_response_time' => now(),
+                        'pm_response_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                } else {
+                    \App\Models\MeetingVendor::create([
+                        'order_id' => $order->id,
+                        'pm_response_time' => now(),
+                        'pm_response_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                }
+
+                $this->markMarketingTaskResponseDone($order, 'meeting_vendor');
+                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Meeting Vendor).');
             }
 
             case Notification::TYPE_APPROVAL_MATERIAL_REQUEST: {

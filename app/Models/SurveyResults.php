@@ -37,4 +37,15 @@ class SurveyResults extends Model
             'jenis_pengukuran_id'
         );
     }
+
+    public function activityLogs()
+    {
+        return $this->hasMany(ActivityLog::class, 'order_id', 'order_id')
+            ->where(function ($q) {
+                $q->where('subject_type', 'SurveyResults')
+                    ->orWhere('action', 'like', '%survey%');
+            })
+            ->orderBy('created_at', 'desc');
+    }
 }
+

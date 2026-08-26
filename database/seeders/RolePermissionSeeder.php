@@ -45,11 +45,14 @@ class RolePermissionSeeder extends Seeder
             $surveyor->syncPermissions($surveyorPermissions);
         }
 
-        // Drafter - Survey Results, Moodboard (partial)
+        // Drafter - Survey Results, Moodboard (partial), Gambar Kerja, Meeting Approval
         $drafter = Role::where('nama_role', 'Drafter')->first();
         if ($drafter) {
-            $drafterPermissions = Permission::where('group', 'Operations - Survey')
-                ->pluck('name')->toArray();
+            $drafterPermissions = Permission::whereIn('group', [
+                'Operations - Survey',
+                'drafters - Gambar Kerja',
+                'Operations - Meeting Vendor',
+            ])->pluck('name')->toArray();
             
             // Add partial moodboard permissions
             $moodboardPartial = Permission::where('group', 'Operations - Moodboard')
@@ -86,13 +89,16 @@ class RolePermissionSeeder extends Seeder
             $estimator->syncPermissions($estimatorPermissions);
         }
 
-        // Desainer - Moodboard, Desain Final, Item Pekerjaan
+        // Desainer - Moodboard, Desain Final, Item Pekerjaan, Gambar Kerja, Meeting Approval, Approval Material
         $desainer = Role::where('nama_role', 'Desainer')->first();
         if ($desainer) {
             $desainerPermissions = Permission::whereIn('group', [
                 'Operations - Moodboard',
                 'Operations - Desain Final',
-                'Operations - Item Pekerjaan'
+                'Operations - Item Pekerjaan',
+                'drafters - Gambar Kerja',
+                'Operations - Meeting Vendor',
+                'Operations - Approval Material',
             ])->pluck('name')->toArray();
             $desainer->syncPermissions($desainerPermissions);
         }
@@ -123,17 +129,22 @@ class RolePermissionSeeder extends Seeder
             $supervisor->syncPermissions($supervisorPermissions);
         }
 
-        // Project Manager - Project Management (full), Defect (full)
+        // Project Manager - Project Management (full), Defect (full), Tanggal Survey (full), Survey Ulang (full), Meeting Approval, Approval Material
         $projectManager = Role::where('nama_role', 'Project Manager')->first();
         if ($projectManager) {
             $pmPermissions = Permission::whereIn('group', [
                 'Operations - Project Management',
-                'Operations - Defect'
+                'Operations - Defect',
+                'surveys - Tanggal Survey',
+                'Operations - Survey Ulang',
+                'drafters - Gambar Kerja',
+                'Operations - Meeting Vendor',
+                'Operations - Approval Material',
             ])->pluck('name')->toArray();
             $projectManager->syncPermissions($pmPermissions);
         }
 
-        // Kepala Marketing - RAB (view), Moodboard (approve/revise)
+        // Kepala Marketing - RAB (view), Moodboard (approve/revise), Meeting Approval
         $kepalaMarketing = Role::where('nama_role', 'Kepala Marketing')->first();
         if ($kepalaMarketing) {
             // RAB view only
@@ -153,8 +164,12 @@ class RolePermissionSeeder extends Seeder
                     'moodboard.revise',
                     'moodboard.accept'
                 ])->pluck('name')->toArray();
+
+            // Meeting Vendor view/response
+            $meetingVendorPermissions = Permission::where('group', 'Operations - Meeting Vendor')
+                ->pluck('name')->toArray();
             
-            $kepalaMarketingPermissions = array_merge($rabViewPermissions, $moodboardApprovePermissions);
+            $kepalaMarketingPermissions = array_merge($rabViewPermissions, $moodboardApprovePermissions, $meetingVendorPermissions);
             $kepalaMarketing->syncPermissions($kepalaMarketingPermissions);
         }
     }

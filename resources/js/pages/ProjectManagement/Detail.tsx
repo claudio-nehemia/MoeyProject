@@ -1,6 +1,6 @@
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 type StageMap = Record<string, number>;
@@ -138,6 +138,11 @@ export default function Detail({
     stages: StageMap;
     qc_counts: QcCounts;
 }) {
+    const { auth } = usePage<any>().props;
+    const userRole = auth?.user?.role?.nama_role || '';
+    const isProjectManager = userRole === 'Project Manager' || userRole === 'Admin';
+    const isLegalAdmin = userRole === 'Legal Admin' || userRole.toLowerCase().includes('legal') || userRole === 'Admin';
+
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [updatingProduk, setUpdatingProduk] = useState<number | null>(null);
     const [animatedProgress, setAnimatedProgress] = useState<{
@@ -679,64 +684,76 @@ export default function Detail({
                                         key={itemPekerjaan.id}
                                         className="mb-6"
                                     >
-                                        {/* Jika status none - tampilkan tombol ajukan perpanjangan */}
-                                        {statusPerpanjangan === 'none' && (
+                                        {/* Jika status none - PM bisa ajukan perpanjangan */}
+                                        {statusPerpanjangan === 'none' && isProjectManager && (
                                             <button
                                                 onClick={
                                                     handleRequestPerpanjangan
                                                 }
-                                                className="inline-flex transform items-center rounded-xl border-2 border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-gray-50 hover:shadow-lg"
+                                                className="inline-flex transform items-center rounded-xl border-2 border-indigo-300 bg-white px-5 py-3 text-sm font-semibold text-indigo-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-indigo-50 hover:shadow-lg"
                                             >
-                                                Ajukan Perpanjangan Timeline
+                                                ⏱️ Ajukan Perpanjangan Timeline
                                             </button>
                                         )}
 
-                                        {/* Jika status pending - tampilkan tombol terima dan tolak */}
+                                        {/* Jika status pending - Legal Admin bisa Terima / Tolak */}
                                         {statusPerpanjangan === 'pending' && (
-                                            <div className="flex gap-3">
-                                                <button
-                                                    onClick={
-                                                        handleApprovePerpanjangan
-                                                    }
-                                                    className="inline-flex transform items-center rounded-xl border-2 border-green-500 bg-green-50 px-5 py-3 text-sm font-semibold text-green-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-green-100 hover:shadow-lg"
-                                                >
-                                                    Terima
-                                                </button>
-                                                <button
-                                                    onClick={
-                                                        handleRejectPerpanjangan
-                                                    }
-                                                    className="inline-flex transform items-center rounded-xl border-2 border-red-500 bg-red-50 px-5 py-3 text-sm font-semibold text-red-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-red-100 hover:shadow-lg"
-                                                >
-                                                    Tolak
-                                                </button>
+                                            <div className="flex flex-wrap items-center gap-3">
+                                                {isLegalAdmin ? (
+                                                    <>
+                                                        <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-300 px-3 py-2 rounded-xl">
+                                                            ⚖️ Pengajuan Perpanjangan Timeline (PM):
+                                                        </span>
+                                                        <button
+                                                            onClick={
+                                                                handleApprovePerpanjangan
+                                                            }
+                                                            className="inline-flex transform items-center rounded-xl border-2 border-green-500 bg-green-50 px-5 py-2.5 text-sm font-semibold text-green-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-green-100 hover:shadow-lg"
+                                                        >
+                                                            ✓ Terima
+                                                        </button>
+                                                        <button
+                                                            onClick={
+                                                                handleRejectPerpanjangan
+                                                            }
+                                                            className="inline-flex transform items-center rounded-xl border-2 border-red-500 bg-red-50 px-5 py-2.5 text-sm font-semibold text-red-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-red-100 hover:shadow-lg"
+                                                        >
+                                                            ✗ Tolak
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <div className="inline-flex items-center rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-800">
+                                                        ⏳ Pengajuan perpanjangan timeline sedang menunggu persetujuan Legal Admin
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
 
-                                        {/* Jika status approved - tampilkan pesan dan tombol atur timeline */}
+                                        {/* Jika status approved - tampilkan pesan */}
                                         {statusPerpanjangan === 'approved' && (
                                             <div className="space-y-3">
                                                 <div className="inline-flex items-center rounded-xl border-2 border-green-500 bg-green-50 px-5 py-3 text-sm font-semibold text-green-700">
-                                                    Pengajuan diterima, silahkan
-                                                    atur timeline
+                                                    ✅ Pengajuan perpanjangan timeline telah disetujui Legal Admin
                                                 </div>
                                             </div>
                                         )}
 
-                                        {/* Jika status rejected - tampilkan pesan dan tombol ajukan lagi */}
+                                        {/* Jika status rejected - PM bisa ajukan lagi */}
                                         {statusPerpanjangan === 'rejected' && (
-                                            <div className="space-y-3">
+                                            <div className="flex flex-wrap items-center gap-3">
                                                 <div className="inline-flex items-center rounded-xl border-2 border-red-500 bg-red-50 px-5 py-3 text-sm font-semibold text-red-700">
-                                                    Pengajuan anda ditolak
+                                                    ❌ Pengajuan perpanjangan timeline ditolak oleh Legal Admin
                                                 </div>
-                                                <button
-                                                    onClick={
-                                                        handleRequestPerpanjangan
-                                                    }
-                                                    className="ml-3 inline-flex transform items-center rounded-xl border-2 border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-gray-50 hover:shadow-lg"
-                                                >
-                                                    Ajukan Perpanjangan Timeline
-                                                </button>
+                                                {isProjectManager && (
+                                                    <button
+                                                        onClick={
+                                                            handleRequestPerpanjangan
+                                                        }
+                                                        className="inline-flex transform items-center rounded-xl border-2 border-indigo-300 bg-white px-5 py-3 text-sm font-semibold text-indigo-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-indigo-50 hover:shadow-lg"
+                                                    >
+                                                        ⏱️ Ajukan Ulang Perpanjangan Timeline
+                                                    </button>
+                                                )}
                                             </div>
                                         )}
                                     </div>

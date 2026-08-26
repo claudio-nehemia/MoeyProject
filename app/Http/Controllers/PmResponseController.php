@@ -8,6 +8,7 @@ use App\Models\Kontrak;
 use App\Models\Estimasi;
 use App\Models\Moodboard;
 use App\Models\GambarKerja;
+use App\Models\MeetingVendor;
 use App\Models\RabInternal;
 use App\Models\SurveyUlang;
 use App\Models\TaskResponse;
@@ -16,6 +17,7 @@ use Illuminate\Http\Request;
 use App\Models\CommitmentFee;
 use App\Models\ItemPekerjaan;
 use App\Models\SurveyResults;
+use App\Services\ActivityLogService;
 use Illuminate\Support\Facades\DB;
 
 class PmResponseController extends Controller
@@ -132,6 +134,18 @@ class PmResponseController extends Controller
 
         \Log::info('Survey Schedule PM Response recorded for Order ID: ' . $order->id);
         \Log::info('=== PM RESPONSE SURVEY SCHEDULE END ===');
+
+        ActivityLogService::log(
+            $order->id,
+            $order,
+            'response_pm',
+            'Respon Survey Schedule (Marketing)',
+            'Kepala Marketing (' . auth()->user()->name . ') mencatat respon untuk Survey Schedule',
+            [
+                'response_by' => auth()->user()->name,
+                'response_time' => now()->toIso8601String(),
+            ]
+        );
 
         return back()->with('success', 'PM Response berhasil dicatat untuk Survey Schedule.');
     }
@@ -509,6 +523,18 @@ class PmResponseController extends Controller
             \Log::info('No associated TaskResponse found for Order ID: ' . $orderId);
         }
 
+        ActivityLogService::log(
+            $orderId,
+            $surveyUlang,
+            'response_pm',
+            'Respon Survey Ulang (Marketing)',
+            'Kepala Marketing (' . auth()->user()->name . ') mencatat respon untuk Survey Ulang',
+            [
+                'response_by' => auth()->user()->name,
+                'response_time' => now()->toIso8601String(),
+            ]
+        );
+
         return back()->with('success', 'PM Response berhasil dicatat untuk Survey Ulang.');
     }
 
@@ -649,7 +675,79 @@ class PmResponseController extends Controller
         } else {
             \Log::info('No associated TaskResponse found for Order ID: ' . $orderId);
         }
+
+        ActivityLogService::log(
+            $orderId,
+            $surveyResult,
+            'response_pm',
+            'Respon Survey Result (Marketing)',
+            'Kepala Marketing (' . auth()->user()->name . ') mencatat respon untuk Survey Result',
+            [
+                'response_by' => auth()->user()->name,
+                'response_time' => now()->toIso8601String(),
+            ]
+        );
+
         return back()->with('success', 'Marketing Response berhasil dicatat untuk Survey Result.');
+    }
+
+    // Meeting Approval
+    public function meetingVendor($orderId)
+    {
+        if ($check = $this->checkPm())
+            return $check;
+        $order = Order::findOrFail($orderId);
+        if ($check = $this->checkOriginalKepalaMarketing($order))
+            return $check;
+
+        $meeting = $order->meetingVendor;
+        if (!$meeting) {
+            $meeting = MeetingVendor::create([
+                'order_id' => $orderId,
+                'pm_response_time' => now(),
+                'pm_response_by' => auth()->user()->name,
+            ]);
+        } else {
+            $meeting->update([
+                'pm_response_time' => now(),
+                'pm_response_by' => auth()->user()->name,
+            ]);
+        }
+
+        $taskResponse = TaskResponse::where('order_id', $orderId)
+            ->where('tahap', 'meeting_vendor')
+            ->where('is_marketing', true)
+            ->orderByDesc('extend_time')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($taskResponse) {
+            $taskResponse->update([
+                'response_time' => now(),
+                'status' => 'selesai',
+                'user_id' => auth()->user()->id,
+            ]);
+        }
+
+        ActivityLogService::log(
+            $orderId,
+            $meeting,
+            'response_pm',
+            'Respon Meeting Vendor (Marketing)',
+            'Kepala Marketing (' . auth()->user()->name . ') mencatat respon untuk Meeting Vendor project ' . $order->nama_project,
+            [
+                'response_by' => auth()->user()->name,
+                'response_time' => now()->toIso8601String(),
+            ]
+        );
+
+        return back()->with('success', 'Marketing Response berhasil dicatat untuk Meeting Vendor.');
+    }
+
+    public function meetingApproval($orderId)
+    {
+        return $this->meetingVendor($orderId);
     }
 
     // Approval RAB

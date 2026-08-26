@@ -117,8 +117,34 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
         return files.reduce((sum, f) => sum + (f?.size || 0), 0);
     }, [data.layout_files, data.foto_lokasi_files, data.mom_files]);
 
+    const [clientErrors, setClientErrors] = useState<Record<string, string>>({});
+
     const handleSubmit = (action: 'save_draft' | 'publish') => {
         if (processing) return;
+
+        setClientErrors({});
+
+        if (action === 'publish') {
+            const newClientErrors: Record<string, string> = {};
+
+            if (data.layout_files.length === 0) {
+                newClientErrors.layout_files = 'File Layout wajib diunggah minimal 1 file untuk mempublikasikan hasil survey.';
+            }
+
+            if (data.foto_lokasi_files.length === 0) {
+                newClientErrors.foto_lokasi_files = 'Foto Lokasi wajib diunggah minimal 1 foto untuk mempublikasikan hasil survey.';
+            }
+
+            const hasExistingMom = !!(order.mom_file || (order.mom_files && order.mom_files.length > 0));
+            if (data.mom_files.length === 0 && !hasExistingMom) {
+                newClientErrors.mom_files = 'Dokumen MoM (Minutes of Meeting) wajib diunggah untuk mempublikasikan hasil survey.';
+            }
+
+            if (Object.keys(newClientErrors).length > 0) {
+                setClientErrors(newClientErrors);
+                return;
+            }
+        }
 
         setSubmitAction(action);
 
@@ -138,6 +164,7 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
             },
         });
     };
+
 
     return (
         <>
@@ -304,7 +331,9 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                         <svg className="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                         </svg>
-                                        Layout Files (Multiple)
+                                        <span>Layout Files (Multiple)</span>
+                                        <span className="text-rose-500 font-bold">*</span>
+                                        <span className="text-[11px] font-medium text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full ml-1">Wajib saat Publish</span>
                                     </label>
                                     <input
                                         type="file"
@@ -346,7 +375,9 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                             ))}
                                         </div>
                                     )}
-                                    {errors.layout_files && <p className="text-red-500 text-xs mt-1">{errors.layout_files}</p>}
+                                    {(errors.layout_files || clientErrors.layout_files) && (
+                                        <p className="text-red-500 text-xs mt-1 font-semibold">{errors.layout_files || clientErrors.layout_files}</p>
+                                    )}
                                 </div>
 
                                 {/* Foto Lokasi (Multiple) */}
@@ -355,7 +386,9 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                         <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                         </svg>
-                                        Foto Lokasi (Multiple)
+                                        <span>Foto Lokasi (Multiple)</span>
+                                        <span className="text-rose-500 font-bold">*</span>
+                                        <span className="text-[11px] font-medium text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full ml-1">Wajib saat Publish</span>
                                     </label>
                                     <input
                                         type="file"
@@ -397,8 +430,11 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                             ))}
                                         </div>
                                     )}
-                                    {errors.foto_lokasi_files && <p className="text-red-500 text-xs mt-1">{errors.foto_lokasi_files}</p>}
+                                    {(errors.foto_lokasi_files || clientErrors.foto_lokasi_files) && (
+                                        <p className="text-red-500 text-xs mt-1 font-semibold">{errors.foto_lokasi_files || clientErrors.foto_lokasi_files}</p>
+                                    )}
                                 </div>
+
 
                                 {/* Jenis Pengukuran */}
                                 <div>
@@ -440,8 +476,10 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
 
                                 {/* MOM File */}
                                 <div>
-                                    <label className="block text-sm font-semibold text-stone-700 mb-2">
-                                        MOM File (Minutes of Meeting) - Optional
+                                    <label className="flex items-center gap-2 text-sm font-semibold text-stone-700 mb-2">
+                                        <span>MOM File (Minutes of Meeting)</span>
+                                        <span className="text-rose-500 font-bold">*</span>
+                                        <span className="text-[11px] font-medium text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full ml-1">Wajib saat Publish</span>
                                     </label>
 
                                     {(() => {
@@ -547,9 +585,12 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                         </div>
                                     )}
 
-                                    {(errors as any).mom_files && <p className="text-red-500 text-xs mt-1">{(errors as any).mom_files}</p>}
+                                    {((errors as any).mom_files || clientErrors.mom_files) && (
+                                        <p className="text-red-500 text-xs mt-1 font-semibold">{(errors as any).mom_files || clientErrors.mom_files}</p>
+                                    )}
                                     {(errors as any)['mom_files.0'] && <p className="text-red-500 text-xs mt-1">{(errors as any)['mom_files.0']}</p>}
                                     {(errors as any).mom_file && <p className="text-red-500 text-xs mt-1">{(errors as any).mom_file}</p>}
+
                                 </div>
                             </div>
 

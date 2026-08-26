@@ -2,6 +2,7 @@ import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import { Head, Link, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
+import ActivityLogTimeline, { ActivityLogItem } from '@/components/ActivityLogTimeline';
 
 interface TaskResponse {
     id: number;
@@ -51,7 +52,12 @@ interface Props {
         links: any;
         meta: any;
     };
-    activeTab: 'tasks' | 'pm';
+    activityLogs?: {
+        data: ActivityLogItem[];
+        links: any;
+        meta: any;
+    };
+    activeTab: 'tasks' | 'pm' | 'activity';
     users: Array<{
         id: number;
         name: string;
@@ -73,13 +79,15 @@ interface Props {
         tahap?: string;
         status?: string;
         search?: string;
-        tab?: 'tasks' | 'pm';
+        tab?: 'tasks' | 'pm' | 'activity';
     };
 }
+
 
 export default function Index({
     taskResponses,
     pmProgress,
+    activityLogs,
     activeTab,
     users,
     orders,
@@ -133,7 +141,7 @@ export default function Index({
             '/log',
             {
                 tab: currentTab,
-                user_id: currentTab === 'tasks' ? (selectedUserId || undefined) : undefined,
+                user_id: currentTab !== 'pm' ? (selectedUserId || undefined) : undefined,
                 order_id: selectedOrderId || undefined,
                 tahap: currentTab === 'tasks' ? (selectedTahap || undefined) : undefined,
                 status: currentTab === 'tasks' ? (selectedStatus || undefined) : undefined,
@@ -155,7 +163,7 @@ export default function Index({
         router.get('/log', { tab: currentTab });
     };
 
-    const handleTabChange = (tab: 'tasks' | 'pm') => {
+    const handleTabChange = (tab: 'tasks' | 'pm' | 'activity') => {
         router.get(
             '/log',
             {
@@ -169,6 +177,7 @@ export default function Index({
             },
         );
     };
+
 
     const toggleOrder = (orderId: number) => {
         setExpandedOrders((prev) => ({
@@ -294,7 +303,7 @@ export default function Index({
                     </div>
 
                     {/* Tab Selection Switch */}
-                    <div className="mb-6 flex border-b border-slate-200">
+                    <div className="mb-6 flex flex-wrap border-b border-slate-200 gap-1">
                         <button
                             onClick={() => handleTabChange('tasks')}
                             className={`px-5 py-3 text-sm font-semibold border-b-2 transition-all ${
@@ -314,6 +323,16 @@ export default function Index({
                             }`}
                         >
                             Project Management Progress
+                        </button>
+                        <button
+                            onClick={() => handleTabChange('activity')}
+                            className={`px-5 py-3 text-sm font-semibold border-b-2 transition-all ${
+                                currentTab === 'activity'
+                                    ? 'border-indigo-600 text-indigo-600'
+                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                            }`}
+                        >
+                            Log Perubahan Data (Audit Trail)
                         </button>
                     </div>
 
@@ -349,13 +368,19 @@ export default function Index({
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder={currentTab === 'tasks' ? "Cari berdasarkan nama project atau user..." : "Cari berdasarkan nama project, customer, atau company..."}
+                                    placeholder={
+                                        currentTab === 'tasks'
+                                            ? "Cari berdasarkan nama project atau user..."
+                                            : currentTab === 'activity'
+                                            ? "Cari berdasarkan judul, deskripsi, user, atau nama project..."
+                                            : "Cari berdasarkan nama project, customer, atau company..."
+                                    }
                                     className="block w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm shadow-sm transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                                     onKeyDown={(e) => e.key === 'Enter' && handleFilter()}
                                 />
                             </div>
                             <div className={`grid grid-cols-1 gap-5 ${currentTab === 'tasks' ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-2'}`}>
-                                {currentTab === 'tasks' && (
+                                {currentTab !== 'pm' && (
                                     <div>
                                         <label className="mb-2 block text-sm font-medium text-slate-700">
                                             User
@@ -383,6 +408,7 @@ export default function Index({
                                         </select>
                                     </div>
                                 )}
+
 
                                 <div>
                                     <label className="mb-2 block text-sm font-medium text-slate-700">
@@ -732,8 +758,45 @@ export default function Index({
                             )}
                         </div>
                     )}
+
+                    {/* Tab 3: Log Perubahan Data (Audit Trail) */}
+                    {currentTab === 'activity' && (
+                        <div className="space-y-6">
+                            <ActivityLogTimeline
+                                logs={activityLogs?.data || []}
+                                title="Semua Log Perubahan Data & Aktivitas"
+                                showOrderLink={true}
+                                emptyMessage="Tidak ada catatan log perubahan yang cocok dengan filter pencarian."
+                            />
+
+                            {/* Activity Pagination */}
+                            {activityLogs?.links && (
+                                <div className="border-t border-slate-200 bg-slate-50 px-6 py-4 rounded-xl shadow-sm mt-4">
+                                    <nav className="flex justify-center">
+                                        <div className="flex space-x-1">
+                                            {activityLogs.links.map((link: any, index: number) => (
+                                                <Link
+                                                    key={index}
+                                                    href={link.url || '#'}
+                                                    className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                                                        link.active
+                                                            ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md'
+                                                            : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                                                    } ${!link.url ? 'cursor-not-allowed opacity-50' : 'hover:shadow-sm'}`}
+                                                    dangerouslySetInnerHTML={{
+                                                        __html: link.label,
+                                                    }}
+                                                />
+                                            ))}
+                                        </div>
+                                    </nav>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </main>
         </div>
     );
 }
+

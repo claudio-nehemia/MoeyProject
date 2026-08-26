@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import ActivityLogTimeline, { ActivityLogItem } from '@/components/ActivityLogTimeline';
 
 interface User {
     id: number;
@@ -45,9 +46,10 @@ interface OrderDetail {
 
 interface Props {
     order: OrderDetail;
+    activityLogs?: ActivityLogItem[];
 }
 
-export default function Show({ order }: Props) {
+export default function Show({ order, activityLogs = [] }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 1024;
@@ -468,8 +470,15 @@ useEffect(() => {
                             </div>
                         )}
                     </div>
+
+                    {/* Activity & Change Log */}
+                    <div className={`mt-6 ${mounted ? 'fadeInUp' : 'opacity-0'}`} style={{ animationDelay: '0.35s' }}>
+                        <ActivityLogTimeline logs={activityLogs} title="Log Perubahan & Riwayat Order" />
+                    </div>
                 </div>
             </div>
         </>
     );
 }
+
+

@@ -44,6 +44,8 @@ class Notification extends Model
     const TYPE_SURVEY_ULANG_REQUEST = 'survey_ulang_request';
 
     const TYPE_GAMBAR_KERJA_REQUEST = 'gambar_kerja_request';
+    const TYPE_JADWAL_MEETING_VENDOR_REQUEST = 'jadwal_meeting_vendor_request';
+    const TYPE_JADWAL_MEETING_APPROVAL_REQUEST = 'jadwal_meeting_vendor_request'; // Alias for compatibility
 
     const TYPE_APPROVAL_MATERIAL_REQUEST = 'approval_material_request';
 

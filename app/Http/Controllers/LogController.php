@@ -6,6 +6,7 @@ use App\Models\User;
 use Inertia\Inertia;
 use App\Models\Order;
 use App\Models\TaskResponse;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use App\Models\TaskResponseExtendLog;
 
@@ -65,6 +66,7 @@ class LogController extends Controller
 
         $taskResponses = null;
         $pmProgress = null;
+        $activityLogs = null;
 
         if ($activeTab === 'pm') {
             $pmQuery = Order::with([
@@ -104,8 +106,39 @@ class LogController extends Controller
                 ];
             });
 
-            // Set empty taskResponses to prevent React crashes
+            // Set empty data to prevent React crashes
             $taskResponses = ['data' => [], 'links' => null, 'meta' => null];
+            $activityLogs = ['data' => [], 'links' => null, 'meta' => null];
+        } elseif ($activeTab === 'activity') {
+            $activityQuery = ActivityLog::with(['order', 'user.role']);
+
+            if ($request->has('user_id') && $request->user_id) {
+                $activityQuery->where('user_id', $request->user_id);
+            }
+
+            if ($request->has('order_id') && $request->order_id) {
+                $activityQuery->where('order_id', $request->order_id);
+            }
+
+            if ($request->has('subject_type') && $request->subject_type) {
+                $activityQuery->where('subject_type', $request->subject_type);
+            }
+
+            if ($request->has('search') && $request->search) {
+                $searchTerm = $request->search;
+                $activityQuery->where(function($q) use ($searchTerm) {
+                    $q->where('title', 'like', "%{$searchTerm}%")
+                      ->orWhere('description', 'like', "%{$searchTerm}%")
+                      ->orWhere('user_name', 'like', "%{$searchTerm}%")
+                      ->orWhereHas('order', function($oq) use ($searchTerm) {
+                          $oq->where('nama_project', 'like', "%{$searchTerm}%");
+                      });
+                });
+            }
+
+            $activityLogs = $activityQuery->orderBy('created_at', 'desc')->paginate(30);
+            $taskResponses = ['data' => [], 'links' => null, 'meta' => null];
+            $pmProgress = ['data' => [], 'links' => null, 'meta' => null];
         } else {
             $query = TaskResponse::with(['order', 'user.role']);
 
@@ -144,13 +177,15 @@ class LogController extends Controller
             // Sort by created_at desc
             $taskResponses = $query->orderBy('created_at', 'desc')->paginate(50);
             
-            // Set empty pmProgress to prevent React crashes
+            // Set empty data to prevent React crashes
             $pmProgress = ['data' => [], 'links' => null, 'meta' => null];
+            $activityLogs = ['data' => [], 'links' => null, 'meta' => null];
         }
 
         return Inertia::render('Log/Index', [
             'taskResponses' => $taskResponses,
             'pmProgress' => $pmProgress,
+            'activityLogs' => $activityLogs,
             'activeTab' => $activeTab,
             'users' => $users,
             'orders' => $orders,
@@ -161,10 +196,12 @@ class LogController extends Controller
                 'order_id' => $request->order_id,
                 'tahap' => $request->tahap,
                 'status' => $request->status,
+                'subject_type' => $request->subject_type,
                 'search' => $request->search,
                 'tab' => $activeTab,
             ],
         ]);
+
     }
 
     /**

@@ -13,6 +13,7 @@ use App\Services\NotificationService;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\Services\ImageService;
+use App\Services\ActivityLogService;
 
 class SurveyResultsController extends Controller
 {
@@ -223,6 +224,18 @@ class SurveyResultsController extends Controller
                 ]);
             }
 
+            ActivityLogService::log(
+                $order->id,
+                $order->surveyResults,
+                'response',
+                'Respon Survey Dicatat',
+                'Mencatat respon survey oleh ' . (auth()->user()->name ?? 'Staff'),
+                [
+                    'response_by' => auth()->user()->name ?? 'Staff',
+                    'response_time' => now()->toIso8601String(),
+                ]
+            );
+
             DB::commit();
             return back()->with('success', 'Response recorded. You can now create the survey.');
 
@@ -292,11 +305,33 @@ class SurveyResultsController extends Controller
             'action' => 'required|in:save_draft,publish',
         ]);
 
+        $survey = SurveyResults::with('order')->findOrFail($validated['survey_id']);
+        $isDraft = $validated['action'] === 'save_draft';
+
+        if (!$isDraft) {
+            // Validate mandatory survey documents
+            $hasExistingMom = !empty($survey->order->mom_file) || !empty($survey->order->mom_files);
+            $hasNewMom = $request->hasFile('mom_files') || $request->hasFile('mom_file');
+            if (!$hasExistingMom && !$hasNewMom) {
+                return back()->withInput()->withErrors(['mom_files' => 'Dokumen MoM (Minutes of Meeting) wajib diunggah untuk mempublikasikan hasil survey.']);
+            }
+
+            $hasExistingLayout = !empty($survey->layout_files);
+            $hasNewLayout = $request->hasFile('layout_files') && count($request->file('layout_files')) > 0;
+            if (!$hasExistingLayout && !$hasNewLayout) {
+                return back()->withInput()->withErrors(['layout_files' => 'File Layout wajib diunggah minimal 1 file untuk mempublikasikan hasil survey.']);
+            }
+
+            $hasExistingFoto = !empty($survey->foto_lokasi_files);
+            $hasNewFoto = $request->hasFile('foto_lokasi_files') && count($request->file('foto_lokasi_files')) > 0;
+            if (!$hasExistingFoto && !$hasNewFoto) {
+                return back()->withInput()->withErrors(['foto_lokasi_files' => 'Foto Lokasi wajib diunggah minimal 1 foto untuk mempublikasikan hasil survey.']);
+            }
+        }
+
         try {
             DB::beginTransaction();
 
-            $survey = SurveyResults::findOrFail($validated['survey_id']);
-            $isDraft = $validated['action'] === 'save_draft';
             $jenisPengukuranIds = $validated['jenis_pengukuran_ids'] ?? [];
 
             // Remove non-database fields
@@ -308,6 +343,7 @@ class SurveyResultsController extends Controller
                 $validated['mom_files'],
                 $validated['action']
             );
+
 
             /* ===============================
              * UPLOAD LAYOUT FILES
@@ -548,6 +584,36 @@ class SurveyResultsController extends Controller
 
             \Log::info("[Survey Store] Survey ID {$survey->id} saved successfully. Files uploaded - Layout: " . count($layoutFilesPaths) . ", Photos: " . count($fotoLokasiFilesPaths));
             
+            if ($isDraft) {
+                ActivityLogService::log(
+                    $survey->order_id,
+                    $survey,
+                    'draft',
+                    'Draft Survey Disimpan',
+                    'Menyimpan draft hasil survey (Layout: ' . count($layoutFilesPaths) . ', Foto: ' . count($fotoLokasiFilesPaths) . ', MoM: ' . count($momUploads) . ')',
+                    [
+                        'layout_count' => count($layoutFilesPaths),
+                        'foto_count' => count($fotoLokasiFilesPaths),
+                        'mom_count' => count($momUploads),
+                        'jenis_pengukuran_count' => count($jenisPengukuranIds),
+                    ]
+                );
+            } else {
+                ActivityLogService::log(
+                    $survey->order_id,
+                    $survey,
+                    'publish',
+                    'Hasil Survey Dipublikasikan',
+                    'Mempublikasikan hasil survey lengkap untuk project ' . ($survey->order->nama_project ?? ''),
+                    [
+                        'layout_count' => count($layoutFilesPaths),
+                        'foto_count' => count($fotoLokasiFilesPaths),
+                        'mom_count' => count($momUploads),
+                        'jenis_pengukuran_count' => count($jenisPengukuranIds),
+                    ]
+                );
+            }
+
             DB::commit();
 
             /* ===============================
@@ -589,14 +655,16 @@ class SurveyResultsController extends Controller
      */
     public function show($id)
     {
-        $survey = SurveyResults::with(['order.jenisInterior', 'order.users.role', 'jenisPengukuran'])
+        $survey = SurveyResults::with(['order.jenisInterior', 'order.users.role', 'jenisPengukuran', 'activityLogs.user'])
             ->findOrFail($id);
 
         return Inertia::render('SurveyResults/Show', [
             'survey' => $survey,
-            'selectedPengukuranIds' => $survey->jenisPengukuran->pluck('id')->toArray()
+            'selectedPengukuranIds' => $survey->jenisPengukuran->pluck('id')->toArray(),
+            'activityLogs' => $survey->activityLogs,
         ]);
     }
+
 
     /**
      * Show the form for editing the specified resource.
@@ -620,7 +688,7 @@ class SurveyResultsController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $survey = SurveyResults::findOrFail($id);
+        $survey = SurveyResults::with('order')->findOrFail($id);
 
         $validated = $request->validate([
             'feedback' => 'nullable|string',
@@ -638,12 +706,35 @@ class SurveyResultsController extends Controller
             'action' => 'required|in:save_draft,publish',
         ]);
 
+        $isDraft = $validated['action'] === 'save_draft';
+
+        if (!$isDraft) {
+            // Validate mandatory survey documents
+            $hasExistingMom = !empty($survey->order->mom_file) || !empty($survey->order->mom_files);
+            $hasNewMom = $request->hasFile('mom_files') || $request->hasFile('mom_file');
+            if (!$hasExistingMom && !$hasNewMom) {
+                return back()->withInput()->withErrors(['mom_files' => 'Dokumen MoM (Minutes of Meeting) wajib diunggah untuk mempublikasikan hasil survey.']);
+            }
+
+            $hasExistingLayout = !empty($survey->layout_files);
+            $hasNewLayout = $request->hasFile('layout_files') && count($request->file('layout_files')) > 0;
+            if (!$hasExistingLayout && !$hasNewLayout) {
+                return back()->withInput()->withErrors(['layout_files' => 'File Layout wajib diunggah minimal 1 file untuk mempublikasikan hasil survey.']);
+            }
+
+            $hasExistingFoto = !empty($survey->foto_lokasi_files);
+            $hasNewFoto = $request->hasFile('foto_lokasi_files') && count($request->file('foto_lokasi_files')) > 0;
+            if (!$hasExistingFoto && !$hasNewFoto) {
+                return back()->withInput()->withErrors(['foto_lokasi_files' => 'Foto Lokasi wajib diunggah minimal 1 foto untuk mempublikasikan hasil survey.']);
+            }
+        }
+
         try {
             DB::beginTransaction();
 
-            $isDraft = $validated['action'] === 'save_draft';
             $wasDraft = $survey->is_draft;
             $jenisPengukuranIds = $validated['jenis_pengukuran_ids'] ?? [];
+
 
             // Remove non-database fields
             unset(
@@ -893,6 +984,37 @@ class SurveyResultsController extends Controller
 
             \Log::info("[Survey Update] Survey ID {$survey->id} updated successfully. New files - Layout: " . count($newLayoutFiles ?? []) . ", Photos: " . count($newFotoFiles ?? []));
             
+            if ($isDraft) {
+                ActivityLogService::log(
+                    $survey->order_id,
+                    $survey,
+                    'draft',
+                    'Draft Survey Diperbarui',
+                    'Memperbarui draft hasil survey (File baru - Layout: ' . count($newLayoutFiles ?? []) . ', Foto: ' . count($newFotoFiles ?? []) . ', MoM: ' . count($momUploads ?? []) . ')',
+                    [
+                        'new_layout_count' => count($newLayoutFiles ?? []),
+                        'new_foto_count' => count($newFotoFiles ?? []),
+                        'new_mom_count' => count($momUploads ?? []),
+                        'jenis_pengukuran_count' => count($jenisPengukuranIds),
+                    ]
+                );
+            } else {
+                $title = $wasDraft ? 'Hasil Survey Dipublikasikan' : 'Hasil Survey Diperbarui';
+                ActivityLogService::log(
+                    $survey->order_id,
+                    $survey,
+                    'publish',
+                    $title,
+                    "{$title} untuk project " . ($survey->order->nama_project ?? ''),
+                    [
+                        'new_layout_count' => count($newLayoutFiles ?? []),
+                        'new_foto_count' => count($newFotoFiles ?? []),
+                        'new_mom_count' => count($momUploads ?? []),
+                        'jenis_pengukuran_count' => count($jenisPengukuranIds),
+                    ]
+                );
+            }
+
             DB::commit();
 
             /* ===============================
@@ -998,8 +1120,21 @@ class SurveyResultsController extends Controller
                         Storage::disk('public')->delete($files[$fileIndex]['thumbnail']);
                     }
 
+                    $deletedFileName = $files[$fileIndex]['original_name'] ?? basename($files[$fileIndex]['path'] ?? 'file');
                     array_splice($files, $fileIndex, 1);
                     $survey->update(['layout_files' => !empty($files) ? array_values($files) : null]);
+
+                    ActivityLogService::log(
+                        $survey->order_id,
+                        $survey,
+                        'delete_file',
+                        'File Layout Dihapus',
+                        "Menghapus file layout: {$deletedFileName}",
+                        [
+                            'file_type' => 'layout',
+                            'file_name' => $deletedFileName,
+                        ]
+                    );
 
                     DB::commit();
                     return back()->with('success', 'Layout file deleted successfully.');
@@ -1016,8 +1151,21 @@ class SurveyResultsController extends Controller
                         Storage::disk('public')->delete($files[$fileIndex]['thumbnail']);
                     }
 
+                    $deletedFileName = $files[$fileIndex]['original_name'] ?? basename($files[$fileIndex]['path'] ?? 'file');
                     array_splice($files, $fileIndex, 1);
                     $survey->update(['foto_lokasi_files' => !empty($files) ? array_values($files) : null]);
+
+                    ActivityLogService::log(
+                        $survey->order_id,
+                        $survey,
+                        'delete_file',
+                        'Foto Lokasi Dihapus',
+                        "Menghapus foto lokasi: {$deletedFileName}",
+                        [
+                            'file_type' => 'foto',
+                            'file_name' => $deletedFileName,
+                        ]
+                    );
 
                     DB::commit();
                     return back()->with('success', 'Photo file deleted successfully.');
@@ -1029,6 +1177,7 @@ class SurveyResultsController extends Controller
 
                 if (isset($momFiles[$fileIndex])) {
                     $path = $momFiles[$fileIndex]['path'] ?? null;
+                    $deletedFileName = $momFiles[$fileIndex]['original_name'] ?? basename($path ?? 'file');
                     if ($path && Storage::disk('public')->exists($path)) {
                         Storage::disk('public')->delete($path);
                     }
@@ -1038,6 +1187,18 @@ class SurveyResultsController extends Controller
                         'mom_files' => !empty($momFiles) ? array_values($momFiles) : null,
                         'mom_file' => null,
                     ]);
+
+                    ActivityLogService::log(
+                        $survey->order_id,
+                        $survey,
+                        'delete_file',
+                        'File MoM Dihapus',
+                        "Menghapus file MoM: {$deletedFileName}",
+                        [
+                            'file_type' => 'mom',
+                            'file_name' => $deletedFileName,
+                        ]
+                    );
 
                     DB::commit();
                     return back()->with('success', 'MOM file deleted successfully.');
@@ -1111,16 +1272,50 @@ class SurveyResultsController extends Controller
      */
     public function publish($id)
     {
+        $survey = SurveyResults::with('order')->findOrFail($id);
+
+        if (!$survey->is_draft) {
+            return back()->with('error', 'Survey is already published.');
+        }
+
+        // Validate mandatory survey documents
+        $hasMom = !empty($survey->order->mom_file) || !empty($survey->order->mom_files);
+        if (!$hasMom) {
+            return back()->with('error', 'Dokumen MoM (Minutes of Meeting) wajib diunggah sebelum mempublikasikan survey.');
+        }
+
+        $hasLayout = !empty($survey->layout_files) && count($survey->layout_files) > 0;
+        if (!$hasLayout) {
+            return back()->with('error', 'File Layout wajib diunggah minimal 1 file sebelum mempublikasikan survey.');
+        }
+
+        $hasFoto = !empty($survey->foto_lokasi_files) && count($survey->foto_lokasi_files) > 0;
+        if (!$hasFoto) {
+            return back()->with('error', 'Foto Lokasi wajib diunggah minimal 1 foto sebelum mempublikasikan survey.');
+        }
+
         try {
             DB::beginTransaction();
 
-            $survey = SurveyResults::findOrFail($id);
-
-            if (!$survey->is_draft) {
-                return back()->with('error', 'Survey is already published.');
-            }
-
             $survey->update(['is_draft' => false]);
+
+            $order = $survey->order;
+            $order->update([
+                'tahapan_proyek' => 'moodboard',
+                'project_status' => 'in_progress',
+            ]);
+
+            ActivityLogService::log(
+                $survey->order_id,
+                $survey,
+                'publish',
+                'Hasil Survey Dipublikasikan',
+                'Mempublikasikan draft hasil survey untuk project ' . ($survey->order->nama_project ?? ''),
+                [
+                    'layout_count' => count($survey->layout_files ?? []),
+                    'foto_count' => count($survey->foto_lokasi_files ?? []),
+                ]
+            );
 
             // Send notification
             $notificationService = new NotificationService();

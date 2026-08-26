@@ -117,6 +117,11 @@ class Order extends Model
         return $this->hasOne(GambarKerja::class);
     }
 
+    public function meetingVendor()
+    {
+        return $this->hasOne(MeetingVendor::class);
+    }
+
     /**
      * Scope untuk filter order berdasarkan role dan team
      */
@@ -179,8 +184,8 @@ class Order extends Model
         }
 
         // Roles yang hanya bisa melihat order dimana mereka masuk survey schedule
-        // Kepala Marketing tidak termasuk karena mereka harus bisa melihat semua
-        if ($user->role_id == Role::getKepalaMarketingRoleId()) {
+        // Kepala Marketing dan Project Manager tidak termasuk karena mereka harus bisa melihat dan mengatur jadwal survey
+        if ($user->role_id == Role::getKepalaMarketingRoleId() || $user->role_id == Role::getProjectManagerRoleId()) {
             return $query;
         }
 
@@ -189,7 +194,6 @@ class Order extends Model
             Role::getSurveyorRoleId(),
             Role::getDrafterRoleId(),
             Role::getSupervisorRoleId(),
-            Role::getProjectManagerRoleId(),
         ];
         
         // Load role jika belum di-load
@@ -215,4 +219,10 @@ class Order extends Model
         // Role lain bisa melihat semua order
         return $query;
     }
+
+    public function activityLogs()
+    {
+        return $this->hasMany(ActivityLog::class)->orderBy('created_at', 'desc');
+    }
 }
+
