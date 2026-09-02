@@ -3,6 +3,7 @@ import { useState, useMemo, useEffect, Fragment } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import ExtendModal from '@/components/ExtendModal';
+import WorkStatusTabs from '@/components/WorkStatusTabs';
 import axios from 'axios';
 
 interface User {
@@ -104,6 +105,7 @@ export default function Index({ itemPekerjaans }: Props) {
     const [expandedRows, setExpandedRows] = useState<number[]>([]);
     const [activeFilter, setActiveFilter] = useState<'semua' | 'belum_bayar' | 'dp' | 'proses' | 'lunas'>('semua');
     const [searchQuery, setSearchQuery] = useState('');
+    const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
     const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: any; marketing?: any }>>({});
     const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string } | null>(null);
 
@@ -171,21 +173,6 @@ export default function Index({ itemPekerjaans }: Props) {
         return 'proses'; // lebih dari tahap 1 tapi belum lunas
     };
 
-    // Filter items based on active filter and signed contract
-    const filteredItems = useMemo(() => {
-        return itemPekerjaans.filter(item => {
-            // Sembunyikan card jika belum upload ttd kontrak
-            if (!item.has_signed_contract) return false;
-
-            const matchesFilter = activeFilter === 'semua' || getPaymentCategory(item) === activeFilter;
-            const matchesSearch = !searchQuery ||
-                item.order.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                item.order.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                item.order.customer_name.toLowerCase().includes(searchQuery.toLowerCase());
-            return matchesFilter && matchesSearch;
-        });
-    }, [itemPekerjaans, activeFilter, searchQuery]);
-
     // Calculate filter counts only for items with signed contract
     const filterCounts = useMemo(() => {
         const validItems = itemPekerjaans.filter(i => i.has_signed_contract);
@@ -197,6 +184,35 @@ export default function Index({ itemPekerjaans }: Props) {
             lunas: validItems.filter(i => getPaymentCategory(i) === 'lunas').length,
         };
     }, [itemPekerjaans]);
+
+    const countBelum = useMemo(() => 
+        itemPekerjaans.filter(i => i.has_signed_contract && getPaymentCategory(i) !== 'lunas').length,
+        [itemPekerjaans]
+    );
+
+    const countSudah = useMemo(() => 
+        itemPekerjaans.filter(i => i.has_signed_contract && getPaymentCategory(i) === 'lunas').length,
+        [itemPekerjaans]
+    );
+
+    // Filter items based on active filter and signed contract
+    const filteredItems = useMemo(() => {
+        return itemPekerjaans.filter(item => {
+            // Sembunyikan card jika belum upload ttd kontrak
+            if (!item.has_signed_contract) return false;
+
+            const isCompleted = getPaymentCategory(item) === 'lunas';
+            const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
+            if (!matchesWorkTab) return false;
+
+            const matchesFilter = activeFilter === 'semua' || getPaymentCategory(item) === activeFilter;
+            const matchesSearch = !searchQuery ||
+                item.order.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.order.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.order.customer_name.toLowerCase().includes(searchQuery.toLowerCase());
+            return matchesFilter && matchesSearch;
+        });
+    }, [itemPekerjaans, activeFilter, searchQuery, workTab]);
 
     const handleGenerateInvoice = (itemPekerjaanId: number, terminStep: number) => {
         const key = `${itemPekerjaanId}-${terminStep}`;
@@ -385,6 +401,14 @@ export default function Index({ itemPekerjaans }: Props) {
                                 Total project: <span className="font-semibold text-slate-700">{totalProjects}</span> · Selesai termin: <span className="font-semibold text-slate-700">{fullyPaidProjects}</span> · Total terbayar: <span className="font-semibold text-slate-700">{formatRupiah(totalPaidAmount)}</span>
                             </div>
                         </div>
+
+                        {/* Work Status Tabs */}
+                        <WorkStatusTabs
+                            activeTab={workTab}
+                            onChange={setWorkTab}
+                            countBelum={countBelum}
+                            countSudah={countSudah}
+                        />
 
                         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div className="relative w-full sm:w-96">

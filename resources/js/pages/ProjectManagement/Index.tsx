@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { useState, useEffect, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import WorkStatusTabs from '@/components/WorkStatusTabs';
 
 type Order = {
     id: number;
@@ -23,6 +24,7 @@ export default function Index({ orders }: { orders: Order[] }) {
     const [animatedProgress, setAnimatedProgress] = useState<{[key: number]: number}>({});
     const [activeFilter, setActiveFilter] = useState<FilterType>('semua');
     const [searchQuery, setSearchQuery] = useState('');
+    const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -35,9 +37,23 @@ export default function Index({ orders }: { orders: Order[] }) {
         return () => clearTimeout(timer);
     }, [orders]);
 
+    const countBelum = useMemo(() =>
+        orders.filter(o => o.progress < 100).length,
+        [orders]
+    );
+
+    const countSudah = useMemo(() =>
+        orders.filter(o => o.progress >= 100).length,
+        [orders]
+    );
+
     // Filter logic
     const filteredOrders = useMemo(() => {
         return orders.filter(order => {
+            const isCompleted = order.progress >= 100;
+            const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
+            if (!matchesWorkTab) return false;
+
             const matchesFilter = (() => {
                 switch (activeFilter) {
                     case 'belum_mulai':
@@ -58,7 +74,7 @@ export default function Index({ orders }: { orders: Order[] }) {
                 order.customer_name.toLowerCase().includes(searchQuery.toLowerCase());
             return matchesFilter && matchesSearch;
         });
-    }, [orders, activeFilter, searchQuery]);
+    }, [orders, activeFilter, searchQuery, workTab]);
 
     // Count for each filter
     const filterCounts = useMemo(() => {
@@ -121,6 +137,14 @@ export default function Index({ orders }: { orders: Order[] }) {
                                 Monitor dan kelola progress semua project
                             </p>
                         </div>
+
+                        {/* Work Status Tabs */}
+                        <WorkStatusTabs
+                            activeTab={workTab}
+                            onChange={setWorkTab}
+                            countBelum={countBelum}
+                            countSudah={countSudah}
+                        />
 
                         {/* Search */}
                         <div className="mb-4">

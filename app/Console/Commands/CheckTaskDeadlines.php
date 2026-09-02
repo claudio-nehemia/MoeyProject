@@ -19,29 +19,38 @@ class CheckTaskDeadlines extends Command
     {
         $this->info('Checking task deadlines...');
 
-        // Ambil semua task yang statusnya bukan 'selesai' dan deadline H-1
-        /** @var Collection<int, TaskResponse> $tasks */
-        $tasks = TaskResponse::whereIn('status', ['menunggu_response', 'menunggu_input'])
-            ->whereDate('deadline', '=', Carbon::tomorrow())
-            ->get();
+        $setting = \App\Models\NotificationSetting::getByKey('reminder_task_deadline');
+        if ($setting && !$setting->is_active) {
+            $this->info('Task deadline reminder is disabled in settings.');
+        } else {
+            $daysOffset = $setting ? (int) $setting->days_offset : 1;
+            $targetDate = Carbon::today()->addDays($daysOffset);
 
-        $this->info("Found {$tasks->count()} tasks with deadline tomorrow");
+            // Ambil semua task yang statusnya bukan 'selesai' dan deadline sesuai jeda hari
+            /** @var Collection<int, TaskResponse> $tasks */
+            $tasks = TaskResponse::whereIn('status', ['menunggu_response', 'menunggu_input'])
+                ->whereDate('deadline', '=', $targetDate)
+                ->get();
 
-        $notificationService = new NotificationService();
+            $this->info("Found {$tasks->count()} tasks with deadline on {$targetDate->toDateString()} (H-{$daysOffset})");
 
-        foreach ($tasks as $task) {
-            $order = $task->order;
+            $notificationService = new NotificationService();
 
-            // Tentukan user yang harus dikirim notifikasi berdasarkan tahap
-            /** @var Collection<int, User> $usersToNotify */
-            $usersToNotify = $this->getUsersForTahap($order, $task->tahap);
+            foreach ($tasks as $task) {
+                $order = $task->order;
+                if (!$order) continue;
 
-            foreach ($usersToNotify as $user) {
-                $notificationService->sendTaskDeadlineReminderNotification(
-                    $order,
-                    $task,
-                    $user
-                );
+                // Tentukan user yang harus dikirim notifikasi berdasarkan tahap
+                /** @var Collection<int, User> $usersToNotify */
+                $usersToNotify = $this->getUsersForTahap($order, $task->tahap);
+
+                foreach ($usersToNotify as $user) {
+                    $notificationService->sendTaskDeadlineReminderNotification(
+                        $order,
+                        $task,
+                        $user
+                    );
+                }
             }
         }
 

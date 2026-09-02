@@ -1,0 +1,161 @@
+=== SHEET NAMES ===
+[0] 🧑🏻‍💻 Simulasi Bisnis
+[1] Cashflow Contoh "Cust-Ambie"
+
+
+==================== SHEET: 🧑🏻‍💻 Simulasi Bisnis ====================
+A1: [SIMULASI BISNIS]
+A2: [MOEY GROUP]
+A3: [JULI - DESEMBER 2026]
+A5: [No] | B5: [Komponen Gaji] | C5: [Biaya Satuan] | D5: [Hari] | E5: [Qty] | F5: [Total] | H5: [Person] | I5: [Total Team] | J5: [Personil]
+A6: [OB]
+B7: [TOTAL] | C7: [115384.6154] (FORMULA: =F7/D7) | D7: [26.0] | F7: [3000000] (FORMULA: =3000000) | H7: [1.0] | I7: [3000000] (FORMULA: =F7*H7) | J7: [Muji]
+A8: [Driver]
+B9: [TOTAL] | C9: [115384.6154] (FORMULA: =F9/D9) | D9: [26.0] | F9: [3000000] (FORMULA: =3000000) | H9: [2.0] | I9: [6000000] (FORMULA: =F9*H9) | J9: [Rio & Yudha]
+A10: [Jasa Pengelolaan Ads]
+B11: [TOTAL] | C11: [2000000.0] | E11: [2.0] | F11: [4000000] (FORMULA: =C11*E11) | H11: [2.0] | I11: [4000000] (FORMULA: =F11) | J11: [Yusuf (Milenial) & Iman (Cipta)]
+A12: [Staf]
+A13: [1.0] | B13: [Gaji Pokok] | C13: [76923.07692] (FORMULA: =F13/D13) | D13: [26.0] | F13: [2000000.0]
+A14: [2.0] | B14: [Tunjangan Jabatan] | C14: [0.0] | D14: [26.0] | F14: [0.0]
+A15: [3.0] | B15: [Transportasi] | C15: [25000.0] | D15: [26.0] | F15: [650000] (FORMULA: =C15*D15)
+A16: [4.0] | B16: [Makan] | C16: [40000.0] | D16: [26.0] | F16: [1040000] (FORMULA: =C16*D16)
+A17: [5.0] | B17: [Absensi] | C17: [55000.0] | D17: [26.0] | F17: [1430000] (FORMULA: =C17*D17)
+B18: [TOTAL] | F18: [5120000] (FORMULA: =SUM(F13:F17)) | H18: [4.0] | I18: [20480000] (FORMULA: =F18*H18) | J18: [Yona, Chantika,Eva, Rama]
+A19: [Supervisor]
+A20: [1.0] | B20: [Gaji Pokok] | C20: [76923.07692] (FORMULA: =F20/D20) | D20: [26.0] | F20: [2000000.0]
+A21: [2.0] | B21: [Tunjangan Jabatan Leader] | C21: [38461.53846] (FORMULA: =F21/D21) | D21: [26.0] | F21: [1000000.0]
+A22: [3.0] | B22: [Transportasi] | C22: [25000.0] | D22: [26.0] | F22: [650000] (FORMULA: =C22*D22)
+A23: [4.0] | B23: [Makan] | C23: [40000.0] | D23: [26.0] | F23: [1040000] (FORMULA: =C23*D23)
+A24: [5.0] | B24: [Absensi] | C24: [55000.0] | D24: [26.0] | F24: [1430000] (FORMULA: =C24*D24)
+B25: [TOTAL] | D25: [26.0] | F25: [6120000] (FORMULA: =sum(F20:F24)) | H25: [2.0] | I25: [12240000] (FORMULA: =F25*H25) | J25: [Hendra & Riyan]
+A26: [Manajer]
+A27: [1.0] | B27: [Gaji Pokok] | C27: [76923.07692] (FORMULA: =F27/D27) | D27: [26.0] | F27: [2000000.0]
+A28: [2.0] | B28: [Tunjangan Jabatan Manager] | C28: [76923.07692] (FORMULA: =F28/D28) | D28: [26.0] | F28: [2000000.0]
+A29: [3.0] | B29: [Transportasi] | C29: [25000.0] | D29: [26.0] | F29: [650000] (FORMULA: =C29*D29)
+A30: [4.0] | B30: [Makan] | C30: [40000.0] | D30: [26.0] | F30: [1040000] (FORMULA: =C30*D30)
+A31: [5.0] | B31: [Absensi] | C31: [55000.0] | D31: [26.0] | F31: [1430000] (FORMULA: =C31*D31)
+B32: [TOTAL] | D32: [26.0] | F32: [7120000] (FORMULA: =sum(F27:F31)) | H32: [4.0] | I32: [28480000] (FORMULA: =F32*H32) | J32: [Bima, Fibri, Wilsen, Johan]
+A33: [General Manager]
+A34: [1.0] | B34: [Gaji Pokok] | C34: [76923.07692] (FORMULA: =F34/D34) | D34: [26.0] | F34: [2000000.0]
+A35: [2.0] | B35: [Tunjangan Jabatan General Manager] | C35: [115384.6154] (FORMULA: =F35/D35) | D35: [26.0] | F35: [3000000.0]
+A36: [3.0] | B36: [Transportasi] | C36: [25000.0] | D36: [26.0] | F36: [650000] (FORMULA: =C36*D36)
+A37: [4.0] | B37: [Makan] | C37: [40000.0] | D37: [26.0] | F37: [1040000] (FORMULA: =C37*D37)
+A38: [5.0] | B38: [Absensi] | C38: [55000.0] | D38: [26.0] | F38: [1430000] (FORMULA: =C38*D38)
+B39: [TOTAL] | D39: [26.0] | F39: [8120000] (FORMULA: =sum(F34:F38)) | H39: [2.0] | I39: [16240000] (FORMULA: =F39*H39) | J39: [Januar & Heri]
+B40: [GRAND TOTAL] | H40: [15] (FORMULA: =SUM(H18:H39)+H7+H9) | I40: [90440000] (FORMULA: =sum(I7:I39))
+A42: [PENGELUARAN BULANAN]
+A43: [No] | B43: [Rincian Pengeluaran Bulanan] | C43: [Biaya Satuan] | D43: [Qty] | E43: [Total]
+A44: [1.0] | B44: [Mobil Atto] | C44: [5000000] (FORMULA: =5000000) | D44: [1.0] | E44: [5000000] (FORMULA: =C44*D44)
+A45: [2.0] | B45: [Mobil Wulling] | C45: [7000000] (FORMULA: =7000000) | D45: [1.0] | E45: [7000000] (FORMULA: =C45*D45)
+A46: [3.0] | B46: [Sewa Ruko] | C46: [9000000.0] | D46: [2.0] | E46: [18000000] (FORMULA: =C46*D46)
+A47: [4.0] | B47: [Listrik] | C47: [2500000] (FORMULA: =E47/D47) | D47: [2.0] | E47: [5000000.0]
+A48: [5.0] | B48: [PDAM] | C48: [500000] (FORMULA: =E48/D48) | D48: [2.0] | E48: [1000000.0]
+A49: [6.0] | B49: [IPL] | C49: [800000.0] | D49: [2.0] | E49: [1600000] (FORMULA: =C49*D49)
+A50: [7.0] | B50: [Makan (Catering Sarmi)] | C50: [10000000.0] | D50: [1.0] | E50: [10000000] (FORMULA: =C50*D50)
+A51: [8.0] | B51: [Internet] | C51: [500000.0] | D51: [2.0] | E51: [1000000] (FORMULA: =C51*D51)
+A52: [9.0] | B52: [E-Toll] | C52: [3000000.0] | D52: [2.0] | E52: [6000000] (FORMULA: =C52*D52)
+A53: [10.0] | B53: [Sedekah] | C53: [40000000] (FORMULA: =E63*1%) | D53: [1.0] | E53: [40000000] (FORMULA: =C53*D53)
+A54: [11.0] | B54: [Maintenance*] | C54: [5000000.0] | D54: [1.0] | E54: [5000000.0]
+A55: [12.0] | B55: [ATK Kantor] | C55: [2000000.0] | D55: [1.0] | E55: [2000000.0]
+A56: [13.0] | B56: [Entertain Tamu**] | C56: [3000000.0] | D56: [1.0] | E56: [3000000.0] | H56: [0.4636997539] (FORMULA: =I40/E61)
+B57: [TOTAL PENGELUARAN] | E57: [104600000] (FORMULA: =sum(E44:E56)) | H57: [0.5363002461] (FORMULA: =E57/E61)
+B58: [*) Perbaikan, pembelian perkakas]
+B59: [*) Di kantor dan diluar] | F59: [164960000] (FORMULA: =E60-E61)
+E60: [360000000] (FORMULA: =E66+E67)
+B61: [TOTAL OVERHEAD BULANAN] | E61: [195040000] (FORMULA: =I40+E57) | F61: [399040000] (FORMULA: =E61+E68) | L61: [SIMULASI CASH IN - CASH OUT]
+A63: [Target Omzet/Bulan] | E63: [4000000000.0] | I63: [Kondisi Terburuk] | M63: [Cash Out] | P63: [Cash In (Existing)]
+A64: [Minimum Margin] | D64: [0.37] (FORMULA: =sum(D66:D74)) | E64: [1480000000] (FORMULA: =$E$63*D64) | F64: [Rekening] | H64: [127680000.0] | I64: [4000000000] (FORMULA: =E63) | J64: [SIMULASI PENDAPATAN KANTOR] | L64: [1.0] | M64: [Finartindo] | N64: [46625559] (FORMULA: =126625559-30000000-50000000) | O64: [1.0] | P64: [Friska 1] | Q64: [33000000.0] | R64: [Pelunasan]
+A65: [No] | B65: [Pengeluaran] | D65: [%] | E65: [Total] | H65: [0.03192] (FORMULA: =H64/E63) | I65: [195040000] (FORMULA: =E61) | J65: [Overhead Operasional + Gaji] | L65: [2.0] | M65: [Salmatos] | N65: [412000000] (FORMULA: =462000000-50000000) | O65: [2.0] | P65: [Titik ] | Q65: [17000000.0] | R65: [Pelunasan]
+A66: [1.0] | B66: [Overhead Operasional] | D66: [0.04] | E66: [160000000] (FORMULA: =$E$63*D66) | F66: [Overhead] | H66: [0.40192] (FORMULA: =D64+H65) | I66: [160000000] (FORMULA: =E66) | J66: [Overhead Operasional] (FORMULA: =B66) | L66: [3.0] | M66: [Susan Sipil] | N66: [69000000.0] | O66: [3.0] | P66: [Arfy] | Q66: [85000000.0] | R66: [Pelunasan]
+A67: [2.0] | B67: [Gaji Karyawan] | D67: [0.05] | E67: [200000000] (FORMULA: =$E$63*D67) | F67: [Payroll] | H67: [0.0255] (FORMULA: =D68/2) | I67: [200000000] (FORMULA: =E67) | J67: [Gaji Karyawan] (FORMULA: =B67) | L67: [4.0] | M67: [Friska 1] | N67: [49000000.0] | O67: [4.0] | P67: [Teksan] | Q67: [25342176.0] | R67: [Pelunasan]
+A68: [3.0] | B68: [Komisi] | D68: [0.051] | E68: [204000000] (FORMULA: =$E$63*D68) | F68: [Payroll] | H68: [0.035] (FORMULA: =D70) | I68: [140000000] (FORMULA: =E70) | J68: [Cadangan Problem & Entertain] (FORMULA: =B70) | L68: [5.0] | M68: [Titik ] | N68: [8000000] (FORMULA: =23000000-15000000) | O68: [5.0] | P68: [Amelia] | R68: [Pelunasan] | S68: [Target pekan 2 Juli]
+A69: [4.0] | B69: [Nett Margin] | D69: [0.09] | E69: [360000000] (FORMULA: =$E$63*D69) | F69: [610.0] | H69: [0.025] (FORMULA: =D72) | I69: [236000000] (FORMULA: =E71) | J69: [Cadangan Ekspansi] (FORMULA: =B71) | L69: [6.0] | M69: [Arfy] | N69: [29000000.0] | O69: [6.0] | P69: [Ira] | Q69: [52202370.2] (FORMULA: =10%*522023702) | R69: [Pelunasan]
+A70: [5.0] | B70: [Cadangan Problem & Entertain] | D70: [0.035] | E70: [140000000] (FORMULA: =$E$63*D70) | F70: [Problem] | H70: [0.31642] (FORMULA: =H66-H67-H68-H69) | I70: [-540960000] (FORMULA: =I65-sum(I66:I69)) | J70: [TOTAL] | L70: [7.0] | M70: [Teksan] | N70: [13000000.0] | O70: [7.0] | P70: [Wellly] | Q70: [0.0] | R70: [Termin 2]
+A71: [6.0] | B71: [Cadangan Ekspansi] | D71: [0.059] | E71: [236000000] (FORMULA: =$E$63*D71) | F71: [Saving] | L71: [8.0] | M71: [Amelia] | N71: [15321413.0] | O71: [8.0] | P71: [Murwati] | Q71: [128092156.4] (FORMULA: =40%*320230391) | R71: [Termin 2]
+A72: [7.0] | B72: [Iklan] | D72: [0.025] | E72: [100000000] (FORMULA: =D72*$E$63) | F72: [Marketing] | I72: [Catatan] | L72: [9.0] | M72: [Ira] | N72: [63000000.0] | O72: [9.0] | P72: [Chandra] | Q72: [200000000.0] | R72: [Pelunasan]
+A73: [8.0] | B73: [Fee Marketing] | D73: [0.01] | E73: [40000000] (FORMULA: =D73*$E$63) | F73: [Marketing] | H73: [1.0] | I73: [Tunjangan Jabatan (Leader & Manajer) hilang] | L73: [10.0] | M73: [Shanty] | N73: [97000000.0] | O73: [10.0] | P73: [Effendy] | Q73: [27500000] (FORMULA: =10%*275000000) | R73: [Pelunasan]
+A74: [9.0] | B74: [Achievement Omzet] | D74: [0.01] | E74: [40000000] (FORMULA: =D74*$E$63) | F74: [(?)] | H74: [2.0] | I74: [Sedekah 1% dari omzet] | L74: [11.0] | M74: [Fahrudin] | N74: [30000000.0] | O74: [11.0] | P74: [Susan Interior] | Q74: [25721603.8] (FORMULA: =10%*257216038) | R74: [Pelunasan]
+H75: [3.0] | I75: [Tidak boleh ada masalah di project, sehingga berimplikasi pada pembayaran termin berikutnya] | L75: [12.0] | M75: [Chandra] | N75: [87000000.0] | O75: [12.0] | P75: [Welly] | R75: [Pelunasan]
+L76: [13.0] | M76: [Effendy] | N76: [52000000.0] | O76: [13.0] | P76: [Aerofood] | Q76: [51000000.0] | R76: [Pelunasan]
+L77: [14.0] | M77: [Susan Interior] | N77: [15000000.0] | O77: [14.0] | P77: [Kemenag] | R77: [Pelunasan]
+L78: [15.0] | M78: [Eddy Panel] | N78: [40000000.0] | O78: [15.0] | P78: [Susan Sipil] | Q78: [20000000.0] | R78: [Sisa Pelunasan]
+L79: [16.0] | M79: [Ci Meggi] | N79: [20000000.0] | O79: [16.0]
+
+
+==================== SHEET: Cashflow Contoh "Cust-Ambie" ====================
+B2: [Atas Dp] | H2: [Customer] | I2: [Titik] | R2: [Pembayaran] | AC2: [Estimasi]
+B3: [Januar] | P3: [1.0] | Q3: [A] | R3: [Vendor] | AC3: [No]
+B4: [Kontrak Internal] | C4: [434352400.0] | H4: [Kontrak Internal] | I4: [434352400] (FORMULA: =C4) | S4: [Ket] | T4: [Persentase] | U4: [Nilai] | V4: [Pembayaran] | W4: [Tanggal] | X4: [Keterangan] | Z4: [FB] | AA4: [JW] | AC4: [1.0]
+B5: [Kontrak Fisik] | H5: [Kontrak Fisik] | I5: [None] (FORMULA: =C5) | S5: [SDM Workshop] | T5: [0.2] | U5: [41802912.6] (FORMULA: =T5*I21) | W5: [2026-07-28 00:00:00] (FORMULA: =E20) | Z5: [False] | AA5: [False] | AC5: [2.0]
+B6: [Kontrak External] | C6: [136087948.0] | H6: [Kontrak External] | I6: [136087948] (FORMULA: =C6) | S6: [Cadangan Vendor] | T6: [0.15] | U6: [31352184.45] (FORMULA: =T6*I21) | W6: [None] (FORMULA: =E21) | Z6: [False] | AA6: [False] | AC6: [3.0]
+B7: [Total] | C7: [570440348] (FORMULA: =SUM(C4:C6)) | D7: [228176139.2] (FORMULA: =C7*40%) | H7: [Total Kontrak] | I7: [570440348] (FORMULA: =SUM(I4:I6)) | S7: [Kasbon I] | T7: [-] | U7: [0.0] | V7: [None] (FORMULA: =D37) | W7: [None] (FORMULA: =E37) | Z7: [False] | AA7: [False] | AC7: [4.0]
+D8: [57044034.8] (FORMULA: =C7*10%) | H8: [Addendum] | S8: [Kasbon II] | T8: [-] | U8: [0.0] | V8: [None] (FORMULA: =D38) | W8: [None] (FORMULA: =E38) | Z8: [False] | AA8: [False] | AC8: [5.0]
+B9: [SPK Internal] | C9: [209014563.0] | D9: [285220174] (FORMULA: =SUM(D7:D8)) | E9: [#VALUE!] (FORMULA: =D9-D10) | H9: [Pembayaran] | K9: [Tgl Pembayaran] | L9: [Proyeksi Pembayaran] | M9: [Estimasi Pembayaran] | S9: [SDM Workshop] | T9: [0.1] | U9: [20901456.3] (FORMULA: =I21*T9) | V9: [None] (FORMULA: =D39) | W9: [None] (FORMULA: =E39) | Z9: [False] | AA9: [False] | AC9: [6.0]
+B10: [SPK Fisik] | D10: [302160713.3] (FORMULA: =E14+E15) | H10: [Pembayaran Dp] | I10: [250000000] (FORMULA: =D17) | J10: [0.5] | K10: [3 Junl, 6 Juni, 11 Juli] (FORMULA: =E17) | L10: [285220174] (FORMULA: =$I$7*J10) | S10: [Pelunasan] | T10: [0.55] (FORMULA: =U10/I17) | U10: [114958009.7] (FORMULA: =I21-U5-U6-U7-U8-U9-U69) | V10: [None] (FORMULA: =D40) | W10: [None] (FORMULA: =E51) | Z10: [False] | AA10: [False] | AC10: [7.0]
+H11: [Permbayaran Termin II] | I11: [None] (FORMULA: =D34) | J11: [0.4] | K11: [None] (FORMULA: =E34) | L11: [228176139.2] (FORMULA: =$I$7*J11) | M11: [None] (FORMULA: =C27) | S11: [Total] | U11: [209014563] (FORMULA: =SUM(U5:U10)+U69) | V11: [0] (FORMULA: =SUM(V5:V10)+V69) | AC11: [8.0]
+B12: [SPK Internal Fix] | C12: [209014563.0] | D12: [73155097.05] (FORMULA: =C12*35%) | H12: [Pembayaran Pelunasan] | I12: [None] (FORMULA: =D48) | J12: [0.1] | K12: [None] (FORMULA: =E48) | L12: [57044034.8] (FORMULA: =$I$7*J12) | M12: [None] (FORMULA: =C28) | AC12: [9.0]
+B13: [SPK Fisik Fix] | D13: [126816600] (FORMULA: =AE32) | H13: [Total Diterima] | I13: [250000000] (FORMULA: =SUM(I10:I12)) | AC13: [10.0]
+D14: [199971697.1] (FORMULA: =SUM(D12:D13)) | E14: [#VALUE!] (FORMULA: =D14+D15) | H14: [Sisa Piutang] | I14: [320440348] (FORMULA: =I7-I13) | Q14: [B] | R14: [Material Hutang 35%] | AC14: [11.0]
+B15: [Fibri] | D15: [39484647.3] (FORMULA: =SUM(I83:I85)) | E15: [#VALUE!] (FORMULA: =C9-U5-U6-D12) | W15: [Tanggal] | X15: [Umur INV] | Z15: [FB] | AA15: [JW] | AC15: [12.0]
+C16: [Estimasi] | D16: [Nilai] | E16: [Tanggal] | H16: [SPK Vendor] | R16: [SOLMATOSS] | U16: [0.0] | V16: [0.0] | X16: [None] (FORMULA: =if(T16=0,"",TODAY()-T16)) | Z16: [False] | AA16: [False] | AC16: [13.0]
+B17: [Pembayaran Dp] | C17: [285220174] (FORMULA: =L10) | D17: [250000000] (FORMULA: =50000000+100000000+100000000) | E17: [3 Junl, 6 Juni, 11 Juli] | H17: [SPK Internal] | I17: [209014563] (FORMULA: =C9) | U17: [0.0] | V17: [0.0] | X17: [None] (FORMULA: =if(T17=0,"",TODAY()-T17)) | Z17: [False] | AA17: [False] | AC17: [14.0]
+H18: [SPK Fisik] | I18: [None] (FORMULA: =C10) | U18: [0.0] | V18: [0.0] | X18: [None] (FORMULA: =if(T18=0,"",TODAY()-T18)) | Z18: [False] | AA18: [False] | AC18: [15.0]
+B19: [Pembayaran SPK] | H19: [SPK External] | I19: [126816600] (FORMULA: =AE32) | U19: [0.0] | V19: [0.0] | X19: [None] (FORMULA: =if(T19=0,"",TODAY()-T19)) | Z19: [False] | AA19: [False] | AC19: [16.0]
+B20: [SDM Workshop] | C20: [41802912.6] (FORMULA: =U5) | D20: [41802913.0] | E20: [2026-07-28 00:00:00] | J20: [Saldo Efisiensi SPK] | U20: [0.0] | V20: [0.0] | X20: [None] (FORMULA: =if(T20=0,"",TODAY()-T20)) | Z20: [False] | AA20: [False] | AC20: [17.0]
+B21: [Cadangan Vendor] | C21: [31352184.45] (FORMULA: =U6) | H21: [SPK Internal Fix] | I21: [209014563] (FORMULA: =C12) | J21: [0] (FORMULA: =if(I21=0,"Cek SPK",I17-I21)) | U21: [0.0] | V21: [0.0] | X21: [None] (FORMULA: =if(T21=0,"",TODAY()-T21)) | Z21: [False] | AA21: [False]
+H22: [SPK Fisik Fix] | I22: [None] (FORMULA: =C13) | J22: [Cek SPK] (FORMULA: =if(I22=0,"Cek SPK",I18-I22)) | U22: [0.0] | V22: [0.0] | X22: [None] (FORMULA: =if(T22=0,"",TODAY()-T22)) | Z22: [False] | AA22: [False]
+B23: [Pembayaran SPK Sipil] | H23: [SPK External Fix] | I23: [0] (FORMULA: =AF32) | J23: [Cek SPK] (FORMULA: =if(I23=0,"Cek SPK",I19-I23)) | U23: [0.0] | V23: [0.0] | X23: [None] (FORMULA: =if(T23=0,"",TODAY()-T23)) | Z23: [False] | AA23: [False]
+B24: [Dp] | C24: [0] (FORMULA: =U74) | U24: [0.0] | V24: [0.0] | X24: [None] (FORMULA: =if(T24=0,"",TODAY()-T24)) | Z24: [False] | AA24: [False]
+H25: [Total] | I25: [209014563] (FORMULA: =SUM(I21:I23)) | J25: [0] (FORMULA: =SUM(J21:J24)) | U25: [0.0] | V25: [0.0] | X25: [None] (FORMULA: =if(T25=0,"",TODAY()-T25)) | Z25: [False] | AA25: [False]
+B26: [Aflah] | H26: [Addendum] | I26: [0] (FORMULA: =AD55) | U26: [0.0] | V26: [0.0] | Z26: [False] | AA26: [False]
+B27: [Kontrak Termin II] | H27: [Realisasi Pengeluaran] | I27: [Pengeluaran] | J27: [Sisa Saldo] | U27: [0.0] | V27: [0.0] | Z27: [False] | AA27: [False]
+B28: [Kontrak Pelunasan] | H28: [Internal] | I28: [0] (FORMULA: =V11) | J28: [209014563] (FORMULA: =I17-I28) | K28: [335831163] (FORMULA: =I118-I117) | U28: [0.0] | V28: [0.0] | Z28: [False] | AA28: [False]
+H29: [Fisik] | I29: [0] (FORMULA: =V77) | J29: [0] (FORMULA: =I18-I29) | U29: [0.0] | V29: [0.0] | Z29: [False] | AA29: [False]
+H30: [External] | I30: [0] (FORMULA: =AI32+AN32) | J30: [126816600] (FORMULA: =I19-I30) | U30: [0.0] | V30: [0.0] | Z30: [False] | AA30: [False]
+B31: [Atas Termin II] | H31: [Addendum] | I31: [0] (FORMULA: =AH55+AN55) | J31: [0] (FORMULA: =I26-I31) | U31: [0.0] | V31: [0.0] | Z31: [False] | AA31: [False]
+B32: [Fibri] | H32: [Total] | I32: [0] (FORMULA: =SUM(I28:I31)) | U32: [0.0] | V32: [0.0] | Z32: [False] | AA32: [False]
+C33: [Estimasi] | D33: [Nilai] | E33: [Tanggal] | U33: [0.0] | V33: [0.0] | Z33: [False] | AA33: [False]
+B34: [Pembayaran Termin II] | C34: [228176139.2] (FORMULA: =L11) | U34: [0.0] | V34: [0.0] | Z34: [False] | AA34: [False]
+U35: [0.0] | V35: [0.0] | Z35: [False] | AA35: [False]
+B36: [Pembayaran SPK] | H36: [Estimasi Margin] | U36: [0.0] | V36: [0.0] | Z36: [False] | AA36: [False]
+B37: [Kasbon I Interior] | H37: [Target Internal] | I37: [225337837] (FORMULA: =I4-I17) | J37: [0.5187903578] (FORMULA: =I37/I4) | U37: [0.0] | V37: [0.0] | Z37: [False] | AA37: [False]
+B38: [Kasbon II Interior] | H38: [Target Fisik] | I38: [0] (FORMULA: =I5-I18) | J38: [#DIV/0!] (FORMULA: =I38/I5) | U38: [0.0] | V38: [0.0] | Z38: [False] | AA38: [False] | AC38: [1.0]
+B39: [SDM Workshop] | C39: [20901456.3] (FORMULA: =U9) | H39: [Target External] | I39: [9271348] (FORMULA: =I6-I19) | J39: [0.06812761994] (FORMULA: =I39/I6) | U39: [0.0] | V39: [0.0] | Z39: [False] | AA39: [False]
+H40: [Total Target Margin] | I40: [234609185] (FORMULA: =I37+I38+I39) | J40: [0.4112773331] (FORMULA: =I40/I7) | U40: [0.0] | V40: [0.0] | Z40: [False] | AA40: [False]
+B41: [Pembayaran SPK Sipil] | H41: [Digital Marketing] | I41: [10858810] (FORMULA: =J41*$I$4) | J41: [0.025] | U41: [0.0] | V41: [0.0] | Z41: [False] | AA41: [False]
+B42: [Termin II SPK Sipil] | C42: [0] (FORMULA: =U75) | H42: [Fee Marketing] | I42: [5023963.74] (FORMULA: =(J42*$I$4)+(($I$5+$I$6)*J42/2)) | J42: [0.01] | U42: [0.0] | V42: [0.0] | Z42: [False] | AA42: [False] | AC42: [2.0]
+H43: [Overhead Gaji] | I43: [21717620] (FORMULA: =J43*I4) | J43: [0.05] | U43: [0.0] | V43: [0.0] | Z43: [False] | AA43: [False]
+H44: [Overhead Operasional] | I44: [17374096] (FORMULA: =J44*I4) | J44: [0.04] | U44: [0.0] | V44: [0.0] | Z44: [False] | AA44: [False]
+B45: [Pelunasan] | H45: [Fee Team Internal] | I45: [26847006.61] (FORMULA: =sum(I60:I69)*2) | J45: [0.06] | U45: [0.0] | V45: [0.0] | Z45: [False] | AA45: [False]
+B46: [Fibri] | H46: [Cadangan Ekspansi] | I46: [34313839.6] (FORMULA: =J46*$I$4) | J46: [0.079] | S46: [Total SOLMATOSS] | U46: [0] (FORMULA: =SUM(U16:U45)) | V46: [0] (FORMULA: =SUM(V16:V45)) | AC46: [3.0]
+C47: [Estimasi] | D47: [Nilai] | E47: [Tanggal] | H47: [Cadangan Problem & Entertain] | I47: [15202334] (FORMULA: =J47*$I$4) | J47: [0.035]
+B48: [Pembayaran Pelunasan] | C48: [57044034.8] (FORMULA: =L12) | H48: [Sisa Margin] | I48: [103271515.1] (FORMULA: =I40-SUM(I41:I47)) | J48: [0.1810382372] (FORMULA: =I48/I7) | S48: [No INV] | T48: [Tanggal INV] | U48: [Nilai] | V48: [Pembayaran] | W48: [Tanggal] | X48: [Umur INV] | Z48: [FB] | AA48: [JW]
+H49: [Margin addendum] | I49: [0] (FORMULA: =I8-I26) | R49: [FINARTINDO] | U49: [0.0] | V49: [0.0] | Z49: [False] | AA49: [False]
+B50: [Pembayaran SPK] | H50: [Rencana Pelaksanaan Keuangan] | U50: [0.0] | V50: [0.0] | X50: [None] (FORMULA: =if(T50=0,"",TODAY()-T50)) | Z50: [False] | AA50: [False] | AC50: [4.0]
+B51: [Pelunasan SPK Interior] | C51: [114958009.7] (FORMULA: =U10) | H51: [DP] | I51: [250000000] (FORMULA: =I10) | J51: [0] (FORMULA: =SUM(I52:I70)-I51) | U51: [0.0] | V51: [0.0] | X51: [None] (FORMULA: =if(T51=0,"",TODAY()-T51)) | Z51: [False] | AA51: [False]
+H52: [DP Vendor] | I52: [41802912.6] (FORMULA: =U5) | K52: [DP Vendor Internal] | L52: [H+7 dari upload doc. Material Approval] | U52: [0.0] | V52: [0.0] | X52: [None] (FORMULA: =if(T52=0,"",TODAY()-T52)) | Z52: [False] | AA52: [False]
+B53: [Pembayaran SPK Sipil] | H53: [Cadangan Vendor] | I53: [31352184.45] (FORMULA: =U6) | K53: [DP Vendor Eksternal] | L53: [Sesuai dengan PO Workplan PM] | S53: [Total FIRARTINDO] | U53: [0] (FORMULA: =SUM(U49:U52)) | V53: [0] (FORMULA: =SUM(V49:V52))
+B54: [Pelunasan SPK Sipil] | C54: [0] (FORMULA: =U76) | H54: [DP Fisik] | I54: [0] (FORMULA: =V74) | K54: [Contoh : (Marmer)]
+H55: [Dp External] | I55: [0] (FORMULA: =AI32) | K55: [Estimasi (Rp. 10.000.000)] | L55: [Harga Aktual (Rp.9.000.000)] | S55: [No INV] | T55: [Tanggal INV] | U55: [Nilai] | V55: [Pembayaran] | W55: [Tanggal] | X55: [Umur INV] | Z55: [FB] | AA55: [JW]
+B56: [335831163] (FORMULA: =K28) | H56: [Fee Marketing] | I56: [5023963.74] (FORMULA: =I42) | K56: [Bayar DP (Tanggal sesuai PO di Workplan)] | L56: [DP (Rp. 5.000.000)] | R56: [CASH URGENT] | V56: [0.0] | Z56: [False] | AA56: [False]
+H57: [Overhead Gaji] | I57: [21717620] (FORMULA: =I43) | K57: [Bayar Termin 2 Pelunasan (Tanggal bisa diestimasi)] | L57: [Input Tanggal Estimasi] | U57: [0.0] | V57: [0.0] | Z57: [False] | AA57: [False] | AC57: [Pengeluaran diluar Perencanaan]
+H58: [Overhead] | I58: [17374096] (FORMULA: =I44) | K58: [Setelah 10 Hari (Perintah - Pelunasan)] | U58: [0.0] | V58: [0.0] | Z58: [False] | AA58: [False] | AC58: [No]
+H59: [Cadangan Ekspansi] | I59: [34313839.6] (FORMULA: =I46) | U59: [0.0] | V59: [0.0] | Z59: [False] | AA59: [False] | AC59: [1.0]
+H60: [Designer] | I60: [3516774.618] (FORMULA: =((N60*$I$4)+(($I$5+$I$6)*N60/2))/2) | N60: [0.014] (FORMULA: =1.5%-0.1%) | U60: [0.0] | V60: [0.0] | Z60: [False] | AA60: [False] | AC60: [2.0]
+H61: [Manager Design] | I61: [1004792.748] (FORMULA: =((N61*$I$4)+(($I$5+$I$6)*N61/2))/2) | N61: [0.004] (FORMULA: =0.5%-0.1%) | U61: [0.0] | V61: [0.0] | Z61: [False] | AA61: [False] | AC61: [3.0]
+H62: [Estimator] | I62: [2260783.683] (FORMULA: =((N62*$I$4)+(($I$5+$I$6)*N62/2))/2) | N62: [0.009] (FORMULA: =1%-0.1%) | U62: [0.0] | V62: [0.0] | Z62: [False] | AA62: [False] | AC62: [4.0]
+H63: [PM] | I63: [1004792.748] (FORMULA: =((N63*$I$4)+(($I$5+$I$6)*N63/2))/2) | N63: [0.004] (FORMULA: =0.5%-0.1%) | U63: [0.0] | V63: [0.0] | Z63: [False] | AA63: [False] | AC63: [5.0]
+H64: [SPV Internal] | I64: [1004792.748] (FORMULA: =((N64*$I$4)+(($I$5+$I$6)*N64/2))/2) | N64: [0.004] (FORMULA: =0.5%-0.1%) | U64: [0.0] | V64: [0.0] | X64: [None] (FORMULA: =if(T64=0,"",TODAY()-T64)) | Z64: [False] | AA64: [False] | AC64: [5.0]
+H65: [Drafter] | I65: [1004792.748] (FORMULA: =((N65*$I$4)+(($I$5+$I$6)*N65/2))/2) | N65: [0.004] (FORMULA: =0.5%-0.1%) | U65: [0.0] | V65: [0.0] | X65: [None] (FORMULA: =if(T65=0,"",TODAY()-T65)) | Z65: [False] | AA65: [False] | AC65: [5.0]
+H66: [Legal Finance] | I66: [1004792.748] (FORMULA: =((N66*$I$4)+(($I$5+$I$6)*N66/2))/2) | N66: [0.004] (FORMULA: =0.5%-0.1%) | U66: [0.0] | V66: [0.0] | X66: [None] (FORMULA: =if(T66=0,"",TODAY()-T66)) | Z66: [False] | AA66: [False] | AC66: [5.0]
+H67: [Busdev] | I67: [1004792.748] (FORMULA: =((N67*$I$4)+(($I$5+$I$6)*N67/2))/2) | N67: [0.004] (FORMULA: =0.5%-0.1%) | S67: [Total CASH URGENT] | U67: [0] (FORMULA: =SUM(U56:U66)) | V67: [0] (FORMULA: =SUM(V56:V66)) | AC67: [5.0]
+H68: [SPV Eksternal] | I68: [612395.766] (FORMULA: =(($I$5+$I$6)*N68)/2) | N68: [0.009] (FORMULA: =1%-0.1%) | AC68: [5.0]
+H69: [Manager Marketing] | I69: [1004792.748] (FORMULA: =((N69*$I$4)+(($I$5+$I$6)*N69/2))/2) | N69: [0.004] (FORMULA: =0.5%-0.1%) | Q69: [0] (FORMULA: =U69/I21) | R69: [Bisa PO] (FORMULA: =if((U69)<(I21*35%),"Bisa PO","Tidak Bisa PO")) | S69: [Total] | U69: [0] (FORMULA: =U46+U53+U67) | V69: [0] (FORMULA: =V46+V53+V67) | W69: [0] (FORMULA: =U69-V69)
+H70: [Sisa Cash Sebelum Management] | I70: [84991880.31] (FORMULA: =I51-sum(I52:I69))
+H72: [Management] | I72: [84991880.31] (FORMULA: =IF(I70>I48,I48,I51-I52-I53-I54-I55-I56-I57-I58-I59-I60-I61-I62-I63-I64-I65-I66-I67-I68-I69)) | P72: [2.0] | Q72: [A] | R72: [Fisik]
+H73: [Sisa Cash] | I73: [0] (FORMULA: =I70-I72) | S73: [Ket] | T73: [Tanggal Rencana] | U73: [Nilai] | V73: [Pembayaran] | W73: [Tanggal Bayar] | X73: [Keterangan] | Z73: [FB] | AA73: [JW]
+S74: [DP] | U74: [0] (FORMULA: =$I$22*50%) | V74: [0.0] | W74: [None] (FORMULA: =E24) | Z74: [False] | AA74: [False]
+H75: [Termin] | I75: [None] (FORMULA: =I11) | S75: [Termin II] | U75: [0] (FORMULA: =$I$22*40%) | V75: [0.0] | W75: [None] (FORMULA: =E42) | Z75: [False] | AA75: [False]
+H76: [Sisa Cash Sebelumnya] | I76: [0] (FORMULA: =I73) | S76: [Pelunasan] | U76: [0] (FORMULA: =$I$22*10%) | V76: [0.0] | W76: [None] (FORMULA: =E54) | Z76: [False] | AA76: [False]
+I77: [0] (FORMULA: =I75+I76) | S77: [Total] | U77: [0] (FORMULA: =SUM(U74:U76)) | V77: [0] (FORMULA: =SUM(V74:V76))
+H79: [Termin Vendor] | I79: [0] (FORMULA: =V7+V8+V9) | J79: [114958009.7] (FORMULA: =U10) | Q79: [B] | R79: [Budget Material] | S79: [0] (FORMULA: =I22-U77)

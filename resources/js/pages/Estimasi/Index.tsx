@@ -1,8 +1,9 @@
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import { router, usePage, Head } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import ExtendModal from '@/components/ExtendModal';
+import WorkStatusTabs from '@/components/WorkStatusTabs';
 import axios from 'axios';
 
 interface Order {
@@ -102,6 +103,19 @@ export default function EstimasiIndex({ moodboards }: Props) {
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [uploadStatusFilter, setUploadStatusFilter] = useState('All');
+    const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
+
+    const countBelum = useMemo(() => moodboards.filter(m => {
+        const total = m.kasar_files.length;
+        const uploaded = m.kasar_files.filter(f => f.estimasi_file).length;
+        return !(total > 0 && uploaded === total);
+    }).length, [moodboards]);
+
+    const countSudah = useMemo(() => moodboards.filter(m => {
+        const total = m.kasar_files.length;
+        const uploaded = m.kasar_files.filter(f => f.estimasi_file).length;
+        return total > 0 && uploaded === total;
+    }).length, [moodboards]);
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type: string } | null>(null);
     const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
@@ -167,11 +181,14 @@ export default function EstimasiIndex({ moodboards }: Props) {
         const uploadedFiles = moodboard.kasar_files.filter(f => f.estimasi_file).length;
         const progress = totalFiles > 0 ? (uploadedFiles / totalFiles) * 100 : 0;
         
+        const isCompleted = totalFiles > 0 && uploadedFiles === totalFiles;
+        const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
+
         let matchesStatus = true;
         if (uploadStatusFilter === 'Selesai') matchesStatus = progress === 100;
         if (uploadStatusFilter === 'Pending') matchesStatus = progress < 100;
 
-        return matchesSearch && matchesStatus;
+        return matchesWorkTab && matchesSearch && matchesStatus;
     });
 
     const handleResponseEstimasi = async (moodboard: Moodboard) => {
@@ -315,6 +332,14 @@ export default function EstimasiIndex({ moodboards }: Props) {
                             Review dan upload file estimasi biaya berdasarkan desain kasar
                         </p>
                     </div>
+
+                    {/* Work Status Tabs */}
+                    <WorkStatusTabs
+                        activeTab={workTab}
+                        onChange={setWorkTab}
+                        countBelum={countBelum}
+                        countSudah={countSudah}
+                    />
 
                     {/* Filters & Search */}
                     <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">

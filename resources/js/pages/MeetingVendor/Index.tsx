@@ -1,9 +1,10 @@
 import ExtendModal from '@/components/ExtendModal';
+import WorkStatusTabs from '@/components/WorkStatusTabs';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import { Head, router } from '@inertiajs/react';
 import axios from 'axios';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 
 interface OrderItem {
     id: number;
@@ -43,6 +44,7 @@ export default function MeetingVendorIndex({
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('semua');
+    const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
     const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
     const [showScheduleModal, setShowScheduleModal] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -131,7 +133,21 @@ export default function MeetingVendorIndex({
     }, [items]);
 
     /* ================= FILTER ================= */
+    const countBelum = useMemo(() =>
+        items.filter(i => i.status_meeting !== 'scheduled').length,
+        [items]
+    );
+
+    const countSudah = useMemo(() =>
+        items.filter(i => i.status_meeting === 'scheduled').length,
+        [items]
+    );
+
     const filteredItems = items.filter((item) => {
+        const isCompleted = item.status_meeting === 'scheduled';
+        const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
+        if (!matchesWorkTab) return false;
+
         if (statusFilter !== 'semua' && item.status_meeting !== statusFilter) {
             return false;
         }
@@ -274,6 +290,14 @@ export default function MeetingVendorIndex({
                         </div>
                     </div>
                 </div>
+
+                {/* Work Status Tabs */}
+                <WorkStatusTabs
+                    activeTab={workTab}
+                    onChange={setWorkTab}
+                    countBelum={countBelum}
+                    countSudah={countSudah}
+                />
 
                 {/* ================= FILTERS ================= */}
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">

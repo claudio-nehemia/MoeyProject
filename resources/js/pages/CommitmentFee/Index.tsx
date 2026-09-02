@@ -1,9 +1,10 @@
 import ExtendModal from '@/components/ExtendModal';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import WorkStatusTabs from '@/components/WorkStatusTabs';
 import { Head, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 
 interface Order {
     id: number;
@@ -74,6 +75,10 @@ export default function Index({ moodboards }: Props) {
     );
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('semua');
+    const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
+
+    const countBelum = useMemo(() => moodboards.filter(m => m.commitmentFee?.payment_status !== 'completed').length, [moodboards]);
+    const countSudah = useMemo(() => moodboards.filter(m => m.commitmentFee?.payment_status === 'completed').length, [moodboards]);
     // Dual task response state: { [orderId]: { regular?: TaskResponse, marketing?: TaskResponse } }
     const [taskResponses, setTaskResponses] = useState<
         Record<number, { regular?: TaskResponse; marketing?: TaskResponse }>
@@ -358,8 +363,12 @@ export default function Index({ moodboards }: Props) {
 
     // Filter moodboards based on search query and status filter
     const filteredMoodboards = moodboards.filter((moodboard) => {
-        // Status filtering logic
         const cf = moodboard.commitmentFee;
+        const isCompleted = cf?.payment_status === 'completed';
+        const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
+        if (!matchesWorkTab) return false;
+
+        // Status filtering logic
         let meetsStatus = true;
 
         if (statusFilter === 'pending_response') {
@@ -406,6 +415,14 @@ export default function Index({ moodboards }: Props) {
                                 approved
                             </p>
                         </div>
+
+                        {/* Work Status Tabs */}
+                        <WorkStatusTabs
+                            activeTab={workTab}
+                            onChange={setWorkTab}
+                            countBelum={countBelum}
+                            countSudah={countSudah}
+                        />
 
                         {/* Filters */}
                         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">

@@ -5,15 +5,17 @@ import Sidebar from '@/components/Sidebar';
 
 interface OrderInfo { id: number; nama_project: string; customer_name: string; company_name: string; payment_status: string; tahapan_proyek: string; pm_name: string; }
 interface Split { internal: number; fisik: number; eksternal: number; total: number; is_manual?: boolean; }
-interface Pembayaran { amount_dp?: number; amount_termin?: number; amount_pelunasan?: number; dp: { amount: number; pct: number; proyeksi: number; tanggal: string|null }; termin: { amount: number; pct: number; proyeksi: number; tanggal: string|null }; pelunasan: { amount: number; pct: number; proyeksi: number; tanggal: string|null }; total_diterima: number; sisa_piutang: number; }
-interface Spk { internal: number; fisik: number; external: number; internal_fix: number; upgrade_material: number; fisik_fix: number; external_fix: number; saldo_efisiensi_internal: number; saldo_efisiensi_fisik: number; saldo_efisiensi_external: number; total_fix: number; total_saldo_efisiensi: number; }
+interface TahapanItem { index: number; nama: string; persentase: number; is_dp: boolean; is_pelunasan: boolean; }
+interface PembayaranPhase { index: number; nama: string; pct: number; proyeksi: number; amount: number; tanggal: string|null; is_dp: boolean; is_pelunasan: boolean; }
+interface Pembayaran { amount_dp?: number; amount_termin?: number; amount_pelunasan?: number; phases: PembayaranPhase[]; total_diterima: number; sisa_piutang: number; }
+interface Spk { internal: number; fisik: number; external: number; internal_fix: number; upgrade_material: number; fisik_fix: number; external_fix: number; biaya_tak_terduga?: number; saldo_efisiensi_internal: number; saldo_efisiensi_fisik: number; saldo_efisiensi_external: number; total_fix: number; total_saldo_efisiensi: number; angka_final?: number; }
 interface Realisasi { internal: number; fisik: number; external: number; addendum: number; sisa_saldo_internal: number; sisa_saldo_fisik: number; sisa_saldo_external: number; total: number; }
 interface FeeTeamItem { label: string; amount: number; type?: string; pct?: number; fixed?: number; formula?: string; }
 interface BreakdownItem { label: string; pct: number; base: 'internal_margin' | 'fisik_eksternal' | 'total_kontrak' | 'fixed'; amount?: number; }
 interface Margin { target_internal: number; target_fisik: number; target_external: number; total_target: number; pct_internal: number; pct_fisik: number; pct_external: number; pct_total: number; fee_team: number; pct_fee_team: number; fee_team_detail: FeeTeamItem[]; breakdown_items: BreakdownItem[]; sisa_margin: number; pct_sisa_margin: number; }
-interface RpkDp { cash_in: number; dp_vendor: number; cadangan_vendor: number; dp_fisik: number; dp_external: number; fee_team_detail: FeeTeamItem[]; breakdown_items: BreakdownItem[]; sisa_cash_sebelum_mgmt: number; management: number; sisa_cash: number; }
-interface RpkTermin { cash_in: number; sisa_cash_sebelumnya: number; total_cash: number; termin_vendor: number; material_hutang_vendor: number; termin_fisik: number; termin_external: number; sisa_cash_sebelum_mgmt: number; management: number; sisa_cash: number; }
-interface RpkPelunasan { sisa_cash_sebelumnya: number; total_cash: number; pelunasan_vendor: number; material_hutang_vendor: number; pelunasan_fisik: number; pelunasan_external: number; sisa_cash_sebelum_mgmt: number; management: number; addendum_cadangan_gaji: number; pengeluaran_lain_lain: number; }
+interface RpkDp { cash_in: number; dp_vendor: number; cadangan_vendor: number; dp_fisik: number; dp_external: number; fee_marketing?: number; overhead_gaji?: number; overhead_operasional?: number; cadangan_ekspansi?: number; fee_team?: number; fee_team_detail: FeeTeamItem[]; breakdown_items: BreakdownItem[]; sisa_cash_sebelum_mgmt: number; management: number; sisa_cash: number; }
+interface RpkTermin { cash_in: number; sisa_cash_sebelumnya: number; total_cash: number; termin_vendor: number; material_hutang_vendor: number; termin_fisik: number; termin_external: number; digital_marketing?: number; fee_team?: number; cadangan_problem?: number; sisa_cash_sebelum_mgmt: number; management: number; sisa_cash: number; }
+interface RpkPelunasan { cash_in?: number; sisa_cash_sebelumnya: number; total_cash: number; pelunasan_vendor: number; material_hutang_vendor: number; pelunasan_fisik: number; pelunasan_external: number; fee_team?: number; sisa_cash_sebelum_mgmt: number; management: number; addendum_cadangan_gaji: number; pengeluaran_lain_lain: number; }
 
 interface VendorMainEntry {
     id: number;
@@ -80,6 +82,8 @@ interface SupplierItem {
 interface Props {
     order: OrderInfo;
     split: Split;
+    tahapan_list: TahapanItem[];
+    pembayaran_phases: PembayaranPhase[];
     pembayaran: Pembayaran;
     spk: Spk;
     realisasi: Realisasi;
@@ -112,11 +116,11 @@ const fmt = (v: number) => new Intl.NumberFormat('id-ID', { style: 'currency', c
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
 
 export default function Show({
-    order, split, pembayaran, spk, realisasi, margin, rpk, status_project,
+    order, split, tahapan_list = [], pembayaran_phases = [], pembayaran, spk, realisasi, margin, rpk, status_project,
     vendor_internal, vendor_fisik, vendor_external, suppliers = []
 }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
-    const [activeTab, setActiveTab] = useState<'kontrak'|'spk'|'margin'|'rpk'|'vendor_internal'|'vendor_fisik'|'vendor_external'>('kontrak');
+    const [activeTab, setActiveTab] = useState<'kontrak'|'spk'|'margin'|'fase_dp'|'fase_termin'|'fase_pelunasan'|'material_eksternal'>('kontrak');
     const [newGroupName, setNewGroupName] = useState('');
     const [showGroupModal, setShowGroupModal] = useState(false);
     const [modalTargetType, setModalTargetType] = useState<'internal'|'fisik'>('internal');
@@ -148,6 +152,7 @@ export default function Show({
         upgrade_material: spk.upgrade_material.toString(),
         spk_fisik_fix: spk.fisik_fix.toString(),
         spk_external_fix: spk.external_fix.toString(),
+        biaya_tak_terduga: (spk.biaya_tak_terduga || 0).toString(),
         fee_team_items: margin.fee_team_detail.map(item => ({
             label: item.label,
             amount: item.amount,
@@ -194,6 +199,8 @@ export default function Show({
         const saldo_efisiensi_fisik = spk_fisik_fix > 0 ? spk_fisik - spk_fisik_fix : 0;
         const saldo_efisiensi_external = spk_external_fix > 0 ? spk_external - spk_external_fix : 0;
         const total_saldo_efisiensi = saldo_efisiensi_internal + saldo_efisiensi_fisik + saldo_efisiensi_external;
+        const biaya_tak_terduga = parseFloat(generalForm.data.biaya_tak_terduga) || 0;
+        const angka_final = total_saldo_efisiensi - biaya_tak_terduga;
 
         const target_internal = split_internal - spk_internal;
         const target_fisik = split_fisik - spk_fisik;
@@ -270,6 +277,8 @@ export default function Show({
             saldo_efisiensi_fisik,
             saldo_efisiensi_external,
             total_saldo_efisiensi,
+            biaya_tak_terduga,
+            angka_final,
             target_internal,
             target_fisik,
             target_external,
@@ -652,9 +661,10 @@ export default function Show({
                             { id: 'kontrak', label: 'Kontrak & RPK', color: 'emerald' },
                             { id: 'spk', label: 'SPK & Realisasi', color: 'amber' },
                             { id: 'margin', label: 'Margin & Fee Config', color: 'violet' },
-                            { id: 'vendor_internal', label: 'Vendor Internal (Detail)', color: 'rose' },
-                            { id: 'vendor_fisik', label: 'Vendor Fisik (Detail)', color: 'blue' },
-                            { id: 'vendor_external', label: 'Vendor External (Detail)', color: 'teal' }
+                            { id: 'fase_dp', label: 'Fase DP', color: 'rose' },
+                            { id: 'fase_termin', label: 'Fase Termin', color: 'blue' },
+                            { id: 'fase_pelunasan', label: 'Fase Pelunasan', color: 'indigo' },
+                            { id: 'material_eksternal', label: 'Pembayaran Material Eksternal', color: 'teal' }
                         ].map((tab) => (
                             <button
                                 key={tab.id}
@@ -684,7 +694,7 @@ export default function Show({
                     {/* ========================================================================= */}
                     {/* TAB VIEW: GENERAL FORMS */}
                     {/* ========================================================================= */}
-                    {['kontrak', 'spk', 'margin', 'rpk'].includes(activeTab) ? (
+                    {['kontrak', 'spk', 'margin'].includes(activeTab) ? (
                         <form onSubmit={handleGeneralSubmit} className="space-y-6">
 
                             {/* TAB: KONTRAK & RPK OVERVIEW */}
@@ -766,24 +776,29 @@ export default function Show({
                                         </div>
 
                                         <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm overflow-hidden">
-                                            <div className="px-5 py-4 border-b border-stone-100 bg-stone-50/50"><h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">Histori Pembayaran Klien</h3></div>
+                                            <div className="px-5 py-4 border-b border-stone-100 bg-stone-50/50">
+                                                <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">Histori Pembayaran Klien</h3>
+                                                <p className="text-[10px] text-stone-400 mt-0.5">{(pembayaran.phases || []).length} tahapan pembayaran</p>
+                                            </div>
                                             <div className="p-5 space-y-4">
-                                                {[
-                                                    { label: 'Pembayaran DP', info: pembayaran.dp },
-                                                    { label: 'Pembayaran Termin II', info: pembayaran.termin },
-                                                    { label: 'Pembayaran Pelunasan', info: pembayaran.pelunasan }
-                                                ].map((p, idx) => (
+                                                {(pembayaran.phases || []).map((phase, idx) => (
                                                     <div key={idx} className="flex justify-between items-start py-2.5 border-b border-stone-100">
                                                         <div>
-                                                            <h4 className="text-xs font-bold text-stone-700">{p.label}</h4>
-                                                            <span className="text-[10px] text-stone-400">{p.info.tanggal ? `Lunas: ${new Date(p.info.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'})}` : 'Belum Lunas'}</span>
+                                                            <h4 className="text-xs font-bold text-stone-700">
+                                                                <span className={`inline-block w-5 h-5 rounded-full text-center text-white text-[10px] leading-5 mr-1.5 ${phase.amount > 0 ? 'bg-emerald-500' : 'bg-stone-300'}`}>{idx + 1}</span>
+                                                                Pembayaran {phase.nama}
+                                                            </h4>
+                                                            <span className="text-[10px] text-stone-400 ml-6.5">{phase.tanggal ? `Lunas: ${new Date(phase.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'})}` : 'Belum Lunas'}</span>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="text-xs font-mono font-bold text-stone-800">{fmt(p.info.amount)}</p>
-                                                            <span className="text-[10px] text-stone-400 font-mono">Proyeksi ({p.info.pct}%): {fmt(p.info.proyeksi)}</span>
+                                                            <p className="text-xs font-mono font-bold text-stone-800">{fmt(phase.amount)}</p>
+                                                            <span className="text-[10px] text-stone-400 font-mono">Proyeksi ({phase.pct}%): {fmt(phase.proyeksi)}</span>
                                                         </div>
                                                     </div>
                                                 ))}
+                                                {(!pembayaran.phases || pembayaran.phases.length === 0) && (
+                                                    <p className="text-xs text-stone-400 text-center py-4">Belum ada tahapan pembayaran</p>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -821,6 +836,7 @@ export default function Show({
                                             {renderInputCard('Upgrade Material', 'upgrade_material')}
                                             {renderInputCard('SPK Fisik Fix', 'spk_fisik_fix')}
                                             {renderInputCard('SPK External Fix', 'spk_external_fix')}
+                                            {renderInputCard('Biaya Tak Terduga', 'biaya_tak_terduga')}
                                         </div>
                                         <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm p-5 space-y-4">
                                             <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider border-b border-stone-100 pb-2">Realisasi (Auto Calculated)</h3>
@@ -843,23 +859,31 @@ export default function Show({
 
                                     {/* Efficiency Card */}
                                     <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm p-5">
-                                        <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider mb-4">Ringkasan Efisiensi SPK</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                        <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider mb-4">Ringkasan Efisiensi SPK & Angka Final</h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                                             <div className="bg-stone-50 rounded-xl p-3 border border-stone-100">
                                                 <span className="text-[10px] text-stone-400 font-bold uppercase block">Efisiensi Internal</span>
-                                                <span className={`text-sm font-mono font-bold block mt-1 ${computed.saldo_efisiensi_internal >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{fmt(computed.saldo_efisiensi_internal)}</span>
+                                                <span className={`text-xs font-mono font-bold block mt-1 ${computed.saldo_efisiensi_internal >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{fmt(computed.saldo_efisiensi_internal)}</span>
                                             </div>
                                             <div className="bg-stone-50 rounded-xl p-3 border border-stone-100">
                                                 <span className="text-[10px] text-stone-400 font-bold uppercase block">Efisiensi Fisik</span>
-                                                <span className={`text-sm font-mono font-bold block mt-1 ${computed.saldo_efisiensi_fisik >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{fmt(computed.saldo_efisiensi_fisik)}</span>
+                                                <span className={`text-xs font-mono font-bold block mt-1 ${computed.saldo_efisiensi_fisik >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{fmt(computed.saldo_efisiensi_fisik)}</span>
                                             </div>
                                             <div className="bg-stone-50 rounded-xl p-3 border border-stone-100">
                                                 <span className="text-[10px] text-stone-400 font-bold uppercase block">Efisiensi External</span>
-                                                <span className={`text-sm font-mono font-bold block mt-1 ${computed.saldo_efisiensi_external >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{fmt(computed.saldo_efisiensi_external)}</span>
+                                                <span className={`text-xs font-mono font-bold block mt-1 ${computed.saldo_efisiensi_external >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{fmt(computed.saldo_efisiensi_external)}</span>
                                             </div>
-                                            <div className="bg-stone-800 rounded-xl p-3 text-white">
-                                                <span className="text-[10px] text-stone-300 font-bold uppercase block">Total Saldo Efisiensi</span>
-                                                <span className="text-sm font-mono font-bold block mt-1">{fmt(computed.total_saldo_efisiensi)}</span>
+                                            <div className="bg-stone-100 rounded-xl p-3 border border-stone-200">
+                                                <span className="text-[10px] text-stone-600 font-bold uppercase block">Total Efisiensi</span>
+                                                <span className="text-xs font-mono font-bold block mt-1 text-stone-800">{fmt(computed.total_saldo_efisiensi)}</span>
+                                            </div>
+                                            <div className="bg-amber-50 rounded-xl p-3 border border-amber-200">
+                                                <span className="text-[10px] text-amber-700 font-bold uppercase block">Biaya Tak Terduga</span>
+                                                <span className="text-xs font-mono font-bold block mt-1 text-amber-800">{fmt(computed.biaya_tak_terduga)}</span>
+                                            </div>
+                                            <div className="bg-emerald-800 rounded-xl p-3 text-white">
+                                                <span className="text-[10px] text-emerald-200 font-bold uppercase block">Angka Final</span>
+                                                <span className="text-xs font-mono font-bold block mt-1">{fmt(computed.angka_final)}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1025,20 +1049,82 @@ export default function Show({
                         // =========================================================================
                         <form onSubmit={handleVendorSubmit} className="space-y-6">
 
-                            {/* TAB: VENDOR INTERNAL */}
-                            {activeTab === 'vendor_internal' && (
+                            {/* TAB: FASE DP */}
+                            {activeTab === 'fase_dp' && (
                                 <div className="space-y-6">
-                                    {/* Main Pembayaran Table */}
+                                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 font-bold text-xs">
+                                        📌 FASE I: PEMBAYARAN VENDOR UTAMA & MATERIAL HUTANG (DP)
+                                    </div>
+
+                                    {/* RPK Summary Card - Fase DP */}
+                                    <div className="bg-gradient-to-br from-rose-900 via-stone-900 to-stone-900 rounded-2xl p-5 text-white shadow-md space-y-4">
+                                        <div className="flex justify-between items-center border-b border-rose-800/60 pb-3">
+                                            <div>
+                                                <h3 className="text-xs font-bold uppercase tracking-wider text-rose-200">📊 Rencana Pelaksanaan Keuangan (RPK) — Fase I (DP)</h3>
+                                                <span className="text-[10px] text-stone-300">Estimasi Cash In Klien & Allocation Breakdown (Membaca Rumus Excel)</span>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-[10px] uppercase text-rose-300 block">Total DP Diterima Klien</span>
+                                                <span className="text-base font-extrabold font-mono text-emerald-400">{fmt(rpk.dp.cash_in)}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">DP Vendor Internal (20%)</span>
+                                                <span className="font-mono font-bold text-amber-300">{fmt(rpk.dp.dp_vendor)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Cadangan Vendor (15%)</span>
+                                                <span className="font-mono font-bold text-amber-300">{fmt(rpk.dp.cadangan_vendor)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">DP Fisik</span>
+                                                <span className="font-mono font-bold text-sky-300">{fmt(rpk.dp.dp_fisik)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">DP External</span>
+                                                <span className="font-mono font-bold text-teal-300">{fmt(rpk.dp.dp_external)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Fee Marketing (1%+0.5%)</span>
+                                                <span className="font-mono font-bold text-rose-300">{fmt(rpk.dp.fee_marketing || 0)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Overhead Gaji (5%)</span>
+                                                <span className="font-mono font-bold text-orange-300">{fmt(rpk.dp.overhead_gaji || 0)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Overhead Operasional (4%)</span>
+                                                <span className="font-mono font-bold text-yellow-300">{fmt(rpk.dp.overhead_operasional || 0)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Fee Team Internal (50%)</span>
+                                                <span className="font-mono font-bold text-indigo-300">{fmt(rpk.dp.fee_team || 0)}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-3 pt-2 border-t border-rose-800/50 text-xs">
+                                            <div className="bg-stone-950/80 p-3 rounded-xl">
+                                                <span className="text-[10px] text-stone-400 block">Sisa Sebelum Management</span>
+                                                <span className={`font-mono font-bold ${rpk.dp.sisa_cash_sebelum_mgmt < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>{fmt(rpk.dp.sisa_cash_sebelum_mgmt)}</span>
+                                            </div>
+                                            <div className="bg-stone-950/80 p-3 rounded-xl">
+                                                <span className="text-[10px] text-stone-400 block">Management (DP)</span>
+                                                <span className="font-mono font-bold text-amber-400">{fmt(rpk.dp.management)}</span>
+                                            </div>
+                                            <div className="bg-stone-950/80 p-3 rounded-xl">
+                                                <span className="text-[10px] text-stone-400 block">Sisa Cash Final (DP)</span>
+                                                <span className={`font-mono font-extrabold ${rpk.dp.sisa_cash < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>{fmt(rpk.dp.sisa_cash)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Main Pembayaran Table Internal */}
                                     <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm p-5 space-y-4">
                                         <div className="flex justify-between items-center border-b border-stone-100 pb-2">
-                                            <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">1A. Rincian Pembayaran Vendor Utama</h3>
-                                            <button
-                                                type="button"
-                                                onClick={() => handleAddMainPaymentRow('internal')}
-                                                className="text-[10px] font-bold text-amber-600 hover:text-amber-700"
-                                            >
-                                                + Tambah Pembayaran Utama
-                                            </button>
+                                            <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">1A. Rincian Pembayaran Vendor Utama Internal (Fase DP)</h3>
+                                            <button type="button" onClick={() => handleAddMainPaymentRow('internal')} className="text-[10px] font-bold text-amber-600 hover:text-amber-700">+ Tambah Pembayaran Utama</button>
                                         </div>
                                         <div className="overflow-x-auto">
                                             <table className="w-full text-xs text-left text-stone-600">
@@ -1053,11 +1139,6 @@ export default function Show({
                                                         <th className="px-4 py-2 text-center">AF</th>
                                                         <th className="px-4 py-2 text-center">FB</th>
                                                         <th className="px-4 py-2 text-center">JW</th>
-                                                        <th className="px-4 py-2 text-right">Termin (V2)</th>
-                                                        <th className="px-4 py-2">Tanggal Termin</th>
-                                                        <th className="px-4 py-2 text-center">AF (T)</th>
-                                                        <th className="px-4 py-2 text-center">FB (T)</th>
-                                                        <th className="px-4 py-2 text-center">JW (T)</th>
                                                         <th className="px-4 py-2 text-center">Aksi</th>
                                                     </tr>
                                                 </thead>
@@ -1065,38 +1146,14 @@ export default function Show({
                                                     {vendorForm.data.pembayaran_vendor_internal.map((item, idx) => {
                                                         const spk_internal_fix = parseFloat(generalForm.data.spk_internal_fix) || 0;
                                                         const totalMaterialInternalNilai = vendor_internal.total_material_nilai || 0;
-
-                                                        let calculatedNilai = 0;
-                                                        let calculatedPct = parseFloat(item.persentase as any) || 0;
-
-                                                        if (item.notes === 'pelunasan') {
-                                                            const sumNonPelunasan = vendorForm.data.pembayaran_vendor_internal
-                                                                .filter(x => x.notes !== 'pelunasan')
-                                                                .reduce((sum, x) => sum + (spk_internal_fix * ((parseFloat(x.persentase as any) || 0) / 100)), 0);
-                                                            calculatedNilai = Math.max(0, spk_internal_fix - sumNonPelunasan - totalMaterialInternalNilai);
-                                                            calculatedPct = spk_internal_fix > 0 ? (calculatedNilai / spk_internal_fix) * 100 : 0;
-                                                        } else {
-                                                            calculatedNilai = spk_internal_fix * (calculatedPct / 100);
-                                                        }
-
+                                                        let calculatedNilai = spk_internal_fix * ((parseFloat(item.persentase as any) || 0) / 100);
                                                         return (
                                                             <tr key={item.id || idx} className="border-b border-stone-100">
                                                                 <td className="p-1">
-                                                                    <input
-                                                                        type="text"
-                                                                        value={item.label}
-                                                                        onChange={(e) => handleUpdateMainVendorField('internal', idx, 'label', e.target.value)}
-                                                                        className="w-full px-2 py-1 text-xs border border-stone-200 rounded font-semibold text-stone-700"
-                                                                        placeholder="Nama Pembayaran"
-                                                                        required
-                                                                    />
+                                                                    <input type="text" value={item.label} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'label', e.target.value)} className="w-full px-2 py-1 text-xs border border-stone-200 rounded font-semibold text-stone-700" placeholder="Nama Pembayaran" required />
                                                                 </td>
                                                                 <td className="p-1">
-                                                                    <select
-                                                                        value={item.notes || 'dp'}
-                                                                        onChange={(e) => handleUpdateMainVendorField('internal', idx, 'notes', e.target.value)}
-                                                                        className="px-1 py-1 text-[11px] text-stone-600 bg-white border border-stone-200 rounded focus:outline-none"
-                                                                    >
+                                                                    <select value={item.notes || 'dp'} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'notes', e.target.value)} className="px-1 py-1 text-[11px] text-stone-600 bg-white border border-stone-200 rounded focus:outline-none">
                                                                         <option value="dp">Fase I (DP)</option>
                                                                         <option value="cadangan">Cadangan Vendor</option>
                                                                         <option value="termin">Fase II (Termin)</option>
@@ -1104,99 +1161,22 @@ export default function Show({
                                                                     </select>
                                                                 </td>
                                                                 <td className="p-1 text-right">
-                                                                    {item.notes !== 'pelunasan' ? (
-                                                                        <input
-                                                                            type="number"
-                                                                            step="0.01"
-                                                                            value={item.persentase || ''}
-                                                                            onChange={(e) => handleUpdateMainVendorField('internal', idx, 'persentase', parseFloat(e.target.value) || 0)}
-                                                                            className="w-14 px-2 py-1 text-right text-xs font-semibold bg-white border border-stone-200 rounded"
-                                                                            placeholder="0"
-                                                                        />
-                                                                    ) : (
-                                                                        <span className="font-mono text-stone-400 font-semibold px-2">{calculatedPct.toFixed(1)}%</span>
-                                                                    )}
+                                                                    <input type="number" step="0.01" value={item.persentase || ''} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'persentase', parseFloat(e.target.value) || 0)} className="w-14 px-2 py-1 text-right text-xs font-semibold bg-white border border-stone-200 rounded" placeholder="0" />
                                                                 </td>
                                                                 <td className="px-2 py-3 text-right font-mono text-stone-500">{fmt(calculatedNilai)}</td>
-                                                                
-                                                                {/* DP Fields */}
                                                                 <td className="p-1">
-                                                                    <input
-                                                                        type="number"
-                                                                        value={item.pembayaran}
-                                                                        onChange={(e) => handleUpdateMainVendorField('internal', idx, 'pembayaran', parseFloat(e.target.value) || 0)}
-                                                                        className="w-20 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded focus:ring-0"
-                                                                    />
+                                                                    <input type="number" value={item.pembayaran} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'pembayaran', parseFloat(e.target.value) || 0)} className="w-24 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded" />
                                                                 </td>
                                                                 <td className="p-1">
-                                                                    <input
-                                                                        type="date"
-                                                                        value={item.tanggal_pembayaran || ''}
-                                                                        onChange={(e) => handleUpdateMainVendorField('internal', idx, 'tanggal_pembayaran', e.target.value)}
-                                                                        className={`px-1 py-1 text-[11px] rounded border focus:ring-0 focus:outline-none ${
-                                                                            isPaymentOverdue(item.tanggal_pembayaran, !!item.flag_fb || !!item.flag_jw)
-                                                                                ? 'border-rose-400 bg-rose-50 text-rose-700 font-semibold'
-                                                                                : 'border-stone-200 bg-white text-stone-600'
-                                                                        }`}
-                                                                    />
-                                                                    {isPaymentOverdue(item.tanggal_pembayaran, !!item.flag_fb || !!item.flag_jw) && (
-                                                                        <span className="text-[9px] text-rose-600 font-bold block mt-0.5 whitespace-nowrap">Reschedule PM!</span>
-                                                                    )}
+                                                                    <input type="date" value={item.tanggal_pembayaran || ''} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'tanggal_pembayaran', e.target.value)} className={`px-1 py-1 text-[11px] rounded border ${isPaymentOverdue(item.tanggal_pembayaran, !!item.flag_fb || !!item.flag_jw) ? 'border-rose-400 bg-rose-50 text-rose-700 font-semibold' : 'border-stone-200 bg-white text-stone-600'}`} />
                                                                 </td>
                                                                 {['flag_af', 'flag_fb', 'flag_jw'].map((flag) => (
                                                                     <td key={flag} className="p-1 text-center">
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={!!item[flag as keyof VendorMainEntry]}
-                                                                            onChange={(e) => handleUpdateMainVendorField('internal', idx, flag as keyof VendorMainEntry, e.target.checked ? '✔' : null)}
-                                                                            className="rounded border-stone-300 text-amber-500 focus:ring-amber-500 scale-90"
-                                                                        />
+                                                                        <input type="checkbox" checked={!!item[flag as keyof VendorMainEntry]} onChange={(e) => handleUpdateMainVendorField('internal', idx, flag as keyof VendorMainEntry, e.target.checked ? '✔' : null)} className="rounded border-stone-300 text-amber-500 scale-90" />
                                                                     </td>
                                                                 ))}
-
-                                                                {/* Termin Fields */}
-                                                                <td className="p-1">
-                                                                    <input
-                                                                        type="number"
-                                                                        value={item.pembayaran_termin || 0}
-                                                                        onChange={(e) => handleUpdateMainVendorField('internal', idx, 'pembayaran_termin', parseFloat(e.target.value) || 0)}
-                                                                        className="w-20 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded focus:ring-0"
-                                                                    />
-                                                                </td>
-                                                                <td className="p-1">
-                                                                    <input
-                                                                        type="date"
-                                                                        value={item.tanggal_pembayaran_termin || ''}
-                                                                        onChange={(e) => handleUpdateMainVendorField('internal', idx, 'tanggal_pembayaran_termin', e.target.value)}
-                                                                        className={`px-1 py-1 text-[11px] rounded border focus:ring-0 focus:outline-none ${
-                                                                            isPaymentOverdue(item.tanggal_pembayaran_termin, !!item.flag_fb_termin || !!item.flag_jw_termin)
-                                                                                ? 'border-rose-400 bg-rose-50 text-rose-700 font-semibold'
-                                                                                : 'border-stone-200 bg-white text-stone-600'
-                                                                        }`}
-                                                                    />
-                                                                    {isPaymentOverdue(item.tanggal_pembayaran_termin, !!item.flag_fb_termin || !!item.flag_jw_termin) && (
-                                                                        <span className="text-[9px] text-rose-600 font-bold block mt-0.5 whitespace-nowrap">Reschedule PM!</span>
-                                                                    )}
-                                                                </td>
-                                                                {['flag_af_termin', 'flag_fb_termin', 'flag_jw_termin'].map((flag) => (
-                                                                    <td key={flag} className="p-1 text-center">
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={!!item[flag as keyof VendorMainEntry]}
-                                                                            onChange={(e) => handleUpdateMainVendorField('internal', idx, flag as keyof VendorMainEntry, e.target.checked ? '✔' : null)}
-                                                                            className="rounded border-stone-300 text-amber-500 focus:ring-amber-500 scale-90"
-                                                                        />
-                                                                    </td>
-                                                                ))}
-
                                                                 <td className="p-1 text-center">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleRemoveMainPaymentRow('internal', idx)}
-                                                                        className="text-rose-500 hover:text-rose-600 font-bold px-2 py-0.5 rounded"
-                                                                    >
-                                                                        x
-                                                                    </button>
+                                                                    <button type="button" onClick={() => handleRemoveMainPaymentRow('internal', idx)} className="text-rose-500 hover:text-rose-600 font-bold px-2 py-0.5 rounded">x</button>
                                                                 </td>
                                                             </tr>
                                                         );
@@ -1206,147 +1186,11 @@ export default function Show({
                                         </div>
                                     </div>
 
-                                    {/* Material Hutang dinamis */}
-                                    <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm p-5 space-y-6">
-                                        <div className="flex justify-between items-center border-b border-stone-100 pb-2">
-                                            <div>
-                                                <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">1B. Material Hutang (Dinamis)</h3>
-                                                <span className="text-[10px] text-stone-400 mt-1 block">Status PO: <span className={`font-bold uppercase ${vendor_internal.status_po === 'Bisa PO' ? 'text-emerald-600' : 'text-rose-500'}`}>{vendor_internal.status_po}</span></span>
-                                            </div>
-                                            {vendorForm.data.material_groups_internal.length > 0 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => openSupplierModal('internal')}
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition"
-                                                >
-                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                                                    Ubah List Vendor
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        {vendorForm.data.material_groups_internal.length === 0 ? (
-                                            <div className="text-center py-8 bg-stone-50/50 border border-dashed border-stone-200 rounded-2xl space-y-3">
-                                                <p className="text-xs text-stone-500 font-medium">Belum ada vendor group material. Silakan tetapkan vendor terlebih dahulu.</p>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => openSupplierModal('internal')}
-                                                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
-                                                    Tetapkan Vendor
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            vendorForm.data.material_groups_internal.map((group, groupIdx) => (
-                                                <div key={groupIdx} className="bg-stone-50/50 border border-stone-200 rounded-xl p-4 space-y-3">
-                                                    <div className="flex justify-between items-center border-b border-stone-200 pb-2">
-                                                        <span className="font-bold text-xs text-stone-700">Vendor: {group.name}</span>
-                                                        <div className="flex items-center gap-3">
-                                                            <button type="button" onClick={() => handleAddInvoiceRow('internal', groupIdx)} className="text-[10px] font-bold text-amber-600 hover:text-amber-700">+ Tambah Baris INV</button>
-                                                            <button type="button" onClick={() => handleRemoveMaterialGroup('internal', groupIdx)} className="text-[10px] text-rose-500 font-bold">Hapus Group</button>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="overflow-x-auto">
-                                                        <table className="w-full text-xs text-left">
-                                                            <thead className="text-[9px] uppercase text-stone-400">
-                                                                <tr>
-                                                                    <th className="px-2 py-1">Keterangan / No INV</th>
-                                                                    <th className="px-2 py-1 text-right">Nilai</th>
-                                                                    <th className="px-2 py-1 text-right">Pembayaran</th>
-                                                                    <th className="px-2 py-1">Tanggal INV</th>
-                                                                    <th className="px-2 py-1">Tanggal Bayar</th>
-                                                                    <th className="px-2 py-1 text-center">AF</th>
-                                                                    <th className="px-2 py-1 text-center">FB</th>
-                                                                    <th className="px-2 py-1 text-center">JW</th>
-                                                                    <th className="px-2 py-1 text-center">Aksi</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {group.items.map((item, itemIdx) => (
-                                                                    <tr key={itemIdx} className="border-b border-stone-100">
-                                                                        <td className="p-1">
-                                                                            <input
-                                                                                type="text"
-                                                                                value={item.label}
-                                                                                onChange={(e) => handleUpdateInvoiceRow('internal', groupIdx, itemIdx, 'label', e.target.value)}
-                                                                                className="w-full px-2 py-1 text-xs border border-stone-200 rounded"
-                                                                                placeholder="No/Ket Invoice"
-                                                                            />
-                                                                        </td>
-                                                                        <td className="p-1">
-                                                                            <input
-                                                                                type="number"
-                                                                                value={item.nilai}
-                                                                                onChange={(e) => handleUpdateInvoiceRow('internal', groupIdx, itemIdx, 'nilai', parseFloat(e.target.value) || 0)}
-                                                                                className="w-24 px-2 py-1 text-right text-xs font-mono border border-stone-200 rounded"
-                                                                            />
-                                                                        </td>
-                                                                        <td className="p-1">
-                                                                            <input
-                                                                                type="number"
-                                                                                value={item.pembayaran}
-                                                                                onChange={(e) => handleUpdateInvoiceRow('internal', groupIdx, itemIdx, 'pembayaran', parseFloat(e.target.value) || 0)}
-                                                                                className="w-24 px-2 py-1 text-right text-xs font-mono border border-stone-200 rounded"
-                                                                            />
-                                                                        </td>
-                                                                        <td className="p-1">
-                                                                            <input
-                                                                                type="date"
-                                                                                value={item.tanggal_inv || ''}
-                                                                                onChange={(e) => handleUpdateInvoiceRow('internal', groupIdx, itemIdx, 'tanggal_inv', e.target.value)}
-                                                                                className="px-2 py-1 text-xs text-stone-600 border border-stone-200 rounded"
-                                                                            />
-                                                                        </td>
-                                                                        <td className="p-1">
-                                                                            <input
-                                                                                type="date"
-                                                                                value={item.tanggal_pembayaran || ''}
-                                                                                onChange={(e) => handleUpdateInvoiceRow('internal', groupIdx, itemIdx, 'tanggal_pembayaran', e.target.value)}
-                                                                                className="px-2 py-1 text-xs text-stone-600 border border-stone-200 rounded"
-                                                                            />
-                                                                        </td>
-                                                                        {['flag_af', 'flag_fb', 'flag_jw'].map((flag) => (
-                                                                            <td key={flag} className="p-1 text-center">
-                                                                                <input
-                                                                                    type="checkbox"
-                                                                                    checked={!!item[flag as keyof MaterialItem]}
-                                                                                    onChange={(e) => handleInvoiceCheckboxChange('internal', groupIdx, itemIdx, flag as any, e.target.checked)}
-                                                                                    className="rounded border-stone-300 text-amber-500 focus:ring-amber-500"
-                                                                                />
-                                                                            </td>
-                                                                        ))}
-                                                                        <td className="p-1 text-center">
-                                                                            <button type="button" onClick={() => handleRemoveInvoiceRow('internal', groupIdx, itemIdx)} className="text-rose-500 hover:text-rose-600 font-bold px-1.5 py-0.5 hover:bg-rose-50 rounded">x</button>
-                                                                        </td>
-                                                                    </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* TAB: VENDOR FISIK */}
-                            {activeTab === 'vendor_fisik' && (
-                                <div className="space-y-6">
-                                    {/* Main Pembayaran Table */}
-                                    {/* Main Pembayaran Table */}
+                                    {/* Main Pembayaran Table Fisik */}
                                     <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm p-5 space-y-4">
                                         <div className="flex justify-between items-center border-b border-stone-100 pb-2">
-                                            <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">2A. Rincian Pembayaran Vendor Utama (Fisik)</h3>
-                                            <button
-                                                type="button"
-                                                onClick={() => handleAddMainPaymentRow('fisik')}
-                                                className="text-[10px] font-bold text-amber-600 hover:text-amber-700"
-                                            >
-                                                + Tambah Pembayaran Utama
-                                            </button>
+                                            <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">1B. Rincian Pembayaran Vendor Utama Fisik (Fase DP)</h3>
+                                            <button type="button" onClick={() => handleAddMainPaymentRow('fisik')} className="text-[10px] font-bold text-amber-600 hover:text-amber-700">+ Tambah Pembayaran Utama</button>
                                         </div>
                                         <div className="overflow-x-auto">
                                             <table className="w-full text-xs text-left text-stone-600">
@@ -1361,6 +1205,124 @@ export default function Show({
                                                         <th className="px-4 py-2 text-center">AF</th>
                                                         <th className="px-4 py-2 text-center">FB</th>
                                                         <th className="px-4 py-2 text-center">JW</th>
+                                                        <th className="px-4 py-2 text-center">Aksi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {vendorForm.data.pembayaran_vendor_fisik.map((item, idx) => {
+                                                        const spk_fisik_fix = parseFloat(generalForm.data.spk_fisik_fix) || 0;
+                                                        let calculatedNilai = spk_fisik_fix * ((parseFloat(item.persentase as any) || 0) / 100);
+                                                        return (
+                                                            <tr key={item.id || idx} className="border-b border-stone-100">
+                                                                <td className="p-1"><input type="text" value={item.label} onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'label', e.target.value)} className="w-full px-2 py-1 text-xs border border-stone-200 rounded font-semibold text-stone-700" placeholder="Nama Pembayaran" required /></td>
+                                                                <td className="p-1">
+                                                                    <select value={item.notes || 'dp'} onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'notes', e.target.value)} className="px-1 py-1 text-[11px] text-stone-600 bg-white border border-stone-200 rounded">
+                                                                        <option value="dp">Fase I (DP)</option>
+                                                                        <option value="termin">Fase II (Termin)</option>
+                                                                        <option value="pelunasan">Fase III (Pelunasan)</option>
+                                                                    </select>
+                                                                </td>
+                                                                <td className="p-1 text-right"><input type="number" step="0.01" value={item.persentase || ''} onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'persentase', parseFloat(e.target.value) || 0)} className="w-14 px-2 py-1 text-right text-xs font-semibold bg-white border border-stone-200 rounded" /></td>
+                                                                <td className="px-2 py-3 text-right font-mono text-stone-500">{fmt(calculatedNilai)}</td>
+                                                                <td className="p-1"><input type="number" value={item.pembayaran} onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'pembayaran', parseFloat(e.target.value) || 0)} className="w-24 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded" /></td>
+                                                                <td className="p-1"><input type="date" value={item.tanggal_pembayaran || ''} onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'tanggal_pembayaran', e.target.value)} className="px-1 py-1 text-[11px] rounded border border-stone-200 bg-white text-stone-600" /></td>
+                                                                {['flag_af', 'flag_fb', 'flag_jw'].map((flag) => (
+                                                                    <td key={flag} className="p-1 text-center"><input type="checkbox" checked={!!item[flag as keyof VendorMainEntry]} onChange={(e) => handleUpdateMainVendorField('fisik', idx, flag as keyof VendorMainEntry, e.target.checked ? '✔' : null)} className="rounded border-stone-300 text-amber-500 scale-90" /></td>
+                                                                ))}
+                                                                <td className="p-1 text-center"><button type="button" onClick={() => handleRemoveMainPaymentRow('fisik', idx)} className="text-rose-500 hover:text-rose-600 font-bold px-2 py-0.5 rounded">x</button></td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* TAB: FASE TERMIN */}
+                            {activeTab === 'fase_termin' && (
+                                <div className="space-y-6">
+                                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 font-bold text-xs">
+                                        📌 FASE II: PEMBAYARAN VENDOR UTAMA & MATERIAL HUTANG (TERMIN)
+                                    </div>
+
+                                    {/* RPK Summary Card - Fase Termin */}
+                                    <div className="bg-gradient-to-br from-blue-900 via-stone-900 to-stone-900 rounded-2xl p-5 text-white shadow-md space-y-4">
+                                        <div className="flex justify-between items-center border-b border-blue-800/60 pb-3">
+                                            <div>
+                                                <h3 className="text-xs font-bold uppercase tracking-wider text-blue-200">📊 Rencana Pelaksanaan Keuangan (RPK) — Fase II (Termin)</h3>
+                                                <span className="text-[10px] text-stone-300">Estimasi Cash In & Allocation Breakdown Termin</span>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-[10px] uppercase text-blue-300 block">Total Cash In Termin</span>
+                                                <span className="text-base font-extrabold font-mono text-emerald-400">{fmt(rpk.termin.total_cash)}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Termin Vendor Internal</span>
+                                                <span className="font-mono font-bold text-amber-300">{fmt(rpk.termin.termin_vendor)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Material Hutang Supplier</span>
+                                                <span className="font-mono font-bold text-amber-300">{fmt(rpk.termin.material_hutang_vendor)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Termin Vendor Fisik</span>
+                                                <span className="font-mono font-bold text-sky-300">{fmt(rpk.termin.termin_fisik)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Termin External</span>
+                                                <span className="font-mono font-bold text-teal-300">{fmt(rpk.termin.termin_external)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Digital Marketing (2.5%)</span>
+                                                <span className="font-mono font-bold text-rose-300">{fmt(rpk.termin.digital_marketing || 0)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Fee Team Internal (50%)</span>
+                                                <span className="font-mono font-bold text-indigo-300">{fmt(rpk.termin.fee_team || 0)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Cadangan Problem (3.5%)</span>
+                                                <span className="font-mono font-bold text-yellow-300">{fmt(rpk.termin.cadangan_problem || 0)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Sisa Cash DP Sebelumnya</span>
+                                                <span className="font-mono font-bold text-emerald-300">{fmt(rpk.termin.sisa_cash_sebelumnya)}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-3 pt-2 border-t border-blue-800/50 text-xs">
+                                            <div className="bg-stone-950/80 p-3 rounded-xl">
+                                                <span className="text-[10px] text-stone-400 block">Sisa Sebelum Management</span>
+                                                <span className={`font-mono font-bold ${rpk.termin.sisa_cash_sebelum_mgmt < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>{fmt(rpk.termin.sisa_cash_sebelum_mgmt)}</span>
+                                            </div>
+                                            <div className="bg-stone-950/80 p-3 rounded-xl">
+                                                <span className="text-[10px] text-stone-400 block">Management (Termin)</span>
+                                                <span className="font-mono font-bold text-amber-400">{fmt(rpk.termin.management)}</span>
+                                            </div>
+                                            <div className="bg-stone-950/80 p-3 rounded-xl">
+                                                <span className="text-[10px] text-stone-400 block">Sisa Cash Final (Termin)</span>
+                                                <span className={`font-mono font-extrabold ${rpk.termin.sisa_cash < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>{fmt(rpk.termin.sisa_cash)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Main Pembayaran Table Internal (Termin) */}
+                                    <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm p-5 space-y-4">
+                                        <div className="flex justify-between items-center border-b border-stone-100 pb-2">
+                                            <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">2A. Rincian Pembayaran Vendor Utama Internal (Fase Termin)</h3>
+                                            <button type="button" onClick={() => handleAddMainPaymentRow('internal')} className="text-[10px] font-bold text-amber-600 hover:text-amber-700">+ Tambah Pembayaran Utama</button>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs text-left text-stone-600">
+                                                <thead className="text-[10px] text-stone-400 uppercase bg-stone-50 border-b border-stone-200">
+                                                    <tr>
+                                                        <th className="px-4 py-2">Keterangan</th>
+                                                        <th className="px-4 py-2">Target Fase</th>
                                                         <th className="px-4 py-2 text-right">Termin (V2)</th>
                                                         <th className="px-4 py-2">Tanggal Termin</th>
                                                         <th className="px-4 py-2 text-center">AF (T)</th>
@@ -1370,246 +1332,142 @@ export default function Show({
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {vendorForm.data.pembayaran_vendor_fisik.map((item, idx) => {
-                                                        const spk_fisik_fix = parseFloat(generalForm.data.spk_fisik_fix) || 0;
-                                                        const calculatedPct = parseFloat(item.persentase as any) || 0;
-                                                        const calculatedNilai = spk_fisik_fix * (calculatedPct / 100);
-
-                                                        return (
-                                                            <tr key={item.id || idx} className="border-b border-stone-100">
-                                                                <td className="p-1">
-                                                                    <input
-                                                                        type="text"
-                                                                        value={item.label}
-                                                                        onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'label', e.target.value)}
-                                                                        className="w-full px-2 py-1 text-xs border border-stone-200 rounded font-semibold text-stone-700"
-                                                                        placeholder="Nama Pembayaran"
-                                                                        required
-                                                                    />
-                                                                </td>
-                                                                <td className="p-1">
-                                                                    <select
-                                                                        value={item.notes || 'dp'}
-                                                                        onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'notes', e.target.value)}
-                                                                        className="px-1 py-1 text-[11px] text-stone-600 bg-white border border-stone-200 rounded focus:outline-none"
-                                                                    >
-                                                                        <option value="dp">Fase I (DP)</option>
-                                                                        <option value="termin">Fase II (Termin)</option>
-                                                                        <option value="pelunasan">Fase III (Pelunasan)</option>
-                                                                    </select>
-                                                                </td>
-                                                                <td className="p-1 text-right">
-                                                                    <input
-                                                                        type="number"
-                                                                        step="0.01"
-                                                                        value={item.persentase || ''}
-                                                                        onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'persentase', parseFloat(e.target.value) || 0)}
-                                                                        className="w-14 px-2 py-1 text-right text-xs font-semibold bg-white border border-stone-200 rounded"
-                                                                        placeholder="0"
-                                                                    />
-                                                                </td>
-                                                                <td className="px-2 py-3 text-right font-mono text-stone-500">{fmt(calculatedNilai)}</td>
-                                                                <td className="p-1">
-                                                                    <input
-                                                                        type="number"
-                                                                        value={item.pembayaran}
-                                                                        onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'pembayaran', parseFloat(e.target.value) || 0)}
-                                                                        className="w-20 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded focus:ring-0"
-                                                                    />
-                                                                </td>
-                                                                <td className="p-1">
-                                                                    <input
-                                                                        type="date"
-                                                                        value={item.tanggal_pembayaran || ''}
-                                                                        onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'tanggal_pembayaran', e.target.value)}
-                                                                        className={`px-1 py-1 text-[11px] rounded border focus:ring-0 focus:outline-none ${
-                                                                            isPaymentOverdue(item.tanggal_pembayaran, !!item.flag_fb || !!item.flag_jw)
-                                                                                ? 'border-rose-400 bg-rose-50 text-rose-700 font-semibold'
-                                                                                : 'border-stone-200 bg-white text-stone-600'
-                                                                        }`}
-                                                                    />
-                                                                    {isPaymentOverdue(item.tanggal_pembayaran, !!item.flag_fb || !!item.flag_jw) && (
-                                                                        <span className="text-[9px] text-rose-600 font-bold block mt-0.5 whitespace-nowrap">Reschedule PM!</span>
-                                                                    )}
-                                                                </td>
-                                                                {['flag_af', 'flag_fb', 'flag_jw'].map((flag) => (
-                                                                    <td key={flag} className="p-1 text-center">
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={!!item[flag as keyof VendorMainEntry]}
-                                                                            onChange={(e) => handleUpdateMainVendorField('fisik', idx, flag as keyof VendorMainEntry, e.target.checked ? '✔' : null)}
-                                                                            className="rounded border-stone-300 text-amber-500 focus:ring-amber-500 scale-90"
-                                                                        />
-                                                                    </td>
-                                                                ))}
-                                                                <td className="p-1">
-                                                                    <input
-                                                                        type="number"
-                                                                        value={item.pembayaran_termin || 0}
-                                                                        onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'pembayaran_termin', parseFloat(e.target.value) || 0)}
-                                                                        className="w-20 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded focus:ring-0"
-                                                                    />
-                                                                </td>
-                                                                <td className="p-1">
-                                                                    <input
-                                                                        type="date"
-                                                                        value={item.tanggal_pembayaran_termin || ''}
-                                                                        onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'tanggal_pembayaran_termin', e.target.value)}
-                                                                        className={`px-1 py-1 text-[11px] rounded border focus:ring-0 focus:outline-none ${
-                                                                            isPaymentOverdue(item.tanggal_pembayaran_termin, !!item.flag_fb_termin || !!item.flag_jw_termin)
-                                                                                ? 'border-rose-400 bg-rose-50 text-rose-700 font-semibold'
-                                                                                : 'border-stone-200 bg-white text-stone-600'
-                                                                        }`}
-                                                                    />
-                                                                    {isPaymentOverdue(item.tanggal_pembayaran_termin, !!item.flag_fb_termin || !!item.flag_jw_termin) && (
-                                                                        <span className="text-[9px] text-rose-600 font-bold block mt-0.5 whitespace-nowrap">Reschedule PM!</span>
-                                                                    )}
-                                                                </td>
-                                                                {['flag_af_termin', 'flag_fb_termin', 'flag_jw_termin'].map((flag) => (
-                                                                    <td key={flag} className="p-1 text-center">
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={!!item[flag as keyof VendorMainEntry]}
-                                                                            onChange={(e) => handleUpdateMainVendorField('fisik', idx, flag as keyof VendorMainEntry, e.target.checked ? '✔' : null)}
-                                                                            className="rounded border-stone-300 text-amber-500 focus:ring-amber-500 scale-90"
-                                                                        />
-                                                                    </td>
-                                                                ))}
-                                                                <td className="p-1 text-center">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleRemoveMainPaymentRow('fisik', idx)}
-                                                                        className="text-rose-500 hover:text-rose-600 font-bold px-2 py-0.5 rounded"
-                                                                    >
-                                                                        x
-                                                                    </button>
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    })}
+                                                    {vendorForm.data.pembayaran_vendor_internal.map((item, idx) => (
+                                                        <tr key={item.id || idx} className="border-b border-stone-100">
+                                                            <td className="p-1"><input type="text" value={item.label} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'label', e.target.value)} className="w-full px-2 py-1 text-xs border border-stone-200 rounded font-semibold text-stone-700" /></td>
+                                                            <td className="p-1"><span className="text-xs font-semibold text-stone-600 uppercase">{item.notes || 'termin'}</span></td>
+                                                            <td className="p-1"><input type="number" value={item.pembayaran_termin || 0} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'pembayaran_termin', parseFloat(e.target.value) || 0)} className="w-24 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded" /></td>
+                                                            <td className="p-1"><input type="date" value={item.tanggal_pembayaran_termin || ''} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'tanggal_pembayaran_termin', e.target.value)} className="px-1 py-1 text-[11px] rounded border border-stone-200 bg-white text-stone-600" /></td>
+                                                            {['flag_af_termin', 'flag_fb_termin', 'flag_jw_termin'].map((flag) => (
+                                                                <td key={flag} className="p-1 text-center"><input type="checkbox" checked={!!item[flag as keyof VendorMainEntry]} onChange={(e) => handleUpdateMainVendorField('internal', idx, flag as keyof VendorMainEntry, e.target.checked ? '✔' : null)} className="rounded border-stone-300 text-amber-500 scale-90" /></td>
+                                                            ))}
+                                                            <td className="p-1 text-center"><button type="button" onClick={() => handleRemoveMainPaymentRow('internal', idx)} className="text-rose-500 hover:text-rose-600 font-bold px-2 py-0.5 rounded">x</button></td>
+                                                        </tr>
+                                                    ))}
                                                 </tbody>
                                             </table>
                                         </div>
                                     </div>
+                                </div>
+                            )}
 
-                                    {/* Material Hutang dinamis */}
-                                    <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm p-5 space-y-6">
-                                        <div className="flex justify-between items-center border-b border-stone-100 pb-2">
+                            {/* TAB: FASE PELUNASAN */}
+                            {activeTab === 'fase_pelunasan' && (
+                                <div className="space-y-6">
+                                    <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-indigo-800 font-bold text-xs">
+                                        📌 FASE III: PEMBAYARAN VENDOR UTAMA & MATERIAL HUTANG (PELUNASAN)
+                                    </div>
+
+                                    {/* RPK Summary Card - Fase Pelunasan */}
+                                    <div className="bg-gradient-to-br from-indigo-900 via-stone-900 to-stone-900 rounded-2xl p-5 text-white shadow-md space-y-4">
+                                        <div className="flex justify-between items-center border-b border-indigo-800/60 pb-3">
                                             <div>
-                                                <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">2B. Material Hutang Fisik (Dinamis)</h3>
-                                                <div className="flex gap-4 text-[10px] text-stone-400 mt-1 font-mono">
-                                                    <span>Budget Material: <b>{fmt(vendor_fisik.budget_material)}</b></span>
-                                                    <span>Sisa Budget: <b className="text-amber-600">{fmt(vendor_fisik.sisa_budget)}</b></span>
-                                                </div>
+                                                <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-200">📊 Rencana Pelaksanaan Keuangan (RPK) — Fase III (Pelunasan)</h3>
+                                                <span className="text-[10px] text-stone-300">Estimasi Cash In & Allocation Breakdown Pelunasan</span>
                                             </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => { setModalTargetType('fisik'); setShowGroupModal(true); }}
-                                                className="text-xs font-bold text-amber-600 hover:text-amber-700"
-                                            >
-                                                + Tambah Vendor Group
-                                            </button>
+                                            <div className="text-right">
+                                                <span className="text-[10px] uppercase text-indigo-300 block">Total Cash In Pelunasan</span>
+                                                <span className="text-base font-extrabold font-mono text-emerald-400">{fmt(rpk.pelunasan.total_cash)}</span>
+                                            </div>
                                         </div>
 
-                                        {vendorForm.data.material_groups_fisik.length === 0 ? (
-                                            <div className="text-center py-6 text-stone-400 text-xs">Belum ada vendor group material. Silakan tambahkan group baru.</div>
-                                        ) : (
-                                            vendorForm.data.material_groups_fisik.map((group, groupIdx) => (
-                                                <div key={groupIdx} className="bg-stone-50/50 border border-stone-200 rounded-xl p-4 space-y-3">
-                                                    <div className="flex justify-between items-center border-b border-stone-200 pb-2">
-                                                        <span className="font-bold text-xs text-stone-700">Vendor: {group.name}</span>
-                                                        <div className="flex items-center gap-3">
-                                                            <button type="button" onClick={() => handleAddInvoiceRow('fisik', groupIdx)} className="text-[10px] font-bold text-amber-600 hover:text-amber-700">+ Tambah Baris INV</button>
-                                                            <button type="button" onClick={() => handleRemoveMaterialGroup('fisik', groupIdx)} className="text-[10px] text-rose-500 font-bold">Hapus Group</button>
-                                                        </div>
-                                                    </div>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Pelunasan Vendor Internal</span>
+                                                <span className="font-mono font-bold text-amber-300">{fmt(rpk.pelunasan.pelunasan_vendor)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Sisa Material Hutang Supplier</span>
+                                                <span className="font-mono font-bold text-amber-300">{fmt(rpk.pelunasan.material_hutang_vendor)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Pelunasan Vendor Fisik</span>
+                                                <span className="font-mono font-bold text-sky-300">{fmt(rpk.pelunasan.pelunasan_fisik)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Pelunasan External</span>
+                                                <span className="font-mono font-bold text-teal-300">{fmt(rpk.pelunasan.pelunasan_external)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Addendum / Cadangan Gaji</span>
+                                                <span className="font-mono font-bold text-rose-300">{fmt(rpk.pelunasan.addendum_cadangan_gaji || 0)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Pengeluaran Lain-lain</span>
+                                                <span className="font-mono font-bold text-orange-300">{fmt(rpk.pelunasan.pengeluaran_lain_lain || 0)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Fee Team Internal (50%)</span>
+                                                <span className="font-mono font-bold text-indigo-300">{fmt(rpk.pelunasan.fee_team || 0)}</span>
+                                            </div>
+                                            <div className="bg-stone-800/70 p-2.5 rounded-xl border border-stone-700/50">
+                                                <span className="text-[10px] text-stone-400 block">Sisa Cash Termin Sebelumnya</span>
+                                                <span className="font-mono font-bold text-emerald-300">{fmt(rpk.pelunasan.sisa_cash_sebelumnya)}</span>
+                                            </div>
+                                        </div>
 
-                                                    <div className="overflow-x-auto">
-                                                        <table className="w-full text-xs text-left">
-                                                            <thead className="text-[9px] uppercase text-stone-400">
-                                                                <tr>
-                                                                    <th className="px-2 py-1">Keterangan / No INV</th>
-                                                                    <th className="px-2 py-1 text-right">Nilai</th>
-                                                                    <th className="px-2 py-1 text-right">Pembayaran</th>
-                                                                    <th className="px-2 py-1">Tanggal INV</th>
-                                                                    <th className="px-2 py-1">Tanggal Bayar</th>
-                                                                    <th className="px-2 py-1 text-center">AF</th>
-                                                                    <th className="px-2 py-1 text-center">FB</th>
-                                                                    <th className="px-2 py-1 text-center">JW</th>
-                                                                    <th className="px-2 py-1 text-center">Aksi</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {group.items.map((item, itemIdx) => (
-                                                                    <tr key={itemIdx} className="border-b border-stone-100">
-                                                                        <td className="p-1">
-                                                                            <input
-                                                                                type="text"
-                                                                                value={item.label}
-                                                                                onChange={(e) => handleUpdateInvoiceRow('fisik', groupIdx, itemIdx, 'label', e.target.value)}
-                                                                                className="w-full px-2 py-1 text-xs border border-stone-200 rounded"
-                                                                                placeholder="No/Ket Invoice"
-                                                                            />
-                                                                        </td>
-                                                                        <td className="p-1">
-                                                                            <input
-                                                                                type="number"
-                                                                                value={item.nilai}
-                                                                                onChange={(e) => handleUpdateInvoiceRow('fisik', groupIdx, itemIdx, 'nilai', parseFloat(e.target.value) || 0)}
-                                                                                className="w-24 px-2 py-1 text-right text-xs font-mono border border-stone-200 rounded"
-                                                                            />
-                                                                        </td>
-                                                                        <td className="p-1">
-                                                                            <input
-                                                                                type="number"
-                                                                                value={item.pembayaran}
-                                                                                onChange={(e) => handleUpdateInvoiceRow('fisik', groupIdx, itemIdx, 'pembayaran', parseFloat(e.target.value) || 0)}
-                                                                                className="w-24 px-2 py-1 text-right text-xs font-mono border border-stone-200 rounded"
-                                                                            />
-                                                                        </td>
-                                                                        <td className="p-1">
-                                                                            <input
-                                                                                type="date"
-                                                                                value={item.tanggal_inv || ''}
-                                                                                onChange={(e) => handleUpdateInvoiceRow('fisik', groupIdx, itemIdx, 'tanggal_inv', e.target.value)}
-                                                                                className="px-2 py-1 text-xs text-stone-600 border border-stone-200 rounded"
-                                                                            />
-                                                                        </td>
-                                                                        <td className="p-1">
-                                                                            <input
-                                                                                type="date"
-                                                                                value={item.tanggal_pembayaran || ''}
-                                                                                onChange={(e) => handleUpdateInvoiceRow('fisik', groupIdx, itemIdx, 'tanggal_pembayaran', e.target.value)}
-                                                                                className="px-2 py-1 text-xs text-stone-600 border border-stone-200 rounded"
-                                                                            />
-                                                                        </td>
-                                                                        {['flag_af', 'flag_fb', 'flag_jw'].map((flag) => (
-                                                                            <td key={flag} className="p-1 text-center">
-                                                                                <input
-                                                                                    type="checkbox"
-                                                                                    checked={!!item[flag as keyof MaterialItem]}
-                                                                                    onChange={(e) => handleInvoiceCheckboxChange('fisik', groupIdx, itemIdx, flag as any, e.target.checked)}
-                                                                                    className="rounded border-stone-300 text-amber-500 focus:ring-amber-500"
-                                                                                />
-                                                                            </td>
-                                                                        ))}
-                                                                        <td className="p-1 text-center">
-                                                                            <button type="button" onClick={() => handleRemoveInvoiceRow('fisik', groupIdx, itemIdx)} className="text-rose-500 hover:text-rose-600 font-bold px-1.5 py-0.5 hover:bg-rose-50 rounded">x</button>
-                                                                        </td>
-                                                                    </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        )}
+                                        <div className="grid grid-cols-3 gap-3 pt-2 border-t border-indigo-800/50 text-xs">
+                                            <div className="bg-stone-950/80 p-3 rounded-xl">
+                                                <span className="text-[10px] text-stone-400 block">Sisa Sebelum Management</span>
+                                                <span className={`font-mono font-bold ${rpk.pelunasan.sisa_cash_sebelum_mgmt < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>{fmt(rpk.pelunasan.sisa_cash_sebelum_mgmt)}</span>
+                                            </div>
+                                            <div className="bg-stone-950/80 p-3 rounded-xl">
+                                                <span className="text-[10px] text-stone-400 block">Management (Pelunasan)</span>
+                                                <span className="font-mono font-bold text-amber-400">{fmt(rpk.pelunasan.management)}</span>
+                                            </div>
+                                            <div className="bg-stone-950/80 p-3 rounded-xl">
+                                                <span className="text-[10px] text-stone-400 block">Status Project Final</span>
+                                                <span className={`font-mono font-extrabold ${status_project < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>{fmt(status_project)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Main Pembayaran Table Internal (Pelunasan) */}
+                                    <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm p-5 space-y-4">
+                                        <div className="flex justify-between items-center border-b border-stone-100 pb-2">
+                                            <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">3A. Rincian Pembayaran Vendor Utama (Pelunasan)</h3>
+                                            <button type="button" onClick={() => handleAddMainPaymentRow('internal')} className="text-[10px] font-bold text-amber-600 hover:text-amber-700">+ Tambah Pembayaran Utama</button>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs text-left text-stone-600">
+                                                <thead className="text-[10px] text-stone-400 uppercase bg-stone-50 border-b border-stone-200">
+                                                    <tr>
+                                                        <th className="px-4 py-2">Keterangan</th>
+                                                        <th className="px-4 py-2">Target Fase</th>
+                                                        <th className="px-4 py-2 text-right">Nilai Akhir (Pelunasan)</th>
+                                                        <th className="px-4 py-2 text-right">Pembayaran Pelunasan</th>
+                                                        <th className="px-4 py-2">Tanggal Pembayaran</th>
+                                                        <th className="px-4 py-2 text-center">AF</th>
+                                                        <th className="px-4 py-2 text-center">FB</th>
+                                                        <th className="px-4 py-2 text-center">JW</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {vendorForm.data.pembayaran_vendor_internal.filter(x => x.notes === 'pelunasan').map((item, idx) => (
+                                                        <tr key={item.id || idx} className="border-b border-stone-100">
+                                                            <td className="p-1 font-semibold text-stone-700 px-3">{item.label}</td>
+                                                            <td className="p-1"><span className="text-xs font-semibold text-stone-600 uppercase">Pelunasan</span></td>
+                                                            <td className="px-2 py-3 text-right font-mono text-stone-500">{fmt(item.nilai || 0)}</td>
+                                                            <td className="p-1"><input type="number" value={item.pembayaran} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'pembayaran', parseFloat(e.target.value) || 0)} className="w-24 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded" /></td>
+                                                            <td className="p-1"><input type="date" value={item.tanggal_pembayaran || ''} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'tanggal_pembayaran', e.target.value)} className="px-1 py-1 text-[11px] rounded border border-stone-200 bg-white text-stone-600" /></td>
+                                                            {['flag_af', 'flag_fb', 'flag_jw'].map((flag) => (
+                                                                <td key={flag} className="p-1 text-center"><input type="checkbox" checked={!!item[flag as keyof VendorMainEntry]} onChange={(e) => handleUpdateMainVendorField('internal', idx, flag as keyof VendorMainEntry, e.target.checked ? '✔' : null)} className="rounded border-stone-300 text-amber-500 scale-90" /></td>
+                                                            ))}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
                             )}
 
-                            {/* TAB: VENDOR EXTERNAL */}
-                            {activeTab === 'vendor_external' && (
+
+
+
+
+                            {/* TAB: PEMBAYARAN MATERIAL EKSTERNAL */}
+                            {activeTab === 'material_eksternal' && (
                                 <div className="space-y-6">
                                     {/* 3A. Daftar Item External */}
                                     <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm p-5 space-y-4">
@@ -1764,10 +1622,7 @@ export default function Show({
                                 </div>
                             )}
 
-                            {/* Save Vendor Footer (visible when vendor list is set for active tab) */}
-                            {((activeTab === 'vendor_internal' && vendorForm.data.material_groups_internal.length > 0) ||
-                              (activeTab === 'vendor_fisik' && vendorForm.data.material_groups_fisik.length > 0) ||
-                              (activeTab === 'vendor_external' && vendorForm.data.external_items.length > 0)) && (
+                            {['fase_dp', 'fase_termin', 'fase_pelunasan', 'material_eksternal'].includes(activeTab) && (
                                 <div className="sticky bottom-4 z-10 flex justify-end bg-white/90 backdrop-blur-sm border border-stone-200/80 p-3 rounded-2xl shadow-lg">
                                     <button type="submit" disabled={vendorForm.processing} className="bg-amber-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl hover:bg-amber-600 transition disabled:opacity-50">
                                         {vendorForm.processing ? 'Menyimpan...' : 'Simpan Rincian Vendor'}

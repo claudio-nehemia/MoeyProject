@@ -32,6 +32,7 @@ class SurveyScheduleController extends Controller
         })->select('id', 'name', 'email')->get();
 
         $orders = Order::with(['surveyUsers:id,name'])
+            ->visibleToSurveyUser($user)
             ->where(function ($query) {
                 $query->whereRaw("LOWER(payment_status) LIKE '%dp%'")
                     ->orWhereNotNull('tanggal_survey')

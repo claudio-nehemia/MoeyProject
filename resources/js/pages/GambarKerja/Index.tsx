@@ -1,9 +1,10 @@
 import ExtendModal from '@/components/ExtendModal';
+import WorkStatusTabs from '@/components/WorkStatusTabs';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import { Head, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 /* ================= TYPES ================= */
 
@@ -50,6 +51,7 @@ export default function GambarKerjaIndex({ items }: Props) {
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('semua');
+    const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
     // Dual task response state
     const [taskResponses, setTaskResponses] = useState<
         Record<number, { regular?: any; marketing?: any }>
@@ -132,7 +134,21 @@ export default function GambarKerjaIndex({ items }: Props) {
 
     /* ================= FILTER ================= */
 
+    const countBelum = useMemo(() =>
+        items.filter(i => i.status !== 'approved').length,
+        [items]
+    );
+
+    const countSudah = useMemo(() =>
+        items.filter(i => i.status === 'approved').length,
+        [items]
+    );
+
     const filteredItems = items.filter((item) => {
+        const isCompleted = item.status === 'approved';
+        const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
+        if (!matchesWorkTab) return false;
+
         // Status filter
         if (statusFilter !== 'semua' && item.status !== statusFilter) {
             return false;
@@ -299,6 +315,14 @@ export default function GambarKerjaIndex({ items }: Props) {
                         </div>
                     </div>
                 </div>
+
+                {/* Work Status Tabs */}
+                <WorkStatusTabs
+                    activeTab={workTab}
+                    onChange={setWorkTab}
+                    countBelum={countBelum}
+                    countSudah={countSudah}
+                />
 
                 {/* ================= FILTERS ================= */}
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">

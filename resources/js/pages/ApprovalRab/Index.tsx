@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import ExtendModal from '@/components/ExtendModal';
+import WorkStatusTabs from '@/components/WorkStatusTabs';
 import axios from 'axios';
 
 interface ItemPreview {
@@ -43,6 +44,7 @@ export default function ApprovalRabIndex({ items }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('semua');
+    const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
     // Dual task response state
     const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: any; marketing?: any }>>({});
     const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: any } | null>(null);
@@ -151,7 +153,21 @@ export default function ApprovalRabIndex({ items }: Props) {
         });
     }, [items]);
 
+    const countBelum = useMemo(() =>
+        items.filter(r => !r.approval_rab_response_time).length,
+        [items]
+    );
+
+    const countSudah = useMemo(() =>
+        items.filter(r => !!r.approval_rab_response_time).length,
+        [items]
+    );
+
     const filtered = items.filter((row) => {
+        const isCompleted = !!row.approval_rab_response_time;
+        const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
+        if (!matchesWorkTab) return false;
+
         // Status filter
         let meetsStatus = true;
         if (statusFilter === 'pending_response') {
@@ -201,6 +217,14 @@ export default function ApprovalRabIndex({ items }: Props) {
                             </p>
                         </div>
                     </div>
+
+                    {/* Work Status Tabs */}
+                    <WorkStatusTabs
+                        activeTab={workTab}
+                        onChange={setWorkTab}
+                        countBelum={countBelum}
+                        countSudah={countSudah}
+                    />
 
                     {/* Filters */}
                     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">

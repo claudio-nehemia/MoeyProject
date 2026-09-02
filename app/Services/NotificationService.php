@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\Order;
 use App\Models\Notification;
+use App\Models\NotificationSetting;
 use App\Models\TaskResponse;
 use App\Services\FCMService;
 
@@ -15,6 +16,142 @@ class NotificationService
     public function __construct()
     {
         $this->fcmService = new FCMService();
+    }
+
+    /**
+     * Dispatch notification dynamically using NotificationSetting if available.
+     * Returns true if handled dynamically, false if caller should use fallback.
+     */
+    public function dispatchDynamicNotification(string $eventKey, Order $order, string $defaultType, array $customData = []): bool
+    {
+        $setting = NotificationSetting::getByKey($eventKey);
+        if (!$setting) {
+            return false;
+        }
+
+        // If explicitly deactivated by admin, skip sending
+        if (!$setting->is_active) {
+            \Log::info("[NotificationService] Notification '{$eventKey}' is disabled in settings.");
+            return true;
+        }
+
+        $replacements = array_merge([
+            'nama_project' => $order->nama_project ?? '-',
+            'customer_name' => $order->customer_name ?? '-',
+            'tanggal_survey' => $order->tanggal_survey ?? '-',
+        ], $customData);
+
+        $title = $setting->formatTitle($replacements);
+        $message = $setting->formatMessage($replacements);
+        $actionUrl = $setting->action_url ?: ($customData['action_url'] ?? '/order');
+
+        $notificationData = array_merge([
+            'order_name' => $order->nama_project,
+            'customer_name' => $order->customer_name,
+            'action_url' => $actionUrl,
+        ], $customData);
+
+        $sendDb = $setting->send_database;
+        $sendFcm = $setting->send_fcm;
+
+        // 1. Resolve primary recipients
+        $recipients = collect();
+        if (!empty($setting->target_role_ids)) {
+            $roleIds = $setting->target_role_ids;
+            if ($setting->recipient_type === 'all_by_role') {
+                $recipients = User::where(function ($query) use ($roleIds) {
+                    $query->whereIn('role_id', $roleIds)
+                        ->orWhereHas('roles', fn($q) => $q->whereIn('roles.id', $roleIds));
+                })->get();
+            } else {
+                // 'order_team'
+                $recipients = $order->users()->where(function ($query) use ($roleIds) {
+                    $query->whereIn('role_id', $roleIds)
+                        ->orWhereHas('roles', fn($q) => $q->whereIn('roles.id', $roleIds));
+                })->get();
+
+                if ($recipients->isEmpty() && method_exists($order, 'surveyUsers')) {
+                    $recipients = $order->surveyUsers()->where(function ($query) use ($roleIds) {
+                        $query->whereIn('role_id', $roleIds)
+                            ->orWhereHas('roles', fn($q) => $q->whereIn('roles.id', $roleIds));
+                    })->get();
+                }
+            }
+        }
+
+        foreach ($recipients as $user) {
+            $notif = null;
+            if ($sendDb) {
+                $notif = Notification::create([
+                    'user_id' => $user->id,
+                    'order_id' => $order->id,
+                    'type' => $defaultType,
+                    'title' => $title,
+                    'message' => $message,
+                    'data' => $notificationData,
+                ]);
+            }
+
+            if ($sendFcm) {
+                $this->fcmService->sendToUser($user->id, [
+                    'title' => $title,
+                    'body' => $message,
+                    'data' => [
+                        'notification_id' => $notif ? $notif->id : 0,
+                        'type' => $defaultType,
+                        'order_id' => $order->id,
+                    ],
+                ]);
+            }
+        }
+
+        // 2. Management copy
+        if ($setting->send_to_management) {
+            $mgmtRoleIds = !empty($setting->management_role_ids)
+                ? $setting->management_role_ids
+                : [
+                    \App\Models\Role::getKepalaMarketingRoleId(),
+                    \App\Models\Role::getProjectManagerRoleId(),
+                    \App\Models\Role::getSupervisorRoleId(),
+                ];
+
+            $managers = $order->users()->where(function ($query) use ($mgmtRoleIds) {
+                $query->whereIn('role_id', $mgmtRoleIds)
+                    ->orWhereHas('roles', fn($q) => $q->whereIn('roles.id', $mgmtRoleIds));
+            })->get();
+
+            foreach ($managers as $manager) {
+                if ($recipients->contains('id', $manager->id)) {
+                    continue;
+                }
+
+                $notif = null;
+                if ($sendDb) {
+                    $notif = Notification::create([
+                        'user_id' => $manager->id,
+                        'order_id' => $order->id,
+                        'type' => $defaultType,
+                        'title' => $title,
+                        'message' => $message,
+                        'data' => $notificationData,
+                    ]);
+                }
+
+                if ($sendFcm) {
+                    $this->fcmService->sendToUser($manager->id, [
+                        'title' => $title,
+                        'body' => $message,
+                        'data' => [
+                            'notification_id' => $notif ? $notif->id : 0,
+                            'type' => $defaultType,
+                            'order_id' => $order->id,
+                        ],
+                    ]);
+                }
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -60,6 +197,7 @@ class NotificationService
      */
     public function sendSurveyRequestNotification(Order $order)
     {
+        if ($this->dispatchDynamicNotification('stage_survey', $order, Notification::TYPE_SURVEY_REQUEST, ['action_url' => '/survey-results'])) return;
         // Get drafter/surveyor from order team
         $surveyors = $order->users()->whereHas('role', function ($query) {
             $query->whereIn('nama_role', ['Surveyor', 'Drafter']);
@@ -112,6 +250,7 @@ class NotificationService
      */
     public function sendMoodboardRequestNotification(Order $order)
     {
+        if ($this->dispatchDynamicNotification('stage_moodboard', $order, Notification::TYPE_MOODBOARD_REQUEST, ['action_url' => '/moodboard'])) return;
         // Get designer from order team
         $designers = $order->users()->whereHas('role', function ($query) {
             $query->where('id', \App\Models\Role::getDesainerRoleId());
@@ -178,6 +317,7 @@ class NotificationService
      */
     public function sendEstimasiRequestNotification(Order $order)
     {
+        if ($this->dispatchDynamicNotification('stage_estimasi', $order, Notification::TYPE_ESTIMASI_REQUEST, ['action_url' => '/estimasi'])) return;
         // Get ALL users with Estimator role
         $estimators = User::whereHas('role', function ($query) {
             $query->where('nama_role', 'Estimator');
@@ -228,6 +368,7 @@ class NotificationService
      */
     public function sendCommitmentFeeRequestNotification(Order $order)
     {
+        if ($this->dispatchDynamicNotification('stage_commitment_fee', $order, Notification::TYPE_COMMITMENT_FEE_REQUEST, ['action_url' => '/commitment-fee'])) return;
         // Get ALL users with Legal Admin role
         $legalAdmins = User::whereHas('role', function ($query) {
             $query->where('nama_role', 'Legal Admin');
@@ -278,6 +419,7 @@ class NotificationService
      */
     public function sendDesignApprovalNotification(Order $order)
     {
+        if ($this->dispatchDynamicNotification('stage_design_approval', $order, Notification::TYPE_DESIGN_APPROVAL, ['action_url' => '/moodboard'])) return;
         // Get designer from order team
         $designers = $order->users()->whereHas('role', function ($query) {
             $query->where('id', \App\Models\Role::getDesainerRoleId());
@@ -328,6 +470,7 @@ class NotificationService
      */
     public function sendFinalDesignRequestNotification(Order $order)
     {
+        if ($this->dispatchDynamicNotification('stage_final_design', $order, Notification::TYPE_FINAL_DESIGN_REQUEST, ['action_url' => '/desain-final'])) return;
         // Get designer from order team
         $designers = $order->users()->whereHas('role', function ($query) {
             $query->where('id', \App\Models\Role::getDesainerRoleId());
@@ -375,6 +518,7 @@ class NotificationService
 
     public function sendItemPekerjaanRequestNotification(Order $order)
     {
+        if ($this->dispatchDynamicNotification('stage_item_pekerjaan', $order, Notification::TYPE_ITEM_PEKERJAAN_REQUEST, ['action_url' => '/item-pekerjaan'])) return;
         // Get designer from order team
         $designers = $order->users()->whereHas('role', function ($query) {
             $query->where('id', \App\Models\Role::getDesainerRoleId());
@@ -422,6 +566,7 @@ class NotificationService
 
     public function sendRabInternalRequestNotification(Order $order)
     {
+        if ($this->dispatchDynamicNotification('stage_rab_internal', $order, Notification::TYPE_RAB_INTERNAL_REQUEST, ['action_url' => '/rab-internal'])) return;
         // Get estimator from order team
         $estimators = User::whereHas('role', function ($query) {
             $query->where('nama_role', 'Estimator');
@@ -469,6 +614,7 @@ class NotificationService
 
     public function sendKontrakRequestNotification(Order $order)
     {
+        if ($this->dispatchDynamicNotification('stage_kontrak', $order, Notification::TYPE_KONTRAK_REQUEST, ['action_url' => '/kontrak'])) return;
         // Get legal admin from order team
         $legalAdmins = User::whereHas('role', function ($query) {
             $query->where('nama_role', 'Legal Admin')->orWhere('nama_role', 'LIKE', '%Legal%');
@@ -516,6 +662,7 @@ class NotificationService
 
     public function sendInvoiceRequestNotification(Order $order)
     {
+        if ($this->dispatchDynamicNotification('stage_invoice', $order, Notification::TYPE_INVOICE_REQUEST, ['action_url' => '/invoice'])) return;
         // Get finance team from order team
         $legalAdmins = User::whereHas('role', function ($query) {
             $query->where('nama_role', 'Legal Admin');
@@ -563,6 +710,7 @@ class NotificationService
 
     public function sendSurveyScheduleRequestNotification(Order $order)
     {
+        if ($this->dispatchDynamicNotification('stage_survey_schedule', $order, Notification::TYPE_SURVEY_SCHEDULE_REQUEST, ['action_url' => '/survey-schedule'])) return;
         $projectManagers = User::whereHas('role', function ($query) {
             $query->where('nama_role', 'Project Manager');
         })->get();
@@ -625,6 +773,7 @@ class NotificationService
 
     public function sendSurveyUlangRequestNotification(Order $order)
     {
+        if ($this->dispatchDynamicNotification('stage_survey_ulang', $order, Notification::TYPE_SURVEY_ULANG_REQUEST, ['action_url' => '/survey-ulang'])) return;
         // Get drafter/surveyor from order team
         $teams = $order->surveyUsers()->whereHas('role', function ($query) {
             $query->where(function ($q) {
@@ -694,6 +843,7 @@ class NotificationService
 
     public function sendGambarKerjaRequestNotification(Order $order)
     {
+        if ($this->dispatchDynamicNotification('stage_gambar_kerja', $order, Notification::TYPE_GAMBAR_KERJA_REQUEST, ['action_url' => '/gambar-kerja'])) return;
         $teams = $order->surveyUsers()->whereHas('role', function ($query) {
             $query->where(function ($q) {
                 $q->whereIn('nama_role', ['Surveyor', 'Drafter'])
@@ -760,6 +910,7 @@ class NotificationService
 
     public function sendMeetingVendorRequestNotification(Order $order)
     {
+        if ($this->dispatchDynamicNotification('stage_meeting_vendor', $order, Notification::TYPE_JADWAL_MEETING_VENDOR_REQUEST, ['action_url' => '/meeting-vendor'])) return;
         $drafters = $order->surveyUsers()->whereHas('role', function ($query) {
             $query->whereIn('nama_role', ['Drafter', 'Surveyor']);
         })->get();
@@ -832,11 +983,13 @@ class NotificationService
 
     public function sendMeetingApprovalRequestNotification(Order $order)
     {
+        if ($this->dispatchDynamicNotification('stage_meeting_vendor', $order, Notification::TYPE_JADWAL_MEETING_APPROVAL_REQUEST, ['action_url' => '/meeting-vendor'])) return;
         $this->sendMeetingVendorRequestNotification($order);
     }
 
     public function sendApprovalMaterialRequestNotification(Order $order)
     {
+        if ($this->dispatchDynamicNotification('stage_approval_material', $order, Notification::TYPE_APPROVAL_MATERIAL_REQUEST, ['action_url' => '/approval-material'])) return;
         $drafters = $order->surveyUsers()->whereHas('role', function ($query) {
             $query->whereIn('nama_role', ['Drafter', 'Surveyor']);
         })->get();
@@ -900,6 +1053,7 @@ class NotificationService
 
     public function sendWorkplanRequestNotification(Order $order)
     {
+        if ($this->dispatchDynamicNotification('stage_workplan', $order, Notification::TYPE_WORKPLAN_REQUEST, ['action_url' => '/workplan'])) return;
         // Get project managers in survey teams
         $projectManagers = $order->surveyUsers()->whereHas('role', function ($query) {
             $query->where('nama_role', 'Project Manager');
@@ -1030,6 +1184,7 @@ class NotificationService
 
     public function sendProjectManagementRequestNotification(Order $order)
     {
+        if ($this->dispatchDynamicNotification('stage_project_management', $order, Notification::TYPE_PROJECT_MANAGEMENT_REQUEST, ['action_url' => '/project-management'])) return;
         // Get Kepala Marketing from order teams and all Supervisors
         $kepalaMarketingInTeam = $order->users()->whereHas('role', function ($query) {
             $query->where('id', \App\Models\Role::getKepalaMarketingRoleId());
@@ -1137,6 +1292,10 @@ class NotificationService
 
     public function sendTaskDeadlineReminderNotification(Order $order, TaskResponse $taskResponse, User $user)
     {
+        $setting = NotificationSetting::getByKey('reminder_task_deadline');
+        if ($setting && !$setting->is_active) {
+            return;
+        }
         $tahapNames = [
             'survey' => 'Survey',
             'moodboard' => 'Moodboard',
@@ -1225,6 +1384,10 @@ class NotificationService
      */
     public function sendPaymentReminderNotification(Order $order, \App\Models\CashflowVendorEntry $entry, string $paymentType = 'dp')
     {
+        $setting = NotificationSetting::getByKey('reminder_payment_due');
+        if ($setting && !$setting->is_active) {
+            return;
+        }
         $legalAdmins = User::whereHas('role', function ($query) {
             $query->where('nama_role', 'Legal Admin');
         })->get();
@@ -1267,6 +1430,10 @@ class NotificationService
 
     public function sendPaymentReminderH7Notification(Order $order, \App\Models\CashflowVendorEntry $entry, string $paymentType = 'dp')
     {
+        $setting = NotificationSetting::getByKey('reminder_payment_h_min');
+        if ($setting && !$setting->is_active) {
+            return;
+        }
         $legalAdmins = User::whereHas('role', function ($query) {
             $query->where('nama_role', 'Legal Admin');
         })->get();
@@ -1308,6 +1475,10 @@ class NotificationService
 
     public function sendFeeReminderNotification(Order $order)
     {
+        $setting = NotificationSetting::getByKey('reminder_material_fee');
+        if ($setting && !$setting->is_active) {
+            return;
+        }
         $pmUsers = $order->users;
 
         foreach ($pmUsers as $user) {

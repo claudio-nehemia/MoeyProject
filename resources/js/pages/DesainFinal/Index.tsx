@@ -1,9 +1,10 @@
 import ExtendModal from '@/components/ExtendModal';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import WorkStatusTabs from '@/components/WorkStatusTabs';
 import { Head, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 interface Order {
     id: number;
@@ -67,6 +68,10 @@ export default function DesainFinalIndex({ moodboards }: Props) {
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('semua');
+    const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
+
+    const countBelum = useMemo(() => moodboards.filter(m => !m.moodboard_final).length, [moodboards]);
+    const countSudah = useMemo(() => moodboards.filter(m => !!m.moodboard_final).length, [moodboards]);
     const [showReplaceModal, setShowReplaceModal] = useState(false);
     const [selectedFile, setSelectedFile] = useState<MoodboardFile | null>(
         null,
@@ -149,6 +154,10 @@ export default function DesainFinalIndex({ moodboards }: Props) {
     }, [moodboards]);
 
     const filteredMoodboards = moodboards.filter((moodboard) => {
+        const isCompleted = !!moodboard.moodboard_final;
+        const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
+        if (!matchesWorkTab) return false;
+
         // Status filter logic
         let meetsStatus = true;
         if (statusFilter === 'pending_response') {
@@ -417,6 +426,14 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                         </div>
                     </div>
                 </div>
+
+                {/* Work Status Tabs */}
+                <WorkStatusTabs
+                    activeTab={workTab}
+                    onChange={setWorkTab}
+                    countBelum={countBelum}
+                    countSudah={countSudah}
+                />
 
                 {/* Filters */}
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">

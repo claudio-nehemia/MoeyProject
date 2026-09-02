@@ -2,6 +2,7 @@ import { Link, Head } from "@inertiajs/react";
 import { useState, useMemo } from "react";
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import WorkStatusTabs from '@/components/WorkStatusTabs';
 
 interface Defect {
     id: number;
@@ -20,9 +21,24 @@ export default function Index({ defects }: { defects: Defect[] }) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('semua');
+    const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
+
+    const countBelum = useMemo(() =>
+        defects.filter(d => d.status !== 'completed').length,
+        [defects]
+    );
+
+    const countSudah = useMemo(() =>
+        defects.filter(d => d.status === 'completed').length,
+        [defects]
+    );
 
     const filteredDefects = useMemo(() =>
         defects.filter(defect => {
+            const isCompleted = defect.status === 'completed';
+            const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
+            if (!matchesWorkTab) return false;
+
             // Status filter
             if (statusFilter !== 'semua' && defect.status !== statusFilter) {
                 return false;
@@ -34,7 +50,7 @@ export default function Index({ defects }: { defects: Defect[] }) {
                 defect.nama_produk.toLowerCase().includes(searchQuery.toLowerCase())
             );
         }),
-        [defects, searchQuery, statusFilter]
+        [defects, searchQuery, statusFilter, workTab]
     );
 
     // Status badge colors
@@ -119,6 +135,14 @@ export default function Index({ defects }: { defects: Defect[] }) {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Work Status Tabs */}
+                        <WorkStatusTabs
+                            activeTab={workTab}
+                            onChange={setWorkTab}
+                            countBelum={countBelum}
+                            countSudah={countSudah}
+                        />
 
                         {/* Filters */}
                         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">

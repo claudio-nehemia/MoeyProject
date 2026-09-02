@@ -224,6 +224,7 @@ class CashflowController extends Controller
         $upgradeMaterial = $getManual('upgrade_material');
         $spkFisikFix = $getManual('spk_fisik_fix');
         $spkExternalFix = $getManual('spk_external_fix');
+        $biayaTakTerduga = $getManual('biaya_tak_terduga');
 
         $saldoEfisiensiInternal = $spkInternalFix > 0 ? $spkInternal - $spkInternalFix : 0;
         $saldoEfisiensiFisik = $spkFisikFix > 0 ? $spkFisik - $spkFisikFix : 0;
@@ -231,6 +232,7 @@ class CashflowController extends Controller
 
         $totalSpkFix = $spkInternalFix + $spkFisikFix + $spkExternalFix;
         $totalSaldoEfisiensi = $saldoEfisiensiInternal + $saldoEfisiensiFisik + $saldoEfisiensiExternal;
+        $angkaFinal = $totalSaldoEfisiensi - $biayaTakTerduga;
 
         // ═══════════════════════════════════════
         // DYNAMIC VENDOR ENTRIES & CALCULATIONS
@@ -370,59 +372,88 @@ class CashflowController extends Controller
         $totalRealisasi = $realisasiInternal + $realisasiFisik + $realisasiExternal + $realisasiAddendum;
 
         // ═══════════════════════════════════════
-        // BAGIAN 2: PEMBAYARAN (DP, Termin, Pelunasan)
+        // BAGIAN 2: PEMBAYARAN (Dinamis per Tahapan)
         // ═══════════════════════════════════════
         $tahapan = $termin?->tahapan ?? [];
-        $pembayaranDp = 0;
-        $pembayaranTermin = 0;
-        $pembayaranPelunasan = 0;
-        $pctDp = 0;
-        $pctTermin = 0;
-        $pctPelunasan = 0;
-        $tglDp = null;
-        $tglTermin = null;
-        $tglPelunasan = null;
+        if (!is_array($tahapan) || empty($tahapan)) {
+            $tahapan = [
+                ['tahapan' => 'DP', 'persentase' => 40],
+                ['tahapan' => 'Termin II', 'persentase' => 30],
+                ['tahapan' => 'Pelunasan', 'persentase' => 30],
+            ];
+        }
+
+        // Build tahapan list for frontend
+        $tahapanList = [];
+        foreach ($tahapan as $idx => $t) {
+            $tahapanList[] = [
+                'index' => $idx,
+                'nama' => $t['tahapan'] ?? 'Tahap ' . ($idx + 1),
+                'persentase' => isset($t['persentase']) ? (float) $t['persentase'] : 0,
+                'is_dp' => $idx === 0,
+                'is_pelunasan' => $idx === count($tahapan) - 1,
+            ];
+        }
 
         // Paid invoices sorted by date
         $paidInvoices = $invoices->where('status', 'paid')->sortBy('paid_at');
         $cmFeePaid = ($commitmentFee && $commitmentFee->payment_status === 'completed') ? (float) $commitmentFee->total_fee : 0;
+        $paidInvoicesList = $paidInvoices->values();
 
-        if (is_array($tahapan)) {
-            foreach ($tahapan as $idx => $t) {
-                $pct = isset($t['persentase']) ? (float) $t['persentase'] : 0;
-                if ($idx === 0) {
-                    $pctDp = $pct;
-                } elseif ($idx === count($tahapan) - 1) {
-                    $pctPelunasan = $pct;
-                } else {
-                    $pctTermin += $pct;
-                }
+        // Build dynamic pembayaran phases
+        $pembayaranPhases = [];
+        $totalDiterima = 0;
+        foreach ($tahapanList as $idx => $fase) {
+            $pct = $fase['persentase'];
+            $proyeksi = $split['total'] * ($pct / 100);
+            $amount = 0;
+            $tanggal = null;
+
+            if ($paidInvoicesList->count() > $idx) {
+                $amount = (float) ($paidInvoicesList->get($idx)?->total_amount ?? 0);
+                $tanggal = $paidInvoicesList->get($idx)?->paid_at;
+            }
+
+            // Add commitment fee to first phase (DP)
+            if ($idx === 0) {
+                $amount += $cmFeePaid;
+            }
+
+            $totalDiterima += $amount;
+
+            $pembayaranPhases[] = [
+                'index' => $idx,
+                'nama' => $fase['nama'],
+                'pct' => $pct,
+                'proyeksi' => round($proyeksi),
+                'amount' => round($amount),
+                'tanggal' => $tanggal,
+                'is_dp' => $fase['is_dp'],
+                'is_pelunasan' => $fase['is_pelunasan'],
+            ];
+        }
+
+        $sisaPiutang = $split['total'] - $totalDiterima;
+
+        // Legacy variables for RPK compatibility
+        $pembayaranDp = $pembayaranPhases[0]['amount'] ?? 0;
+        $pembayaranTermin = 0;
+        $pembayaranPelunasan = 0;
+        foreach ($pembayaranPhases as $phase) {
+            if (!$phase['is_dp'] && !$phase['is_pelunasan']) {
+                $pembayaranTermin += $phase['amount'];
+            }
+            if ($phase['is_pelunasan']) {
+                $pembayaranPelunasan = $phase['amount'];
             }
         }
-
-        // If we have percentages, calculate projections
-        $proyeksiDp = $split['total'] * ($pctDp / 100);
-        $proyeksiTermin = $split['total'] * ($pctTermin / 100);
-        $proyeksiPelunasan = $split['total'] * ($pctPelunasan / 100);
-
-        // Actual payments from invoices
-        $paidInvoicesList = $paidInvoices->values();
-        if ($paidInvoicesList->count() > 0) {
-            $pembayaranDp = (float) $paidInvoicesList->get(0)?->total_amount ?? 0;
-            $tglDp = $paidInvoicesList->get(0)?->paid_at;
+        $pctDp = $pembayaranPhases[0]['pct'] ?? 0;
+        $pctTermin = 0;
+        $pctPelunasan = 0;
+        foreach ($tahapanList as $fase) {
+            if (!$fase['is_dp'] && !$fase['is_pelunasan']) $pctTermin += $fase['persentase'];
+            if ($fase['is_pelunasan']) $pctPelunasan = $fase['persentase'];
         }
-        if ($paidInvoicesList->count() > 1) {
-            $pembayaranTermin = (float) $paidInvoicesList->get(1)?->total_amount ?? 0;
-            $tglTermin = $paidInvoicesList->get(1)?->paid_at;
-        }
-        if ($paidInvoicesList->count() > 2) {
-            $pembayaranPelunasan = (float) $paidInvoicesList->get(2)?->total_amount ?? 0;
-            $tglPelunasan = $paidInvoicesList->get(2)?->paid_at;
-        }
-
-        $pembayaranDp += $cmFeePaid;
-        $totalDiterima = $pembayaranDp + $pembayaranTermin + $pembayaranPelunasan;
-        $sisaPiutang = $split['total'] - $totalDiterima;
 
         // ═══════════════════════════════════════
         // BAGIAN 5: ESTIMASI MARGIN
@@ -582,6 +613,16 @@ class CashflowController extends Controller
         // ═══════════════════════════════════════
         // BAGIAN 6: RENCANA PELAKSANAAN KEUANGAN (RPK)
         // ═══════════════════════════════════════
+        $kontrakInternal = $split['internal'];
+        $kontrakFisikExt = $split['fisik'] + $split['eksternal'];
+
+        $digitalMarketingVal = 0.025 * $kontrakInternal;
+        $feeMarketingVal = (0.01 * $kontrakInternal) + (0.01 * $kontrakFisikExt / 2);
+        $overheadGajiVal = 0.05 * $kontrakInternal;
+        $overheadOperasionalVal = 0.04 * $kontrakInternal;
+        $cadanganEkspansiVal = 0.079 * $kontrakInternal;
+        $cadanganProblemVal = 0.035 * $kontrakInternal;
+
         // Fase DP
         $rpkDp = $pembayaranDp;
         $dpVendor = $internalMain->where('notes', 'dp')->sum('pembayaran');
@@ -595,7 +636,8 @@ class CashflowController extends Controller
             $cadanganVendorDp = $cadanganVendorPembayaran;
         }
 
-        $totalPengeluaranDp = $dpVendor + $cadanganVendorDp + $dpFisik + $totalDpExternal + $totalFeeTeam + $totalBreakdownAmount;
+        $feeTeamHalf = $totalFeeTeam / 2;
+        $totalPengeluaranDp = $dpVendor + $cadanganVendorDp + $dpFisik + $totalDpExternal + $feeMarketingVal + $overheadGajiVal + $overheadOperasionalVal + $cadanganEkspansiVal + $feeTeamHalf;
         $sisaCashSebelumMgmtDp = $rpkDp - $totalPengeluaranDp;
         $managementDp = ($sisaCashSebelumMgmtDp > $sisaMargin) ? $sisaMargin : $sisaCashSebelumMgmtDp;
         if ($managementDp < 0) $managementDp = 0;
@@ -615,12 +657,13 @@ class CashflowController extends Controller
         }
         $materialHutangVendor = $totalMaterialInternalPembayaran;
 
-        $sisaCashSebelumMgmtTermin = $totalCashTermin - $terminVendor - $materialHutangVendor - $terminFisik - $totalTerminExternal;
+        $totalPengeluaranTermin = $terminVendor + $materialHutangVendor + $terminFisik + $totalTerminExternal + $digitalMarketingVal + $feeTeamHalf + $cadanganProblemVal;
+        $sisaCashSebelumMgmtTermin = $totalCashTermin - $totalPengeluaranTermin;
         $managementTermin = 0;
         if (($managementDp + $sisaCashSebelumMgmtTermin) > $sisaMargin) {
             $managementTermin = $sisaMargin - $managementDp;
         } else {
-            $managementTermin = $rpkTermin - $terminVendor - $materialHutangVendor - $terminFisik - $totalTerminExternal;
+            $managementTermin = $totalCashTermin - $totalPengeluaranTermin;
         }
         if ($managementTermin < 0) $managementTermin = 0;
         $sisaCashTermin = $sisaCashSebelumMgmtTermin - $managementTermin;
@@ -640,7 +683,8 @@ class CashflowController extends Controller
             return $entry->spk_amount - $entry->pembayaran - $entry->pembayaran_termin;
         });
 
-        $sisaCashSebelumMgmtPelunasan = $totalCashPelunasan - $pelunasanVendor - $materialHutangVendorPel - $pelunasanFisik - $totalStatusExternal;
+        $totalPengeluaranPelunasan = $pelunasanVendor + $materialHutangVendorPel + $pelunasanFisik + $totalStatusExternal + $feeTeamHalf;
+        $sisaCashSebelumMgmtPelunasan = $totalCashPelunasan - $totalPengeluaranPelunasan;
         $managementPelunasan = 0;
         if ($pembayaranPelunasan > 0) {
             $managementPelunasan = $sisaMargin - $managementDp - $managementTermin;
@@ -667,13 +711,13 @@ class CashflowController extends Controller
                 'pm_name' => $pm?->name ?? '-',
             ],
             'split' => $split,
+            'tahapan_list' => $tahapanList,
+            'pembayaran_phases' => $pembayaranPhases,
             'pembayaran' => [
                 'amount_dp' => $pembayaranDp,
                 'amount_termin' => $pembayaranTermin,
                 'amount_pelunasan' => $pembayaranPelunasan,
-                'dp' => ['amount' => $pembayaranDp, 'pct' => $pctDp, 'proyeksi' => $proyeksiDp, 'tanggal' => $tglDp],
-                'termin' => ['amount' => $pembayaranTermin, 'pct' => $pctTermin, 'proyeksi' => $proyeksiTermin, 'tanggal' => $tglTermin],
-                'pelunasan' => ['amount' => $pembayaranPelunasan, 'pct' => $pctPelunasan, 'proyeksi' => $proyeksiPelunasan, 'tanggal' => $tglPelunasan],
+                'phases' => $pembayaranPhases,
                 'total_diterima' => $totalDiterima,
                 'sisa_piutang' => $sisaPiutang,
             ],
@@ -685,11 +729,13 @@ class CashflowController extends Controller
                 'upgrade_material' => $upgradeMaterial,
                 'fisik_fix' => $spkFisikFix,
                 'external_fix' => $spkExternalFix,
+                'biaya_tak_terduga' => $biayaTakTerduga,
                 'saldo_efisiensi_internal' => $saldoEfisiensiInternal,
                 'saldo_efisiensi_fisik' => $saldoEfisiensiFisik,
                 'saldo_efisiensi_external' => $saldoEfisiensiExternal,
                 'total_fix' => $totalSpkFix,
                 'total_saldo_efisiensi' => $totalSaldoEfisiensi,
+                'angka_final' => $angkaFinal,
             ],
             'realisasi' => [
                 'internal' => $realisasiInternal,
@@ -724,6 +770,11 @@ class CashflowController extends Controller
                     'cadangan_vendor' => $cadanganVendorDp,
                     'dp_fisik' => $dpFisik,
                     'dp_external' => $totalDpExternal,
+                    'fee_marketing' => round($feeMarketingVal),
+                    'overhead_gaji' => round($overheadGajiVal),
+                    'overhead_operasional' => round($overheadOperasionalVal),
+                    'cadangan_ekspansi' => round($cadanganEkspansiVal),
+                    'fee_team' => round($feeTeamHalf),
                     'fee_team_detail' => $feeTeamData,
                     'breakdown_items' => $breakdownData,
                     'sisa_cash_sebelum_mgmt' => round($sisaCashSebelumMgmtDp),
@@ -738,17 +789,22 @@ class CashflowController extends Controller
                     'material_hutang_vendor' => $materialHutangVendor,
                     'termin_fisik' => $terminFisik,
                     'termin_external' => $totalTerminExternal,
+                    'digital_marketing' => round($digitalMarketingVal),
+                    'fee_team' => round($feeTeamHalf),
+                    'cadangan_problem' => round($cadanganProblemVal),
                     'sisa_cash_sebelum_mgmt' => round($sisaCashSebelumMgmtTermin),
                     'management' => round($managementTermin),
                     'sisa_cash' => round($sisaCashTermin),
                 ],
                 'pelunasan' => [
+                    'cash_in' => $pembayaranPelunasan,
                     'sisa_cash_sebelumnya' => round($sisaCashSebelumnyaPelunasan),
                     'total_cash' => round($totalCashPelunasan),
                     'pelunasan_vendor' => $pelunasanVendor,
                     'material_hutang_vendor' => $materialHutangVendorPel,
                     'pelunasan_fisik' => $pelunasanFisik,
                     'pelunasan_external' => $totalStatusExternal,
+                    'fee_team' => round($feeTeamHalf),
                     'sisa_cash_sebelum_mgmt' => round($sisaCashSebelumMgmtPelunasan),
                     'management' => round($managementPelunasan),
                     'addendum_cadangan_gaji' => $addendumCadanganGaji,
@@ -796,7 +852,7 @@ class CashflowController extends Controller
             'kontrak_internal', 'kontrak_fisik', 'kontrak_external',
             // SPK
             'spk_internal', 'spk_fisik', 'spk_external',
-            'spk_internal_fix', 'upgrade_material', 'spk_fisik_fix', 'spk_external_fix',
+            'spk_internal_fix', 'upgrade_material', 'spk_fisik_fix', 'spk_external_fix', 'biaya_tak_terduga',
             // Realisasi
             'realisasi_internal', 'realisasi_fisik', 'realisasi_external', 'realisasi_addendum',
             // Fee percentages
@@ -1331,6 +1387,29 @@ class CashflowController extends Controller
             ->orderBy('id')
             ->get();
 
+        if ($entries->isEmpty()) {
+            $rabMaterials = $this->getRabMaterialsByCategory($order, $type);
+            foreach ($rabMaterials as $idx => $mat) {
+                CashflowVendorEntry::create([
+                    'order_id' => $order->id,
+                    'vendor_type' => $type,
+                    'section' => 'material_hutang',
+                    'vendor_group' => $mat['vendor_name'],
+                    'label' => $mat['label'],
+                    'nilai' => $mat['nilai'],
+                    'pembayaran' => 0,
+                    'sort_order' => $idx + 1,
+                ]);
+            }
+            if (!empty($rabMaterials)) {
+                $entries = CashflowVendorEntry::where('order_id', $order->id)
+                    ->where('vendor_type', $type)
+                    ->where('section', 'material_hutang')
+                    ->orderBy('id')
+                    ->get();
+            }
+        }
+
         $grouped = [];
         foreach ($entries as $entry) {
             $groupName = $entry->vendor_group ?: 'Uncategorized';
@@ -1357,6 +1436,124 @@ class CashflowController extends Controller
         return array_values($grouped);
     }
 
+    private function getRabMaterialsByCategory(Order $order, string $type)
+    {
+        $targetCategory = strtolower($type);
+        $items = [];
+        $itemPekerjaan = $order->moodboard?->itemPekerjaan;
+        if (!$itemPekerjaan) return $items;
+
+        $rabKontrak = $itemPekerjaan->rabKontrak;
+        if ($rabKontrak) {
+            foreach ($rabKontrak->rabKontrakProduks as $rkp) {
+                $itemProduk = $rkp->itemPekerjaanProduk;
+                if (!$itemProduk) continue;
+
+                $prodObj = $itemProduk->produk;
+                $vendorName = $prodObj?->supplier?->name ?? 'Vendor Umum';
+
+                if (strtolower($prodObj?->kategori ?? 'internal') === $targetCategory) {
+                    $items[] = [
+                        'label' => $prodObj->nama_produk,
+                        'vendor_name' => $vendorName,
+                        'nilai' => (float) $rkp->harga_akhir,
+                    ];
+                }
+
+                foreach ($itemProduk->bahanBakus as $bb) {
+                    $itemObj = $bb->item;
+                    if ($itemObj && strtolower($itemObj->kategori ?? 'internal') === $targetCategory) {
+                        $items[] = [
+                            'label' => $itemObj->nama_item,
+                            'vendor_name' => $itemObj->supplier?->name ?? $vendorName,
+                            'nilai' => (float) $bb->harga_dasar,
+                        ];
+                    }
+                }
+
+                foreach ($itemProduk->jenisItems as $jenisItem) {
+                    foreach ($jenisItem->items as $item) {
+                        $itemObj = $item->item;
+                        if ($itemObj && strtolower($itemObj->kategori ?? 'internal') === $targetCategory) {
+                            $items[] = [
+                                'label' => $itemObj->nama_item,
+                                'vendor_name' => $itemObj->supplier?->name ?? $vendorName,
+                                'nilai' => (float) ($itemObj->harga * $item->quantity),
+                            ];
+                        }
+                    }
+                }
+
+                foreach ($rkp->rabKontrakAksesoris as $rka) {
+                    $itemObj = $rka->itemPekerjaanItem?->item;
+                    if ($itemObj && strtolower($itemObj->kategori ?? 'internal') === $targetCategory) {
+                        $items[] = [
+                            'label' => $itemObj->nama_item,
+                            'vendor_name' => $itemObj->supplier?->name ?? $vendorName,
+                            'nilai' => (float) $rka->harga_total,
+                        ];
+                    }
+                }
+            }
+        } else {
+            $rabInternal = $itemPekerjaan->rabInternal;
+            if ($rabInternal) {
+                foreach ($rabInternal->rabProduks as $rp) {
+                    $itemProduk = $rp->itemPekerjaanProduk;
+                    if (!$itemProduk) continue;
+
+                    $prodObj = $itemProduk->produk;
+                    $vendorName = $prodObj?->supplier?->name ?? 'Vendor Umum';
+
+                    if (strtolower($prodObj?->kategori ?? 'internal') === $targetCategory) {
+                        $items[] = [
+                            'label' => $prodObj->nama_produk,
+                            'vendor_name' => $vendorName,
+                            'nilai' => (float) $rp->harga_akhir,
+                        ];
+                    }
+
+                    foreach ($itemProduk->bahanBakus as $bb) {
+                        $itemObj = $bb->item;
+                        if ($itemObj && strtolower($itemObj->kategori ?? 'internal') === $targetCategory) {
+                            $items[] = [
+                                'label' => $itemObj->nama_item,
+                                'vendor_name' => $itemObj->supplier?->name ?? $vendorName,
+                                'nilai' => (float) $bb->harga_dasar,
+                            ];
+                        }
+                    }
+
+                    foreach ($itemProduk->jenisItems as $jenisItem) {
+                        foreach ($jenisItem->items as $item) {
+                            $itemObj = $item->item;
+                            if ($itemObj && strtolower($itemObj->kategori ?? 'internal') === $targetCategory) {
+                                $items[] = [
+                                    'label' => $itemObj->nama_item,
+                                    'vendor_name' => $itemObj->supplier?->name ?? $vendorName,
+                                    'nilai' => (float) ($itemObj->harga * $item->quantity),
+                                ];
+                            }
+                        }
+                    }
+
+                    foreach ($rp->rabAksesoris as $ra) {
+                        $itemObj = $ra->itemPekerjaanItem?->item;
+                        if ($itemObj && strtolower($itemObj->kategori ?? 'internal') === $targetCategory) {
+                            $items[] = [
+                                'label' => $itemObj->nama_item,
+                                'vendor_name' => $itemObj->supplier?->name ?? $vendorName,
+                                'nilai' => (float) $ra->harga_total,
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+
+        return $items;
+    }
+
     private function getExternalEntries(Order $order, string $section)
     {
         $entries = CashflowVendorEntry::where('order_id', $order->id)
@@ -1364,6 +1561,29 @@ class CashflowController extends Controller
             ->where('section', $section)
             ->orderBy('id')
             ->get();
+
+        if ($entries->isEmpty() && $section === 'item_external') {
+            $rabExternalItems = $this->getExternalRabItems($order);
+            foreach ($rabExternalItems as $idx => $extItem) {
+                CashflowVendorEntry::create([
+                    'order_id' => $order->id,
+                    'vendor_type' => 'external',
+                    'section' => 'item_external',
+                    'label' => $extItem['label'],
+                    'vendor_name' => $extItem['vendor_name'],
+                    'nilai' => $extItem['nilai'],
+                    'spk_amount' => $extItem['spk_amount'],
+                    'sort_order' => $idx + 1,
+                ]);
+            }
+            if (!empty($rabExternalItems)) {
+                $entries = CashflowVendorEntry::where('order_id', $order->id)
+                    ->where('vendor_type', 'external')
+                    ->where('section', $section)
+                    ->orderBy('id')
+                    ->get();
+            }
+        }
 
         $formatted = [];
         foreach ($entries as $entry) {
@@ -1389,6 +1609,133 @@ class CashflowController extends Controller
         }
 
         return $formatted;
+    }
+
+    private function getExternalRabItems(Order $order)
+    {
+        $items = [];
+        $itemPekerjaan = $order->moodboard?->itemPekerjaan;
+        if (!$itemPekerjaan) return $items;
+
+        $rabKontrak = $itemPekerjaan->rabKontrak;
+        if ($rabKontrak) {
+            foreach ($rabKontrak->rabKontrakProduks as $rkp) {
+                $itemProduk = $rkp->itemPekerjaanProduk;
+                if (!$itemProduk) continue;
+
+                $prodObj = $itemProduk->produk;
+                $vendorName = $prodObj?->supplier?->name ?? '';
+
+                if (strtolower($prodObj?->kategori ?? '') === 'eksternal') {
+                    $items[] = [
+                        'label' => $prodObj->nama_produk,
+                        'vendor_name' => $vendorName,
+                        'nilai' => (float) $rkp->harga_akhir,
+                        'spk_amount' => (float) $rkp->harga_akhir,
+                    ];
+                }
+
+                foreach ($itemProduk->bahanBakus as $bb) {
+                    $itemObj = $bb->item;
+                    if ($itemObj && strtolower($itemObj->kategori ?? '') === 'eksternal') {
+                        $items[] = [
+                            'label' => $itemObj->nama_item,
+                            'vendor_name' => $itemObj->supplier?->name ?? $vendorName,
+                            'nilai' => (float) $bb->harga_dasar,
+                            'spk_amount' => (float) $bb->harga_dasar,
+                        ];
+                    }
+                }
+
+                foreach ($itemProduk->jenisItems as $jenisItem) {
+                    foreach ($jenisItem->items as $item) {
+                        $itemObj = $item->item;
+                        if ($itemObj && strtolower($itemObj->kategori ?? '') === 'eksternal') {
+                            $priceItem = (float) $itemObj->harga * $item->quantity;
+                            $items[] = [
+                                'label' => $itemObj->nama_item,
+                                'vendor_name' => $itemObj->supplier?->name ?? $vendorName,
+                                'nilai' => $priceItem,
+                                'spk_amount' => $priceItem,
+                            ];
+                        }
+                    }
+                }
+
+                foreach ($rkp->rabKontrakAksesoris as $rka) {
+                    $itemObj = $rka->itemPekerjaanItem?->item;
+                    if ($itemObj && strtolower($itemObj->kategori ?? '') === 'eksternal') {
+                        $items[] = [
+                            'label' => $itemObj->nama_item,
+                            'vendor_name' => $itemObj->supplier?->name ?? $vendorName,
+                            'nilai' => (float) $rka->harga_total,
+                            'spk_amount' => (float) $rka->harga_total,
+                        ];
+                    }
+                }
+            }
+        } else {
+            $rabInternal = $itemPekerjaan->rabInternal;
+            if ($rabInternal) {
+                foreach ($rabInternal->rabProduks as $rp) {
+                    $itemProduk = $rp->itemPekerjaanProduk;
+                    if (!$itemProduk) continue;
+
+                    $prodObj = $itemProduk->produk;
+                    $vendorName = $prodObj?->supplier?->name ?? '';
+
+                    if (strtolower($prodObj?->kategori ?? '') === 'eksternal') {
+                        $items[] = [
+                            'label' => $prodObj->nama_produk,
+                            'vendor_name' => $vendorName,
+                            'nilai' => (float) $rp->harga_akhir,
+                            'spk_amount' => (float) $rp->harga_akhir,
+                        ];
+                    }
+
+                    foreach ($itemProduk->bahanBakus as $bb) {
+                        $itemObj = $bb->item;
+                        if ($itemObj && strtolower($itemObj->kategori ?? '') === 'eksternal') {
+                            $items[] = [
+                                'label' => $itemObj->nama_item,
+                                'vendor_name' => $itemObj->supplier?->name ?? $vendorName,
+                                'nilai' => (float) $bb->harga_dasar,
+                                'spk_amount' => (float) $bb->harga_dasar,
+                            ];
+                        }
+                    }
+
+                    foreach ($itemProduk->jenisItems as $jenisItem) {
+                        foreach ($jenisItem->items as $item) {
+                            $itemObj = $item->item;
+                            if ($itemObj && strtolower($itemObj->kategori ?? '') === 'eksternal') {
+                                $priceItem = (float) $itemObj->harga * $item->quantity;
+                                $items[] = [
+                                    'label' => $itemObj->nama_item,
+                                    'vendor_name' => $itemObj->supplier?->name ?? $vendorName,
+                                    'nilai' => $priceItem,
+                                    'spk_amount' => $priceItem,
+                                ];
+                            }
+                        }
+                    }
+
+                    foreach ($rp->rabAksesoris as $ra) {
+                        $itemObj = $ra->itemPekerjaanItem?->item;
+                        if ($itemObj && strtolower($itemObj->kategori ?? '') === 'eksternal') {
+                            $items[] = [
+                                'label' => $itemObj->nama_item,
+                                'vendor_name' => $itemObj->supplier?->name ?? $vendorName,
+                                'nilai' => (float) $ra->harga_total,
+                                'spk_amount' => (float) $ra->harga_total,
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+
+        return $items;
     }
 
     private function calculateStatusProject(Order $order, float $totalContract = 0, float $totalReceived = 0)

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { router, Link, Head, usePage } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import ExtendModal from '@/components/ExtendModal';
+import WorkStatusTabs from '@/components/WorkStatusTabs';
 import axios from 'axios';
 
 interface Order {
@@ -92,6 +93,11 @@ function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: Props) {
     const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: TaskResponse } | null>(null);
 
     const [statusFilter, setStatusFilter] = useState('all');
+    const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
+
+    const countBelum = useMemo(() => moodboards.filter(m => m.itemPekerjaan?.status !== 'published').length, [moodboards]);
+    const countSudah = useMemo(() => moodboards.filter(m => m.itemPekerjaan?.status === 'published').length, [moodboards]);
+
     const [marketingFilter, setMarketingFilter] = useState('all');
     const [urgencyFilter, setUrgencyFilter] = useState('all');
     const [companyFilter, setCompanyFilter] = useState('all');
@@ -163,6 +169,10 @@ function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: Props) {
     }, [moodboards]);
 
     const filteredMoodboards = moodboards.filter((moodboard) => {
+        const isCompleted = moodboard.itemPekerjaan?.status === 'published';
+        const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
+        if (!matchesWorkTab) return false;
+
         const search = searchQuery.toLowerCase();
         const matchesSearch = 
             moodboard.order?.nama_project.toLowerCase().includes(search) ||
@@ -310,6 +320,14 @@ function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: Props) {
                             </div>
                         </div>
                     </div>
+
+                    {/* Work Status Tabs */}
+                    <WorkStatusTabs
+                        activeTab={workTab}
+                        onChange={setWorkTab}
+                        countBelum={countBelum}
+                        countSudah={countSudah}
+                    />
 
                     {/* Search & Filters */}
                     <div className="mb-6 space-y-4">

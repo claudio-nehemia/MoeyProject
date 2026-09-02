@@ -4,6 +4,7 @@ import { router, Link, Head } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import ExtendModal from '@/components/ExtendModal';
+import WorkStatusTabs from '@/components/WorkStatusTabs';
 import axios from 'axios';
 
 interface Order {
@@ -48,14 +49,31 @@ function Index({ itemPekerjaans }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [activeTab, setActiveTab] = useState<'internal' | 'kontrak'>('internal');
     const [searchQuery, setSearchQuery] = useState('');
+    const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
+
+    const countBelum = useMemo(() =>
+        (itemPekerjaans as ItemPekerjaan[]).filter(i => !(i.rabInternal && i.rabInternal.total_produks > 0)).length,
+        [itemPekerjaans]
+    );
+
+    const countSudah = useMemo(() =>
+        (itemPekerjaans as ItemPekerjaan[]).filter(i => !!(i.rabInternal && i.rabInternal.total_produks > 0)).length,
+        [itemPekerjaans]
+    );
 
     const filteredItemPekerjaans = useMemo(() =>
-        (itemPekerjaans as ItemPekerjaan[]).filter(item =>
-            item.order.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.order.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.order.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
-        ),
-        [itemPekerjaans, searchQuery]
+        (itemPekerjaans as ItemPekerjaan[]).filter(item => {
+            const isCompleted = !!item.rabInternal && item.rabInternal.total_produks > 0;
+            const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
+            if (!matchesWorkTab) return false;
+
+            return (
+                item.order.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.order.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.order.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }),
+        [itemPekerjaans, searchQuery, workTab]
     );
     // Dual task response state
     const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: TaskResponse; marketing?: TaskResponse }>>({});
@@ -222,6 +240,14 @@ function Index({ itemPekerjaans }: Props) {
                                     Kelola RAB Internal untuk setiap item pekerjaan
                                 </p>
                             </div>
+
+                            {/* Work Status Tabs */}
+                            <WorkStatusTabs
+                                activeTab={workTab}
+                                onChange={setWorkTab}
+                                countBelum={countBelum}
+                                countSudah={countSudah}
+                            />
 
                             {/* Search */}
                             <div className="mb-4">

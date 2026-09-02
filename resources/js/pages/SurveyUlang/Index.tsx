@@ -1,9 +1,10 @@
 import ExtendModal from '@/components/ExtendModal';
+import WorkStatusTabs from '@/components/WorkStatusTabs';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 interface SurveyUlang {
     id: number;
@@ -42,6 +43,7 @@ export default function Index({ surveys }: Props) {
     const [mounted, setMounted] = useState(false);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('semua');
+    const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
     const [taskResponses, setTaskResponses] = useState<
         Record<number, { regular?: TaskResponse; marketing?: TaskResponse }>
     >({});
@@ -179,7 +181,21 @@ export default function Index({ surveys }: Props) {
         });
     };
 
+    const countBelum = useMemo(() =>
+        surveys.filter(s => s.status_survey_ulang !== 'done').length,
+        [surveys]
+    );
+
+    const countSudah = useMemo(() =>
+        surveys.filter(s => s.status_survey_ulang === 'done').length,
+        [surveys]
+    );
+
     const filtered = surveys.filter((s) => {
+        const isCompleted = s.status_survey_ulang === 'done';
+        const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
+        if (!matchesWorkTab) return false;
+
         // Status filter
         if (statusFilter !== 'semua' && s.status_survey_ulang !== statusFilter) {
             return false;
@@ -248,6 +264,14 @@ export default function Index({ surveys }: Props) {
                         </div>
                     </div>
                 </div>
+
+                {/* Work Status Tabs */}
+                <WorkStatusTabs
+                    activeTab={workTab}
+                    onChange={setWorkTab}
+                    countBelum={countBelum}
+                    countSudah={countSudah}
+                />
 
                 {/* FILTERS */}
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">

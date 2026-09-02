@@ -1,6 +1,7 @@
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import ExtendModal from '@/components/ExtendModal';
+import WorkStatusTabs from '@/components/WorkStatusTabs';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
@@ -61,6 +62,10 @@ export default function Index({ surveys }: Props) {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [tahapanFilter, setTahapanFilter] = useState('all');
+    const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
+
+    const countBelum = useMemo(() => surveys.filter(s => !s.has_survey).length, [surveys]);
+    const countSudah = useMemo(() => surveys.filter(s => !!s.has_survey).length, [surveys]);
 
     const ITEMS_PER_PAGE = 15;
     const [currentPage, setCurrentPage] = useState(1);
@@ -279,6 +284,8 @@ export default function Index({ surveys }: Props) {
     };
 
     const filteredSurveys = surveys.filter((survey) => {
+        const matchesWorkTab = workTab === 'belum' ? !survey.has_survey : !!survey.has_survey;
+
         const matchesSearch =
             survey.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
             survey.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -287,13 +294,13 @@ export default function Index({ surveys }: Props) {
         const matchesStatus = statusFilter === 'all' || survey.project_status.toLowerCase() === statusFilter.toLowerCase();
         const matchesTahapan = tahapanFilter === 'all' || survey.tahapan_proyek.toLowerCase() === tahapanFilter.toLowerCase();
         
-        return matchesSearch && matchesStatus && matchesTahapan;
+        return matchesWorkTab && matchesSearch && matchesStatus && matchesTahapan;
     });
 
     // Reset pagination when filter changes
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, statusFilter, tahapanFilter]);
+    }, [searchQuery, statusFilter, tahapanFilter, workTab]);
 
     const totalPages = Math.ceil(filteredSurveys.length / ITEMS_PER_PAGE);
     
@@ -383,6 +390,14 @@ export default function Index({ surveys }: Props) {
                                 </p>
                             </div>
                         </div>
+
+                        {/* Work Status Tabs */}
+                        <WorkStatusTabs
+                            activeTab={workTab}
+                            onChange={setWorkTab}
+                            countBelum={countBelum}
+                            countSudah={countSudah}
+                        />
 
                         {/* Search & Filters */}
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

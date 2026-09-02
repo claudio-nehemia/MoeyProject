@@ -1,9 +1,10 @@
 import MoodboardModal from '@/components/MoodboardModal';
-import ExtendModal from '@/components/ExtendModal';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import ExtendModal from '@/components/ExtendModal';
+import WorkStatusTabs from '@/components/WorkStatusTabs';
 import { Head, router, usePage } from '@inertiajs/react';
-import { useEffect, useState, Fragment } from 'react';
+import React, { Fragment, useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 
 interface Team {
@@ -118,6 +119,11 @@ export default function Index({ orders }: Props) {
     const [mounted, setMounted] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
+    const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
+
+    const countBelum = useMemo(() => orders.filter(o => o.moodboard?.status !== 'approved').length, [orders]);
+    const countSudah = useMemo(() => orders.filter(o => o.moodboard?.status === 'approved').length, [orders]);
+
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [showModal, setShowModal] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'upload-kasar' | 'revise'>('create');
@@ -226,6 +232,10 @@ export default function Index({ orders }: Props) {
 
     useEffect(() => {
         const filtered = orders.filter((order) => {
+            const matchesWorkTab = workTab === 'belum' 
+                ? order.moodboard?.status !== 'approved' 
+                : order.moodboard?.status === 'approved';
+
             const matchesSearch = 
                 order.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 order.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -242,10 +252,10 @@ export default function Index({ orders }: Props) {
                 if (statusFilter === 'No Response') matchesStatus = status === 'no_response';
             }
 
-            return matchesSearch && matchesStatus;
+            return matchesWorkTab && matchesSearch && matchesStatus;
         });
         setFilteredOrders(filtered);
-    }, [searchQuery, statusFilter, orders]);
+    }, [searchQuery, statusFilter, workTab, orders]);
 
     const formatDeadline = (value: string | null | undefined) => {
         if (value == null || value === '') return '-';
@@ -446,6 +456,14 @@ export default function Index({ orders }: Props) {
                             Kelola dan review moodboard desain dari tim secara efisien
                         </p>
                     </div>
+
+                    {/* Work Status Tabs */}
+                    <WorkStatusTabs
+                        activeTab={workTab}
+                        onChange={setWorkTab}
+                        countBelum={countBelum}
+                        countSudah={countSudah}
+                    />
 
                     {/* Filters & Search */}
                     <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">

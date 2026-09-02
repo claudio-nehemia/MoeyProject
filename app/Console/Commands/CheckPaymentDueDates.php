@@ -19,86 +19,98 @@ class CheckPaymentDueDates extends Command
 
         $notificationService = new NotificationService();
         $today = Carbon::today();
-        $h7Date = Carbon::today()->addDays(7);
-        $threeDaysAgo = Carbon::today()->subDays(3);
+
+        $hMinSetting = \App\Models\NotificationSetting::getByKey('reminder_payment_h_min');
+        $dueSetting = \App\Models\NotificationSetting::getByKey('reminder_payment_due');
+        $feeSetting = \App\Models\NotificationSetting::getByKey('reminder_material_fee');
 
         // ==========================================
-        // 1. REMINDER H-7 (JATUH TEMPO H-7)
+        // 1. REMINDER H-X (JATUH TEMPO H-X AWAL)
         // ==========================================
-        
-        // 1a. Check tanggal_pembayaran (DP/Main) H-7
-        $h7GeneralEntries = CashflowVendorEntry::whereDate('tanggal_pembayaran', '=', $h7Date)
-            ->where('reminder_h7_sent', false)
-            ->get();
+        if (!$hMinSetting || $hMinSetting->is_active) {
+            $hDays = $hMinSetting ? (int) $hMinSetting->days_offset : 7;
+            $hTargetDate = Carbon::today()->addDays($hDays);
 
-        foreach ($h7GeneralEntries as $entry) {
-            $order = $entry->order;
-            if ($order) {
-                $notificationService->sendPaymentReminderH7Notification($order, $entry, 'dp');
-                $entry->update(['reminder_h7_sent' => true]);
-                $this->info("Sent H-7 reminder for DP/Payment entry ID: {$entry->id} on project: {$order->nama_project}");
+            // 1a. Check tanggal_pembayaran (DP/Main)
+            $hGeneralEntries = CashflowVendorEntry::whereDate('tanggal_pembayaran', '=', $hTargetDate)
+                ->where('reminder_h7_sent', false)
+                ->get();
+
+            foreach ($hGeneralEntries as $entry) {
+                $order = $entry->order;
+                if ($order) {
+                    $notificationService->sendPaymentReminderH7Notification($order, $entry, 'dp');
+                    $entry->update(['reminder_h7_sent' => true]);
+                    $this->info("Sent H-{$hDays} reminder for DP/Payment entry ID: {$entry->id} on project: {$order->nama_project}");
+                }
             }
-        }
 
-        // 1b. Check tanggal_pembayaran_termin H-7
-        $h7TerminEntries = CashflowVendorEntry::whereDate('tanggal_pembayaran_termin', '=', $h7Date)
-            ->where('reminder_h7_termin_sent', false)
-            ->get();
+            // 1b. Check tanggal_pembayaran_termin
+            $hTerminEntries = CashflowVendorEntry::whereDate('tanggal_pembayaran_termin', '=', $hTargetDate)
+                ->where('reminder_h7_termin_sent', false)
+                ->get();
 
-        foreach ($h7TerminEntries as $entry) {
-            $order = $entry->order;
-            if ($order) {
-                $notificationService->sendPaymentReminderH7Notification($order, $entry, 'termin');
-                $entry->update(['reminder_h7_termin_sent' => true]);
-                $this->info("Sent H-7 reminder for Termin entry ID: {$entry->id} on project: {$order->nama_project}");
+            foreach ($hTerminEntries as $entry) {
+                $order = $entry->order;
+                if ($order) {
+                    $notificationService->sendPaymentReminderH7Notification($order, $entry, 'termin');
+                    $entry->update(['reminder_h7_termin_sent' => true]);
+                    $this->info("Sent H-{$hDays} reminder for Termin entry ID: {$entry->id} on project: {$order->nama_project}");
+                }
             }
         }
 
         // ==========================================
         // 2. REMINDER H-0 (HARI JATUH TEMPO)
         // ==========================================
+        if (!$dueSetting || $dueSetting->is_active) {
+            // 2a. Check tanggal_pembayaran (DP/Main) H-0
+            $dueGeneralEntries = CashflowVendorEntry::whereDate('tanggal_pembayaran', '=', $today)
+                ->where('reminder_sent', false)
+                ->get();
 
-        // 2a. Check tanggal_pembayaran (DP/Main) H-0
-        $dueGeneralEntries = CashflowVendorEntry::whereDate('tanggal_pembayaran', '=', $today)
-            ->where('reminder_sent', false)
-            ->get();
-
-        foreach ($dueGeneralEntries as $entry) {
-            $order = $entry->order;
-            if ($order) {
-                $notificationService->sendPaymentReminderNotification($order, $entry, 'dp');
-                $entry->update(['reminder_sent' => true]);
-                $this->info("Sent H-0 reminder for DP/Payment entry ID: {$entry->id} on project: {$order->nama_project}");
+            foreach ($dueGeneralEntries as $entry) {
+                $order = $entry->order;
+                if ($order) {
+                    $notificationService->sendPaymentReminderNotification($order, $entry, 'dp');
+                    $entry->update(['reminder_sent' => true]);
+                    $this->info("Sent H-0 reminder for DP/Payment entry ID: {$entry->id} on project: {$order->nama_project}");
+                }
             }
-        }
 
-        // 2b. Check tanggal_pembayaran_termin H-0
-        $dueTerminEntries = CashflowVendorEntry::whereDate('tanggal_pembayaran_termin', '=', $today)
-            ->where('reminder_termin_sent', false)
-            ->get();
+            // 2b. Check tanggal_pembayaran_termin H-0
+            $dueTerminEntries = CashflowVendorEntry::whereDate('tanggal_pembayaran_termin', '=', $today)
+                ->where('reminder_termin_sent', false)
+                ->get();
 
-        foreach ($dueTerminEntries as $entry) {
-            $order = $entry->order;
-            if ($order) {
-                $notificationService->sendPaymentReminderNotification($order, $entry, 'termin');
-                $entry->update(['reminder_termin_sent' => true]);
-                $this->info("Sent H-0 reminder for Termin entry ID: {$entry->id} on project: {$order->nama_project}");
+            foreach ($dueTerminEntries as $entry) {
+                $order = $entry->order;
+                if ($order) {
+                    $notificationService->sendPaymentReminderNotification($order, $entry, 'termin');
+                    $entry->update(['reminder_termin_sent' => true]);
+                    $this->info("Sent H-0 reminder for Termin entry ID: {$entry->id} on project: {$order->nama_project}");
+                }
             }
         }
 
         // ==========================================
-        // 3. REMINDER FEE H+3 SETELAH APPROVAL MATERIAL
+        // 3. REMINDER FEE H+X SETELAH APPROVAL MATERIAL
         // ==========================================
-        $itemPekerjaans = \App\Models\ItemPekerjaan::whereDate('pm_approval_rab_response_time', '=', $threeDaysAgo)
-            ->where('reminder_fee_sent', false)
-            ->get();
+        if (!$feeSetting || $feeSetting->is_active) {
+            $feeDays = $feeSetting ? (int) $feeSetting->days_offset : 3;
+            $feeDate = Carbon::today()->subDays($feeDays);
 
-        foreach ($itemPekerjaans as $ip) {
-            $order = $ip->moodboard?->order;
-            if ($order) {
-                $notificationService->sendFeeReminderNotification($order);
-                $ip->update(['reminder_fee_sent' => true]);
-                $this->info("Sent H+3 Fee Reminder for project: {$order->nama_project}");
+            $itemPekerjaans = \App\Models\ItemPekerjaan::whereDate('pm_approval_rab_response_time', '=', $feeDate)
+                ->where('reminder_fee_sent', false)
+                ->get();
+
+            foreach ($itemPekerjaans as $ip) {
+                $order = $ip->moodboard?->order;
+                if ($order) {
+                    $notificationService->sendFeeReminderNotification($order);
+                    $ip->update(['reminder_fee_sent' => true]);
+                    $this->info("Sent H+{$feeDays} Fee Reminder for project: {$order->nama_project}");
+                }
             }
         }
 

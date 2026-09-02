@@ -4,6 +4,7 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { useRef, useState, useEffect, useMemo } from 'react';
 import KontrakModal from './KontrakModal';
 import ExtendModal from '@/components/ExtendModal';
+import WorkStatusTabs from '@/components/WorkStatusTabs';
 import axios from 'axios';
 
 interface CommitmentFee {
@@ -88,14 +89,31 @@ export default function Index({ itemPekerjaans, termins }: Props) {
     const isKepalaMarketing = auth?.user?.isKepalaMarketing || false;
     const isNotKepalaMarketing = !isKepalaMarketing;
     const [searchQuery, setSearchQuery] = useState('');
+    const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
+
+    const countBelum = useMemo(() =>
+        itemPekerjaans.filter(item => !item.kontrak?.signed_contract_path).length,
+        [itemPekerjaans]
+    );
+
+    const countSudah = useMemo(() =>
+        itemPekerjaans.filter(item => !!item.kontrak?.signed_contract_path).length,
+        [itemPekerjaans]
+    );
 
     const filteredItemPekerjaans = useMemo(() =>
-        itemPekerjaans.filter(item =>
-            item.order.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.order.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.order.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
-        ),
-        [itemPekerjaans, searchQuery]
+        itemPekerjaans.filter(item => {
+            const isCompleted = !!item.kontrak?.signed_contract_path;
+            const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
+            if (!matchesWorkTab) return false;
+
+            return (
+                item.order.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.order.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.order.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }),
+        [itemPekerjaans, searchQuery, workTab]
     );
 
     // Fetch dual task responses (regular & marketing)
@@ -237,6 +255,14 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                 <h2 className="mb-6 text-2xl font-semibold text-gray-800">
                                     Kontrak Management
                                 </h2>
+
+                                {/* Work Status Tabs */}
+                                <WorkStatusTabs
+                                    activeTab={workTab}
+                                    onChange={setWorkTab}
+                                    countBelum={countBelum}
+                                    countSudah={countSudah}
+                                />
 
                                 {/* Search */}
                                 <div className="mb-4">

@@ -1,6 +1,7 @@
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import ExtendModal from '@/components/ExtendModal';
+import WorkStatusTabs from '@/components/WorkStatusTabs';
 import { Head, router } from '@inertiajs/react';
 import { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
@@ -48,14 +49,30 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing, isProjec
   const [mounted, setMounted] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [tanggalSurvey, setTanggalSurvey] = useState('');
+  const [jamSurvey, setJamSurvey] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const [taskResponses, setTaskResponses] = useState<Record<number, TaskResponse>>({});
   const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: TaskResponse } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('semua');
+  const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
+
+  const countBelum = useMemo(() =>
+    orders.filter(o => !o.tanggal_survey).length,
+    [orders]
+  );
+
+  const countSudah = useMemo(() =>
+    orders.filter(o => !!o.tanggal_survey).length,
+    [orders]
+  );
 
   const filteredOrders = useMemo(() =>
     orders.filter(order => {
+      const isCompleted = !!order.tanggal_survey;
+      const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
+      if (!matchesWorkTab) return false;
+
       // Status filter
       let meetsStatus = true;
       if (statusFilter === 'pending_response') {
@@ -74,7 +91,7 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing, isProjec
         order.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }),
-    [orders, searchQuery, statusFilter]
+    [orders, searchQuery, statusFilter, workTab]
   );
 
   useEffect(() => {
@@ -203,6 +220,14 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing, isProjec
           <p className="text-stone-600 mb-6">
             Order yang perlu dijadwalkan survey
           </p>
+
+          {/* Work Status Tabs */}
+          <WorkStatusTabs
+            activeTab={workTab}
+            onChange={setWorkTab}
+            countBelum={countBelum}
+            countSudah={countSudah}
+          />
 
           {/* Filters */}
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">

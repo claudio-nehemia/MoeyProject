@@ -42,6 +42,7 @@ use App\Http\Controllers\ProjectManagementController;
 use App\Http\Controllers\CashflowController;
 use App\Http\Controllers\MeetingVendorController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\PayrollKomisiController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -838,6 +839,44 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('pph21/simulasi', [\App\Http\Controllers\Pph21Controller::class, 'simulasi'])->name('pph21.simulasi');
     Route::post('pph21/simulasi/hitung', [\App\Http\Controllers\Pph21Controller::class, 'hitungSimulasi'])->name('pph21.simulasi.hitung');
     Route::post('pph21/generate', [\App\Http\Controllers\Pph21Controller::class, 'generateSlip'])->name('pph21.generate');
+
+    // ==========================================
+    // PAYROLL KOMISI & ACHIEVEMENT
+    // ==========================================
+    Route::prefix('payroll-komisi')->name('payroll-komisi.')->group(function () {
+        Route::get('/', [PayrollKomisiController::class, 'index'])->name('index');
+        Route::post('/generate', [PayrollKomisiController::class, 'generate'])->name('generate');
+        Route::post('/generate-single', [PayrollKomisiController::class, 'generateSingle'])->name('generate-single');
+        Route::get('/rab-omzet/{nik}', [PayrollKomisiController::class, 'getRabOmzet'])->name('rab-omzet');
+        Route::get('/system-data/{nik}', [PayrollKomisiController::class, 'getSystemData'])->name('system-data');
+        Route::get('/detail/{id}', [PayrollKomisiController::class, 'show'])->name('detail');
+
+        // Konfigurasi per jabatan
+        Route::get('/config', [PayrollKomisiController::class, 'configIndex'])->name('config.index');
+        Route::post('/config', [PayrollKomisiController::class, 'configStore'])->name('config.store');
+        Route::put('/config/{id}', [PayrollKomisiController::class, 'configUpdate'])->name('config.update');
+
+        // Kasbon
+        Route::get('/kasbon', [PayrollKomisiController::class, 'kasbonIndex'])->name('kasbon.index');
+        Route::post('/kasbon', [PayrollKomisiController::class, 'kasbonStore'])->name('kasbon.store');
+
+        // Pengaturan Tanggal Gajian
+        Route::post('/setting', [PayrollKomisiController::class, 'updateSetting'])->name('setting.update');
+
+        // Release Slip Gaji
+        Route::post('/release', [PayrollKomisiController::class, 'releaseAll'])->name('release-all');
+        Route::post('/release/{id}', [PayrollKomisiController::class, 'releaseSingle'])->name('release-single');
+    });
+
+    // ==========================================
+    // PENGATURAN NOTIFIKASI DINAMIS
+    // ==========================================
+    Route::prefix('pengaturan-notifikasi')->name('pengaturan-notifikasi.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\NotificationSettingController::class, 'index'])->name('index');
+        Route::put('/{id}', [\App\Http\Controllers\NotificationSettingController::class, 'update'])->name('update');
+        Route::patch('/{id}/quick-toggle', [\App\Http\Controllers\NotificationSettingController::class, 'quickToggle'])->name('quick-toggle');
+        Route::post('/{id}/test-send', [\App\Http\Controllers\NotificationSettingController::class, 'testSend'])->name('test-send');
+    });
 });
 
 require __DIR__ . '/settings.php';

@@ -162,9 +162,20 @@ class Order extends Model
         $isRestricted = count(array_intersect($userRoleIds, $restrictedRoleIds)) > 0;
         
         if ($isRestricted) {
-            // Filter hanya order dimana user adalah team member
-            return $query->whereHas('users', function($q) use ($user) {
-                $q->where('users.id', $user->id);
+            // Setelah atur tim baru (surveyUsers), hanya visible ke tim baru.
+            // Sebelum atur tim baru, masih visible ke tim lama (order_teams / users).
+            return $query->where(function ($q) use ($user) {
+                $q->where(function ($sub) use ($user) {
+                    $sub->whereHas('surveyUsers')
+                        ->whereHas('surveyUsers', function ($sq) use ($user) {
+                            $sq->where('users.id', $user->id);
+                        });
+                })->orWhere(function ($sub) use ($user) {
+                    $sub->whereDoesntHave('surveyUsers')
+                        ->whereHas('users', function ($uq) use ($user) {
+                            $uq->where('users.id', $user->id);
+                        });
+                });
             });
         }
         
@@ -174,7 +185,9 @@ class Order extends Model
 
     /**
      * Scope untuk filter order berdasarkan survey schedule users
-     * Untuk menu: Survey Ulang, Gambar Kerja, Approval Material, Workplan, Project Management, Defect Management
+     * Untuk menu: Atur Tanggal, Survey Ulang, Gambar Kerja, Approval Material, Workplan, Project Management, Defect Management
+     * - Sebelum atur tim baru: masih visible ke tim lama (order_teams / users)
+     * - Setelah atur tim baru: berubah hanya visible ke tim baru (survey_schedule_users / surveyUsers)
      */
     public function scopeVisibleToSurveyUser($query, $user = null)
     {
@@ -210,9 +223,20 @@ class Order extends Model
         $isRestricted = count(array_intersect($userRoleIds, $restrictedRoleIds)) > 0;
         
         if ($isRestricted) {
-            // Filter hanya order dimana user masuk dalam survey schedule users
-            return $query->whereHas('surveyUsers', function($q) use ($user) {
-                $q->where('users.id', $user->id);
+            // Setelah atur tim baru (surveyUsers), hanya visible ke tim baru.
+            // Sebelum atur tim baru, masih visible ke tim lama (order_teams / users).
+            return $query->where(function ($q) use ($user) {
+                $q->where(function ($sub) use ($user) {
+                    $sub->whereHas('surveyUsers')
+                        ->whereHas('surveyUsers', function ($sq) use ($user) {
+                            $sq->where('users.id', $user->id);
+                        });
+                })->orWhere(function ($sub) use ($user) {
+                    $sub->whereDoesntHave('surveyUsers')
+                        ->whereHas('users', function ($uq) use ($user) {
+                            $uq->where('users.id', $user->id);
+                        });
+                });
             });
         }
         

@@ -2,8 +2,9 @@ import Navbar from '@/components/Navbar';
 import SearchFilter from '@/components/SearchFilter';
 import Sidebar from '@/components/Sidebar';
 import ExtendModal from '@/components/ExtendModal';
+import WorkStatusTabs from '@/components/WorkStatusTabs';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 
 interface PengajuanPerpanjanganTimeline {
@@ -50,6 +51,7 @@ export default function Index({ orders }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [searchQuery, setSearchQuery] = useState('');
     const [filteredOrders, setFilteredOrders] = useState(orders);
+    const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
     // State untuk dua jenis TaskResponse
     const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: any; marketing?: any }>>({});
     const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: any } | null>(null);
@@ -108,15 +110,30 @@ export default function Index({ orders }: Props) {
         });
     }, [orders]);
 
+    const countBelum = useMemo(() =>
+        orders.filter(o => (o.workplan_progress || 0) < 100).length,
+        [orders]
+    );
+
+    const countSudah = useMemo(() =>
+        orders.filter(o => (o.workplan_progress || 0) >= 100).length,
+        [orders]
+    );
+
     useEffect(() => {
-        const filtered = orders.filter(
-            (order) =>
+        const filtered = orders.filter((order) => {
+            const isCompleted = (order.workplan_progress || 0) >= 100;
+            const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
+            if (!matchesWorkTab) return false;
+
+            return (
                 order.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 order.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 order.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
-        );
+            );
+        });
         setFilteredOrders(filtered);
-    }, [searchQuery, orders]);
+    }, [searchQuery, orders, workTab]);
 
     const getProgressColor = (progress: number) => {
         if (progress >= 100) return 'bg-gradient-to-r from-emerald-500 to-green-600';
@@ -236,6 +253,14 @@ export default function Index({ orders }: Props) {
                         </div>
                     </div>
                 </div>
+
+                {/* Work Status Tabs */}
+                <WorkStatusTabs
+                    activeTab={workTab}
+                    onChange={setWorkTab}
+                    countBelum={countBelum}
+                    countSudah={countSudah}
+                />
 
                 {/* Search */}
                 <SearchFilter
