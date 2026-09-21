@@ -2,6 +2,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import { useState, useEffect, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import CurrencyInput from '@/components/CurrencyInput';
 
 interface OrderInfo { id: number; nama_project: string; customer_name: string; company_name: string; payment_status: string; tahapan_proyek: string; pm_name: string; }
 interface Split { internal: number; fisik: number; eksternal: number; total: number; is_manual?: boolean; }
@@ -554,11 +555,11 @@ export default function Show({
                 </div>
                 <div className="relative">
                     <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 font-semibold text-xs">Rp</span>
-                    <input
-                        type="number"
+                    <CurrencyInput
                         value={isReadOnly ? val : (generalForm.data as any)[name]}
-                        onChange={(e) => !isReadOnly && generalForm.setData(name as any, e.target.value)}
+                        onChange={(num) => !isReadOnly && generalForm.setData(name as any, num)}
                         readOnly={isReadOnly}
+                        disabled={isReadOnly}
                         className={`w-full pl-8 pr-3 py-1.5 text-right font-mono text-xs font-semibold rounded-lg focus:outline-none focus:ring-0 ${isReadOnly ? 'bg-stone-100/80 text-stone-500 border-stone-200 cursor-not-allowed' : 'bg-white text-stone-700 border-stone-200 focus:border-stone-300'}`}
                         placeholder="0"
                     />
@@ -1165,7 +1166,7 @@ export default function Show({
                                                                 </td>
                                                                 <td className="px-2 py-3 text-right font-mono text-stone-500">{fmt(calculatedNilai)}</td>
                                                                 <td className="p-1">
-                                                                    <input type="number" value={item.pembayaran} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'pembayaran', parseFloat(e.target.value) || 0)} className="w-24 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded" />
+                                                                    <CurrencyInput value={item.pembayaran} onChange={(val) => handleUpdateMainVendorField('internal', idx, 'pembayaran', val)} className="w-24 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded" />
                                                                 </td>
                                                                 <td className="p-1">
                                                                     <input type="date" value={item.tanggal_pembayaran || ''} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'tanggal_pembayaran', e.target.value)} className={`px-1 py-1 text-[11px] rounded border ${isPaymentOverdue(item.tanggal_pembayaran, !!item.flag_fb || !!item.flag_jw) ? 'border-rose-400 bg-rose-50 text-rose-700 font-semibold' : 'border-stone-200 bg-white text-stone-600'}`} />
@@ -1224,7 +1225,7 @@ export default function Show({
                                                                 </td>
                                                                 <td className="p-1 text-right"><input type="number" step="0.01" value={item.persentase || ''} onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'persentase', parseFloat(e.target.value) || 0)} className="w-14 px-2 py-1 text-right text-xs font-semibold bg-white border border-stone-200 rounded" /></td>
                                                                 <td className="px-2 py-3 text-right font-mono text-stone-500">{fmt(calculatedNilai)}</td>
-                                                                <td className="p-1"><input type="number" value={item.pembayaran} onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'pembayaran', parseFloat(e.target.value) || 0)} className="w-24 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded" /></td>
+                                                                <td className="p-1"><CurrencyInput value={item.pembayaran} onChange={(val) => handleUpdateMainVendorField('fisik', idx, 'pembayaran', val)} className="w-24 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded" /></td>
                                                                 <td className="p-1"><input type="date" value={item.tanggal_pembayaran || ''} onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'tanggal_pembayaran', e.target.value)} className="px-1 py-1 text-[11px] rounded border border-stone-200 bg-white text-stone-600" /></td>
                                                                 {['flag_af', 'flag_fb', 'flag_jw'].map((flag) => (
                                                                     <td key={flag} className="p-1 text-center"><input type="checkbox" checked={!!item[flag as keyof VendorMainEntry]} onChange={(e) => handleUpdateMainVendorField('fisik', idx, flag as keyof VendorMainEntry, e.target.checked ? '✔' : null)} className="rounded border-stone-300 text-amber-500 scale-90" /></td>
@@ -1336,7 +1337,7 @@ export default function Show({
                                                         <tr key={item.id || idx} className="border-b border-stone-100">
                                                             <td className="p-1"><input type="text" value={item.label} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'label', e.target.value)} className="w-full px-2 py-1 text-xs border border-stone-200 rounded font-semibold text-stone-700" /></td>
                                                             <td className="p-1"><span className="text-xs font-semibold text-stone-600 uppercase">{item.notes || 'termin'}</span></td>
-                                                            <td className="p-1"><input type="number" value={item.pembayaran_termin || 0} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'pembayaran_termin', parseFloat(e.target.value) || 0)} className="w-24 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded" /></td>
+                                                            <td className="p-1"><CurrencyInput value={item.pembayaran_termin || 0} onChange={(val) => handleUpdateMainVendorField('internal', idx, 'pembayaran_termin', val)} className="w-24 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded" /></td>
                                                             <td className="p-1"><input type="date" value={item.tanggal_pembayaran_termin || ''} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'tanggal_pembayaran_termin', e.target.value)} className="px-1 py-1 text-[11px] rounded border border-stone-200 bg-white text-stone-600" /></td>
                                                             {['flag_af_termin', 'flag_fb_termin', 'flag_jw_termin'].map((flag) => (
                                                                 <td key={flag} className="p-1 text-center"><input type="checkbox" checked={!!item[flag as keyof VendorMainEntry]} onChange={(e) => handleUpdateMainVendorField('internal', idx, flag as keyof VendorMainEntry, e.target.checked ? '✔' : null)} className="rounded border-stone-300 text-amber-500 scale-90" /></td>
@@ -1448,7 +1449,7 @@ export default function Show({
                                                             <td className="p-1 font-semibold text-stone-700 px-3">{item.label}</td>
                                                             <td className="p-1"><span className="text-xs font-semibold text-stone-600 uppercase">Pelunasan</span></td>
                                                             <td className="px-2 py-3 text-right font-mono text-stone-500">{fmt(item.nilai || 0)}</td>
-                                                            <td className="p-1"><input type="number" value={item.pembayaran} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'pembayaran', parseFloat(e.target.value) || 0)} className="w-24 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded" /></td>
+                                                            <td className="p-1"><CurrencyInput value={item.pembayaran} onChange={(val) => handleUpdateMainVendorField('internal', idx, 'pembayaran', val)} className="w-24 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded" /></td>
                                                             <td className="p-1"><input type="date" value={item.tanggal_pembayaran || ''} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'tanggal_pembayaran', e.target.value)} className="px-1 py-1 text-[11px] rounded border border-stone-200 bg-white text-stone-600" /></td>
                                                             {['flag_af', 'flag_fb', 'flag_jw'].map((flag) => (
                                                                 <td key={flag} className="p-1 text-center"><input type="checkbox" checked={!!item[flag as keyof VendorMainEntry]} onChange={(e) => handleUpdateMainVendorField('internal', idx, flag as keyof VendorMainEntry, e.target.checked ? '✔' : null)} className="rounded border-stone-300 text-amber-500 scale-90" /></td>
@@ -1507,16 +1508,16 @@ export default function Show({
                                                                     <input type="text" value={item.vendor_name} onChange={(e) => handleUpdateExternalRow('items', idx, 'vendor_name', e.target.value)} className="w-20 px-1 py-0.5 border border-stone-200 rounded" />
                                                                 </td>
                                                                 <td className="p-1">
-                                                                    <input type="number" value={item.nilai} onChange={(e) => handleUpdateExternalRow('items', idx, 'nilai', parseFloat(e.target.value) || 0)} className="w-20 px-1 py-0.5 text-right font-mono border border-stone-200 rounded" />
+                                                                    <CurrencyInput value={item.nilai} onChange={(val) => handleUpdateExternalRow('items', idx, 'nilai', val)} className="w-24 px-1 py-0.5 text-right font-mono border border-stone-200 rounded" />
                                                                 </td>
                                                                 <td className="p-1">
-                                                                    <input type="number" value={item.spk_amount} onChange={(e) => handleUpdateExternalRow('items', idx, 'spk_amount', parseFloat(e.target.value) || 0)} className="w-20 px-1 py-0.5 text-right font-mono border border-stone-200 rounded" />
+                                                                    <CurrencyInput value={item.spk_amount} onChange={(val) => handleUpdateExternalRow('items', idx, 'spk_amount', val)} className="w-24 px-1 py-0.5 text-right font-mono border border-stone-200 rounded" />
                                                                 </td>
                                                                 <td className="p-1">
                                                                     <input type="date" value={item.tanggal_perencanaan || ''} onChange={(e) => handleUpdateExternalRow('items', idx, 'tanggal_perencanaan', e.target.value)} className="px-1 py-0.5 text-[10px] border border-stone-200 rounded" />
                                                                 </td>
                                                                 <td className="p-1">
-                                                                    <input type="number" value={item.pembayaran} onChange={(e) => handleUpdateExternalRow('items', idx, 'pembayaran', parseFloat(e.target.value) || 0)} className="w-20 px-1 py-0.5 text-right font-mono border border-stone-200 rounded" />
+                                                                    <CurrencyInput value={item.pembayaran} onChange={(val) => handleUpdateExternalRow('items', idx, 'pembayaran', val)} className="w-24 px-1 py-0.5 text-right font-mono border border-stone-200 rounded" />
                                                                 </td>
                                                                 <td className="p-1">
                                                                     <input type="date" value={item.tanggal_pembayaran || ''} onChange={(e) => handleUpdateExternalRow('items', idx, 'tanggal_pembayaran', e.target.value)} className="px-1 py-0.5 text-[10px] border border-stone-200 rounded" />
@@ -1535,7 +1536,7 @@ export default function Show({
                                                                     </div>
                                                                 </td>
                                                                 <td className="p-1">
-                                                                    <input type="number" value={item.pembayaran_termin} onChange={(e) => handleUpdateExternalRow('items', idx, 'pembayaran_termin', parseFloat(e.target.value) || 0)} className="w-20 px-1 py-0.5 text-right font-mono border border-stone-200 rounded" />
+                                                                    <CurrencyInput value={item.pembayaran_termin} onChange={(val) => handleUpdateExternalRow('items', idx, 'pembayaran_termin', val)} className="w-24 px-1 py-0.5 text-right font-mono border border-stone-200 rounded" />
                                                                 </td>
                                                                 <td className="p-1">
                                                                     <input type="date" value={item.tanggal_pembayaran_termin || ''} onChange={(e) => handleUpdateExternalRow('items', idx, 'tanggal_pembayaran_termin', e.target.value)} className="px-1 py-0.5 text-[10px] border border-stone-200 rounded" />
@@ -1592,10 +1593,10 @@ export default function Show({
                                                                 <input type="text" value={item.label} onChange={(e) => handleUpdateExternalRow('addendums', idx, 'label', e.target.value)} className="w-full px-2 py-1 border border-stone-200 rounded" />
                                                             </td>
                                                             <td className="p-1">
-                                                                <input type="number" value={item.nilai} onChange={(e) => handleUpdateExternalRow('addendums', idx, 'nilai', parseFloat(e.target.value) || 0)} className="w-28 px-2 py-1 text-right font-mono border border-stone-200 rounded" />
+                                                                <CurrencyInput value={item.nilai} onChange={(val) => handleUpdateExternalRow('addendums', idx, 'nilai', val)} className="w-28 px-2 py-1 text-right font-mono border border-stone-200 rounded" />
                                                             </td>
                                                             <td className="p-1">
-                                                                <input type="number" value={item.pembayaran} onChange={(e) => handleUpdateExternalRow('addendums', idx, 'pembayaran', parseFloat(e.target.value) || 0)} className="w-28 px-2 py-1 text-right font-mono border border-stone-200 rounded" />
+                                                                <CurrencyInput value={item.pembayaran} onChange={(val) => handleUpdateExternalRow('addendums', idx, 'pembayaran', val)} className="w-28 px-2 py-1 text-right font-mono border border-stone-200 rounded" />
                                                             </td>
                                                             <td className="p-1">
                                                                 <input type="date" value={item.tanggal_pembayaran || ''} onChange={(e) => handleUpdateExternalRow('addendums', idx, 'tanggal_pembayaran', e.target.value)} className="px-2 py-1 border border-stone-200 rounded" />
