@@ -734,10 +734,9 @@ export default function Show({
                                                     <span className="text-xs font-semibold text-stone-600">Kontrak Internal</span>
                                                     <div className="flex items-center gap-1">
                                                         <span className="text-xs text-stone-400 font-bold">Rp</span>
-                                                        <input
-                                                            type="number"
+                                                        <CurrencyInput
                                                             value={generalForm.data.kontrak_internal}
-                                                            onChange={(e) => generalForm.setData('kontrak_internal', e.target.value)}
+                                                            onChange={(val) => generalForm.setData('kontrak_internal', val.toString())}
                                                             className="w-40 px-2.5 py-1 text-xs text-right font-mono font-bold text-stone-800 bg-white border border-stone-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
                                                             placeholder="0"
                                                         />
@@ -747,10 +746,9 @@ export default function Show({
                                                     <span className="text-xs font-semibold text-stone-600">Kontrak Fisik</span>
                                                     <div className="flex items-center gap-1">
                                                         <span className="text-xs text-stone-400 font-bold">Rp</span>
-                                                        <input
-                                                            type="number"
+                                                        <CurrencyInput
                                                             value={generalForm.data.kontrak_fisik}
-                                                            onChange={(e) => generalForm.setData('kontrak_fisik', e.target.value)}
+                                                            onChange={(val) => generalForm.setData('kontrak_fisik', val.toString())}
                                                             className="w-40 px-2.5 py-1 text-xs text-right font-mono font-bold text-stone-800 bg-white border border-stone-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
                                                             placeholder="0"
                                                         />
@@ -760,10 +758,9 @@ export default function Show({
                                                     <span className="text-xs font-semibold text-stone-600">Kontrak Eksternal</span>
                                                     <div className="flex items-center gap-1">
                                                         <span className="text-xs text-stone-400 font-bold">Rp</span>
-                                                        <input
-                                                            type="number"
+                                                        <CurrencyInput
                                                             value={generalForm.data.kontrak_external}
-                                                            onChange={(e) => generalForm.setData('kontrak_external', e.target.value)}
+                                                            onChange={(val) => generalForm.setData('kontrak_external', val.toString())}
                                                             className="w-40 px-2.5 py-1 text-xs text-right font-mono font-bold text-stone-800 bg-white border border-stone-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
                                                             placeholder="0"
                                                         />
@@ -986,11 +983,9 @@ export default function Show({
                                                     {item.type === 'fixed' && (
                                                         <div className="relative w-full sm:w-1/4">
                                                             <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-stone-400 text-[10px]">Rp</span>
-                                                            <input
-                                                                type="text"
-                                                                value={item.fixed ? new Intl.NumberFormat('id-ID').format(item.fixed) : ''}
-                                                                onChange={(e) => {
-                                                                    const val = parseFloat(e.target.value.replace(/\./g, '')) || 0;
+                                                            <CurrencyInput
+                                                                value={item.fixed}
+                                                                onChange={(val) => {
                                                                     handleUpdateFeeMember(idx, 'fixed', val);
                                                                     handleUpdateFeeMember(idx, 'amount', val);
                                                                 }}
