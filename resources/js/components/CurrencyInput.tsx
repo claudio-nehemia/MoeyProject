@@ -8,9 +8,64 @@ export interface CurrencyInputProps extends Omit<React.InputHTMLAttributes<HTMLI
     allowDecimal?: boolean;
 }
 
+/**
+ * Parsing nilai input atau props menjadi angka murni (number).
+ * Pintar membedakan desimal standar (e.g. 14466666.67 dari PHP/JS)
+ * dan format mata uang lokal Indonesia (e.g. 14.466.666,67 atau 1.000.000).
+ */
+export function parseCurrencyValue(str: string | number | null | undefined): number {
+    if (str === null || str === undefined || str === '') return 0;
+    if (typeof str === 'number') return isNaN(str) ? 0 : str;
+
+    const trimmed = str.toString().trim();
+    if (!trimmed) return 0;
+
+    // Jika mengandung koma: koma pasti pemisah desimal (format Indonesia)
+    if (trimmed.includes(',')) {
+        const clean = trimmed.replace(/\./g, '').replace(',', '.');
+        const num = parseFloat(clean);
+        return isNaN(num) ? 0 : num;
+    }
+
+    // Jika mengandung lebih dari satu titik (misal "1.000.000"): titik adalah pemisah ribuan
+    const dotCount = (trimmed.match(/\./g) || []).length;
+    if (dotCount > 1) {
+        const clean = trimmed.replace(/\./g, '');
+        const num = parseFloat(clean);
+        return isNaN(num) ? 0 : num;
+    }
+
+    // Jika mengandung tepat satu titik:
+    if (dotCount === 1) {
+        const parts = trimmed.split('.');
+        // Jika bagian sebelum titik > 3 digit (misal "14466666.67") atau setelah titik bukan 3 digit (misal ".67" atau ".6"):
+        // Pasti merupakan desimal float dari database/JSON (bukan ribuan)!
+        if (parts[0].length > 3 || parts[1].length !== 3) {
+            const num = parseFloat(trimmed);
+            return isNaN(num) ? 0 : num;
+        } else {
+            // Contoh "1.500" atau "250.000" -> titik sebagai pemisah ribuan
+            const clean = trimmed.replace(/\./g, '');
+            const num = parseFloat(clean);
+            return isNaN(num) ? 0 : num;
+        }
+    }
+
+    const num = parseFloat(trimmed);
+    return isNaN(num) ? 0 : num;
+}
+
+/**
+ * Format angka numerik atau string menjadi format tampilan mata uang bertitik:
+ * Contoh:
+ * - 14466666.67 -> "14.466.666,67"
+ * - 91666.67 -> "91.666,67"
+ * - 1000000 -> "1.000.000"
+ * - 0 -> "0"
+ */
 export function formatCurrencyDisplay(val: number | string | null | undefined, allowDecimal = true): string {
     if (val === null || val === undefined || val === '') return '';
-    const num = typeof val === 'number' ? val : parseFloat(val.toString().replace(/\./g, '').replace(',', '.'));
+    const num = parseCurrencyValue(val);
     if (isNaN(num)) return '';
 
     // Pisahkan integer dan desimal
@@ -23,13 +78,6 @@ export function formatCurrencyDisplay(val: number | string | null | undefined, a
         return `${intFormatted},${dec}`;
     }
     return intFormatted;
-}
-
-export function parseCurrencyValue(str: string): number {
-    if (!str) return 0;
-    const clean = str.replace(/\./g, '').replace(',', '.');
-    const num = parseFloat(clean);
-    return isNaN(num) ? 0 : num;
 }
 
 export default function CurrencyInput({
@@ -47,7 +95,7 @@ export default function CurrencyInput({
     // Sinkronisasi nilai display jika prop value berubah dari eksternal
     useEffect(() => {
         const currentNum = parseCurrencyValue(displayVal);
-        const propNum = typeof value === 'number' ? value : parseFloat((value || '').toString()) || 0;
+        const propNum = parseCurrencyValue(value);
         // Hanya update jika nilai numerik berbeda (mencegah overwrite saat user mengetik desimal koma)
         if (Math.abs(currentNum - propNum) > 0.0001) {
             setDisplayVal(formatCurrencyDisplay(value, allowDecimal));
