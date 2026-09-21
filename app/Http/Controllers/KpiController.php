@@ -101,7 +101,15 @@ class KpiController extends Controller
 
         $paginated = $query->paginate(10)->withQueryString();
 
-        $kpiData = $paginated->through(function ($user) use ($settings) {
+        $attService = app(\App\Services\AttendanceCalculationService::class);
+        $currentDate = Carbon::parse($currentMonth . '-01');
+
+        $kpiData = $paginated->through(function ($user) use ($settings, $attService, $currentDate) {
+            $attSummary = null;
+            if ($user->karyawan) {
+                $attSummary = $attService->getMonthlyAttendanceSummary($user->karyawan->nik, $currentDate->month, $currentDate->year);
+            }
+
             return [
                 'user_id' => $user->id,
                 'name' => $user->name,
@@ -112,6 +120,8 @@ class KpiController extends Controller
                 'fast_updates' => $user->kpi_fast_updates ?? 0,
                 'late_tasks' => $user->kpi_late_tasks ?? 0,
                 'completed_projects' => $user->kpi_completed_projects ?? 0,
+                'total_hadir' => $attSummary ? $attSummary['hari_hadir'] : 0,
+                'total_izin' => $attSummary ? ($attSummary['hari_izin'] + $attSummary['hari_sakit']) : 0,
                 'late_presences' => $user->kpi_late_presences ?? 0,
                 'alpha_days' => $user->kpi_alpha_days ?? 0,
                 'perfect_attendance_bonus' => (bool)($user->kpi_perfect_attendance_bonus ?? false),

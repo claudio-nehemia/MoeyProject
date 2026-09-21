@@ -60,11 +60,7 @@ class PayrollKomisiController extends Controller
             $slip = $slips->first(function ($s) use ($karyawan) {
                 return trim($s->nik) === trim($karyawan->nik);
             });
-            $config = $configs->first(function ($c) use ($karyawan) {
-                if ($karyawan->kode_jabatan && $c->kode_jabatan === $karyawan->kode_jabatan) return true;
-                if ($karyawan->jabatan && stripos($c->jabatan, $karyawan->jabatan->nama_jabatan) !== false) return true;
-                return false;
-            }) ?? $configs->first();
+            $config = $this->service->findConfigForKaryawan($karyawan) ?? $configs->first();
 
             $activeKasbon = \App\Models\PayrollKasbon::where('nik', $karyawan->nik)
                 ->where('status', 'aktif')
@@ -84,6 +80,12 @@ class PayrollKomisiController extends Controller
                 'has_slip' => $slip !== null,
                 'gaji_sementara' => $gajiSementara,
                 'hari_hadir' => $gajiSementara['hari_hadir'] ?? 0,
+                'hari_tepat_waktu' => $gajiSementara['hari_tepat_waktu'] ?? 0,
+                'hari_terlambat' => $gajiSementara['hari_terlambat'] ?? 0,
+                'hari_izin' => $gajiSementara['hari_izin'] ?? 0,
+                'hari_sakit' => $gajiSementara['hari_sakit'] ?? 0,
+                'hari_alpha' => $gajiSementara['hari_alpha'] ?? 0,
+                'perfect_attendance' => $gajiSementara['perfect_attendance'] ?? false,
                 'hari_kerja_default' => $gajiSementara['hari_kerja_default'] ?? 26,
                 'kasbon_aktif' => $activeKasbon ? [
                     'total_kasbon' => $activeKasbon->total_kasbon,

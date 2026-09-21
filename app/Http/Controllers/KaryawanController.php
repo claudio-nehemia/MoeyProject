@@ -23,6 +23,15 @@ class KaryawanController extends Controller
         $jabatans = Jabatan::select('kode_jabatan', 'nama_jabatan')->get();
         $jamkerjas = \App\Models\Jamkerja::select('kode_jam_kerja', 'nama_jam_kerja')->get();
 
+        $attService = app(\App\Services\AttendanceCalculationService::class);
+        $bulan = now()->month;
+        $tahun = now()->year;
+
+        $karyawans->transform(function ($k) use ($attService, $bulan, $tahun) {
+            $k->presensi_summary = $attService->getMonthlyAttendanceSummary($k->nik, $bulan, $tahun);
+            return $k;
+        });
+
         return Inertia::render('Karyawan/Index', [
             'karyawans' => $karyawans,
             'users' => $users,

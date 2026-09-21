@@ -36,6 +36,12 @@ interface PayrollSlip {
 interface RunningSalary {
     has_config: boolean;
     hari_hadir: number;
+    hari_tepat_waktu?: number;
+    hari_terlambat?: number;
+    hari_izin?: number;
+    hari_sakit?: number;
+    hari_alpha?: number;
+    perfect_attendance?: boolean;
     hari_kerja_default: number;
     gaji_pokok_berjalan: number;
     tunjangan_jabatan: number;
@@ -96,6 +102,12 @@ interface KaryawanRow {
     has_slip: boolean;
     gaji_sementara?: RunningSalary;
     hari_hadir: number;
+    hari_tepat_waktu?: number;
+    hari_terlambat?: number;
+    hari_izin?: number;
+    hari_sakit?: number;
+    hari_alpha?: number;
+    perfect_attendance?: boolean;
     hari_kerja_default: number;
     kasbon_aktif?: {
         total_kasbon: number;
@@ -737,7 +749,28 @@ export default function Index({
                                                         }`}>
                                                             {row.hari_hadir || 0} / {row.hari_kerja_default || 26} Hari
                                                         </span>
-                                                        <div className="text-[10px] text-gray-400 mt-0.5 font-mono">
+                                                        {row.perfect_attendance && (
+                                                            <span className="inline-block ml-1 text-emerald-600 text-[10px]" title="Kehadiran Sempurna (0 Telat & 0 Alpa)">⭐</span>
+                                                        )}
+                                                        <div className="flex flex-wrap items-center justify-center gap-1 mt-1 text-[9px] font-mono">
+                                                            {(row.hari_terlambat || 0) > 0 && (
+                                                                <span className="px-1 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-150">
+                                                                    {row.hari_terlambat} Telat
+                                                                </span>
+                                                            )}
+                                                            {((row.hari_izin || 0) + (row.hari_sakit || 0)) > 0 && (
+                                                                <span className="px-1 py-0.2 rounded bg-blue-50 text-blue-600 border border-blue-150">
+                                                                    {(row.hari_izin || 0) + (row.hari_sakit || 0)} Izin
+                                                                </span>
+                                                            )}
+                                                            {(row.hari_alpha || 0) > 0 && (
+                                                                <span className="px-1 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-150">
+                                                                    {row.hari_alpha} Alpa
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-[10px] text-emerald-600 mt-0.5 font-mono flex items-center justify-center gap-1">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                                                             Terhubung Presensi
                                                         </div>
                                                     </td>

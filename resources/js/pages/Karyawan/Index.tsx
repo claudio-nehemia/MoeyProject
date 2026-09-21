@@ -66,6 +66,17 @@ interface Karyawan {
         nama_jam_kerja: string;
     } | null;
     facerecognition?: Facerecognition[];
+    presensi_summary?: {
+        hari_hadir: number;
+        hari_tepat_waktu: number;
+        hari_terlambat: number;
+        hari_izin: number;
+        hari_sakit: number;
+        hari_alpha: number;
+        hari_kerja_default: number;
+        perfect_attendance: boolean;
+        presensi_rate: number;
+    } | null;
 }
 
 interface UserDropdown {
@@ -400,7 +411,7 @@ export default function Index({ karyawans, users, cabangs, departemens, jabatans
 
                                         {/* Status & Work details (Col 2) */}
                                         <div className="flex-1 border-t lg:border-t-0 border-stone-100 pt-3 lg:pt-0">
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                                 
                                                 {/* Active Status & Masa Kerja */}
                                                 <div className="flex flex-col">
@@ -470,6 +481,42 @@ export default function Index({ karyawans, users, cabangs, departemens, jabatans
                                                                 Belum Terdaftar
                                                             </span>
                                                         )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Absensi Bulan Ini */}
+                                                <div className="flex flex-col">
+                                                    <span className="text-[9px] text-stone-400 font-extrabold uppercase tracking-wider mb-1">Absensi Bulan Ini</span>
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-extrabold border ${
+                                                                (kar.presensi_summary?.hari_hadir || 0) >= 20 
+                                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-150' 
+                                                                    : 'bg-amber-50 text-amber-700 border-amber-150'
+                                                            }`}>
+                                                                {kar.presensi_summary?.hari_hadir || 0} / {kar.presensi_summary?.hari_kerja_default || 26} Hari
+                                                            </span>
+                                                            {kar.presensi_summary?.perfect_attendance && (
+                                                                <span title="Kehadiran Sempurna" className="text-[10px]">⭐</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-1 text-[9px] font-mono">
+                                                            {(kar.presensi_summary?.hari_terlambat || 0) > 0 && (
+                                                                <span className="px-1 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-150">
+                                                                    {kar.presensi_summary?.hari_terlambat} Telat
+                                                                </span>
+                                                            )}
+                                                            {((kar.presensi_summary?.hari_izin || 0) + (kar.presensi_summary?.hari_sakit || 0)) > 0 && (
+                                                                <span className="px-1 py-0.2 rounded bg-blue-50 text-blue-600 border border-blue-150">
+                                                                    {(kar.presensi_summary?.hari_izin || 0) + (kar.presensi_summary?.hari_sakit || 0)} Izin
+                                                                </span>
+                                                            )}
+                                                            {(kar.presensi_summary?.hari_alpha || 0) > 0 && (
+                                                                <span className="px-1 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-150">
+                                                                    {kar.presensi_summary?.hari_alpha} Alpa
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
 

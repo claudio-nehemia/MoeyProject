@@ -14,6 +14,8 @@ interface KpiUserSummary {
     fast_updates: number;
     late_tasks: number;
     completed_projects: number;
+    total_hadir?: number;
+    total_izin?: number;
     late_presences?: number;
     alpha_days?: number;
     perfect_attendance_bonus?: boolean;
@@ -343,19 +345,38 @@ export default function Index({
                                                     <td className="px-5 py-3.5 text-center text-xs font-semibold text-rose-500">
                                                         -{user.late_tasks}
                                                     </td>
-                                                    <td className="px-5 py-3.5 text-center text-[10px] font-bold">
-                                                        {user.perfect_attendance_bonus ? (
-                                                            <span className="inline-flex px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100">
-                                                                Perfect ⭐
-                                                            </span>
-                                                        ) : (user.late_presences || user.alpha_days) ? (
-                                                            <span className="inline-flex flex-col gap-0.5 text-rose-600">
-                                                                {user.late_presences ? `-${user.late_presences}T` : ''}
-                                                                {user.alpha_days ? `-${user.alpha_days}A` : ''}
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-stone-400 font-medium">-</span>
-                                                        )}
+                                                    <td className="px-5 py-3.5 text-center text-[10px]">
+                                                        <div className="font-extrabold text-stone-850 text-xs">
+                                                            {user.total_hadir || 0} Hari
+                                                        </div>
+                                                        <div className="flex flex-wrap items-center justify-center gap-1 mt-1 font-mono">
+                                                            {user.perfect_attendance_bonus ? (
+                                                                <span className="inline-flex px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold">
+                                                                    ⭐ Hadir Penuh
+                                                                </span>
+                                                            ) : (
+                                                                <>
+                                                                    {(user.late_presences || 0) > 0 && (
+                                                                        <span className="px-1 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-150 font-bold">
+                                                                            {user.late_presences}T
+                                                                        </span>
+                                                                    )}
+                                                                    {(user.total_izin || 0) > 0 && (
+                                                                        <span className="px-1 py-0.2 rounded bg-blue-50 text-blue-600 border border-blue-150 font-bold">
+                                                                            {user.total_izin}I
+                                                                        </span>
+                                                                    )}
+                                                                    {(user.alpha_days || 0) > 0 && (
+                                                                        <span className="px-1 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-150 font-bold">
+                                                                            {user.alpha_days}A
+                                                                        </span>
+                                                                    )}
+                                                                    {!(user.late_presences || 0) && !(user.total_izin || 0) && !(user.alpha_days || 0) && (
+                                                                        <span className="text-stone-400 font-medium text-[9px]">-</span>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                     <td className="px-5 py-3.5 text-center">
                                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold shadow-sm ${getScoreBadgeClass(user.score)}`}>

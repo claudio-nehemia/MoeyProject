@@ -7,10 +7,17 @@ use App\Models\PayrollKasbon;
 use App\Models\PayrollMonthly;
 use App\Models\PayrollPositionConfig;
 use App\Models\Presensi;
+use App\Services\AttendanceCalculationService;
 use Illuminate\Support\Facades\DB;
 
 class PayrollCalculationService
 {
+    protected AttendanceCalculationService $attendanceService;
+
+    public function __construct(?AttendanceCalculationService $attendanceService = null)
+    {
+        $this->attendanceService = $attendanceService ?? app(AttendanceCalculationService::class);
+    }
     /**
      * Generate slip gaji untuk satu karyawan pada bulan/tahun tertentu.
      * Logika: Divisi → Jabatan → PayrollPositionConfig → hitung semua komponen.
@@ -419,11 +426,11 @@ class PayrollCalculationService
     // ==========================================
 
     /**
-     * Cari config payroll berdasarkan jabatan karyawan
+     * Cari config payroll berdasarkan jabatan karyawan secara cerdas dan fleksibel.
      */
-    protected function findConfigForKaryawan(Karyawan $karyawan): ?PayrollPositionConfig
+    public function findConfigForKaryawan(Karyawan $karyawan): ?PayrollPositionConfig
     {
-        // Coba match by kode_jabatan
+        // 1. Coba match langsung by kode_jabatan
         if ($karyawan->kode_jabatan) {
             $config = PayrollPositionConfig::where('kode_jabatan', $karyawan->kode_jabatan)
                 ->where('is_active', true)
@@ -431,32 +438,88 @@ class PayrollCalculationService
             if ($config) return $config;
         }
 
-        // Fallback: coba match by jabatan name
-        $jabatan = $karyawan->jabatan;
-        if ($jabatan) {
-            $config = PayrollPositionConfig::where('jabatan', 'LIKE', "%{$jabatan->nama_jabatan}%")
-                ->where('is_active', true)
-                ->first();
-            if ($config) return $config;
+        $configs = PayrollPositionConfig::where('is_active', true)->get();
+        if ($configs->isEmpty()) {
+            return null;
         }
 
-        return null;
+        // 2. Coba match by nama_jabatan karyawan
+        $rawNamaJabatan = $karyawan->jabatan?->nama_jabatan ?? '';
+        $namaJabatan = strtolower($rawNamaJabatan);
+
+        if (!empty($namaJabatan)) {
+            // Pemetaan kata kunci spesifik
+            if (str_contains($namaJabatan, 'drafter')) {
+                $found = $configs->first(fn($c) => $c->kode_jabatan === 'DFT' || str_contains(strtolower($c->jabatan), 'drafter'));
+                if ($found) return $found;
+            }
+            if (str_contains($namaJabatan, 'design') || str_contains($namaJabatan, 'desain')) {
+                if (str_contains($namaJabatan, 'gm') || str_contains($namaJabatan, 'general')) {
+                    $found = $configs->first(fn($c) => $c->kode_jabatan === 'GMD');
+                    if ($found) return $found;
+                } elseif (str_contains($namaJabatan, 'manager') || str_contains($namaJabatan, 'manajer')) {
+                    $found = $configs->first(fn($c) => $c->kode_jabatan === 'MDS');
+                    if ($found) return $found;
+                } else {
+                    $found = $configs->first(fn($c) => $c->kode_jabatan === 'DSG' || str_contains(strtolower($c->jabatan), 'design'));
+                    if ($found) return $found;
+                }
+            }
+            if (str_contains($namaJabatan, 'marketing') || str_contains($namaJabatan, 'sales')) {
+                $found = $configs->first(fn($c) => $c->kode_jabatan === 'MMK' || str_contains(strtolower($c->jabatan), 'marketing'));
+                if ($found) return $found;
+            }
+            if (str_contains($namaJabatan, 'estimator')) {
+                $found = $configs->first(fn($c) => $c->kode_jabatan === 'GME' || str_contains(strtolower($c->jabatan), 'estimator'));
+                if ($found) return $found;
+            }
+            if (str_contains($namaJabatan, 'legal') || str_contains($namaJabatan, 'finance') || str_contains($namaJabatan, 'keuangan')) {
+                $found = $configs->first(fn($c) => $c->kode_jabatan === 'MLF' || str_contains(strtolower($c->jabatan), 'legal') || str_contains(strtolower($c->jabatan), 'finance'));
+                if ($found) return $found;
+            }
+            if (str_contains($namaJabatan, 'busdev') || str_contains($namaJabatan, 'business') || str_contains($namaJabatan, 'bisnis')) {
+                $found = $configs->first(fn($c) => $c->kode_jabatan === 'MBD');
+                if ($found) return $found;
+            }
+            if (str_contains($namaJabatan, 'project manager') || str_contains($namaJabatan, 'pm')) {
+                $found = $configs->first(fn($c) => $c->kode_jabatan === 'PJM');
+                if ($found) return $found;
+            }
+            if (str_contains($namaJabatan, 'supervisor') || str_contains($namaJabatan, 'spv')) {
+                if (str_contains($namaJabatan, 'eksternal') || str_contains($namaJabatan, 'external')) {
+                    $found = $configs->first(fn($c) => $c->kode_jabatan === 'SPE');
+                    if ($found) return $found;
+                } else {
+                    $found = $configs->first(fn($c) => $c->kode_jabatan === 'SPI');
+                    if ($found) return $found;
+                }
+            }
+
+            // Fuzzy string matching
+            foreach ($configs as $cfg) {
+                $cfgName = strtolower($cfg->jabatan);
+                if (str_contains($cfgName, $namaJabatan) || str_contains($namaJabatan, $cfgName)) {
+                    return $cfg;
+                }
+            }
+        }
+
+        // 3. Fallback cerdas jika jabatan karyawan belum ada konfigurasinya
+        return $configs->first(fn($c) => $c->kode_jabatan === 'DSG') 
+            ?? $configs->first(fn($c) => $c->kode_jabatan === 'DFT') 
+            ?? $configs->first();
     }
 
     /**
-     * Hitung hari hadir dari tabel presensi
+     * Hitung hari hadir dari tabel presensi (menggunakan AttendanceCalculationService)
      */
     public function getHariHadir(string $nik, int $bulan, int $tahun): int
     {
         try {
-            $count = Presensi::where('nik', trim($nik))
-                ->whereMonth('tanggal', $bulan)
-                ->whereYear('tanggal', $tahun)
-                ->whereNotNull('jam_in')
-                ->count();
-            return $count > 0 ? $count : 26;
+            $summary = $this->attendanceService->getMonthlyAttendanceSummary($nik, $bulan, $tahun);
+            return $summary['hari_hadir'];
         } catch (\Exception $e) {
-            return 26; // default full hadir
+            return 0;
         }
     }
 
@@ -759,17 +822,26 @@ class PayrollCalculationService
         }
 
         $config = $this->findConfigForKaryawan($karyawan);
+        $hariKerjaDefault = $config ? ($config->hari_kerja_default ?? 26) : 26;
+
+        // 1. Kehadiran aktual s/d hari ini dari AttendanceCalculationService
+        $attendance = $this->attendanceService->getMonthlyAttendanceSummary($nik, $bulan, $tahun, $hariKerjaDefault);
+        $hariHadir = $attendance['hari_hadir'];
+
         if (!$config) {
             return [
                 'has_config' => false,
                 'total_sementara' => 0,
-                'hari_hadir' => 0,
+                'hari_hadir' => $hariHadir,
+                'hari_tepat_waktu' => $attendance['hari_tepat_waktu'],
+                'hari_terlambat' => $attendance['hari_terlambat'],
+                'hari_izin' => $attendance['hari_izin'],
+                'hari_sakit' => $attendance['hari_sakit'],
+                'hari_alpha' => $attendance['hari_alpha'],
+                'perfect_attendance' => $attendance['perfect_attendance'],
+                'hari_kerja_default' => $hariKerjaDefault,
             ];
         }
-
-        // 1. Kehadiran aktual s/d hari ini dari tabel presensi
-        $hariHadir = $this->getHariHadir($nik, $bulan, $tahun);
-        $hariKerjaDefault = $config->hari_kerja_default ?? 26;
 
         // 2. Operasional harian berjalan (Uang makan, Transportasi, Kehadiran)
         $transportasi = $hariHadir * $config->transportasi_harian;
@@ -848,6 +920,12 @@ class PayrollCalculationService
         return [
             'has_config' => true,
             'hari_hadir' => $hariHadir,
+            'hari_tepat_waktu' => $attendance['hari_tepat_waktu'],
+            'hari_terlambat' => $attendance['hari_terlambat'],
+            'hari_izin' => $attendance['hari_izin'],
+            'hari_sakit' => $attendance['hari_sakit'],
+            'hari_alpha' => $attendance['hari_alpha'],
+            'perfect_attendance' => $attendance['perfect_attendance'],
             'hari_kerja_default' => $hariKerjaDefault,
             'gaji_pokok_berjalan' => $gajiPokokBerjalan,
             'tunjangan_jabatan' => $tunjanganJabatan,

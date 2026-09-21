@@ -196,39 +196,20 @@ class KpiService
             }
         }
 
-        // Attendance KPI calculations
+        // Attendance KPI calculations via unified AttendanceCalculationService
         $latePresences = 0;
         $alphaDays = 0;
         $perfectAttendanceBonus = false;
         $karyawan = $user->karyawan;
 
         if ($karyawan) {
-            $presenceRecords = DB::table('presensi')
-                ->join('presensi_jamkerja', 'presensi.kode_jam_kerja', '=', 'presensi_jamkerja.kode_jam_kerja')
-                ->where('presensi.nik', $karyawan->nik)
-                ->whereBetween('presensi.tanggal', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
-                ->select('presensi.*', 'presensi_jamkerja.jam_masuk as jk_jam_masuk')
-                ->get();
+            $attService = app(\App\Services\AttendanceCalculationService::class);
+            $parsedDate = Carbon::parse($month . '-01');
+            $attSummary = $attService->getMonthlyAttendanceSummary($karyawan->nik, $parsedDate->month, $parsedDate->year);
 
-            $hasAttendance = false;
-            foreach ($presenceRecords as $p) {
-                if ($p->status === 'h') {
-                    $hasAttendance = true;
-                    if ($p->jam_in) {
-                        $jamInOnly = date('H:i:s', strtotime($p->jam_in));
-                        if ($jamInOnly > $p->jk_jam_masuk) {
-                            $latePresences++;
-                        }
-                    }
-                } elseif ($p->status === 'a') {
-                    $alphaDays++;
-                }
-            }
-
-            // Perfect attendance criteria: has at least one presence, 0 lates, 0 alphas
-            if ($hasAttendance && $latePresences === 0 && $alphaDays === 0) {
-                $perfectAttendanceBonus = true;
-            }
+            $latePresences = $attSummary['hari_terlambat'];
+            $alphaDays = $attSummary['hari_alpha'];
+            $perfectAttendanceBonus = $attSummary['perfect_attendance'];
         }
 
         $penaltyLate = $settings->penalty_attendance_late ?? 5;
