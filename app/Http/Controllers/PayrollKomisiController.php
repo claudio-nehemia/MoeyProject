@@ -244,6 +244,23 @@ class PayrollKomisiController extends Controller
     }
 
     /**
+     * Inisialisasi konfigurasi default 11 jabatan Moey dari seeder
+     */
+    public function configSeedDefault()
+    {
+        try {
+            \Illuminate\Support\Facades\Artisan::call('db:seed', [
+                '--class' => 'Database\Seeders\PayrollPositionConfigSeeder',
+                '--force' => true,
+            ]);
+
+            return back()->with('success', 'Berhasil menginisialisasi skema konfigurasi default 11 jabatan Moey.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal inisialisasi: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Simpan konfigurasi jabatan baru
      */
     public function configStore(Request $request)

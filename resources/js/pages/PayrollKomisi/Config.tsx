@@ -61,6 +61,17 @@ export default function Config({ configs }: Props) {
         return true;
     });
     const [expandedId, setExpandedId] = useState<number | null>(null);
+    const [seeding, setSeeding] = useState(false);
+
+    const handleSeedDefault = () => {
+        if (configs.length > 0 && !confirm('Inisialisasi akan memuat ulang 11 jabatan standar Moey. Lanjutkan?')) {
+            return;
+        }
+        setSeeding(true);
+        router.post('/payroll-komisi/config/seed-default', {}, {
+            onFinish: () => setSeeding(false),
+        });
+    };
 
     const { flash } = usePage().props as any;
 
@@ -94,19 +105,53 @@ export default function Config({ configs }: Props) {
                             ← Kembali ke Payroll
                         </button>
 
-                        <div className="mb-6">
-                            <h1 className="text-2xl font-bold text-gray-900">
-                                ⚙️ Konfigurasi Payroll per Jabatan
-                            </h1>
-                            <p className="text-gray-500 mt-1">
-                                {configs.length} jabatan dari {Object.keys(grouped).length} divisi
-                            </p>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                            <div>
+                                <h1 className="text-2xl font-bold text-gray-900">
+                                    ⚙️ Konfigurasi Payroll per Jabatan
+                                </h1>
+                                <p className="text-gray-500 mt-1">
+                                    {configs.length} jabatan dari {Object.keys(grouped).length} divisi
+                                </p>
+                            </div>
+                            <div>
+                                <button
+                                    onClick={handleSeedDefault}
+                                    disabled={seeding}
+                                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-sm transition flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {seeding ? 'Memproses...' : '⚡ Inisialisasi Skema Default (11 Jabatan Moey)'}
+                                </button>
+                            </div>
                         </div>
 
                         {/* Flash */}
                         {flash?.success && (
                             <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl">
                                 ✅ {flash.success}
+                            </div>
+                        )}
+
+                        {configs.length === 0 && (
+                            <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center max-w-2xl mx-auto my-8 shadow-sm">
+                                <div className="w-16 h-16 mx-auto mb-4 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center text-2xl">
+                                    ⚙️
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">
+                                    Belum Ada Konfigurasi Jabatan
+                                </h3>
+                                <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+                                    Halaman ini mengatur parameter payroll (gaji pokok, tunjangan, uang harian makan/transport/kehadiran, komisi DP/pelunasan, dan KPI) untuk setiap jabatan.
+                                    <br />
+                                    Klik tombol di bawah untuk memuat 11 konfigurasi standar (Design, Marketing, Team Tengah, Pelaksana Project) sesuai format Moey.
+                                </p>
+                                <button
+                                    onClick={handleSeedDefault}
+                                    disabled={seeding}
+                                    className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md transition disabled:opacity-50 inline-flex items-center gap-2"
+                                >
+                                    {seeding ? 'Sedang Memproses...' : '⚡ Inisialisasi 11 Jabatan Standar Moey'}
+                                </button>
                             </div>
                         )}
 

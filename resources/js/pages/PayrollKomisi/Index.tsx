@@ -744,28 +744,28 @@ export default function Index({
                                                         </span>
                                                     </td>
                                                     <td className="px-3 py-3 text-center">
-                                                        <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold ${
-                                                            (row.hari_hadir || 0) >= 20 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                                                        }`}>
-                                                            {row.hari_hadir || 0} / {row.hari_kerja_default || 26} Hari
-                                                        </span>
-                                                        {row.perfect_attendance && (
-                                                            <span className="inline-block ml-1 text-emerald-600 text-[10px]" title="Kehadiran Sempurna (0 Telat & 0 Alpa)">⭐</span>
-                                                        )}
-                                                        <div className="flex flex-wrap items-center justify-center gap-1 mt-1 text-[9px] font-mono">
-                                                            {(row.hari_terlambat || 0) > 0 && (
-                                                                <span className="px-1 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-150">
-                                                                    {row.hari_terlambat} Telat
-                                                                </span>
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold ${
+                                                                (row.hari_hadir || 0) >= 20 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                                                            }`}>
+                                                                {row.hari_hadir || 0} / {row.hari_kerja_default || 26} Hari
+                                                            </span>
+                                                            {row.perfect_attendance && (
+                                                                <span className="inline-block text-emerald-600 text-[10px]" title="Kehadiran Sempurna (0 Telat & 0 Alpa)">⭐</span>
                                                             )}
-                                                            {((row.hari_izin || 0) + (row.hari_sakit || 0)) > 0 && (
-                                                                <span className="px-1 py-0.2 rounded bg-blue-50 text-blue-600 border border-blue-150">
-                                                                    {(row.hari_izin || 0) + (row.hari_sakit || 0)} Izin
+                                                        </div>
+                                                        <div className="flex flex-wrap items-center justify-center gap-1 mt-1 text-[9px] font-mono">
+                                                            <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-semibold" title="Total Hari Izin (Izin Absen/Cuti/Dinas/Sakit)">
+                                                                📋 {(row.hari_izin || 0) + (row.hari_sakit || 0)} Izin
+                                                            </span>
+                                                            {(row.hari_terlambat || 0) > 0 && (
+                                                                <span className="px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200 font-semibold" title="Keterlambatan">
+                                                                    ⏱️ {row.hari_terlambat} Telat
                                                                 </span>
                                                             )}
                                                             {(row.hari_alpha || 0) > 0 && (
-                                                                <span className="px-1 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-150">
-                                                                    {row.hari_alpha} Alpa
+                                                                <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-semibold" title="Alpa / Mangkir">
+                                                                    ⚠️ {row.hari_alpha} Alpa
                                                                 </span>
                                                             )}
                                                         </div>

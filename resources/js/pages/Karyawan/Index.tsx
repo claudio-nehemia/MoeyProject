@@ -501,19 +501,17 @@ export default function Index({ karyawans, users, cabangs, departemens, jabatans
                                                             )}
                                                         </div>
                                                         <div className="flex flex-wrap gap-1 text-[9px] font-mono">
+                                                            <span className="px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200 font-semibold" title="Total Hari Izin (Izin Absen/Cuti/Dinas/Sakit)">
+                                                                📋 {(kar.presensi_summary?.hari_izin || 0) + (kar.presensi_summary?.hari_sakit || 0)} Izin
+                                                            </span>
                                                             {(kar.presensi_summary?.hari_terlambat || 0) > 0 && (
-                                                                <span className="px-1 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-150">
-                                                                    {kar.presensi_summary?.hari_terlambat} Telat
-                                                                </span>
-                                                            )}
-                                                            {((kar.presensi_summary?.hari_izin || 0) + (kar.presensi_summary?.hari_sakit || 0)) > 0 && (
-                                                                <span className="px-1 py-0.2 rounded bg-blue-50 text-blue-600 border border-blue-150">
-                                                                    {(kar.presensi_summary?.hari_izin || 0) + (kar.presensi_summary?.hari_sakit || 0)} Izin
+                                                                <span className="px-1 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-150 font-semibold" title="Keterlambatan">
+                                                                    ⏱️ {kar.presensi_summary?.hari_terlambat} Telat
                                                                 </span>
                                                             )}
                                                             {(kar.presensi_summary?.hari_alpha || 0) > 0 && (
-                                                                <span className="px-1 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-150">
-                                                                    {kar.presensi_summary?.hari_alpha} Alpa
+                                                                <span className="px-1 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-150 font-semibold" title="Alpa">
+                                                                    ⚠️ {kar.presensi_summary?.hari_alpha} Alpa
                                                                 </span>
                                                             )}
                                                         </div>

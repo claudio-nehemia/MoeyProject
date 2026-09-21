@@ -854,6 +854,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Konfigurasi per jabatan
         Route::get('/config', [PayrollKomisiController::class, 'configIndex'])->name('config.index');
         Route::post('/config', [PayrollKomisiController::class, 'configStore'])->name('config.store');
+        Route::post('/config/seed-default', [PayrollKomisiController::class, 'configSeedDefault'])->name('config.seed-default');
         Route::put('/config/{id}', [PayrollKomisiController::class, 'configUpdate'])->name('config.update');
 
         // Kasbon

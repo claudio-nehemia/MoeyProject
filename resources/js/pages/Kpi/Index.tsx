@@ -350,6 +350,9 @@ export default function Index({
                                                             {user.total_hadir || 0} Hari
                                                         </div>
                                                         <div className="flex flex-wrap items-center justify-center gap-1 mt-1 font-mono">
+                                                            <span className="px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-150 font-bold" title="Total Hari Izin">
+                                                                📋 {user.total_izin || 0} Izin
+                                                            </span>
                                                             {user.perfect_attendance_bonus ? (
                                                                 <span className="inline-flex px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold">
                                                                     ⭐ Hadir Penuh
@@ -357,22 +360,14 @@ export default function Index({
                                                             ) : (
                                                                 <>
                                                                     {(user.late_presences || 0) > 0 && (
-                                                                        <span className="px-1 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-150 font-bold">
+                                                                        <span className="px-1 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-150 font-bold" title="Keterlambatan">
                                                                             {user.late_presences}T
                                                                         </span>
                                                                     )}
-                                                                    {(user.total_izin || 0) > 0 && (
-                                                                        <span className="px-1 py-0.2 rounded bg-blue-50 text-blue-600 border border-blue-150 font-bold">
-                                                                            {user.total_izin}I
-                                                                        </span>
-                                                                    )}
                                                                     {(user.alpha_days || 0) > 0 && (
-                                                                        <span className="px-1 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-150 font-bold">
+                                                                        <span className="px-1 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-150 font-bold" title="Alpa">
                                                                             {user.alpha_days}A
                                                                         </span>
-                                                                    )}
-                                                                    {!(user.late_presences || 0) && !(user.total_izin || 0) && !(user.alpha_days || 0) && (
-                                                                        <span className="text-stone-400 font-medium text-[9px]">-</span>
                                                                     )}
                                                                 </>
                                                             )}
