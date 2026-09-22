@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import ExtendModal from '@/components/ExtendModal';
 import WorkStatusTabs from '@/components/WorkStatusTabs';
 import axios from 'axios';
+import { AlertTriangle, Clock, Check } from 'lucide-react';
 
 interface Order {
     id: number;
@@ -573,7 +574,10 @@ function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: Props) {
                                                 <td className="px-4 py-4 min-w-[180px]">
                                                     {(moodboard.itemPekerjaan?.pm_response_time || taskResponseMarketing?.response_time) ? (
                                                         <div className="space-y-1 rounded-lg bg-purple-50/50 border border-purple-100 p-2">
-                                                            <p className="text-[10px] font-bold text-purple-700 uppercase tracking-tight">✓ Responded</p>
+                                                            <p className="text-[10px] font-bold text-purple-700 uppercase tracking-tight flex items-center gap-1">
+                                                                <Check className="w-3 h-3 text-purple-600" />
+                                                                <span>Responded</span>
+                                                            </p>
                                                             <p className="text-xs text-purple-900 font-medium">{moodboard.itemPekerjaan?.pm_response_by || taskResponseMarketing?.response_by || '-'}</p>
                                                             <p className="text-[10px] text-purple-600">
                                                                 {formatDateTime(moodboard.itemPekerjaan?.pm_response_time || taskResponseMarketing?.response_time!)}
@@ -608,15 +612,25 @@ function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: Props) {
                                                                 ? 'bg-orange-50 border-orange-200'
                                                                 : 'bg-yellow-50 border-yellow-200'
                                                         }`}>
-                                                            <p className={`text-xs font-semibold mb-0.5 ${
+                                                            <div className={`text-xs font-semibold mb-0.5 flex items-center gap-1 ${
                                                                 daysLeftRegular !== null && daysLeftRegular < 0
                                                                     ? 'text-red-900'
                                                                     : daysLeftRegular !== null && daysLeftRegular <= 3
                                                                     ? 'text-orange-900'
                                                                     : 'text-yellow-900'
                                                             }`}>
-                                                                {daysLeftRegular !== null && daysLeftRegular < 0 ? '⚠️ Deadline Terlewat' : '⏰ Deadline'}
-                                                            </p>
+                                                                {daysLeftRegular !== null && daysLeftRegular < 0 ? (
+                                                                    <>
+                                                                        <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+                                                                        <span>Deadline Terlewat</span>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Clock className="w-3.5 h-3.5 text-yellow-600" />
+                                                                        <span>Deadline</span>
+                                                                    </>
+                                                                )}
+                                                            </div>
                                                             <p className={`text-xs ${
                                                                 daysLeftRegular !== null && daysLeftRegular < 0
                                                                     ? 'text-red-700'
@@ -649,9 +663,10 @@ function ItemPekerjaanIndex({ moodboards, produks, jenisItems }: Props) {
                                                     {/* Marketing Deadline */}
                                                     {showMarketingDeadline && taskResponseMarketing && (
                                                         <div className="rounded-lg border bg-purple-50 border-purple-200 p-2.5">
-                                                            <p className="text-xs font-semibold mb-0.5 text-purple-900">
-                                                                ⏰ Deadline (Marketing)
-                                                            </p>
+                                                            <div className="text-xs font-semibold mb-0.5 text-purple-900 flex items-center gap-1">
+                                                                <Clock className="w-3.5 h-3.5 text-purple-600" />
+                                                                <span>Deadline (Marketing)</span>
+                                                            </div>
                                                             <p className="text-xs text-purple-700">
                                                                 {formatDeadline(taskResponseMarketing.deadline)}
                                                             </p>

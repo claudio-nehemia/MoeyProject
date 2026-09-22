@@ -10,6 +10,7 @@ class Order extends Model
         'nama_project',
         'company_name',
         'customer_name',
+        'customer_email',
         'customer_additional_info',
         'nomor_unit',
         'phone_number',
@@ -28,11 +29,17 @@ class Order extends Model
         'pm_survey_response_by',
         'pm_survey_response_time',
         'created_by',
+        'customer_user_id',
     ];
 
     protected $casts = [
         'mom_files' => 'array',
     ];
+
+    public function customerUser()
+    {
+        return $this->belongsTo(User::class, 'customer_user_id');
+    }
 
     public function jenisInterior()
     {

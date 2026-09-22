@@ -1,4 +1,5 @@
 import React from 'react';
+import { Clock, CheckCircle2 } from 'lucide-react';
 
 interface WorkStatusTabsProps {
     activeTab: 'belum' | 'sudah';
@@ -28,7 +29,8 @@ export default function WorkStatusTabs({
                         : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}
             >
-                <span>⏳ {belumLabel}</span>
+                <Clock className="w-4 h-4" />
+                <span>{belumLabel}</span>
                 <span
                     className={`px-2 py-0.5 text-xs rounded-full font-bold transition-all ${
                         activeTab === 'belum'
@@ -48,7 +50,8 @@ export default function WorkStatusTabs({
                         : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}
             >
-                <span>✓ {sudahLabel}</span>
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{sudahLabel}</span>
                 <span
                     className={`px-2 py-0.5 text-xs rounded-full font-bold transition-all ${
                         activeTab === 'sudah'

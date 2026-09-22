@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { router, Link, Head } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
+import { AlertTriangle, Info, CheckCircle2 } from 'lucide-react';
 
 interface Item {
     nama_item: string;
@@ -179,7 +180,7 @@ export default function Show({ rabVendor }: Props) {
                                     </svg>
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="text-xl font-bold text-blue-900 dark:text-blue-100">🏭 Formula RAB Vendor</h3>
+                                    <h3 className="text-xl font-bold text-blue-900 dark:text-blue-100">Formula RAB Vendor</h3>
                                     <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">Harga original untuk purchase order vendor (TANPA markup)</p>
                                 </div>
                             </div>
@@ -200,8 +201,8 @@ export default function Show({ rabVendor }: Props) {
                                                 <span className="mx-2">×</span>
                                                 <span className="font-bold text-gray-600 dark:text-gray-400">Dimensi × Qty</span>
                                             </div>
-                                            <div className="mt-2 text-xs text-red-600 dark:text-red-400 font-semibold">
-                                                ⚠️ TANPA MARKUP (Harga Original)
+                                            <div className="mt-2 text-xs text-red-600 dark:text-red-400 font-semibold flex items-center gap-1">
+                                                <AlertTriangle className="w-3.5 h-3.5" /> TANPA MARKUP (Harga Original)
                                             </div>
                                         </div>
                                         
@@ -223,7 +224,9 @@ export default function Show({ rabVendor }: Props) {
                                     
                                     {/* Legend Section */}
                                     <div>
-                                        <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">📌 Keterangan:</div>
+                                        <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-1.5">
+                                            <Info className="w-4 h-4 text-stone-600" /> Keterangan:
+                                        </div>
                                         <div className="space-y-2 text-sm">
                                             <div className="flex items-start gap-2">
                                                 <div className="w-4 h-4 rounded bg-emerald-500 mt-0.5 flex-shrink-0"></div>
@@ -256,7 +259,9 @@ export default function Show({ rabVendor }: Props) {
                                         </div>
                                         
                                         <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
-                                            <div className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1">✅ Karakteristik RAB Vendor:</div>
+                                            <div className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1 flex items-center gap-1">
+                                                <CheckCircle2 className="w-3.5 h-3.5" /> Karakteristik RAB Vendor:
+                                            </div>
                                             <ul className="text-xs text-blue-600 dark:text-blue-400 space-y-1">
                                                 <li>• TANPA markup (harga original)</li>
                                                 <li>• Untuk purchase order ke vendor</li>

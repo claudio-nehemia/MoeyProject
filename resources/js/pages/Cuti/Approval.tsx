@@ -142,8 +142,9 @@ export default function Approval({ pendingList }: Props) {
                     {/* Header */}
                     <div className="mb-6">
                         <div className="flex items-center gap-2 mb-1">
-                            <h1 className="text-2xl font-bold tracking-tight text-slate-800">
-                                📝 Persetujuan Izin & Cuti Karyawan
+                            <h1 className="text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-2">
+                                <FileText className="w-6 h-6 text-amber-600" />
+                                Persetujuan Izin & Cuti Karyawan
                             </h1>
                             <span className="inline-flex px-2.5 py-0.5 rounded bg-amber-50 border border-amber-100 text-amber-800 text-[10px] font-extrabold uppercase tracking-wider">
                                 Delegasi Approval

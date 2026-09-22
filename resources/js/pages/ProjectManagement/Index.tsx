@@ -3,6 +3,16 @@ import { useState, useEffect, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import WorkStatusTabs from '@/components/WorkStatusTabs';
+import {
+    ClipboardList,
+    PauseCircle,
+    RefreshCw,
+    AlertTriangle,
+    CheckCircle2,
+    User,
+    Calendar,
+    Search as SearchIcon,
+} from 'lucide-react';
 
 type Order = {
     id: number;
@@ -50,29 +60,26 @@ export default function Index({ orders }: { orders: Order[] }) {
     // Filter logic
     const filteredOrders = useMemo(() => {
         return orders.filter(order => {
-            const isCompleted = order.progress >= 100;
-            const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
-            if (!matchesWorkTab) return false;
+            const matchTab = workTab === 'belum'
+                ? order.progress < 100
+                : order.progress >= 100;
 
-            const matchesFilter = (() => {
-                switch (activeFilter) {
-                    case 'belum_mulai':
-                        return order.progress === 0;
-                    case 'proses':
-                        return order.progress > 0 && order.progress < 100 && (order.deadline_status !== 'overdue' && (order.sisa_hari === null || order.sisa_hari > 0));
-                    case 'deadline':
-                        return order.deadline_status === 'overdue' || (order.sisa_hari !== null && order.sisa_hari <= 0 && order.progress < 100);
-                    case 'selesai':
-                        return order.progress >= 100;
-                    default:
-                        return true;
-                }
-            })();
-            const matchesSearch = !searchQuery ||
-                order.nama_project.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                order.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                order.customer_name.toLowerCase().includes(searchQuery.toLowerCase());
-            return matchesFilter && matchesSearch;
+            if (!matchTab) return false;
+
+            if (searchQuery.trim()) {
+                const query = searchQuery.toLowerCase();
+                const matchQuery =
+                    order.nama_project?.toLowerCase().includes(query) ||
+                    order.company_name?.toLowerCase().includes(query) ||
+                    order.customer_name?.toLowerCase().includes(query);
+                if (!matchQuery) return false;
+            }
+
+            if (activeFilter === 'belum_mulai') return order.progress === 0;
+            if (activeFilter === 'proses') return order.progress > 0 && order.progress < 100 && (order.deadline_status !== 'overdue' && (order.sisa_hari === null || order.sisa_hari > 0));
+            if (activeFilter === 'deadline') return order.deadline_status === 'overdue' || (order.sisa_hari !== null && order.sisa_hari <= 0 && order.progress < 100);
+            if (activeFilter === 'selesai') return order.progress >= 100;
+            return true;
         });
     }, [orders, activeFilter, searchQuery, workTab]);
 
@@ -87,12 +94,12 @@ export default function Index({ orders }: { orders: Order[] }) {
         };
     }, [orders]);
 
-    const filters: { key: FilterType; label: string; icon: string; color: string; bgColor: string }[] = [
-        { key: 'semua', label: 'Semua', icon: '📋', color: 'text-gray-700', bgColor: 'bg-gray-100 hover:bg-gray-200' },
-        { key: 'belum_mulai', label: 'Belum Mulai', icon: '⏸️', color: 'text-slate-700', bgColor: 'bg-slate-100 hover:bg-slate-200' },
-        { key: 'proses', label: 'Proses', icon: '🔄', color: 'text-blue-700', bgColor: 'bg-blue-100 hover:bg-blue-200' },
-        { key: 'deadline', label: 'Deadline', icon: '⚠️', color: 'text-red-700', bgColor: 'bg-red-100 hover:bg-red-200' },
-        { key: 'selesai', label: 'Selesai', icon: '✅', color: 'text-green-700', bgColor: 'bg-green-100 hover:bg-green-200' },
+    const filters: { key: FilterType; label: string; icon: React.ComponentType<{ className?: string }>; color: string; bgColor: string }[] = [
+        { key: 'semua', label: 'Semua', icon: ClipboardList, color: 'text-gray-700', bgColor: 'bg-gray-100 hover:bg-gray-200' },
+        { key: 'belum_mulai', label: 'Belum Mulai', icon: PauseCircle, color: 'text-slate-700', bgColor: 'bg-slate-100 hover:bg-slate-200' },
+        { key: 'proses', label: 'Proses', icon: RefreshCw, color: 'text-blue-700', bgColor: 'bg-blue-100 hover:bg-blue-200' },
+        { key: 'deadline', label: 'Deadline', icon: AlertTriangle, color: 'text-red-700', bgColor: 'bg-red-100 hover:bg-red-200' },
+        { key: 'selesai', label: 'Selesai', icon: CheckCircle2, color: 'text-green-700', bgColor: 'bg-green-100 hover:bg-green-200' },
     ];
 
     const getProgressColor = (progress: number) => {
@@ -176,7 +183,10 @@ export default function Index({ orders }: { orders: Order[] }) {
                                             : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
                                     }`}
                                 >
-                                    <span>{filter.icon}</span>
+                                    {(() => {
+                                        const Icon = filter.icon;
+                                        return <Icon className="w-4 h-4" />;
+                                    })()}
                                     <span>{filter.label}</span>
                                     <span className={`ml-1 rounded-full px-2 py-0.5 text-xs font-bold ${
                                         activeFilter === filter.key
@@ -214,11 +224,13 @@ export default function Index({ orders }: { orders: Order[] }) {
                                                         {order.company_name}
                                                     </p>
                                                     <div className="flex items-center gap-3">
-                                                        <p className="text-xs text-gray-600">
-                                                            👤 {order.customer_name}
+                                                        <p className="text-xs text-gray-600 flex items-center gap-1">
+                                                            <User className="w-3.5 h-3.5 text-gray-400" />
+                                                            {order.customer_name}
                                                         </p>
-                                                        <p className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                                                            📅 {order.created_at ? new Date(order.created_at).toLocaleDateString('id-ID') : '-'}
+                                                        <p className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                            <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                                                            {order.created_at ? new Date(order.created_at).toLocaleDateString('id-ID') : '-'}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -253,13 +265,13 @@ export default function Index({ orders }: { orders: Order[] }) {
                                                 <div className="mt-3 flex flex-wrap items-center gap-2">
                                                     {order.finishing_qc > 0 && (
                                                         <div className="flex items-center gap-1.5 rounded-lg bg-purple-100 px-3 py-1.5 text-xs font-semibold text-purple-800">
-                                                            <span>🔍</span>
+                                                            <SearchIcon className="w-3.5 h-3.5 text-purple-600" />
                                                             <span>Finishing QC: <strong>{order.finishing_qc}</strong></span>
                                                         </div>
                                                     )}
                                                     {order.install_qc > 0 && (
                                                         <div className="flex items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-800">
-                                                            <span>✅</span>
+                                                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                                                             <span>Install QC: <strong>{order.install_qc}</strong></span>
                                                         </div>
                                                     )}

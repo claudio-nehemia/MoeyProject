@@ -2,6 +2,28 @@ import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
+import {
+    FileText,
+    FileSpreadsheet,
+    BarChart3,
+    Clock,
+    RefreshCw,
+    AlertTriangle,
+    AlertCircle,
+    CheckCircle2,
+    CreditCard,
+    Check,
+    Calendar,
+    XCircle,
+    Scale,
+    FileCheck,
+    Camera,
+    Trash2,
+    FileEdit,
+    Plus,
+    DoorOpen,
+    Search
+} from 'lucide-react';
 
 type StageMap = Record<string, number>;
 
@@ -466,15 +488,15 @@ export default function Detail({
     const getDeadlineIcon = (status: string | null) => {
         switch (status) {
             case 'overdue':
-                return '⚠️';
+                return <AlertTriangle className="w-4 h-4 text-red-600 inline" />;
             case 'urgent':
-                return '🔴';
+                return <AlertCircle className="w-4 h-4 text-red-500 inline" />;
             case 'warning':
-                return '🟡';
+                return <Clock className="w-4 h-4 text-amber-500 inline" />;
             case 'normal':
-                return '🟢';
+                return <CheckCircle2 className="w-4 h-4 text-emerald-600 inline" />;
             default:
-                return '⏳';
+                return <Clock className="w-4 h-4 text-slate-400 inline" />;
         }
     };
 
@@ -533,16 +555,15 @@ export default function Detail({
                                         onClick={() => setShowNotesModal(true)}
                                         className="inline-flex transform items-center rounded-xl border-2 border-indigo-500 bg-indigo-50 px-5 py-3 text-sm font-semibold text-indigo-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-indigo-100 hover:shadow-lg"
                                     >
-                                        <span className="mr-2">📝</span>
+                                        <FileText className="w-4 h-4 mr-2" />
                                         Catatan Pengerjaan Progress
                                     </button>
 
                                     <a
                                         href={`/project-management/${order.id}/export-pdf`}
-                                        target="_blank"
-                                        className="inline-flex transform items-center rounded-xl border-2 border-rose-500 bg-rose-50 px-5 py-3 text-sm font-semibold text-rose-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-rose-100 hover:shadow-lg"
+                                        className="inline-flex transform items-center rounded-xl border-2 border-red-500 bg-red-50 px-5 py-3 text-sm font-semibold text-red-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-red-100 hover:shadow-lg"
                                     >
-                                        <span className="mr-2">📄</span>
+                                        <FileText className="w-4 h-4 mr-2" />
                                         Export PDF
                                     </a>
 
@@ -550,7 +571,7 @@ export default function Detail({
                                         href={`/project-management/${order.id}/export-excel`}
                                         className="inline-flex transform items-center rounded-xl border-2 border-emerald-500 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-emerald-100 hover:shadow-lg"
                                     >
-                                        <span className="mr-2">📊</span>
+                                        <FileSpreadsheet className="w-4 h-4 mr-2" />
                                         Export Excel
                                     </a>
                                 </div>
@@ -692,7 +713,8 @@ export default function Detail({
                                                 }
                                                 className="inline-flex transform items-center rounded-xl border-2 border-indigo-300 bg-white px-5 py-3 text-sm font-semibold text-indigo-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-indigo-50 hover:shadow-lg"
                                             >
-                                                ⏱️ Ajukan Perpanjangan Timeline
+                                                <Clock className="w-4 h-4 mr-2" />
+                                                Ajukan Perpanjangan Timeline
                                             </button>
                                         )}
 
@@ -701,8 +723,9 @@ export default function Detail({
                                             <div className="flex flex-wrap items-center gap-3">
                                                 {isLegalAdmin ? (
                                                     <>
-                                                        <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-300 px-3 py-2 rounded-xl">
-                                                            ⚖️ Pengajuan Perpanjangan Timeline (PM):
+                                                        <span className="text-sm font-semibold text-indigo-900 flex items-center gap-1.5">
+                                                            <Scale className="w-4 h-4 text-indigo-600" />
+                                                            Pengajuan Perpanjangan Timeline (PM):
                                                         </span>
                                                         <button
                                                             onClick={
@@ -710,7 +733,7 @@ export default function Detail({
                                                             }
                                                             className="inline-flex transform items-center rounded-xl border-2 border-green-500 bg-green-50 px-5 py-2.5 text-sm font-semibold text-green-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-green-100 hover:shadow-lg"
                                                         >
-                                                            ✓ Terima
+                                                            <Check className="w-4 h-4 mr-1" /> Terima
                                                         </button>
                                                         <button
                                                             onClick={
@@ -718,12 +741,13 @@ export default function Detail({
                                                             }
                                                             className="inline-flex transform items-center rounded-xl border-2 border-red-500 bg-red-50 px-5 py-2.5 text-sm font-semibold text-red-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-red-100 hover:shadow-lg"
                                                         >
-                                                            ✗ Tolak
+                                                            <XCircle className="w-4 h-4 mr-1" /> Tolak
                                                         </button>
                                                     </>
                                                 ) : (
-                                                    <div className="inline-flex items-center rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-800">
-                                                        ⏳ Pengajuan perpanjangan timeline sedang menunggu persetujuan Legal Admin
+                                                    <div className="inline-flex items-center gap-2 rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-800">
+                                                        <Clock className="w-4 h-4 text-amber-700" />
+                                                        Pengajuan perpanjangan timeline sedang menunggu persetujuan Legal Admin
                                                     </div>
                                                 )}
                                             </div>
@@ -732,8 +756,9 @@ export default function Detail({
                                         {/* Jika status approved - tampilkan pesan */}
                                         {statusPerpanjangan === 'approved' && (
                                             <div className="space-y-3">
-                                                <div className="inline-flex items-center rounded-xl border-2 border-green-500 bg-green-50 px-5 py-3 text-sm font-semibold text-green-700">
-                                                    ✅ Pengajuan perpanjangan timeline telah disetujui Legal Admin
+                                                <div className="inline-flex items-center gap-2 rounded-xl border-2 border-green-500 bg-green-50 px-5 py-3 text-sm font-semibold text-green-700">
+                                                    <CheckCircle2 className="w-4 h-4 text-green-700" />
+                                                    Pengajuan perpanjangan timeline telah disetujui Legal Admin
                                                 </div>
                                             </div>
                                         )}
@@ -741,17 +766,19 @@ export default function Detail({
                                         {/* Jika status rejected - PM bisa ajukan lagi */}
                                         {statusPerpanjangan === 'rejected' && (
                                             <div className="flex flex-wrap items-center gap-3">
-                                                <div className="inline-flex items-center rounded-xl border-2 border-red-500 bg-red-50 px-5 py-3 text-sm font-semibold text-red-700">
-                                                    ❌ Pengajuan perpanjangan timeline ditolak oleh Legal Admin
+                                                <div className="inline-flex items-center gap-2 rounded-xl border-2 border-red-500 bg-red-50 px-5 py-3 text-sm font-semibold text-red-700">
+                                                    <XCircle className="w-4 h-4 text-red-700" />
+                                                    Pengajuan perpanjangan timeline ditolak oleh Legal Admin
                                                 </div>
                                                 {isProjectManager && (
                                                     <button
                                                         onClick={
                                                             handleRequestPerpanjangan
                                                         }
-                                                        className="inline-flex transform items-center rounded-xl border-2 border-indigo-300 bg-white px-5 py-3 text-sm font-semibold text-indigo-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-indigo-50 hover:shadow-lg"
+                                                        className="inline-flex transform items-center gap-2 rounded-xl border-2 border-indigo-300 bg-white px-5 py-3 text-sm font-semibold text-indigo-700 shadow-md transition-all duration-200 hover:scale-105 hover:bg-indigo-50 hover:shadow-lg"
                                                     >
-                                                        ⏱️ Ajukan Ulang Perpanjangan Timeline
+                                                        <Clock className="w-4 h-4 text-indigo-700" />
+                                                        Ajukan Ulang Perpanjangan Timeline
                                                     </button>
                                                 )}
                                             </div>
@@ -797,8 +824,9 @@ export default function Detail({
                                             <div
                                                 className={`rounded-xl border-2 p-4 shadow-md backdrop-blur-sm ${getDeadlineStatusColor(kontrak.deadline_status)}`}
                                             >
-                                                <p className="mb-2 text-xs font-semibold tracking-wide uppercase">
-                                                    📅 Durasi Kontrak
+                                                <p className="mb-2 text-xs font-semibold tracking-wide uppercase flex items-center gap-1">
+                                                    <Calendar className="w-3.5 h-3.5 inline" />
+                                                    Durasi Kontrak
                                                 </p>
                                                 <p className="text-lg font-bold">
                                                     {kontrak.durasi_kontrak}{' '}
@@ -904,8 +932,9 @@ export default function Detail({
 
                         {/* Produk Filter Tabs */}
                         <div className="mb-6 rounded-xl bg-white p-4 shadow-lg">
-                            <h3 className="mb-3 text-sm font-semibold text-gray-700">
-                                🔍 Filter Produk
+                            <h3 className="mb-3 text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                                <Search className="w-4 h-4 text-gray-500" />
+                                Filter Produk
                             </h3>
                             <div className="overflow-x-auto">
                                 <div className="flex min-w-max gap-2">
@@ -917,7 +946,7 @@ export default function Detail({
                                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                         }`}
                                     >
-                                        <span>📊</span>
+                                        <BarChart3 className="w-4 h-4" />
                                         <span>Semua</span>
                                         <span
                                             className={`rounded-full px-2 py-0.5 text-xs ${
@@ -939,7 +968,7 @@ export default function Detail({
                                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                         }`}
                                     >
-                                        <span>⏳</span>
+                                        <Clock className="w-4 h-4" />
                                         <span>Belum Mulai</span>
                                         <span
                                             className={`rounded-full px-2 py-0.5 text-xs ${
@@ -961,7 +990,7 @@ export default function Detail({
                                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                         }`}
                                     >
-                                        <span>🔄</span>
+                                        <RefreshCw className="w-4 h-4" />
                                         <span>Proses</span>
                                         <span
                                             className={`rounded-full px-2 py-0.5 text-xs ${
@@ -983,7 +1012,7 @@ export default function Detail({
                                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                         }`}
                                     >
-                                        <span>🚨</span>
+                                        <AlertTriangle className="w-4 h-4" />
                                         <span>Deadline</span>
                                         <span
                                             className={`rounded-full px-2 py-0.5 text-xs ${
@@ -1005,7 +1034,7 @@ export default function Detail({
                                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                         }`}
                                     >
-                                        <span>✅</span>
+                                        <CheckCircle2 className="w-4 h-4" />
                                         <span>Selesai</span>
                                         <span
                                             className={`rounded-full px-2 py-0.5 text-xs ${
@@ -1179,8 +1208,9 @@ export default function Detail({
                                                 <div className="flex flex-wrap items-center justify-between gap-4">
                                                     <div className="flex items-center gap-4">
                                                         <div className="flex items-center gap-2">
+                                                            <CreditCard className="w-4 h-4 text-emerald-600" />
                                                             <span className="text-sm font-semibold text-gray-700">
-                                                                💰 Pembayaran:
+                                                                Pembayaran:
                                                             </span>
                                                             <span className="rounded-lg bg-blue-100 px-2 py-1 text-xs font-bold text-blue-800">
                                                                 {
@@ -1222,12 +1252,14 @@ export default function Detail({
                                                                         title={`${step.text}: ${step.status === 'paid' ? 'Terbayar' : step.status === 'pending' ? 'Menunggu Pembayaran' : step.status === 'available' ? 'Siap Bayar' : step.status === 'waiting_bast' ? 'Tunggu BAST' : step.locked_reason || 'Terkunci'}`}
                                                                     >
                                                                         {step.status ===
-                                                                        'paid'
-                                                                            ? '✓'
-                                                                            : step.status ===
-                                                                                'waiting_bast'
-                                                                              ? '📋'
-                                                                              : step.step}
+                                                                        'paid' ? (
+                                                                            <Check className="w-3.5 h-3.5" />
+                                                                        ) : step.status ===
+                                                                            'waiting_bast' ? (
+                                                                            <FileText className="w-3.5 h-3.5" />
+                                                                        ) : (
+                                                                            step.step
+                                                                        )}
                                                                     </div>
                                                                 ),
                                                             )}
@@ -1328,13 +1360,9 @@ export default function Detail({
                                                                 1 &&
                                                         !item.has_bast && (
                                                             <div className="flex items-center gap-2 rounded-lg bg-purple-100 px-3 py-2 text-sm text-purple-800">
-                                                                <span>📋</span>
+                                                                <FileText className="w-4 h-4 text-purple-700 flex-shrink-0" />
                                                                 <span>
-                                                                    Tahap
-                                                                    terakhir
-                                                                    perlu BAST
-                                                                    terlebih
-                                                                    dahulu
+                                                                    Tahap terakhir perlu BAST terlebih dahulu
                                                                 </span>
                                                             </div>
                                                         )}
@@ -1342,7 +1370,7 @@ export default function Detail({
                                                     {item.payment_info
                                                         .is_fully_paid && (
                                                         <div className="flex items-center gap-2 rounded-lg bg-green-100 px-4 py-2 font-bold text-green-800">
-                                                            <span>✅</span>
+                                                            <CheckCircle2 className="w-4 h-4 text-green-700 flex-shrink-0" />
                                                             <span>
                                                                 Pembayaran Lunas
                                                             </span>
@@ -1396,10 +1424,8 @@ export default function Detail({
                                             <div className="relative z-10 mt-4 rounded-xl border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 p-4">
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100">
-                                                            <span className="text-xl">
-                                                                📋
-                                                            </span>
+                                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-600">
+                                                            <FileCheck className="w-5 h-5" />
                                                         </div>
                                                         <div>
                                                             <h4 className="font-bold text-purple-900">
@@ -1418,9 +1444,9 @@ export default function Detail({
                                                     {item.has_bast ? (
                                                         <div className="flex items-center gap-4">
                                                             <div className="text-right">
-                                                                <p className="text-xs font-medium text-green-600">
-                                                                    ✅ BAST
-                                                                    Sudah Dibuat
+                                                                <p className="text-xs font-medium text-green-600 flex items-center justify-end gap-1">
+                                                                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                                                                    <span>BAST Sudah Dibuat</span>
                                                                 </p>
                                                                 <p className="text-sm font-bold text-green-800">
                                                                     {
@@ -1541,12 +1567,9 @@ export default function Detail({
                                                         <div className="my-4 border-t border-purple-200" />
 
                                                         <div>
-                                                            <h5 className="mb-3 flex items-center text-sm font-semibold text-purple-900">
-                                                                <span className="mr-2">
-                                                                    📷
-                                                                </span>
-                                                                Foto BAST dengan
-                                                                Klien
+                                                            <h5 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-purple-900">
+                                                                <Camera className="w-4 h-4 text-purple-700" />
+                                                                Foto BAST dengan Klien
                                                             </h5>
 
                                                             {item.has_bast_foto_klien ? (
@@ -1563,11 +1586,9 @@ export default function Detail({
                                                                         }
                                                                     />
                                                                     <div className="flex-1">
-                                                                        <p className="text-sm font-semibold text-green-800">
-                                                                            ✅
-                                                                            Foto
-                                                                            sudah
-                                                                            diupload
+                                                                        <p className="text-sm font-semibold text-green-800 flex items-center gap-1">
+                                                                            <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                                                            <span>Foto sudah diupload</span>
                                                                         </p>
                                                                         <p className="text-xs text-green-600">
                                                                             Diupload:{' '}
@@ -1615,10 +1636,8 @@ export default function Detail({
                                                                 // ✅ Tampilkan pesan jika belum ada foto
                                                                 <div className="rounded-lg border-2 border-dashed border-orange-300 bg-orange-50 p-4">
                                                                     <div className="flex items-center gap-3">
-                                                                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100">
-                                                                            <span className="text-2xl">
-                                                                                ⚠️
-                                                                            </span>
+                                                                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                                                                            <AlertTriangle className="w-6 h-6" />
                                                                         </div>
                                                                         <div className="flex-1">
                                                                             <p className="text-sm font-semibold text-orange-800">
@@ -1654,8 +1673,8 @@ export default function Detail({
                                             {filterProduks(item.produks)
                                                 .length === 0 ? (
                                                 <div className="rounded-xl border-2 border-dashed border-gray-300 p-8 text-center">
-                                                    <div className="mb-2 text-4xl">
-                                                        🔍
+                                                    <div className="mb-2 flex justify-center">
+                                                        <Search className="w-8 h-8 text-gray-400" />
                                                     </div>
                                                     <p className="font-medium text-gray-500">
                                                         Tidak ada produk dengan
@@ -1693,7 +1712,7 @@ export default function Detail({
                                                             {/* Ruangan Header */}
                                                             <div className="flex items-center gap-3 rounded-xl border-2 border-cyan-200 bg-gradient-to-r from-cyan-50 to-teal-50 px-5 py-3">
                                                                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600 text-lg font-bold text-white shadow">
-                                                                    🚪
+                                                                    <DoorOpen className="w-5 h-5 text-white" />
                                                                 </div>
                                                                 <div className="flex-1">
                                                                     <h4 className="text-lg font-bold text-cyan-900">
@@ -2021,13 +2040,9 @@ export default function Detail({
                                                                                                 .length >
                                                                                                 0 && (
                                                                                                 <div className="mt-4 border-t border-gray-200 pt-4">
-                                                                                                    <p className="mb-2 text-sm font-semibold text-gray-700">
-                                                                                                        📸
-                                                                                                        Bukti
-                                                                                                        Tahapan
-                                                                                                        (Klik
-                                                                                                        untuk
-                                                                                                        lihat):
+                                                                                                    <p className="mb-2 text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                                                                                                        <Camera className="w-4 h-4 text-blue-600" />
+                                                                                                        <span>Bukti Tahapan (Klik untuk lihat):</span>
                                                                                                     </p>
                                                                                                     <div className="flex flex-wrap gap-2">
                                                                                                         {Object.entries(
@@ -2049,18 +2064,10 @@ export default function Detail({
                                                                                                                             },
                                                                                                                         )
                                                                                                                     }
-                                                                                                                    className="inline-flex cursor-pointer items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800 transition-colors hover:bg-blue-200"
+                                                                                                                    className="inline-flex cursor-pointer items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800 transition-colors hover:bg-blue-200 gap-1"
                                                                                                                 >
-                                                                                                                    ✓{' '}
-                                                                                                                    {
-                                                                                                                        stage
-                                                                                                                    }{' '}
-                                                                                                                    (
-                                                                                                                    {
-                                                                                                                        evidences.length
-                                                                                                                    }
-
-                                                                                                                    )
+                                                                                                                    <Check className="w-3 h-3" />
+                                                                                                                    <span>{stage} ({evidences.length})</span>
                                                                                                                 </button>
                                                                                                             ),
                                                                                                         )}
@@ -2104,10 +2111,9 @@ export default function Detail({
                                                                                                     wp.end_date,
                                                                                             ) && (
                                                                                                 <div className="mt-4 border-t border-gray-200 pt-4">
-                                                                                                    <p className="mb-3 text-sm font-semibold text-gray-700">
-                                                                                                        📅
-                                                                                                        Jadwal
-                                                                                                        Tahapan:
+                                                                                                    <p className="mb-3 text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                                                                                                        <Calendar className="w-4 h-4 text-slate-600" />
+                                                                                                        <span>Jadwal Tahapan:</span>
                                                                                                     </p>
                                                                                                     <div className="max-h-48 space-y-2 overflow-y-auto pr-2">
                                                                                                         {produk.workplan_items
@@ -2461,20 +2467,9 @@ export default function Detail({
                                                                                             <div className="space-y-2">
                                                                                                 {/* Warning jika ada pending approval */}
                                                                                                 {produk.has_pending_approval && (
-                                                                                                    <div className="rounded-lg border border-orange-300 bg-orange-100 p-3 text-sm text-orange-800">
-                                                                                                        ⚠️
-                                                                                                        Ada
-                                                                                                        perbaikan
-                                                                                                        defect
-                                                                                                        yang
-                                                                                                        menunggu
-                                                                                                        approval.
-                                                                                                        Tidak
-                                                                                                        dapat
-                                                                                                        melanjutkan
-                                                                                                        ke
-                                                                                                        tahap
-                                                                                                        berikutnya.
+                                                                                                    <div className="rounded-lg border border-orange-300 bg-orange-100 p-3 text-sm text-orange-800 flex items-center gap-2">
+                                                                                                        <AlertTriangle className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                                                                                                        <span>Ada perbaikan defect yang menunggu approval. Tidak dapat melanjutkan ke tahap berikutnya.</span>
                                                                                                     </div>
                                                                                                 )}
 
@@ -2561,13 +2556,9 @@ export default function Detail({
                                                                                                 <div className="mt-4 border-t border-gray-200 pt-4">
                                                                                                     {produk.has_active_defect ? (
                                                                                                         <div className="flex items-center gap-2">
-                                                                                                            <span className="flex-1 text-sm font-medium text-orange-600">
-                                                                                                                ⚠️
-                                                                                                                Ada
-                                                                                                                defect
-                                                                                                                yang
-                                                                                                                sedang
-                                                                                                                ditangani
+                                                                                                            <span className="flex-1 text-sm font-medium text-orange-600 flex items-center gap-1.5">
+                                                                                                                <AlertTriangle className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                                                                                                                <span>Ada defect yang sedang ditangani</span>
                                                                                                             </span>
                                                                                                             <Link
                                                                                                                 href={`/defect-management/${produk.defect_id}`}
@@ -2587,11 +2578,10 @@ export default function Detail({
                                                                                                                     produk.id,
                                                                                                                 );
                                                                                                             }}
-                                                                                                            className="w-full rounded-lg bg-gradient-to-r from-red-500 to-orange-600 px-4 py-2 font-medium text-white shadow-lg hover:from-red-600 hover:to-orange-700"
+                                                                                                            className="w-full rounded-lg bg-gradient-to-r from-red-500 to-orange-600 px-4 py-2 font-medium text-white shadow-lg hover:from-red-600 hover:to-orange-700 inline-flex items-center justify-center gap-1.5"
                                                                                                         >
-                                                                                                            🔍
-                                                                                                            Report
-                                                                                                            Defect
+                                                                                                            <Search className="w-4 h-4" />
+                                                                                                            Report Defect
                                                                                                         </button>
                                                                                                     )}
                                                                                                 </div>
@@ -2647,8 +2637,9 @@ export default function Detail({
                     <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
                         <div className="p-6">
                             <div className="mb-4 flex items-center justify-between">
-                                <h2 className="text-xl font-bold text-gray-900">
-                                    📸 Upload Bukti Tahapan
+                                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                    <Camera className="w-5 h-5 text-blue-600" />
+                                    <span>Upload Bukti Tahapan</span>
                                 </h2>
                                 <button
                                     onClick={() =>
@@ -2750,8 +2741,9 @@ export default function Detail({
                     <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
                         <div className="p-6">
                             <div className="mb-6 flex items-center justify-between">
-                                <h2 className="text-2xl font-bold text-gray-900">
-                                    📸 Bukti Tahapan: {showEvidenceModal.stage}
+                                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                                    <Camera className="w-6 h-6 text-blue-600" />
+                                    <span>Bukti Tahapan: {showEvidenceModal.stage}</span>
                                 </h2>
                                 <button
                                     onClick={() => setShowEvidenceModal(null)}
@@ -2903,8 +2895,9 @@ export default function Detail({
                     <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
                         <div className="p-6">
                             <div className="mb-4 flex items-center justify-between">
-                                <h2 className="text-2xl font-bold text-gray-900">
-                                    🔍 Report Defect - {selectedProduk.nama_produk}
+                                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                                    <Search className="w-6 h-6 text-red-600" />
+                                    Report Defect - {selectedProduk.nama_produk}
                                 </h2>
                                 <button
                                     onClick={() => {
@@ -2961,16 +2954,18 @@ export default function Detail({
                                                 <button
                                                     type="button"
                                                     onClick={() => removeDefectItem(index)}
-                                                    className="text-red-600 transition-colors hover:text-red-800"
+                                                    className="text-red-600 transition-colors hover:text-red-800 inline-flex items-center gap-1"
                                                 >
-                                                    🗑️ Hapus
+                                                    <Trash2 className="w-4 h-4" />
+                                                    <span>Hapus</span>
                                                 </button>
                                             )}
                                         </div>
 
                                         <div className="mb-3">
-                                            <label className="mb-1 block text-sm font-medium text-gray-700">
-                                                📷 Foto Cacat *
+                                            <label className="mb-1 block text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                                                <Camera className="w-4 h-4 text-slate-500" />
+                                                <span>Foto Cacat *</span>
                                             </label>
                                             <input
                                                 type="file"
@@ -2988,8 +2983,9 @@ export default function Detail({
                                         </div>
 
                                         <div>
-                                            <label className="mb-1 block text-sm font-medium text-gray-700">
-                                                📝 Catatan Cacat *
+                                            <label className="mb-1 block text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                                                <FileEdit className="w-4 h-4 text-slate-500" />
+                                                <span>Catatan Cacat *</span>
                                             </label>
                                             <textarea
                                                 required
@@ -3008,9 +3004,10 @@ export default function Detail({
                                 <button
                                     type="button"
                                     onClick={addDefectItem}
-                                    className="mb-6 w-full rounded-lg border-2 border-dashed border-gray-300 bg-white px-4 py-3 font-medium text-gray-600 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600"
+                                    className="mb-6 w-full rounded-lg border-2 border-dashed border-gray-300 bg-white px-4 py-3 font-medium text-gray-600 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600 inline-flex items-center justify-center gap-1.5"
                                 >
-                                    ➕ Tambah Cacat Lain
+                                    <Plus className="w-4 h-4" />
+                                    <span>Tambah Cacat Lain</span>
                                 </button>
 
                                 <div className="flex gap-3">

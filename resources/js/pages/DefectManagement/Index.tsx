@@ -3,6 +3,7 @@ import { useState, useMemo } from "react";
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import WorkStatusTabs from '@/components/WorkStatusTabs';
+import { Eye } from 'lucide-react';
 
 interface Defect {
     id: number;
@@ -261,9 +262,10 @@ export default function Index({ defects }: { defects: Defect[] }) {
                                                     <td className="px-5 py-4 align-top text-right">
                                                         <Link
                                                             href={`/defect-management/${defect.id}`}
-                                                            className="inline-flex rounded-md bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-blue-700"
+                                                            className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-blue-700"
                                                         >
-                                                            👁️ Lihat Detail
+                                                            <Eye className="w-3.5 h-3.5" />
+                                                            <span>Lihat Detail</span>
                                                         </Link>
                                                     </td>
                                                 </tr>

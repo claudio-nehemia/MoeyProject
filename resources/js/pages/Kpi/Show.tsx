@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import { Calendar, TrendingUp, Check, X } from 'lucide-react';
 
 interface KpiUserSummary {
     score: number;
@@ -327,7 +328,9 @@ export default function Show({ user, summary, taskHistory, completedProjects, tr
                             <>
                                 <div className="bg-indigo-50/50 border border-indigo-200/60 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                     <div className="flex items-center gap-3">
-                                        <span className="text-xl">📅</span>
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
+                                            <Calendar className="w-5 h-5" />
+                                        </div>
                                         <div>
                                             <h4 className="text-xs font-bold text-indigo-800">Catatan Absensi Bulanan</h4>
                                             <p className="text-[11px] text-indigo-700/80 mt-0.5">Penilaian kehadiran berdasarkan finger print & log kehadiran harian.</p>
@@ -344,8 +347,16 @@ export default function Show({ user, summary, taskHistory, completedProjects, tr
                                         </div>
                                         <div className={`rounded-lg px-3 py-1 border ${summary.perfect_attendance_bonus ? 'bg-emerald-50 border-emerald-150' : 'bg-stone-50 border-stone-150'}`}>
                                             <span className={`text-[9px] font-bold block ${summary.perfect_attendance_bonus ? 'text-emerald-700' : 'text-stone-500'}`}>Perfect Attendance (+{bonusPerfectVal} pts)</span>
-                                            <span className={`font-mono font-extrabold text-xs ${summary.perfect_attendance_bonus ? 'text-emerald-800' : 'text-stone-500'}`}>
-                                                {summary.perfect_attendance_bonus ? 'Ya ✅' : 'Tidak ❌'}
+                                            <span className="font-mono font-extrabold text-xs">
+                                                {summary.perfect_attendance_bonus ? (
+                                                    <span className="inline-flex items-center gap-1 text-emerald-800">
+                                                        <span>Ya</span> <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 text-stone-500">
+                                                        <span>Tidak</span> <X className="w-3.5 h-3.5 text-rose-500" />
+                                                    </span>
+                                                )}
                                             </span>
                                         </div>
                                     </div>
@@ -396,7 +407,10 @@ export default function Show({ user, summary, taskHistory, completedProjects, tr
                     <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-md space-y-4">
                         <div className="flex items-center justify-between border-b border-stone-100 pb-3">
                             <div>
-                                <h3 className="text-sm font-bold text-stone-800">📈 Tren KPI Bulanan</h3>
+                                <h3 className="text-sm font-bold text-stone-800 flex items-center gap-1.5">
+                                    <TrendingUp className="w-4 h-4 text-amber-600" />
+                                    <span>Tren KPI Bulanan</span>
+                                </h3>
                                 <p className="text-[10px] text-stone-500 mt-0.5">Grafik pergerakan nilai KPI yang dicatat di akhir setiap bulan.</p>
                             </div>
                             <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2.5 py-0.5 rounded">

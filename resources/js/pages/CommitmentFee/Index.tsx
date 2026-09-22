@@ -5,6 +5,7 @@ import WorkStatusTabs from '@/components/WorkStatusTabs';
 import { Head, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import React, { useEffect, useState, useMemo } from 'react';
+import { ImageIcon, FileText, Download, Clock, Check } from 'lucide-react';
 
 interface Order {
     id: number;
@@ -525,9 +526,12 @@ export default function Index({ moodboards }: Props) {
                                                             {moodboard.moodboard_kasar ? (
                                                                 <div className="flex items-center gap-2">
                                                                     <button onClick={() => handleImagePreview(`/storage/${moodboard.moodboard_kasar}`)} className="flex items-center gap-1 rounded border border-purple-200 bg-purple-50 px-2 py-1 text-xs font-semibold text-purple-600 transition-colors hover:text-purple-800" title="Moodboard Design">
-                                                                        🖼️ Preview Design
+                                                                        <ImageIcon className="w-3.5 h-3.5" />
+                                                                        <span>Preview Design</span>
                                                                     </button>
-                                                                    <a href={`/storage/${moodboard.moodboard_kasar}`} download className="text-slate-400 hover:text-slate-600" title="Download">⬇️</a>
+                                                                    <a href={`/storage/${moodboard.moodboard_kasar}`} download className="text-slate-400 hover:text-slate-600 p-1" title="Download">
+                                                                        <Download className="w-3.5 h-3.5" />
+                                                                    </a>
                                                                 </div>
                                                             ) : (
                                                                 <div className="text-xs italic text-slate-400">No Design</div>
@@ -535,9 +539,12 @@ export default function Index({ moodboards }: Props) {
                                                             {moodboard.estimasi ? (
                                                                 <div className="flex items-center gap-2">
                                                                     <button onClick={() => moodboard.estimasi && handleFilePreview(`/storage/${moodboard.estimasi.estimated_cost}`)} className="flex items-center gap-1 rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-600 transition-colors hover:text-blue-800" title="File Estimasi Biaya">
-                                                                        📄 File Estimasi
+                                                                        <FileText className="w-3.5 h-3.5" />
+                                                                        <span>File Estimasi</span>
                                                                     </button>
-                                                                    <a href={`/storage/${moodboard.estimasi.estimated_cost}`} download className="text-slate-400 hover:text-slate-600" title="Download">⬇️</a>
+                                                                    <a href={`/storage/${moodboard.estimasi.estimated_cost}`} download className="text-slate-400 hover:text-slate-600 p-1" title="Download">
+                                                                        <Download className="w-3.5 h-3.5" />
+                                                                    </a>
                                                                 </div>
                                                             ) : (
                                                                 <div className="text-xs italic text-slate-400">No Est</div>
@@ -551,7 +558,10 @@ export default function Index({ moodboards }: Props) {
                                                              taskResponseRegular.status !== 'telat_submit' && 
                                                              !taskResponseRegular.update_data_time && (
                                                                 <div className={`rounded-lg p-2.5 border ${daysLeftRegular !== null && daysLeftRegular < 0 ? 'bg-red-50 border-red-200 text-red-700' : daysLeftRegular !== null && daysLeftRegular <= 3 ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-yellow-50 border-yellow-200 text-yellow-700'}`}>
-                                                                    <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">⏰ Deadline CF</div>
+                                                                    <div className="text-[10px] font-bold uppercase tracking-wider opacity-80 flex items-center gap-1">
+                                                                        <Clock className="w-3 h-3" />
+                                                                        <span>Deadline CF</span>
+                                                                    </div>
                                                                     <div className="mt-0.5 text-xs font-medium">{formatDeadline(taskResponseRegular.deadline)}</div>
                                                                     {daysLeftRegular !== null && (
                                                                         <div className="mt-1 text-[10px] font-medium">{daysLeftRegular < 0 ? `Terlambat ${Math.abs(daysLeftRegular)} hari` : `${daysLeftRegular} hari lagi`}</div>
@@ -569,7 +579,10 @@ export default function Index({ moodboards }: Props) {
                                                              taskResponseMarketing.status !== 'telat_submit' && 
                                                              !taskResponseMarketing.update_data_time && (
                                                                 <div className="rounded-lg border border-purple-200 bg-purple-50 p-2.5 text-purple-700">
-                                                                    <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">⏰ Deadline CF(Mkt)</div>
+                                                                    <div className="text-[10px] font-bold uppercase tracking-wider opacity-80 flex items-center gap-1">
+                                                                        <Clock className="w-3 h-3" />
+                                                                        <span>Deadline CF(Mkt)</span>
+                                                                    </div>
                                                                     <div className="mt-0.5 text-xs font-medium">{formatDeadline(taskResponseMarketing.deadline)}</div>
                                                                     {daysLeftMarketing !== null && (
                                                                         <div className="mt-1 text-[10px] font-medium">{daysLeftMarketing < 0 ? `Terlambat ${Math.abs(daysLeftMarketing)} hari` : `${daysLeftMarketing} hari lagi`}</div>
@@ -590,9 +603,13 @@ export default function Index({ moodboards }: Props) {
                                                                 <div className="text-sm font-bold text-gray-900">{formatCurrency(moodboard.commitmentFee.total_fee)}</div>
                                                                 <div className="mt-1.5">
                                                                     {moodboard.commitmentFee.payment_status === 'completed' ? (
-                                                                        <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200">✓ Completed</span>
+                                                                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200">
+                                                                            <Check className="w-3 h-3" /> Completed
+                                                                        </span>
                                                                     ) : (
-                                                                        <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-semibold text-amber-700 border border-amber-200">⏳ Pending</span>
+                                                                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-semibold text-amber-700 border border-amber-200">
+                                                                            <Clock className="w-3 h-3" /> Pending
+                                                                        </span>
                                                                     )}
                                                                 </div>
                                                             </div>

@@ -2,7 +2,7 @@ import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { Eye, Edit2, Trash2, FileDown } from 'lucide-react';
+import { Eye, Edit2, Trash2, FileDown, Sparkles, FileText, Calculator, Palette, CreditCard, ClipboardList, Clock, User, LucideIcon } from 'lucide-react';
 
 interface User {
     id: number;
@@ -138,25 +138,25 @@ export default function Index({ orders }: Props) {
         }
     };
 
-    const getTahapanStyle = (tahapan: string) => {
+    const getTahapanStyle = (tahapan: string): { color: string; icon: LucideIcon } => {
         switch (tahapan) {
             case 'produksi':
-                return { color: 'bg-amber-50 text-amber-600 border-amber-200', icon: '✨' };
+                return { color: 'bg-amber-50 text-amber-600 border-amber-200', icon: Sparkles };
             case 'kontrak':
-                return { color: 'bg-indigo-50 text-indigo-600 border-indigo-200', icon: '📄' };
+                return { color: 'bg-indigo-50 text-indigo-600 border-indigo-200', icon: FileText };
             case 'rab':
-                return { color: 'bg-blue-50 text-blue-600 border-blue-200', icon: '💰' };
+                return { color: 'bg-blue-50 text-blue-600 border-blue-200', icon: Calculator };
             case 'desain_final':
-                return { color: 'bg-cyan-50 text-cyan-600 border-cyan-200', icon: '🎨' };
+                return { color: 'bg-cyan-50 text-cyan-600 border-cyan-200', icon: Palette };
             case 'cm_fee':
-                return { color: 'bg-amber-50 text-amber-600 border-amber-200', icon: '💳' };
+                return { color: 'bg-amber-50 text-amber-600 border-amber-200', icon: CreditCard };
             case 'moodboard':
-                return { color: 'bg-pink-50 text-pink-600 border-pink-200', icon: '🎨' };
+                return { color: 'bg-pink-50 text-pink-600 border-pink-200', icon: Palette };
             case 'survey':
-                return { color: 'bg-purple-50 text-purple-600 border-purple-200', icon: '📋' };
+                return { color: 'bg-purple-50 text-purple-600 border-purple-200', icon: ClipboardList };
             case 'not_start':
             default:
-                return { color: 'bg-slate-50 text-slate-500 border-slate-200', icon: '⏳' };
+                return { color: 'bg-slate-50 text-slate-500 border-slate-200', icon: Clock };
         }
     };
 
@@ -376,6 +376,7 @@ export default function Index({ orders }: Props) {
                                     <tbody className="divide-y divide-slate-100 bg-white">
                                         {currentOrders.map((order, index) => {
                                             const tahapan = getTahapanStyle(order.tahapan_proyek);
+                                            const TahapanIcon = tahapan.icon;
                                             return (
                                             <tr key={order.id} className="hover:bg-slate-50/50 transition-colors duration-200">
                                                 <td className="px-6 py-4">
@@ -396,7 +397,7 @@ export default function Index({ orders }: Props) {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-semibold tracking-wide border rounded-full ${tahapan.color}`}>
-                                                        <span>{tahapan.icon}</span>
+                                                        <TahapanIcon className="w-3.5 h-3.5 shrink-0" />
                                                         {formatTahapan(order.tahapan_proyek)}
                                                     </span>
                                                 </td>
@@ -437,7 +438,8 @@ export default function Index({ orders }: Props) {
                                                 {showCreator && (
                                                     <td className="px-6 py-4">
                                                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold tracking-wide border border-stone-200 bg-stone-50 rounded-lg text-stone-600">
-                                                            👤 {order.creator?.name || 'System'}
+                                                            <User className="w-3 h-3 text-stone-500 shrink-0" />
+                                                            {order.creator?.name || 'System'}
                                                         </span>
                                                     </td>
                                                 )}

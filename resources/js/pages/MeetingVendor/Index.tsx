@@ -5,6 +5,7 @@ import Sidebar from '@/components/Sidebar';
 import { Head, router } from '@inertiajs/react';
 import axios from 'axios';
 import React, { useEffect, useState, useMemo } from 'react';
+import { Calendar, Clock, MapPin, Check } from 'lucide-react';
 
 interface OrderItem {
     id: number;
@@ -413,19 +414,19 @@ export default function MeetingVendorIndex({
                                                     {item.tanggal_meeting ? (
                                                         <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-2.5 max-w-[260px]">
                                                             <div className="flex items-center gap-2 mb-1">
-                                                                <span className="text-sm">📅</span>
+                                                                <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                                                                 <span className="font-bold text-xs text-blue-900">
                                                                     {formatDateDisplay(item.tanggal_meeting)}
                                                                 </span>
                                                                 {item.jam_meeting && (
-                                                                    <span className="rounded bg-blue-200/80 px-1.5 py-0.5 text-[10px] font-bold text-blue-800">
-                                                                        ⏰ {item.jam_meeting} WIB
+                                                                    <span className="rounded bg-blue-200/80 px-1.5 py-0.5 text-[10px] font-bold text-blue-800 inline-flex items-center gap-1">
+                                                                        <Clock className="w-2.5 h-2.5" /> {item.jam_meeting} WIB
                                                                     </span>
                                                                 )}
                                                             </div>
                                                             {item.lokasi && (
                                                                 <div className="text-[11px] text-slate-700 flex items-center gap-1.5 mt-1">
-                                                                    <span className="text-slate-400">📍</span>
+                                                                    <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
                                                                     <span className="font-medium truncate">{item.lokasi}</span>
                                                                 </div>
                                                             )}
@@ -436,8 +437,9 @@ export default function MeetingVendorIndex({
                                                             )}
                                                         </div>
                                                     ) : (
-                                                        <div className="inline-flex rounded border border-dashed border-amber-300 bg-amber-50/50 px-2.5 py-1.5 text-xs text-amber-800">
-                                                            ⏳ Belum ada jadwal meeting
+                                                        <div className="inline-flex items-center gap-1 rounded border border-dashed border-amber-300 bg-amber-50/50 px-2.5 py-1.5 text-xs text-amber-800">
+                                                            <Clock className="w-3 h-3 text-amber-600" />
+                                                            <span>Belum ada jadwal meeting</span>
                                                         </div>
                                                     )}
 
@@ -544,18 +546,20 @@ export default function MeetingVendorIndex({
                                                         <button
                                                             onClick={() => handleResponse(item)}
                                                             disabled={loading}
-                                                            className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-center text-[11px] font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
+                                                            className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-center text-[11px] font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50 inline-flex items-center justify-center gap-1"
                                                         >
-                                                            ✓ Response
+                                                            <Check className="w-3.5 h-3.5" />
+                                                            <span>Response</span>
                                                         </button>
                                                     )}
 
                                                     {canSchedule && (
                                                         <button
                                                             onClick={() => openScheduleModal(item)}
-                                                            className="w-full rounded-md bg-indigo-600 px-3 py-1.5 text-center text-[11px] font-medium text-white shadow-sm transition hover:bg-indigo-700 mt-1"
+                                                            className="w-full rounded-md bg-indigo-600 px-3 py-1.5 text-center text-[11px] font-medium text-white shadow-sm transition hover:bg-indigo-700 mt-1 inline-flex items-center justify-center gap-1"
                                                         >
-                                                            📅 {item.tanggal_meeting ? 'Edit Jadwal' : 'Atur Jadwal Meeting'}
+                                                            <Calendar className="w-3.5 h-3.5" />
+                                                            <span>{item.tanggal_meeting ? 'Edit Jadwal' : 'Atur Jadwal Meeting'}</span>
                                                         </button>
                                                     )}
                                                 </div>

@@ -94,8 +94,9 @@ export default function Settings({ settings, allRoles }: Props) {
                     {/* Header */}
                     <div className="mb-6">
                         <div className="flex items-center gap-2 mb-1">
-                            <h1 className="text-2xl font-bold tracking-tight text-slate-800">
-                                ⚙️ Pengaturan Presensi & Aplikasi Mobile
+                            <h1 className="text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-2">
+                                <SettingsIcon className="w-6 h-6 text-slate-700" />
+                                <span>Pengaturan Presensi & Aplikasi Mobile</span>
                             </h1>
                             <span className="inline-flex px-2.5 py-0.5 rounded bg-amber-50 border border-amber-100 text-amber-800 text-[10px] font-extrabold uppercase tracking-wider">
                                 Konfigurasi Global
@@ -116,7 +117,7 @@ export default function Settings({ settings, allRoles }: Props) {
                                 </div>
                                 <div>
                                     <h3 className="text-sm font-extrabold text-slate-850">
-                                        🔑 Otoritas Approval Pengajuan
+                                        Otoritas Approval Pengajuan
                                     </h3>
                                     <p className="text-[11px] text-stone-500 mt-0.5">
                                         Tentukan tingkat role yang memiliki kewenangan penuh untuk menyetujui atau menolak permohonan (cuti, izin, lembur, dan koreksi absen) yang diajukan karyawan dari aplikasi mobile.
@@ -149,7 +150,7 @@ export default function Settings({ settings, allRoles }: Props) {
                                 </div>
                                 <div>
                                     <h3 className="text-sm font-extrabold text-slate-855">
-                                        ⏰ Toleransi & Pembatasan Waktu Presensi
+                                        Toleransi & Pembatasan Waktu Presensi
                                     </h3>
                                     <p className="text-[11px] text-stone-500 mt-0.5">
                                         Jika dibatasi, karyawan hanya diijinkan melakukan absensi check-in/out dalam rentang waktu toleransi tertentu dari jam kerja yang dijadwalkan.
@@ -223,7 +224,7 @@ export default function Settings({ settings, allRoles }: Props) {
                                 </div>
                                 <div>
                                     <h3 className="text-sm font-extrabold text-slate-850">
-                                        👤 Verifikasi Pengenalan Wajah (Face Recognition AI)
+                                        Verifikasi Pengenalan Wajah (Face Recognition AI)
                                     </h3>
                                     <p className="text-[11px] text-stone-500 mt-0.5">
                                         Deteksi pencocokan wajah selfie saat absen dengan data wajah master staf terdaftar untuk mencegah manipulasi.
@@ -254,7 +255,7 @@ export default function Settings({ settings, allRoles }: Props) {
                                         <div className="p-4 bg-emerald-50/60 border border-emerald-100 rounded-2xl flex items-start gap-2.5">
                                             <Info size={14} className="text-emerald-600 mt-0.5 flex-shrink-0" />
                                             <div>
-                                                <p className="text-[11px] text-emerald-800 font-extrabold">💡 Rekomendasi Optimal:</p>
+                                                <p className="text-[11px] text-emerald-800 font-extrabold">Rekomendasi Optimal:</p>
                                                 <ul className="text-[10px] text-emerald-700 mt-1 space-y-1 list-disc ml-3">
                                                     <li>Upload foto wajah beresolusi jelas di halaman <strong>Data Karyawan → Kelola Wajah</strong>.</li>
                                                     <li>Usahakan mendaftarkan minimal 2 foto wajah per karyawan dengan variasi cahaya berbeda.</li>
@@ -274,7 +275,7 @@ export default function Settings({ settings, allRoles }: Props) {
                                 </div>
                                 <div>
                                     <h3 className="text-sm font-extrabold text-slate-850">
-                                        📱 Kontrol Layanan & Modul Aplikasi Mobile
+                                        Kontrol Layanan & Modul Aplikasi Mobile
                                     </h3>
                                     <p className="text-[11px] text-stone-500 mt-0.5">
                                         Aktifkan atau sembunyikan fitur-fitur opsional pada perangkat mobile karyawan secara dinamis dari cloud database admin.

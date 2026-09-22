@@ -2,6 +2,7 @@ import { useState } from "react";
 import { router, Head } from "@inertiajs/react";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
+import { CheckCircle, XCircle, Clock } from 'lucide-react';
 
 interface DefectItem {
     id: number;
@@ -260,11 +261,22 @@ export default function Show({ defect }: { defect: Defect }) {
                                                                             ? 'bg-red-500 text-white'
                                                                             : 'bg-yellow-500 text-white'
                                                                     }`}>
-                                                                        {repair.is_approved
-                                                                            ? '✓ Approved'
-                                                                            : repair.rejection_notes
-                                                                            ? '❌ Ditolak / Revisi'
-                                                                            : '⏳ Pending Approval'}
+                                                                        {repair.is_approved ? (
+                                                                            <span className="flex items-center gap-1">
+                                                                                <CheckCircle className="w-3.5 h-3.5" />
+                                                                                <span>Approved</span>
+                                                                            </span>
+                                                                        ) : repair.rejection_notes ? (
+                                                                            <span className="flex items-center gap-1">
+                                                                                <XCircle className="w-3.5 h-3.5" />
+                                                                                <span>Ditolak / Revisi</span>
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="flex items-center gap-1">
+                                                                                <Clock className="w-3.5 h-3.5" />
+                                                                                <span>Pending Approval</span>
+                                                                            </span>
+                                                                        )}
                                                                     </div>
                                                                 </div>
                                                                 <div className={`rounded-lg ${repair.is_approved ? 'bg-white' : 'bg-white/80'} p-3`}>

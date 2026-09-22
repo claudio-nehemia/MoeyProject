@@ -4,8 +4,7 @@ import ExtendModal from '@/components/ExtendModal';
 import WorkStatusTabs from '@/components/WorkStatusTabs';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState, useMemo } from 'react';
-import axios from 'axios';
-import { Eye, Edit2, PlusCircle, PenTool, CheckCircle, Clock } from 'lucide-react';
+import { Eye, Edit2, PlusCircle, PenTool, CheckCircle, Clock, Sparkles, FileText, DollarSign, Palette, CreditCard, ClipboardList, Hourglass } from 'lucide-react';
 
 interface Survey {
     id: number;
@@ -246,22 +245,22 @@ export default function Index({ surveys }: Props) {
     const getTahapanStyle = (tahapan: string) => {
         switch (tahapan) {
             case 'produksi':
-                return { color: 'bg-amber-50 text-amber-600 border-amber-200', icon: '✨' };
+                return { color: 'bg-amber-50 text-amber-600 border-amber-200', icon: Sparkles };
             case 'kontrak':
-                return { color: 'bg-indigo-50 text-indigo-600 border-indigo-200', icon: '📄' };
+                return { color: 'bg-indigo-50 text-indigo-600 border-indigo-200', icon: FileText };
             case 'rab':
-                return { color: 'bg-blue-50 text-blue-600 border-blue-200', icon: '💰' };
+                return { color: 'bg-blue-50 text-blue-600 border-blue-200', icon: DollarSign };
             case 'desain_final':
-                return { color: 'bg-cyan-50 text-cyan-600 border-cyan-200', icon: '🎨' };
+                return { color: 'bg-cyan-50 text-cyan-600 border-cyan-200', icon: Palette };
             case 'cm_fee':
-                return { color: 'bg-amber-50 text-amber-600 border-amber-200', icon: '💳' };
+                return { color: 'bg-amber-50 text-amber-600 border-amber-200', icon: CreditCard };
             case 'moodboard':
-                return { color: 'bg-pink-50 text-pink-600 border-pink-200', icon: '🎨' };
+                return { color: 'bg-pink-50 text-pink-600 border-pink-200', icon: Palette };
             case 'survey':
-                return { color: 'bg-purple-50 text-purple-600 border-purple-200', icon: '📋' };
+                return { color: 'bg-purple-50 text-purple-600 border-purple-200', icon: ClipboardList };
             case 'not_start':
             default:
-                return { color: 'bg-slate-50 text-slate-500 border-slate-200', icon: '⏳' };
+                return { color: 'bg-slate-50 text-slate-500 border-slate-200', icon: Hourglass };
         }
     };
 
@@ -603,10 +602,15 @@ export default function Index({ surveys }: Props) {
                                                         )}
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold tracking-wide border rounded-full ${tahapan.color}`}>
-                                                            <span>{tahapan.icon}</span>
-                                                            {formatTahapanProyek(survey.tahapan_proyek)}
-                                                        </span>
+                                                        {(() => {
+                                                            const TahapIcon = tahapan.icon;
+                                                            return (
+                                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold tracking-wide border rounded-full ${tahapan.color}`}>
+                                                                    <TahapIcon className="w-3.5 h-3.5" />
+                                                                    {formatTahapanProyek(survey.tahapan_proyek)}
+                                                                </span>
+                                                            );
+                                                        })()}
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         {survey.response_time ? (

@@ -5,6 +5,7 @@ import WorkStatusTabs from '@/components/WorkStatusTabs';
 import { Head, router } from '@inertiajs/react';
 import { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
+import { Check, Calendar } from 'lucide-react';
 
 /* ================= TYPES ================= */
 interface SurveyUser {
@@ -297,13 +298,17 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing, isProjec
                                         <div className="flex flex-col gap-1.5 mt-2">
                                             {hasResponse && (
                                                 <div className="inline-flex flex-col gap-0.5 px-2 py-1.5 bg-green-50 border border-green-200 rounded max-w-fit">
-                                                    <span className="text-[9px] font-bold text-green-700 uppercase tracking-wider">✓ Response: {order.survey_response_by}</span>
+                                                    <span className="text-[9px] font-bold text-green-700 uppercase tracking-wider flex items-center gap-1">
+                                                        <Check className="w-3 h-3 text-green-600" /> Response: {order.survey_response_by}
+                                                    </span>
                                                     <span className="text-[10px] text-green-600">{formatDateTime(order.survey_response_time)}</span>
                                                 </div>
                                             )}
                                             {hasPmResponse && (
                                                 <div className="inline-flex flex-col gap-0.5 px-2 py-1.5 bg-blue-50 border border-blue-200 rounded max-w-fit mt-1">
-                                                    <span className="text-[9px] font-bold text-blue-700 uppercase tracking-wider">✓ PM Res: {order.pm_survey_response_by}</span>
+                                                    <span className="text-[9px] font-bold text-blue-700 uppercase tracking-wider flex items-center gap-1">
+                                                        <Check className="w-3 h-3 text-blue-600" /> PM Res: {order.pm_survey_response_by}
+                                                    </span>
                                                     <span className="text-[10px] text-blue-600">{formatDateTime(order.pm_survey_response_time)}</span>
                                                 </div>
                                             )}
@@ -316,7 +321,7 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing, isProjec
                                             {order.tanggal_survey ? (
                                                 <div className="max-w-[220px] rounded border border-indigo-200 bg-indigo-50 p-2 whitespace-normal">
                                                     <div className="flex items-center gap-1 text-[11px] font-bold text-indigo-700 mb-1">
-                                                        <span>📅</span>
+                                                        <Calendar className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                                                         <span>
                                                             Dijadwalkan:{' '}
                                                             {(() => {
@@ -371,9 +376,10 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing, isProjec
                                             {showScheduleButton && (
                                                 <button
                                                     onClick={() => openModal(order)}
-                                                    className="w-full rounded-md bg-indigo-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-indigo-700 text-center"
+                                                    className="inline-flex items-center justify-center gap-1.5 w-full rounded-md bg-indigo-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-indigo-700 text-center"
                                                 >
-                                                    {order.tanggal_survey ? '📅 Edit Schedule' : '📅 Isi Tanggal Survey'}
+                                                    <Calendar className="w-3.5 h-3.5" />
+                                                    <span>{order.tanggal_survey ? 'Edit Schedule' : 'Isi Tanggal Survey'}</span>
                                                 </button>
                                             )}
 
@@ -389,9 +395,10 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing, isProjec
                                             {isNotKepalaMarketing && !hasResponse && (
                                                 <button
                                                     onClick={() => handleResponse(order.id)}
-                                                    className="w-full rounded-md bg-green-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-green-700 text-center mt-1"
+                                                    className="inline-flex items-center justify-center gap-1.5 w-full rounded-md bg-green-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-green-700 text-center mt-1"
                                                 >
-                                                    ✓ Response
+                                                    <Check className="w-3.5 h-3.5" />
+                                                    <span>Response</span>
                                                 </button>
                                             )}
                                         </div>

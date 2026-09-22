@@ -23,6 +23,7 @@ interface Props {
     supervisors?: User[];
     projectManagers?: User[];
     jenisInteriors: JenisInterior[];
+    customers?: User[];
 }
 
 export default function Create({
@@ -32,6 +33,7 @@ export default function Create({
     supervisors = [],
     projectManagers = [],
     jenisInteriors = [],
+    customers = [],
 }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
@@ -54,6 +56,8 @@ export default function Create({
         jenis_interior_id: '',
         company_name: '',
         customer_name: '',
+        customer_email: '',
+        customer_user_id: '',
         customer_additional_info: '',
         nomor_unit: '',
         phone_number: '',
@@ -543,6 +547,68 @@ export default function Create({
                                         {errors.customer_name && (
                                             <p className="mt-1 text-xs text-red-500">
                                                 {errors.customer_name}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Customer Email */}
+                                    <div>
+                                        <label className="mb-2 block text-sm font-semibold text-stone-700">
+                                            Customer Email (Untuk Portal Customer)
+                                        </label>
+                                        <input
+                                            type="email"
+                                            name="customer_email"
+                                            value={data.customer_email}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'customer_email',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            className="w-full rounded-lg border border-stone-300 px-4 py-2.5 transition-all outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                                            placeholder="contoh: customer@gmail.com"
+                                        />
+                                        {errors.customer_email && (
+                                            <p className="mt-1 text-xs text-red-500">
+                                                {errors.customer_email}
+                                            </p>
+                                        )}
+                                        <p className="mt-1 text-xs text-stone-400">
+                                            Email ini akan digunakan untuk pembuatan akun portal customer
+                                        </p>
+                                    </div>
+
+                                    {/* Linked Customer Account (Portal Login) */}
+                                    <div>
+                                        <label className="mb-2 block text-sm font-semibold text-stone-700">
+                                            Tautkan Akun Customer (Opsional)
+                                        </label>
+                                        <select
+                                            name="customer_user_id"
+                                            value={data.customer_user_id}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                const selected = customers.find(c => c.id.toString() === val);
+                                                setData((prev) => ({
+                                                    ...prev,
+                                                    customer_user_id: val,
+                                                    customer_name: prev.customer_name || (selected ? selected.name : ''),
+                                                    customer_email: selected ? selected.email : prev.customer_email,
+                                                }));
+                                            }}
+                                            className="w-full rounded-lg border border-stone-300 px-4 py-2.5 transition-all outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                                        >
+                                            <option value="">-- Pilih Akun Customer Terdaftar (Opsional) --</option>
+                                            {customers.map((c) => (
+                                                <option key={c.id} value={c.id}>
+                                                    {c.name} ({c.email})
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {errors.customer_user_id && (
+                                            <p className="mt-1 text-xs text-red-500">
+                                                {errors.customer_user_id}
                                             </p>
                                         )}
                                     </div>

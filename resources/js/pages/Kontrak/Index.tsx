@@ -6,6 +6,7 @@ import KontrakModal from './KontrakModal';
 import ExtendModal from '@/components/ExtendModal';
 import WorkStatusTabs from '@/components/WorkStatusTabs';
 import axios from 'axios';
+import { Check, Clock } from 'lucide-react';
 
 interface CommitmentFee {
     id: number;
@@ -514,10 +515,9 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                 <div className="space-y-2">
                                                                     {item.kontrak?.response_time ? (
                                                                         <div className="space-y-1">
-                                                                            <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
-                                                                                ✓
-                                                                                Sudah
-                                                                                Response
+                                                                            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
+                                                                                <Check className="w-3 h-3 text-green-700" />
+                                                                                Sudah Response
                                                                             </span>
                                                                             <div className="text-xs text-gray-600">
                                                                                 <div>
@@ -551,7 +551,10 @@ export default function Index({ itemPekerjaans, termins }: Props) {
 
                                                                     {item.kontrak?.pm_response_time && (
                                                                         <div className="bg-purple-50 border border-purple-200 rounded-lg p-2">
-                                                                            <p className="text-xs font-semibold text-purple-900">✓ Marketing Response</p>
+                                                                            <p className="text-xs font-semibold text-purple-900 flex items-center gap-1">
+                                                                                <Check className="w-3 h-3 text-purple-700" />
+                                                                                Marketing Response
+                                                                            </p>
                                                                             <p className="text-xs text-purple-700">By: {item.kontrak.pm_response_by}</p>
                                                                             <p className="text-xs text-purple-700">{item.kontrak.pm_response_time}</p>
                                                                         </div>
@@ -671,16 +674,14 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                             {item
                                                                                 .kontrak
                                                                                 .signed_contract_path ? (
-                                                                                <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1.5 text-xs font-medium text-green-800">
-                                                                                    ✓
-                                                                                    Kontrak
-                                                                                    TTD
+                                                                                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1.5 text-xs font-medium text-green-800">
+                                                                                    <Check className="w-3 h-3 text-green-700" />
+                                                                                    Kontrak TTD
                                                                                 </span>
                                                                             ) : (
-                                                                                <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1.5 text-xs font-medium text-amber-800">
-                                                                                    ⏳
-                                                                                    Belum
-                                                                                    TTD
+                                                                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1.5 text-xs font-medium text-amber-800">
+                                                                                    <Clock className="w-3 h-3 text-amber-700" />
+                                                                                    Belum TTD
                                                                                 </span>
                                                                             )}
                                                                         </div>

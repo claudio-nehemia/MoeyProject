@@ -15,7 +15,8 @@ import {
     Clock,
     Briefcase,
     ChevronRight,
-    RotateCcw
+    RotateCcw,
+    GraduationCap
 } from 'lucide-react';
 
 interface Pelatihan {
@@ -195,8 +196,9 @@ export default function Index({ pelatihans, karyawans, filters }: Props) {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
                         <div>
                             <div className="flex items-center gap-2 mb-1">
-                                <h1 className="text-2xl font-bold tracking-tight text-slate-800">
-                                    🎓 Manajemen Pelatihan Karyawan
+                                <h1 className="text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-2">
+                                    <GraduationCap className="w-6 h-6 text-amber-500" />
+                                    <span>Manajemen Pelatihan Karyawan</span>
                                 </h1>
                                 <span className="inline-flex px-2.5 py-0.5 rounded bg-amber-50 border border-amber-100 text-amber-800 text-[10px] font-extrabold uppercase tracking-wider">
                                     Upskilling

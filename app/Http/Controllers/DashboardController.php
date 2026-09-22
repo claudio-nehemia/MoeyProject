@@ -12,6 +12,10 @@ class DashboardController extends Controller
         // Get current user with role and divisi
         $user = auth()->user()->load('role.divisi');
 
+        if ($user->isCustomer()) {
+            return redirect()->route('customer.portal');
+        }
+
         $ordersQuery = Order::visibleToUser($user);
 
         $totalOrders = (clone $ordersQuery)->count();

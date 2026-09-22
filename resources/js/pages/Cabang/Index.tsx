@@ -141,8 +141,9 @@ export default function Index({ cabangs }: Props) {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
                         <div>
                             <div className="flex items-center gap-2 mb-1">
-                                <h1 className="text-2xl font-bold tracking-tight text-slate-800">
-                                    🏢 Manajemen Cabang Kantor
+                                <h1 className="text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-2">
+                                    <Building className="w-6 h-6 text-amber-600" />
+                                    Manajemen Cabang Kantor
                                 </h1>
                                 <span className="inline-flex px-2.5 py-0.5 rounded bg-amber-50 border border-amber-100 text-amber-800 text-[10px] font-extrabold uppercase tracking-wider">
                                     Data Lokasi
@@ -307,7 +308,8 @@ export default function Index({ cabangs }: Props) {
                     </button>
 
                     <h3 className="text-base font-extrabold text-slate-800 mb-4 flex items-center gap-2">
-                        🏢 {editMode ? 'Ubah Informasi Cabang' : 'Tambah Cabang Baru'}
+                        <Building className="w-5 h-5 text-amber-600" />
+                        {editMode ? 'Ubah Informasi Cabang' : 'Tambah Cabang Baru'}
                     </h3>
                     
                     <form onSubmit={handleSubmit} className="space-y-4">

@@ -23,7 +23,11 @@ import {
     AlertCircle,
     UserCheck,
     MapPin,
-    ShieldAlert
+    ShieldAlert,
+    Clock,
+    Star,
+    FileText,
+    AlertTriangle,
 } from 'lucide-react';
 
 interface Facerecognition {
@@ -426,8 +430,9 @@ export default function Index({ karyawans, users, cabangs, departemens, jabatans
                                                                 Nonaktif
                                                             </span>
                                                         )}
-                                                        <span className="text-[11px] text-stone-500 font-bold" title="Masa Kerja">
-                                                            ⏱️ {getMasaKerja(kar.tanggal_masuk)}
+                                                        <span className="flex items-center gap-1 text-[11px] text-stone-500 font-bold" title="Masa Kerja">
+                                                            <Clock size={11} className="text-stone-400" />
+                                                            <span>{getMasaKerja(kar.tanggal_masuk)}</span>
                                                         </span>
                                                     </div>
                                                 </div>
@@ -497,21 +502,26 @@ export default function Index({ karyawans, users, cabangs, departemens, jabatans
                                                                 {kar.presensi_summary?.hari_hadir || 0} / {kar.presensi_summary?.hari_kerja_default || 26} Hari
                                                             </span>
                                                             {kar.presensi_summary?.perfect_attendance && (
-                                                                <span title="Kehadiran Sempurna" className="text-[10px]">⭐</span>
+                                                                <span title="Kehadiran Sempurna" className="inline-flex">
+                                                                    <Star size={12} className="text-amber-500 fill-amber-500" />
+                                                                </span>
                                                             )}
                                                         </div>
                                                         <div className="flex flex-wrap gap-1 text-[9px] font-mono">
-                                                            <span className="px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200 font-semibold" title="Total Hari Izin (Izin Absen/Cuti/Dinas/Sakit)">
-                                                                📋 {(kar.presensi_summary?.hari_izin || 0) + (kar.presensi_summary?.hari_sakit || 0)} Izin
+                                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200 font-semibold" title="Total Hari Izin (Izin Absen/Cuti/Dinas/Sakit)">
+                                                                <FileText size={10} />
+                                                                <span>{(kar.presensi_summary?.hari_izin || 0) + (kar.presensi_summary?.hari_sakit || 0)} Izin</span>
                                                             </span>
                                                             {(kar.presensi_summary?.hari_terlambat || 0) > 0 && (
-                                                                <span className="px-1 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-150 font-semibold" title="Keterlambatan">
-                                                                    ⏱️ {kar.presensi_summary?.hari_terlambat} Telat
+                                                                <span className="inline-flex items-center gap-1 px-1 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-150 font-semibold" title="Keterlambatan">
+                                                                    <Clock size={10} />
+                                                                    <span>{kar.presensi_summary?.hari_terlambat} Telat</span>
                                                                 </span>
                                                             )}
                                                             {(kar.presensi_summary?.hari_alpha || 0) > 0 && (
-                                                                <span className="px-1 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-150 font-semibold" title="Alpa">
-                                                                    ⚠️ {kar.presensi_summary?.hari_alpha} Alpa
+                                                                <span className="inline-flex items-center gap-1 px-1 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-150 font-semibold" title="Alpa">
+                                                                    <AlertTriangle size={10} />
+                                                                    <span>{kar.presensi_summary?.hari_alpha} Alpa</span>
                                                                 </span>
                                                             )}
                                                         </div>
@@ -850,8 +860,9 @@ export default function Index({ karyawans, users, cabangs, departemens, jabatans
                     </button>
 
                     <div className="mb-4">
-                        <h3 className="text-base font-extrabold text-slate-800">
-                            👤 Kelola Master Wajah (Face Recognition)
+                        <h3 className="text-base font-extrabold text-slate-800 flex items-center gap-2">
+                            <User className="w-5 h-5 text-amber-600" />
+                            Kelola Master Wajah (Face Recognition)
                         </h3>
                         {selectedKaryawan && (
                             <p className="text-xs text-stone-500 mt-0.5">

@@ -15,7 +15,8 @@ import {
     UserX,
     HelpCircle,
     Clock,
-    RotateCcw
+    RotateCcw,
+    UserMinus
 } from 'lucide-react';
 
 interface Karyawan {
@@ -218,8 +219,9 @@ export default function ResignIndex({ resigns, filters }: Props) {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
                         <div>
                             <div className="flex items-center gap-2 mb-1">
-                                <h1 className="text-2xl font-bold tracking-tight text-slate-800">
-                                    👋 Review Pengunduran Diri (Resign)
+                                <h1 className="text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-2">
+                                    <UserMinus className="w-6 h-6 text-amber-500" />
+                                    <span>Review Pengunduran Diri (Resign)</span>
                                 </h1>
                                 <span className="inline-flex px-2.5 py-0.5 rounded bg-amber-50 border border-amber-100 text-amber-800 text-[10px] font-extrabold uppercase tracking-wider">
                                     HR Approval

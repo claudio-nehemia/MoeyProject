@@ -5,6 +5,7 @@ import WorkStatusTabs from '@/components/WorkStatusTabs';
 import { Head, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { useEffect, useState, useMemo } from 'react';
+import { AlertTriangle, Clock, Eye, Check, RefreshCw, Trash2 } from 'lucide-react';
 
 interface Order {
     id: number;
@@ -542,7 +543,11 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                                                              !taskResponseRegular.update_data_time && (
                                                                 <div className={`rounded-lg p-2.5 border ${daysLeftRegular !== null && daysLeftRegular < 0 ? 'bg-red-50 border-red-200 text-red-700' : daysLeftRegular !== null && daysLeftRegular <= 3 ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-yellow-50 border-yellow-200 text-yellow-700'}`}>
                                                                     <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">
-                                                                        {daysLeftRegular !== null && daysLeftRegular < 0 ? '⚠️ Terlewat' : '⏰ Deadline DF'}
+                                                                        {daysLeftRegular !== null && daysLeftRegular < 0 ? (
+                                                                            <span className="inline-flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Terlewat</span>
+                                                                        ) : (
+                                                                            <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" /> Deadline DF</span>
+                                                                        )}
                                                                     </div>
                                                                     <div className="mt-0.5 text-xs font-medium">{formatDeadline(taskResponseRegular.deadline)}</div>
                                                                     {daysLeftRegular !== null && (
@@ -561,7 +566,9 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                                                              taskResponseMarketing.status !== 'telat_submit' && 
                                                              !taskResponseMarketing.update_data_time && (
                                                                 <div className="rounded-lg border border-purple-200 bg-purple-50 p-2.5 text-purple-700">
-                                                                    <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">⏰ Deadline DF(Mkt)</div>
+                                                                    <div className="text-[10px] font-bold uppercase tracking-wider opacity-80 inline-flex items-center gap-1">
+                                                                        <Clock className="w-3 h-3" /> Deadline DF(Mkt)
+                                                                    </div>
                                                                     <div className="mt-0.5 text-xs font-medium">{formatDeadline(taskResponseMarketing.deadline)}</div>
                                                                     {daysLeftMarketing !== null && (
                                                                         <div className="mt-1 text-[10px] font-medium">{daysLeftMarketing < 0 ? `Terlambat ${Math.abs(daysLeftMarketing)} hari` : `${daysLeftMarketing} hari lagi`}</div>
@@ -593,12 +600,22 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                                                                             </div>
                                                                         </div>
                                                                         <div className="flex gap-1 flex-wrap">
-                                                                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="flex-1 rounded border border-blue-200 bg-blue-50 px-1 py-1 text-center text-[10px] font-medium text-blue-700 hover:bg-blue-100" title="Lihat">👁️ Lihat</a>
+                                                                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="flex-1 rounded border border-blue-200 bg-blue-50 px-1 py-1 text-center text-[10px] font-medium text-blue-700 hover:bg-blue-100 inline-flex items-center justify-center gap-1" title="Lihat">
+                                                                                <Eye className="w-3 h-3" />
+                                                                                <span>Lihat</span>
+                                                                            </a>
                                                                             {!moodboard.moodboard_final && (
-                                                                                <button onClick={() => handleAcceptDesain(moodboard, file)} disabled={loading} className="flex-1 rounded bg-gradient-to-r from-emerald-500 to-emerald-600 px-1 py-1 text-[10px] font-medium text-white hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50" title="Terima">✓ Terima</button>
+                                                                                <button onClick={() => handleAcceptDesain(moodboard, file)} disabled={loading} className="flex-1 rounded bg-gradient-to-r from-emerald-500 to-emerald-600 px-1 py-1 text-[10px] font-medium text-white hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 inline-flex items-center justify-center gap-1" title="Terima">
+                                                                                    <Check className="w-3 h-3" />
+                                                                                    <span>Terima</span>
+                                                                                </button>
                                                                             )}
-                                                                            <button onClick={() => openReplaceModal(file)} disabled={loading} className="rounded border border-amber-200 bg-amber-50 px-1.5 py-1 text-[10px] text-amber-700 hover:bg-amber-100 disabled:opacity-50" title="Ganti">🔄</button>
-                                                                            <button onClick={() => handleDeleteFile(file)} disabled={loading} className="rounded border border-red-200 bg-red-50 px-1.5 py-1 text-[10px] text-red-700 hover:bg-red-100 disabled:opacity-50" title="Hapus">🗑️</button>
+                                                                            <button onClick={() => openReplaceModal(file)} disabled={loading} className="rounded border border-amber-200 bg-amber-50 px-1.5 py-1 text-[10px] text-amber-700 hover:bg-amber-100 disabled:opacity-50 inline-flex items-center justify-center" title="Ganti">
+                                                                                <RefreshCw className="w-3 h-3" />
+                                                                            </button>
+                                                                            <button onClick={() => handleDeleteFile(file)} disabled={loading} className="rounded border border-red-200 bg-red-50 px-1.5 py-1 text-[10px] text-red-700 hover:bg-red-100 disabled:opacity-50 inline-flex items-center justify-center" title="Hapus">
+                                                                                <Trash2 className="w-3 h-3" />
+                                                                            </button>
                                                                         </div>
                                                                     </div>
                                                                 ))}
@@ -654,8 +671,9 @@ export default function DesainFinalIndex({ moodboards }: Props) {
                                                                     <button onClick={() => openUploadModal(moodboard)} disabled={loading} className="w-full rounded-md bg-indigo-600 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50 text-center">
                                                                         {moodboard.final_files.length > 0 ? `+ Tambah File` : 'Upload Desain'}
                                                                     </button>
-                                                                    <button onClick={() => openReviseModal(moodboard)} disabled={loading} className="w-full rounded-md bg-orange-600 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-orange-700 disabled:opacity-50 text-center mt-1">
-                                                                        🔄 Revisi
+                                                                    <button onClick={() => openReviseModal(moodboard)} disabled={loading} className="w-full rounded-md bg-orange-600 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-orange-700 disabled:opacity-50 text-center mt-1 inline-flex items-center justify-center gap-1">
+                                                                        <RefreshCw className="w-3 h-3" />
+                                                                        <span>Revisi</span>
                                                                     </button>
                                                                 </>
                                                             )}

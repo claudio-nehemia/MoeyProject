@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
+import { Rocket } from 'lucide-react';
 
 interface SidebarProps {
     isOpen: boolean;
@@ -325,6 +326,28 @@ export default function Sidebar({
                 </svg>
             ),
             gradient: 'from-yellow-400 to-yellow-600',
+        },
+        {
+            name: 'Customer Portal',
+            href: '/master-customer',
+            page: 'master-customer',
+            permission: null,
+            icon: (
+                <svg
+                    className="h-3.5 w-3.5 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                </svg>
+            ),
+            gradient: 'from-cyan-500 to-blue-600',
         },
     ];
 
@@ -1223,8 +1246,9 @@ export default function Sidebar({
 
                     <div className="mt-auto border-t border-stone-200 pt-2">
                         <div className="rounded-lg bg-gradient-to-br from-cyan-100 to-cyan-200 p-2">
-                            <p className="mb-0.5 text-xs font-semibold text-cyan-900">
-                                🚀 Operations
+                            <p className="mb-0.5 text-xs font-semibold text-cyan-900 flex items-center gap-1.5">
+                                <Rocket className="w-3.5 h-3.5 text-cyan-700" />
+                                Operations
                             </p>
                             <p className="text-xs text-cyan-800">
                                 Manage your projects & orders

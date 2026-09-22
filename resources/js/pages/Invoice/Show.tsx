@@ -2,6 +2,14 @@ import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { FormEventHandler, useState, Fragment } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import {
+    Clock,
+    Check,
+    X,
+    FileText,
+    CreditCard,
+    Sparkles
+} from 'lucide-react';
 
 interface User {
     id: number;
@@ -142,25 +150,25 @@ export default function Show({ invoice }: Props) {
     };
 
     const getStatusBadge = (status: string) => {
-        const configs = {
+        const configs: Record<string, { bg: string; text: string; icon: React.ReactNode; label: string; pulse: boolean }> = {
             pending: {
                 bg: 'bg-gradient-to-r from-yellow-400 to-orange-400',
                 text: 'text-white',
-                icon: '⏳',
+                icon: <Clock className="w-5 h-5" />,
                 label: 'Pending',
                 pulse: true
             },
             paid: {
                 bg: 'bg-gradient-to-r from-green-400 to-emerald-500',
                 text: 'text-white',
-                icon: '✓',
+                icon: <Check className="w-5 h-5" />,
                 label: 'Terbayar',
                 pulse: false
             },
             cancelled: {
                 bg: 'bg-gradient-to-r from-red-400 to-pink-500',
                 text: 'text-white',
-                icon: '✕',
+                icon: <X className="w-5 h-5" />,
                 label: 'Dibatalkan',
                 pulse: false
             },
@@ -293,8 +301,9 @@ export default function Show({ invoice }: Props) {
                                         
                                         {/* Termin Info */}
                                         <div className="mt-3 flex items-center gap-2">
-                                            <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-semibold backdrop-blur-sm">
-                                                📋 {invoice.termin_nama || 'Termin'}
+                                            <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-semibold backdrop-blur-sm inline-flex items-center gap-1.5">
+                                                <FileText className="w-4 h-4 text-blue-200" />
+                                                <span>{invoice.termin_nama || 'Termin'}</span>
                                             </span>
                                             <span className="px-3 py-1 bg-amber-400 text-amber-900 rounded-full text-sm font-bold">
                                                 Tahap {invoice.termin_step} / {invoice.total_steps}
@@ -317,8 +326,9 @@ export default function Show({ invoice }: Props) {
                                         </a>
 
                                         {invoice.paid_at && (
-                                            <p className="text-sm text-blue-100 mt-3 bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm">
-                                                💰 Paid: {formatDate(invoice.paid_at)}
+                                            <p className="text-sm text-blue-100 mt-3 bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm inline-flex items-center gap-1.5">
+                                                <CreditCard className="w-4 h-4 text-blue-200" />
+                                                <span>Paid: {formatDate(invoice.paid_at)}</span>
                                             </p>
                                         )}
                                     </div>
@@ -518,7 +528,7 @@ export default function Show({ invoice }: Props) {
                                                                             <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                                                                                 <h4 className="flex items-center gap-2 text-sm font-bold text-gray-700 uppercase mb-4">
                                                                                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white">
-                                                                                        ⚡
+                                                                                        <Sparkles className="w-4 h-4 text-white" />
                                                                                     </div>
                                                                                     Accessories
                                                                                 </h4>
@@ -609,7 +619,9 @@ export default function Show({ invoice }: Props) {
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                                         </svg>
-                                        {invoice.has_bast_foto_klien ? '✅ Foto BAST dengan Klien' : '📸 Upload Foto BAST dengan Klien'}
+                                        <span>
+                                            {invoice.has_bast_foto_klien ? 'Foto BAST dengan Klien' : 'Upload Foto BAST dengan Klien'}
+                                        </span>
                                     </h3>
                                     <p className="text-purple-200 text-sm mt-1">
                                         Wajib untuk pembayaran tahap terakhir (pelunasan)

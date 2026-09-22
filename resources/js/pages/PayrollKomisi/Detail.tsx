@@ -2,6 +2,7 @@ import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import { Info } from 'lucide-react';
 
 interface KpiDetail {
     komponen: string;
@@ -295,10 +296,19 @@ export default function Detail({ slip }: Props) {
                                     </table>
 
                                     {/* KPI Rules */}
-                                    <div className="px-6 py-3 bg-gray-50 text-xs text-gray-500 space-y-1">
-                                        <p>📌 KPI "Sangat Baik" 9x dalam 1 tahun → kenaikan Gaji 10%</p>
-                                        <p>📌 KPI "Cukup" 3 bulan berturut → Surat Peringatan (SP) 1</p>
-                                        <p>📌 SP 1 + Status "Buruk" → Komisi & Tunjangan dihanguskan + SP 2</p>
+                                    <div className="px-6 py-3 bg-gray-50 text-xs text-gray-500 space-y-1.5">
+                                        <p className="flex items-center gap-1.5">
+                                            <Info className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                                            <span>KPI "Sangat Baik" 9x dalam 1 tahun → kenaikan Gaji 10%</span>
+                                        </p>
+                                        <p className="flex items-center gap-1.5">
+                                            <Info className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                                            <span>KPI "Cukup" 3 bulan berturut → Surat Peringatan (SP) 1</span>
+                                        </p>
+                                        <p className="flex items-center gap-1.5">
+                                            <Info className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                                            <span>SP 1 + Status "Buruk" → Komisi & Tunjangan dihanguskan + SP 2</span>
+                                        </p>
                                     </div>
                                 </div>
                             )}

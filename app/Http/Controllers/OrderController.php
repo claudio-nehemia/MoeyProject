@@ -98,8 +98,14 @@ class OrderController extends Controller
         $teams = $this->getOrderTeamUsers();
         $jenisInteriors = JenisInterior::select('id', 'nama_interior')->get();
 
+        $customers = User::whereHas('role', fn($q) => $q->where('nama_role', 'Customer'))
+            ->orWhereHas('roles', fn($q) => $q->where('nama_role', 'Customer'))
+            ->select('id', 'name', 'email')
+            ->get();
+
         return Inertia::render('Order/Create', array_merge($teams, [
             'jenisInteriors' => $jenisInteriors,
+            'customers' => $customers,
         ]));
     }
 
@@ -129,6 +135,8 @@ class OrderController extends Controller
             'jenis_interior_id' => 'required|exists:jenis_interiors,id',
             'company_name' => 'required|string|max:255',
             'customer_name' => 'required|string|max:255',
+            'customer_email' => 'nullable|email|max:255',
+            'customer_user_id' => 'nullable|exists:users,id',
             'customer_additional_info' => 'nullable|string',
             'nomor_unit' => 'nullable|string|max:100',
             'phone_number' => 'required|string|max:20',
@@ -146,6 +154,19 @@ class OrderController extends Controller
         $validated['priority_level'] = $validated['priority_level'] ?? 'medium';
 
         $validated['tanggal_masuk_customer'] = now()->toDateString();
+
+        // Auto-link customer user if email matches existing customer or sync email from user
+        if (empty($validated['customer_user_id']) && !empty($validated['customer_email'])) {
+            $existingUser = User::where('email', $validated['customer_email'])->first();
+            if ($existingUser) {
+                $validated['customer_user_id'] = $existingUser->id;
+            }
+        } elseif (!empty($validated['customer_user_id']) && empty($validated['customer_email'])) {
+            $custUser = User::find($validated['customer_user_id']);
+            if ($custUser) {
+                $validated['customer_email'] = $custUser->email;
+            }
+        }
 
         \Log::info('Validated Data:', $validated);
         \Log::info('User IDs after validation:', ['user_ids' => $validated['user_ids'] ?? []]);
@@ -255,10 +276,16 @@ class OrderController extends Controller
         // Get existing team members (ambil ID dari User model, bukan dari pivot)
         $existingUserIds = $order->users->pluck('id')->toArray();
 
+        $customers = User::whereHas('role', fn($q) => $q->where('nama_role', 'Customer'))
+            ->orWhereHas('roles', fn($q) => $q->where('nama_role', 'Customer'))
+            ->select('id', 'name', 'email')
+            ->get();
+
         return Inertia::render('Order/Edit', array_merge($teams, [
             'order' => $order,
             'jenisInteriors' => $jenisInteriors,
             'existingUserIds' => $existingUserIds,
+            'customers' => $customers,
         ]));
     }
 
@@ -279,6 +306,8 @@ class OrderController extends Controller
             'jenis_interior_id' => 'required|exists:jenis_interiors,id',
             'company_name' => 'required|string|max:255',
             'customer_name' => 'required|string|max:255',
+            'customer_email' => 'nullable|email|max:255',
+            'customer_user_id' => 'nullable|exists:users,id',
             'customer_additional_info' => 'nullable|string',
             'nomor_unit' => 'nullable|string|max:100',
             'phone_number' => 'required|string|max:20',
@@ -295,6 +324,19 @@ class OrderController extends Controller
         $validated['project_status'] = $validated['project_status'] ?? $order->project_status ?? 'pending';
         $validated['priority_level'] = $validated['priority_level'] ?? $order->priority_level ?? 'medium';
         $validated['tanggal_masuk_customer'] = now()->toDateString();
+
+        // Auto-link customer user if email matches existing customer or sync email from user
+        if (empty($validated['customer_user_id']) && !empty($validated['customer_email'])) {
+            $existingUser = User::where('email', $validated['customer_email'])->first();
+            if ($existingUser) {
+                $validated['customer_user_id'] = $existingUser->id;
+            }
+        } elseif (!empty($validated['customer_user_id']) && empty($validated['customer_email'])) {
+            $custUser = User::find($validated['customer_user_id']);
+            if ($custUser) {
+                $validated['customer_email'] = $custUser->email;
+            }
+        }
 
         \Log::info('Validated Data:', $validated);
         \Log::info('User IDs after validation:', ['user_ids' => $validated['user_ids'] ?? []]);

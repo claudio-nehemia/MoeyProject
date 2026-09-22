@@ -5,6 +5,7 @@ import Sidebar from '@/components/Sidebar';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { useEffect, useState, useMemo } from 'react';
+import { Check, FileEdit, Eye, Pencil } from 'lucide-react';
 
 interface SurveyUlang {
     id: number;
@@ -430,18 +431,20 @@ export default function Index({ surveys }: Props) {
                                                     {isNotKepalaMarketing && s.status_survey_ulang === 'pending' && (
                                                         <button
                                                             onClick={() => router.post(`/survey-ulang/${s.id}/response`)}
-                                                            className="w-full rounded-md bg-emerald-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-emerald-700 text-center"
+                                                            className="inline-flex items-center justify-center gap-1.5 w-full rounded-md bg-emerald-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-emerald-700 text-center"
                                                         >
-                                                            ✓ Response
+                                                            <Check className="w-3.5 h-3.5" />
+                                                            <span>Response</span>
                                                         </button>
                                                     )}
 
                                                     {isNotKepalaMarketing && s.status_survey_ulang === 'waiting_input' && (
                                                         <Link
                                                             href={`/survey-ulang/create/${s.id}`}
-                                                            className="w-full rounded-md bg-amber-500 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-amber-600 inline-block text-center"
+                                                            className="inline-flex items-center justify-center gap-1.5 w-full rounded-md bg-amber-500 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-amber-600 text-center"
                                                         >
-                                                            📝 Input Hasil Survey
+                                                            <FileEdit className="w-3.5 h-3.5" />
+                                                            <span>Input Hasil Survey</span>
                                                         </Link>
                                                     )}
 
@@ -449,15 +452,17 @@ export default function Index({ surveys }: Props) {
                                                         <>
                                                             <Link
                                                                 href={`/survey-ulang/show/${s.survey_ulang_id}`}
-                                                                className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-blue-700 inline-block text-center"
+                                                                className="inline-flex items-center justify-center gap-1.5 w-full rounded-md bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-blue-700 text-center"
                                                             >
-                                                                👁️ View
+                                                                <Eye className="w-3.5 h-3.5" />
+                                                                <span>View</span>
                                                             </Link>
                                                             <Link
                                                                 href={`/survey-ulang/edit/${s.survey_ulang_id}`}
-                                                                className="w-full rounded-md border border-stone-300 bg-white px-3 py-1.5 text-[11px] font-medium text-stone-700 shadow-sm transition hover:bg-stone-50 inline-block mt-1 text-center"
+                                                                className="inline-flex items-center justify-center gap-1.5 w-full rounded-md border border-stone-300 bg-white px-3 py-1.5 text-[11px] font-medium text-stone-700 shadow-sm transition hover:bg-stone-50 mt-1 text-center"
                                                             >
-                                                                ✏️ Edit
+                                                                <Pencil className="w-3.5 h-3.5" />
+                                                                <span>Edit</span>
                                                             </Link>
                                                         </>
                                                     )}

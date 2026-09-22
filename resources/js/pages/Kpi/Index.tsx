@@ -3,6 +3,19 @@ import { useState, useEffect, FormEventHandler } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import SearchFilter from '@/components/SearchFilter';
+import {
+    BarChart3,
+    Award,
+    Briefcase,
+    AlertTriangle,
+    ClipboardList,
+    Star,
+    Zap,
+    Edit3,
+    Clock,
+    AlertCircle,
+    Settings,
+} from 'lucide-react';
 
 interface KpiUserSummary {
     user_id: number;
@@ -214,8 +227,8 @@ export default function Index({
                                     <p className="text-[10px] uppercase font-bold tracking-wider text-stone-400">Rata-Rata Score KPI</p>
                                     <h3 className="text-2xl font-bold text-stone-800 mt-1">{globalStats.avgScore} Poin</h3>
                                     <p className="text-[10px] text-stone-500 mt-1">Seluruh divisi & staff (Bulan Ini)</p>
-                                    <div className="absolute top-1/2 right-4 -translate-y-1/2 w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 text-sm font-bold">
-                                        📊
+                                    <div className="absolute top-1/2 right-4 -translate-y-1/2 w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-600">
+                                        <BarChart3 className="w-4 h-4" />
                                     </div>
                                 </div>
 
@@ -223,9 +236,12 @@ export default function Index({
                                 <div className="bg-white rounded-xl border border-stone-200 p-4 shadow-sm relative overflow-hidden group hover:border-amber-300 transition-all">
                                     <p className="text-[10px] uppercase font-bold tracking-wider text-stone-400">Top Performer</p>
                                     <h3 className="text-md font-bold text-stone-800 mt-1 truncate max-w-[80%]">{globalStats.topPerformerName}</h3>
-                                    <p className="text-[10px] text-emerald-600 font-semibold mt-1">★ {globalStats.topPerformerScore} Poin (Bulan Ini)</p>
-                                    <div className="absolute top-1/2 right-4 -translate-y-1/2 w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 text-sm">
-                                        👑
+                                    <p className="text-[10px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
+                                        <Star className="w-3 h-3 fill-emerald-600" />
+                                        <span>{globalStats.topPerformerScore} Poin (Bulan Ini)</span>
+                                    </p>
+                                    <div className="absolute top-1/2 right-4 -translate-y-1/2 w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
+                                        <Award className="w-4 h-4" />
                                     </div>
                                 </div>
 
@@ -234,8 +250,8 @@ export default function Index({
                                     <p className="text-[10px] uppercase font-bold tracking-wider text-stone-400">Project Selesai</p>
                                     <h3 className="text-2xl font-bold text-stone-800 mt-1">{globalStats.totalCompletedProjects} Project</h3>
                                     <p className="text-[10px] text-stone-500 mt-1">Akumulasi seluruh tim (Bulan Ini)</p>
-                                    <div className="absolute top-1/2 right-4 -translate-y-1/2 w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 text-sm">
-                                        💼
+                                    <div className="absolute top-1/2 right-4 -translate-y-1/2 w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                                        <Briefcase className="w-4 h-4" />
                                     </div>
                                 </div>
 
@@ -244,8 +260,8 @@ export default function Index({
                                     <p className="text-[10px] uppercase font-bold tracking-wider text-stone-400">Total Keterlambatan</p>
                                     <h3 className="text-2xl font-bold text-rose-600 mt-1">{globalStats.totalLateTasks} Kali</h3>
                                     <p className="text-[10px] text-stone-500 mt-1">Denda poin terhitung (Bulan Ini)</p>
-                                    <div className="absolute top-1/2 right-4 -translate-y-1/2 w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-600 text-sm">
-                                        ⚠️
+                                    <div className="absolute top-1/2 right-4 -translate-y-1/2 w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-600">
+                                        <AlertTriangle className="w-4 h-4" />
                                     </div>
                                 </div>
                             </div>
@@ -350,12 +366,12 @@ export default function Index({
                                                             {user.total_hadir || 0} Hari
                                                         </div>
                                                         <div className="flex flex-wrap items-center justify-center gap-1 mt-1 font-mono">
-                                                            <span className="px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-150 font-bold" title="Total Hari Izin">
-                                                                📋 {user.total_izin || 0} Izin
+                                                            <span className="px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-150 font-bold inline-flex items-center gap-0.5" title="Total Hari Izin">
+                                                                <ClipboardList className="w-2.5 h-2.5" /> {user.total_izin || 0} Izin
                                                             </span>
                                                             {user.perfect_attendance_bonus ? (
-                                                                <span className="inline-flex px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold">
-                                                                    ⭐ Hadir Penuh
+                                                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold">
+                                                                    <Star className="w-2.5 h-2.5 text-amber-500 fill-amber-500" /> Hadir Penuh
                                                                 </span>
                                                             ) : (
                                                                 <>
@@ -420,7 +436,8 @@ export default function Index({
                         <div className="max-w-3xl mx-auto bg-white rounded-xl border border-stone-200 shadow-lg overflow-hidden fadeInUp">
                             <div className="bg-gradient-to-r from-stone-800 to-stone-750 p-5 text-white">
                                 <h2 className="text-base font-bold flex items-center gap-2">
-                                    ⚙️ Parameter Penilaian KPI
+                                    <Settings className="w-5 h-5 text-amber-500" />
+                                    Parameter Penilaian KPI
                                 </h2>
                                 <p className="text-[11px] text-stone-300 mt-1">
                                     Konfigurasi poin dasar, sistem bonus respon/update, dan denda denda keterlambatan per parameter.
@@ -462,7 +479,10 @@ export default function Index({
 
                                     {/* Response Time Parameter */}
                                     <div className="border border-stone-200 rounded-lg p-4 space-y-4 shadow-sm bg-stone-50/50">
-                                        <h3 className="text-xs font-bold text-amber-800 border-b border-stone-200 pb-1.5">⚡ Kecepatan Respon (Response Speed)</h3>
+                                        <h3 className="text-xs font-bold text-amber-800 border-b border-stone-200 pb-1.5 flex items-center gap-1.5">
+                                            <Zap className="w-3.5 h-3.5 text-amber-600" />
+                                            <span>Kecepatan Respon (Response Speed)</span>
+                                        </h3>
                                         <p className="text-[10px] text-stone-400">Target pengerjaan otomatis merujuk ke parameter <code className="font-semibold text-amber-700">duration_actual</code> pada setiap task response.</p>
                                         <div className="space-y-1.5">
                                             <label className="block text-[11px] font-semibold text-stone-700">Maksimum Bonus Poin per Respon Cepat</label>
@@ -479,7 +499,10 @@ export default function Index({
 
                                     {/* Update Time Parameter */}
                                     <div className="border border-stone-200 rounded-lg p-4 space-y-4 shadow-sm bg-stone-50/50">
-                                        <h3 className="text-xs font-bold text-amber-800 border-b border-stone-200 pb-1.5">✍️ Kecepatan Update Selesai</h3>
+                                        <h3 className="text-xs font-bold text-amber-800 border-b border-stone-200 pb-1.5 flex items-center gap-1.5">
+                                            <Edit3 className="w-3.5 h-3.5 text-amber-600" />
+                                            <span>Kecepatan Update Selesai</span>
+                                        </h3>
                                         <p className="text-[10px] text-stone-400">Target pengerjaan otomatis merujuk ke parameter <code className="font-semibold text-amber-700">duration - duration_actual</code> pada setiap task response.</p>
                                         <div className="space-y-1.5">
                                             <label className="block text-[11px] font-semibold text-stone-700">Maksimum Bonus Poin per Update Cepat</label>
@@ -496,7 +519,10 @@ export default function Index({
 
                                     {/* Late Penalty */}
                                     <div className="border border-stone-200 rounded-lg p-4 space-y-3.5 shadow-sm bg-stone-50/50">
-                                        <h3 className="text-xs font-bold text-rose-800 border-b border-stone-200 pb-1.5">⚠️ Denda Terlambat (Penalty)</h3>
+                                        <h3 className="text-xs font-bold text-rose-800 border-b border-stone-200 pb-1.5 flex items-center gap-1.5">
+                                            <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                                            <span>Denda Terlambat (Penalty)</span>
+                                        </h3>
                                         <div className="space-y-1.5">
                                             <label className="block text-[11px] font-semibold text-stone-700">Pengurangan Poin per Terlambat</label>
                                             <p className="text-[9px] text-stone-400">Nilai pengurangan poin ketika melewati deadline respon atau input data.</p>
@@ -513,7 +539,10 @@ export default function Index({
 
                                     {/* Completed Projects Parameter */}
                                     <div className="border border-stone-200 rounded-lg p-4 space-y-3.5 shadow-sm bg-stone-50/50">
-                                        <h3 className="text-xs font-bold text-emerald-800 border-b border-stone-200 pb-1.5">💼 Project Selesai (BAST & Lunas)</h3>
+                                        <h3 className="text-xs font-bold text-emerald-800 border-b border-stone-200 pb-1.5 flex items-center gap-1.5">
+                                            <Briefcase className="w-3.5 h-3.5 text-emerald-600" />
+                                            <span>Project Selesai (BAST & Lunas)</span>
+                                        </h3>
                                         <div className="space-y-1.5">
                                             <label className="block text-[11px] font-semibold text-stone-700">Penambahan Poin per Project</label>
                                             <p className="text-[9px] text-stone-400">Nilai bonus poin ketika project yang di-assign terhitung selesai (BAST & Lunas).</p>
@@ -530,7 +559,10 @@ export default function Index({
 
                                     {/* Attendance KPI: penalty_attendance_late */}
                                     <div className="border border-stone-200 rounded-lg p-4 space-y-3.5 shadow-sm bg-stone-50/50">
-                                        <h3 className="text-xs font-bold text-rose-800 border-b border-stone-200 pb-1.5">🕒 Penalti Terlambat Presensi</h3>
+                                        <h3 className="text-xs font-bold text-rose-800 border-b border-stone-200 pb-1.5 flex items-center gap-1.5">
+                                            <Clock className="w-3.5 h-3.5 text-rose-600" />
+                                            <span>Penalti Terlambat Presensi</span>
+                                        </h3>
                                         <div className="space-y-1.5">
                                             <label className="block text-[11px] font-semibold text-stone-700">Pengurangan Poin per Keterlambatan</label>
                                             <input
@@ -546,7 +578,10 @@ export default function Index({
 
                                     {/* Attendance KPI: penalty_attendance_alpha */}
                                     <div className="border border-stone-200 rounded-lg p-4 space-y-3.5 shadow-sm bg-stone-50/50">
-                                        <h3 className="text-xs font-bold text-rose-800 border-b border-stone-200 pb-1.5">🚫 Penalti Alpa / Mangkir</h3>
+                                        <h3 className="text-xs font-bold text-rose-800 border-b border-stone-200 pb-1.5 flex items-center gap-1.5">
+                                            <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                                            <span>Penalti Alpa / Mangkir</span>
+                                        </h3>
                                         <div className="space-y-1.5">
                                             <label className="block text-[11px] font-semibold text-stone-700">Pengurangan Poin per Hari Alpa</label>
                                             <input
@@ -562,7 +597,10 @@ export default function Index({
 
                                     {/* Attendance KPI: bonus_attendance_perfect */}
                                     <div className="border border-stone-200 rounded-lg p-4 space-y-3.5 shadow-sm bg-stone-50/50 col-span-1 md:col-span-2">
-                                        <h3 className="text-xs font-bold text-emerald-800 border-b border-stone-200 pb-1.5">🏆 Bonus Kehadiran Sempurna</h3>
+                                        <h3 className="text-xs font-bold text-emerald-800 border-b border-stone-200 pb-1.5 flex items-center gap-1.5">
+                                            <Award className="w-3.5 h-3.5 text-emerald-600" />
+                                            <span>Bonus Kehadiran Sempurna</span>
+                                        </h3>
                                         <div className="space-y-1.5">
                                             <label className="block text-[11px] font-semibold text-stone-700">Tambahan Poin Kehadiran Sempurna Bulanan</label>
                                             <p className="text-[9px] text-stone-400">Bonus poin jika sebulan penuh hadir (tanpa terlambat & tanpa mangkir).</p>

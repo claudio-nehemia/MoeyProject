@@ -2,6 +2,15 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import {
+    Zap,
+    CheckCircle2,
+    Settings,
+    CreditCard,
+    BarChart3,
+    Target,
+    Info
+} from 'lucide-react';
 
 interface KpiConfig {
     id: number;
@@ -107,8 +116,9 @@ export default function Config({ configs }: Props) {
 
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                             <div>
-                                <h1 className="text-2xl font-bold text-gray-900">
-                                    ⚙️ Konfigurasi Payroll per Jabatan
+                                <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                                    <Settings className="w-6 h-6 text-gray-700" />
+                                    Konfigurasi Payroll per Jabatan
                                 </h1>
                                 <p className="text-gray-500 mt-1">
                                     {configs.length} jabatan dari {Object.keys(grouped).length} divisi
@@ -120,22 +130,24 @@ export default function Config({ configs }: Props) {
                                     disabled={seeding}
                                     className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-sm transition flex items-center gap-2 disabled:opacity-50"
                                 >
-                                    {seeding ? 'Memproses...' : '⚡ Inisialisasi Skema Default (11 Jabatan Moey)'}
+                                    <Zap className="w-4 h-4" />
+                                    <span>{seeding ? 'Memproses...' : 'Inisialisasi Skema Default (11 Jabatan Moey)'}</span>
                                 </button>
                             </div>
                         </div>
 
                         {/* Flash */}
                         {flash?.success && (
-                            <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl">
-                                ✅ {flash.success}
+                            <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-2">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                <span>{flash.success}</span>
                             </div>
                         )}
 
                         {configs.length === 0 && (
                             <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center max-w-2xl mx-auto my-8 shadow-sm">
-                                <div className="w-16 h-16 mx-auto mb-4 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center text-2xl">
-                                    ⚙️
+                                <div className="w-16 h-16 mx-auto mb-4 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center">
+                                    <Settings className="w-8 h-8" />
                                 </div>
                                 <h3 className="text-lg font-bold text-gray-900 mb-2">
                                     Belum Ada Konfigurasi Jabatan
@@ -150,7 +162,8 @@ export default function Config({ configs }: Props) {
                                     disabled={seeding}
                                     className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md transition disabled:opacity-50 inline-flex items-center gap-2"
                                 >
-                                    {seeding ? 'Sedang Memproses...' : '⚡ Inisialisasi 11 Jabatan Standar Moey'}
+                                    <Zap className="w-4 h-4" />
+                                    <span>{seeding ? 'Sedang Memproses...' : 'Inisialisasi 11 Jabatan Standar Moey'}</span>
                                 </button>
                             </div>
                         )}
@@ -213,7 +226,10 @@ export default function Config({ configs }: Props) {
                                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                                             {/* Gaji & Tunjangan */}
                                                             <div>
-                                                                <h4 className="font-bold text-gray-700 text-sm mb-2">💰 Gaji & Tunjangan</h4>
+                                                                <h4 className="font-bold text-gray-700 text-sm mb-2 flex items-center gap-1.5">
+                                                                    <CreditCard className="w-4 h-4 text-emerald-600" />
+                                                                    <span>Gaji & Tunjangan</span>
+                                                                </h4>
                                                                 <div className="space-y-1 text-sm">
                                                                     <div className="flex justify-between"><span className="text-gray-500">Gaji Pokok</span><span className="font-mono">Rp {formatCurrency(config.gaji_pokok)}</span></div>
                                                                     <div className="flex justify-between"><span className="text-gray-500">Gaji/Hari</span><span className="font-mono">Rp {formatCurrency(config.gaji_pokok_harian)}</span></div>
@@ -232,7 +248,10 @@ export default function Config({ configs }: Props) {
 
                                                             {/* Komisi */}
                                                             <div>
-                                                                <h4 className="font-bold text-gray-700 text-sm mb-2">📊 Komisi & Achievement</h4>
+                                                                <h4 className="font-bold text-gray-700 text-sm mb-2 flex items-center gap-1.5">
+                                                                    <BarChart3 className="w-4 h-4 text-indigo-600" />
+                                                                    <span>Komisi & Achievement</span>
+                                                                </h4>
                                                                 <div className="space-y-1 text-sm">
                                                                     <div className="flex justify-between"><span className="text-gray-500">CF per Client</span><span className="font-mono">Rp {formatCurrency(config.cf_per_client)}</span></div>
                                                                     <div className="flex justify-between"><span className="text-gray-500">Max CF/Bulan</span><span className="font-mono">{config.cf_max_per_bulan}×</span></div>
@@ -250,7 +269,10 @@ export default function Config({ configs }: Props) {
 
                                                             {/* KPI */}
                                                             <div>
-                                                                <h4 className="font-bold text-gray-700 text-sm mb-2">🎯 Bobot KPI</h4>
+                                                                <h4 className="font-bold text-gray-700 text-sm mb-2 flex items-center gap-1.5">
+                                                                    <Target className="w-4 h-4 text-amber-600" />
+                                                                    <span>Bobot KPI</span>
+                                                                </h4>
                                                                 <div className="space-y-2">
                                                                     {config.kpi_configs.map((kpi, i) => (
                                                                         <div key={i} className="flex items-center gap-2">
@@ -270,8 +292,9 @@ export default function Config({ configs }: Props) {
                                                                     ))}
                                                                 </div>
                                                                 {config.catatan && (
-                                                                    <div className="mt-3 text-xs text-gray-400 bg-gray-50 p-2 rounded">
-                                                                        📌 {config.catatan}
+                                                                    <div className="mt-3 text-xs text-gray-400 bg-gray-50 p-2 rounded flex items-start gap-1">
+                                                                        <Info className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                                                                        <span>{config.catatan}</span>
                                                                     </div>
                                                                 )}
                                                             </div>

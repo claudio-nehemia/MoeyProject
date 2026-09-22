@@ -99,10 +99,10 @@ export default function WorkplanItemForm({
                         onChange={(e) => onUpdate(itemIndex, 'status', e.target.value)}
                         className={`w-full rounded-lg border px-3 py-2 text-sm font-medium ${getStatusColor(item.status)}`}
                     >
-                        <option value="planned">📋 Planned</option>
-                        <option value="in_progress">🔄 In Progress</option>
-                        <option value="done">✅ Done</option>
-                        <option value="cancelled">❌ Cancelled</option>
+                        <option value="planned">Planned</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="done">Done</option>
+                        <option value="cancelled">Cancelled</option>
                     </select>
                 </div>
 

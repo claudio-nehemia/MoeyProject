@@ -185,8 +185,9 @@ export default function Index({ presensiData, filters }: Props) {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
                         <div>
                             <div className="flex items-center gap-2 mb-1">
-                                <h1 className="text-2xl font-bold tracking-tight text-slate-800">
-                                    📅 Monitoring Presensi Karyawan
+                                <h1 className="text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-2">
+                                    <Calendar className="w-6 h-6 text-slate-700" />
+                                    <span>Monitoring Presensi Karyawan</span>
                                 </h1>
                                 <span className="inline-flex px-2.5 py-0.5 rounded bg-emerald-50 border border-emerald-100 text-emerald-800 text-[10px] font-extrabold uppercase tracking-wider">
                                     Realtime
@@ -446,7 +447,8 @@ export default function Index({ presensiData, filters }: Props) {
                         <div className="flex items-center justify-between px-6 py-4 bg-stone-50 border-b border-stone-150">
                             <div>
                                 <h2 className="text-base font-extrabold text-stone-850 flex items-center gap-2">
-                                    📸 Rincian Presensi Karyawan
+                                    <Camera className="w-5 h-5 text-stone-700" />
+                                    <span>Rincian Presensi Karyawan</span>
                                 </h2>
                                 <p className="text-[10px] text-stone-500 font-semibold mt-0.5">
                                     {selectedPresence.nama_karyawan} ({selectedPresence.nik}) — {new Date(selectedPresence.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}

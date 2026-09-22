@@ -2,6 +2,19 @@ import { useState, useEffect, useMemo, Fragment } from 'react';
 import { router, Link, Head } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
+import {
+    FileText,
+    FileSpreadsheet,
+    Building2,
+    Globe,
+    Calculator,
+    Lightbulb,
+    Info,
+    CheckCircle2,
+    Layers,
+    Hammer,
+    Factory
+} from 'lucide-react';
 
 interface Item {
     nama_item: string;
@@ -207,28 +220,28 @@ export default function Show({ rabInternal }: Props) {
                                             className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-md hover:bg-red-700 transition"
                                             title="Export PDF Semua Kategori"
                                         >
-                                            📄 Semua
+                                            <FileText className="w-3.5 h-3.5" /> Semua
                                         </a>
                                         <a
                                             href={`/rab-internal/${rabInternal.id}/pdf?category=internal`}
                                             className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white shadow-md hover:bg-emerald-800 transition"
                                             title="Export PDF Kategori Internal"
                                         >
-                                            🏭 Internal
+                                            <Factory className="w-3.5 h-3.5" /> Internal
                                         </a>
                                         <a
                                             href={`/rab-internal/${rabInternal.id}/pdf?category=fisik`}
                                             className="inline-flex items-center gap-1.5 rounded-lg bg-amber-700 px-3 py-1.5 text-xs font-bold text-white shadow-md hover:bg-amber-800 transition"
                                             title="Export PDF Fisik"
                                         >
-                                            🏗️ Fisik
+                                            <Building2 className="w-3.5 h-3.5" /> Fisik
                                         </a>
                                         <a
                                             href={`/rab-internal/${rabInternal.id}/pdf?category=eksternal`}
                                             className="inline-flex items-center gap-1.5 rounded-lg bg-purple-700 px-3 py-1.5 text-xs font-bold text-white shadow-md hover:bg-purple-800 transition"
                                             title="Export PDF Eksternal (Semua Vendor)"
                                         >
-                                            🌐 Eksternal
+                                            <Globe className="w-3.5 h-3.5" /> Eksternal
                                         </a>
 
                                         <div className="h-4 w-px bg-amber-300/40 mx-1 hidden sm:block"></div>
@@ -237,7 +250,7 @@ export default function Show({ rabInternal }: Props) {
                                             href={`/rab-internal/${rabInternal.id}/excel`}
                                             className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-md hover:bg-emerald-700 transition ml-auto sm:ml-0"
                                         >
-                                            📊 Export Excel
+                                            <FileSpreadsheet className="w-3.5 h-3.5" /> Export Excel
                                         </a>
                                     </div>
                                 </div>
@@ -274,7 +287,9 @@ export default function Show({ rabInternal }: Props) {
                         <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 shadow-sm flex flex-col justify-between">
                             <div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xs font-bold uppercase text-emerald-800 tracking-wider">🏭 RAB Internal</span>
+                                    <span className="text-xs font-bold uppercase text-emerald-800 tracking-wider flex items-center gap-1.5">
+                                        <Factory className="w-3.5 h-3.5" /> RAB Internal
+                                    </span>
                                     <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-extrabold text-emerald-900">Internal</span>
                                 </div>
                                 <p className="mt-2 font-mono text-xl font-bold text-emerald-950">{formatCurrency(categoryTotals.internal)}</p>
@@ -285,7 +300,7 @@ export default function Show({ rabInternal }: Props) {
                                     href={`/rab-internal/${rabInternal.id}/pdf?category=internal`}
                                     className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-900 transition"
                                 >
-                                    📄 Export PDF Internal →
+                                    <FileText className="w-3 h-3" /> Export PDF Internal →
                                 </a>
                             </div>
                         </div>
@@ -293,7 +308,9 @@ export default function Show({ rabInternal }: Props) {
                         <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm flex flex-col justify-between">
                             <div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xs font-bold uppercase text-amber-800 tracking-wider">🏗️ RAB Fisik</span>
+                                    <span className="text-xs font-bold uppercase text-amber-800 tracking-wider flex items-center gap-1.5">
+                                        <Building2 className="w-3.5 h-3.5" /> RAB Fisik
+                                    </span>
                                     <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-extrabold text-amber-900">Fisik</span>
                                 </div>
                                 <p className="mt-2 font-bold text-amber-950 text-sm">Spesifikasi Item Fisik</p>
@@ -304,7 +321,7 @@ export default function Show({ rabInternal }: Props) {
                                     href={`/rab-internal/${rabInternal.id}/pdf?category=fisik`}
                                     className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:text-amber-900 transition"
                                 >
-                                    📄 Export PDF Fisik →
+                                    <FileText className="w-3 h-3" /> Export PDF Fisik →
                                 </a>
                             </div>
                         </div>
@@ -312,7 +329,9 @@ export default function Show({ rabInternal }: Props) {
                         <div className="rounded-xl border border-purple-200 bg-purple-50/70 p-4 shadow-sm flex flex-col justify-between">
                             <div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xs font-bold uppercase text-purple-800 tracking-wider">🌐 RAB Eksternal</span>
+                                    <span className="text-xs font-bold uppercase text-purple-800 tracking-wider flex items-center gap-1.5">
+                                        <Globe className="w-3.5 h-3.5" /> RAB Eksternal
+                                    </span>
                                     <span className="rounded-full bg-purple-200 px-2 py-0.5 text-[10px] font-extrabold text-purple-900">Eksternal</span>
                                 </div>
                                 <p className="mt-2 font-bold text-purple-950 text-sm">Spesifikasi per Vendor</p>
@@ -323,7 +342,7 @@ export default function Show({ rabInternal }: Props) {
                                     href={`/rab-internal/${rabInternal.id}/pdf?category=eksternal`}
                                     className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 hover:text-purple-900 transition"
                                 >
-                                    📄 Export PDF Eksternal →
+                                    <FileText className="w-3 h-3" /> Export PDF Eksternal →
                                 </a>
                             </div>
                         </div>
@@ -331,7 +350,9 @@ export default function Show({ rabInternal }: Props) {
                         <div className="rounded-xl border border-indigo-200 bg-indigo-600 p-4 text-white shadow-md flex flex-col justify-between">
                             <div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xs font-bold uppercase text-indigo-100 tracking-wider">📊 Grand Total RAB</span>
+                                    <span className="text-xs font-bold uppercase text-indigo-100 tracking-wider flex items-center gap-1.5">
+                                        <FileSpreadsheet className="w-3.5 h-3.5" /> Grand Total RAB
+                                    </span>
                                     <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-extrabold text-white">Internal</span>
                                 </div>
                                 <p className="mt-2 font-mono text-xl font-bold text-white">{formatCurrency(categoryTotals.internal)}</p>
@@ -342,7 +363,7 @@ export default function Show({ rabInternal }: Props) {
                                     href={`/rab-internal/${rabInternal.id}/pdf`}
                                     className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-100 hover:text-white transition"
                                 >
-                                    📄 Export PDF Semua →
+                                    <FileText className="w-3 h-3" /> Export PDF Semua →
                                 </a>
                             </div>
                         </div>
@@ -354,12 +375,12 @@ export default function Show({ rabInternal }: Props) {
                             <div className="p-6">
                                 <div className="flex items-start gap-3 mb-4">
                                     <div className="rounded-full bg-indigo-600 p-2">
-                                        <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                        </svg>
+                                        <Calculator className="h-6 w-6 text-white" />
                                     </div>
                                     <div className="flex-1">
-                                        <h3 className="text-xl font-bold text-indigo-900 dark:text-indigo-100">📐 Formula RAB Internal</h3>
+                                        <h3 className="text-xl font-bold text-indigo-900 dark:text-indigo-100 flex items-center gap-2">
+                                            Formula RAB Internal
+                                        </h3>
                                         <p className="text-sm text-indigo-700 dark:text-indigo-300 mt-1">Rumus perhitungan harga jual dengan markup & aksesoris</p>
                                     </div>
                                 </div>
@@ -380,8 +401,9 @@ export default function Show({ rabInternal }: Props) {
                                                     <span className="mx-2">×</span>
                                                     <span className="font-bold text-gray-600 dark:text-gray-400">Dimensi × Qty</span>
                                                 </div>
-                                                <div className="mt-2 text-xs text-amber-600 dark:text-amber-400 font-semibold">
-                                                    💡 Contoh: Markup 20% → (BB+Fin) ÷ 0.8 × Dim × Qty
+                                                <div className="mt-2 text-xs text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1">
+                                                    <Lightbulb className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                                                    <span>Contoh: Markup 20% → (BB+Fin) ÷ 0.8 × Dim × Qty</span>
                                                 </div>
                                             </div>
                                             
@@ -400,7 +422,9 @@ export default function Show({ rabInternal }: Props) {
                                         
                                         {/* Legend Section */}
                                         <div>
-                                            <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">📌 Keterangan Komponen:</div>
+                                            <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-1.5">
+                                                <Info className="w-4 h-4 text-stone-600" /> Keterangan Komponen:
+                                            </div>
                                             <div className="space-y-2 text-sm">
                                                 <div className="flex items-start gap-2">
                                                     <div className="w-4 h-4 rounded bg-emerald-500 mt-0.5 flex-shrink-0"></div>
@@ -440,7 +464,9 @@ export default function Show({ rabInternal }: Props) {
                                             </div>
                                             
                                             <div className="mt-4 p-3 bg-indigo-50 rounded-lg border border-indigo-200">
-                                                <div className="text-xs font-semibold text-indigo-700 mb-1">✅ Karakteristik RAB Internal:</div>
+                                                <div className="text-xs font-semibold text-indigo-700 mb-1 flex items-center gap-1">
+                                                    <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" /> Karakteristik RAB Internal:
+                                                </div>
                                                 <ul className="text-xs text-indigo-600 space-y-1">
                                                     <li>• Markup sebagai PEMBAGI dengan rumus (1 - markup/100)</li>
                                                     <li>• Include aksesoris dalam harga akhir</li>
@@ -458,29 +484,33 @@ export default function Show({ rabInternal }: Props) {
                     <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 bg-white p-2 rounded-xl shadow-sm dark:border-gray-700 dark:bg-gray-800">
                         <div className="flex flex-wrap items-center gap-2">
                             {[
-                                { key: 'semua', label: '📊 Semua Produk', count: rabInternal.produks.length },
-                                { key: 'internal', label: '🏭 Internal (Workshop)', count: rabInternal.produks.filter(p => (p.kategori || 'internal').toLowerCase() === 'internal').length },
-                                { key: 'fisik', label: '🏗️ Fisik (Kontraktor)', count: rabInternal.produks.filter(p => (p.kategori || 'internal').toLowerCase() === 'fisik').length },
-                                { key: 'eksternal', label: '🌐 Eksternal (Vendor)', count: rabInternal.produks.filter(p => (p.kategori || 'internal').toLowerCase() === 'eksternal').length },
-                            ].map((tab) => (
-                                <button
-                                    key={tab.key}
-                                    type="button"
-                                    onClick={() => setActiveCategoryTab(tab.key as any)}
-                                    className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-lg transition-all ${
-                                        activeCategoryTab === tab.key
-                                            ? 'bg-amber-500 text-white shadow-md'
-                                            : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
-                                    }`}
-                                >
-                                    <span>{tab.label}</span>
-                                    <span className={`px-1.5 py-0.5 text-[10px] rounded-full font-mono ${
-                                        activeCategoryTab === tab.key ? 'bg-white/30 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200'
-                                    }`}>
-                                        {tab.count}
-                                    </span>
-                                </button>
-                            ))}
+                                { key: 'semua', label: 'Semua Produk', count: rabInternal.produks.length, icon: Layers },
+                                { key: 'internal', label: 'Internal (Workshop)', count: rabInternal.produks.filter(p => (p.kategori || 'internal').toLowerCase() === 'internal').length, icon: Factory },
+                                { key: 'fisik', label: 'Fisik (Kontraktor)', count: rabInternal.produks.filter(p => (p.kategori || 'internal').toLowerCase() === 'fisik').length, icon: Building2 },
+                                { key: 'eksternal', label: 'Eksternal (Vendor)', count: rabInternal.produks.filter(p => (p.kategori || 'internal').toLowerCase() === 'eksternal').length, icon: Globe },
+                            ].map((tab) => {
+                                const TabIcon = tab.icon;
+                                return (
+                                    <button
+                                        key={tab.key}
+                                        type="button"
+                                        onClick={() => setActiveCategoryTab(tab.key as any)}
+                                        className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-lg transition-all ${
+                                            activeCategoryTab === tab.key
+                                                ? 'bg-amber-500 text-white shadow-md'
+                                                : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                                        }`}
+                                    >
+                                        <TabIcon className="w-3.5 h-3.5" />
+                                        <span>{tab.label}</span>
+                                        <span className={`px-1.5 py-0.5 text-[10px] rounded-full font-mono ${
+                                            activeCategoryTab === tab.key ? 'bg-white/30 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200'
+                                        }`}>
+                                            {tab.count}
+                                        </span>
+                                    </button>
+                                );
+                            })}
                         </div>
 
                         <a
@@ -488,7 +518,7 @@ export default function Show({ rabInternal }: Props) {
                             className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3.5 py-2 text-xs font-bold text-white shadow hover:bg-red-700 transition ml-auto"
                             title={`Export PDF ${activeCategoryTab.toUpperCase()}`}
                         >
-                            📄 Export PDF {activeCategoryTab === 'semua' ? 'Semua' : activeCategoryTab.toUpperCase()}
+                            <FileText className="w-3.5 h-3.5" /> Export PDF {activeCategoryTab === 'semua' ? 'Semua' : activeCategoryTab.toUpperCase()}
                         </a>
                     </div>
 
@@ -506,7 +536,7 @@ export default function Show({ rabInternal }: Props) {
                                         <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-purple-700 to-indigo-700 px-5 py-3 text-white">
                                             <div className="flex items-center gap-2.5">
                                                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 text-base">
-                                                    🏢
+                                                    <Building2 className="w-4 h-4 text-white" />
                                                 </div>
                                                 <div>
                                                     <h3 className="text-sm font-bold tracking-wide uppercase">
@@ -521,7 +551,7 @@ export default function Show({ rabInternal }: Props) {
                                                 href={`/rab-internal/${rabInternal.id}/pdf?category=eksternal&vendor_name=${encodeURIComponent(vendorGroup.vendor_name)}${vendorGroup.vendor_id ? `&vendor_id=${vendorGroup.vendor_id}` : ''}`}
                                                 className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3.5 py-1.5 text-xs font-bold text-purple-900 shadow hover:bg-purple-50 transition"
                                             >
-                                                📄 Export PDF ({vendorGroup.vendor_name})
+                                                <FileText className="w-3.5 h-3.5" /> Export PDF ({vendorGroup.vendor_name})
                                             </a>
                                         </div>
 

@@ -2,7 +2,12 @@ import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import { Head, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
-import { Bell, CheckCheck, CheckCircle2, Clock, Trash2 } from 'lucide-react';
+import { 
+    Bell, CheckCheck, CheckCircle2, Clock, Trash2,
+    ClipboardList, Palette, Coins, Check, CreditCard, Target, 
+    Edit3, BarChart3, FileText, Receipt, Calendar, RefreshCw, 
+    Ruler, CheckSquare, Megaphone, ArrowRight, LucideIcon 
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface Notification {
@@ -598,42 +603,42 @@ export default function Index({ notifications, unreadCount }: Props) {
         }
     };
 
-    const getNotificationIcon = (type: string) => {
+    const getNotificationIcon = (type: string): LucideIcon => {
         switch (type) {
             case 'survey_request':
-                return '📋';
+                return ClipboardList;
             case 'moodboard_request':
-                return '🎨';
+                return Palette;
             case 'estimasi_request':
-                return '💰';
+                return Coins;
             case 'design_approval':
-                return '✅';
+                return Check;
             case 'commitment_fee_request':
-                return '💳';
+                return CreditCard;
             case 'final_design_request':
-                return '🎯';
+                return Target;
             case 'item_pekerjaan_request':
-                return '📝';
+                return Edit3;
             case 'rab_internal_request':
-                return '📊';
+                return BarChart3;
             case 'kontrak_request':
-                return '📄';
+                return FileText;
             case 'invoice_request':
-                return '🧾';
+                return Receipt;
             case 'survey_schedule_request':
-                return '📅';
+                return Calendar;
             case 'survey_ulang_request':
-                return '🔄';
+                return RefreshCw;
             case 'gambar_kerja_request':
-                return '📐';
+                return Ruler;
             case 'approval_material_request':
-                return '✔️';
+                return CheckSquare;
             case 'workplan_request':
-                return '📋';
+                return ClipboardList;
             case 'project_management_request':
-                return '📊';
+                return BarChart3;
             default:
-                return '📢';
+                return Megaphone;
         }
     };
 
@@ -786,10 +791,11 @@ export default function Index({ notifications, unreadCount }: Props) {
                                         <div className="flex gap-4">
                                             {/* Icon */}
                                             <div className="flex-shrink-0">
-                                                <div className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-stone-200 bg-white text-2xl shadow-sm">
-                                                    {getNotificationIcon(
-                                                        notification.type,
-                                                    )}
+                                                <div className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-stone-200 bg-white shadow-sm text-stone-600">
+                                                    {(() => {
+                                                        const NotifIcon = getNotificationIcon(notification.type);
+                                                        return <NotifIcon className="w-6 h-6" />;
+                                                    })()}
                                                 </div>
                                             </div>
 
@@ -1013,7 +1019,7 @@ export default function Index({ notifications, unreadCount }: Props) {
                                                             <span>
                                                                 Lihat Detail
                                                             </span>
-                                                            <span>→</span>
+                                                            <ArrowRight className="w-4 h-4" />
                                                         </button>
                                                     )}
 

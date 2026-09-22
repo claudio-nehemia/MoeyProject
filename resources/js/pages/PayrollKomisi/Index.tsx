@@ -2,6 +2,33 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import {
+    Wallet,
+    Briefcase,
+    Calendar,
+    Settings,
+    Zap,
+    Megaphone,
+    CheckCircle2,
+    XCircle,
+    BarChart3,
+    FileText,
+    Star,
+    ClipboardList,
+    Clock,
+    AlertTriangle,
+    Gift,
+    Target,
+    Edit3,
+    ChevronLeft,
+    ChevronRight,
+    TrendingUp,
+    Download,
+    RefreshCw,
+    Loader2,
+    CreditCard,
+    Save,
+} from 'lucide-react';
 
 interface PayrollSlip {
     id: number;
@@ -311,7 +338,7 @@ export default function Index({
     };
 
     const handleReleaseAll = () => {
-        if (!confirm(`📢 Release seluruh slip gaji resmi untuk periode ${BULAN_LABELS[selectedBulan]} ${selectedTahun}? Slip gaji akan dipublikasikan secara resmi ke seluruh karyawan.`)) return;
+        if (!confirm(`Release seluruh slip gaji resmi untuk periode ${BULAN_LABELS[selectedBulan]} ${selectedTahun}? Slip gaji akan dipublikasikan secara resmi ke seluruh karyawan.`)) return;
         setReleasing(true);
         router.post('/payroll-komisi/release', {
             bulan: selectedBulan,
@@ -322,7 +349,7 @@ export default function Index({
     };
 
     const handleReleaseSingle = (slipId: number, nama: string) => {
-        if (!confirm(`📢 Release slip gaji resmi untuk ${nama}?`)) return;
+        if (!confirm(`Release slip gaji resmi untuk ${nama}?`)) return;
         router.post(`/payroll-komisi/release/${slipId}`);
     };
 
@@ -446,8 +473,8 @@ export default function Index({
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
                         <div>
                             <div className="flex items-center gap-2.5">
-                                <span className="p-2.5 bg-gradient-to-br from-amber-500 to-amber-600 text-white rounded-xl shadow-sm text-xl">
-                                    💰
+                                <span className="p-2.5 bg-gradient-to-br from-amber-500 to-amber-600 text-white rounded-xl shadow-sm">
+                                    <Wallet className="w-5 h-5 text-white" />
                                 </span>
                                 <div>
                                     <h1 className="text-xl font-bold text-gray-900">
@@ -467,7 +494,7 @@ export default function Index({
                                 className="px-3.5 py-2 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-800 rounded-xl text-xs font-semibold shadow-xs transition flex items-center gap-1.5"
                                 title="Lihat Komposisi CF Rp 5.000.000 per client per jabatan"
                             >
-                                <span>💼</span>
+                                <Briefcase className="w-3.5 h-3.5 text-blue-600" />
                                 <span>Komposisi CF (Rp 5 Jt / Client)</span>
                                 {total_company_cf > 0 && (
                                     <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-600 text-white">
@@ -480,14 +507,14 @@ export default function Index({
                                 onClick={() => setSettingModalOpen(true)}
                                 className="px-3.5 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-1.5"
                             >
-                                <span>🗓️</span>
+                                <Calendar className="w-3.5 h-3.5 text-gray-500" />
                                 <span>Atur Tanggal Gajian: <b>Tgl {setting?.tanggal_gajian || 25}</b></span>
                             </button>
                             <a
                                 href="/payroll-komisi/config"
                                 className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-1.5"
                             >
-                                <span>⚙️</span>
+                                <Settings className="w-3.5 h-3.5" />
                                 <span>Konfigurasi 11 Jabatan</span>
                             </a>
                         </div>
@@ -496,7 +523,9 @@ export default function Index({
                     {/* Schedule & Monitoring Banner */}
                     <div className="p-4 bg-gradient-to-r from-blue-50 via-indigo-50 to-amber-50 border border-blue-200/80 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
                         <div className="flex items-start gap-3">
-                            <span className="text-2xl mt-0.5">🗓️</span>
+                            <div className="p-2 bg-blue-100 text-blue-700 rounded-xl mt-0.5">
+                                <Calendar className="w-5 h-5" />
+                            </div>
                             <div>
                                 <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
                                     <span>Jadwal Penggajian Rutin: Tanggal {setting?.tanggal_gajian || 25} Setiap Bulan</span>
@@ -504,8 +533,16 @@ export default function Index({
                                         Cutoff: Tgl {setting?.cutoff_tanggal || 20}
                                     </span>
                                 </div>
-                                <p className="text-xs text-gray-600 mt-1">
-                                    {setting?.auto_generate_on_payday ? '⚡ Otomatis di-generate sistem setiap tanggal gajian.' : '⚙️ Perhitungan final di-trigger manual di akhir bulan.'}
+                                <p className="text-xs text-gray-600 mt-1 flex items-center flex-wrap gap-1">
+                                    {setting?.auto_generate_on_payday ? (
+                                        <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
+                                            <Zap className="w-3.5 h-3.5 text-emerald-600" /> Otomatis di-generate sistem setiap tanggal gajian.
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1 text-gray-600 font-medium">
+                                            <Settings className="w-3.5 h-3.5 text-gray-500" /> Perhitungan final di-trigger manual di akhir bulan.
+                                        </span>
+                                    )}
                                     {' '}Setiap harinya Anda dapat memonitor <span className="font-semibold text-blue-900">Gaji Sementara (Berjalan)</span> yang terhubung langsung dengan kehadiran absensi & progress RAB.
                                 </p>
                             </div>
@@ -518,7 +555,17 @@ export default function Index({
                                 disabled={generating}
                                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow transition flex items-center gap-1.5 whitespace-nowrap disabled:opacity-50"
                             >
-                                {generating ? '⏳ Menghitung...' : '⚡ Hitung Final Slip Akhir Bulan'}
+                                {generating ? (
+                                    <>
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        <span>Menghitung...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Zap className="w-3.5 h-3.5" />
+                                        <span>Hitung Final Slip Akhir Bulan</span>
+                                    </>
+                                )}
                             </button>
                             <button
                                 type="button"
@@ -526,7 +573,17 @@ export default function Index({
                                 disabled={releasing}
                                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow transition flex items-center gap-1.5 whitespace-nowrap disabled:opacity-50"
                             >
-                                {releasing ? '⏳ Merilis...' : '📢 Release Semua Slip Gaji'}
+                                {releasing ? (
+                                    <>
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        <span>Merilis...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Megaphone className="w-3.5 h-3.5" />
+                                        <span>Release Semua Slip Gaji</span>
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>
@@ -534,12 +591,14 @@ export default function Index({
                     {/* Flash Messages */}
                     {flash?.success && (
                         <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-2">
-                            <span>✅</span> {flash.success}
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <span>{flash.success}</span>
                         </div>
                     )}
                     {flash?.error && (
                         <div className="p-4 bg-red-50 border border-red-200 text-red-800 rounded-xl text-xs font-semibold flex items-center gap-2">
-                            <span>❌</span> {flash.error}
+                            <XCircle className="w-4 h-4 text-red-600 shrink-0" />
+                            <span>{flash.error}</span>
                         </div>
                     )}
 
@@ -554,7 +613,7 @@ export default function Index({
                                     : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                             }`}
                         >
-                            <span>📊</span>
+                            <BarChart3 className="w-3.5 h-3.5" />
                             <span>Mode Monitoring: Gaji Berjalan (Harian s/d Hari Ini)</span>
                             <span className={`px-2 py-0.5 rounded-full text-[10px] ${activeTab === 'monitoring' ? 'bg-blue-700 text-white' : 'bg-gray-100 text-gray-700'}`}>
                                 Realtime Presensi
@@ -569,7 +628,7 @@ export default function Index({
                                     : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                             }`}
                         >
-                            <span>📑</span>
+                            <FileText className="w-3.5 h-3.5" />
                             <span>Mode Slip Resmi: Slip Akhir Bulan (Final)</span>
                             <span className={`px-2 py-0.5 rounded-full text-[10px] ${activeTab === 'slip' ? 'bg-blue-700 text-white' : 'bg-gray-100 text-gray-700'}`}>
                                 {totalGenerated} Terhitung
@@ -664,15 +723,25 @@ export default function Index({
                     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
                         <div className="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
                             <div>
-                                <span className="text-xs font-bold text-gray-800 uppercase tracking-wider">
-                                    {activeTab === 'monitoring' ? '📊 Tabel Monitoring Gaji Sementara (Berjalan)' : '📑 Tabel Slip Gaji Resmi (Final)'}
+                                <span className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                                    {activeTab === 'monitoring' ? (
+                                        <>
+                                            <BarChart3 className="w-4 h-4 text-blue-600" />
+                                            <span>Tabel Monitoring Gaji Sementara (Berjalan)</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FileText className="w-4 h-4 text-emerald-600" />
+                                            <span>Tabel Slip Gaji Resmi (Final)</span>
+                                        </>
+                                    )}
                                 </span>
                                 <span className="text-xs text-gray-500 ml-2">
                                     Periode: {BULAN_LABELS[selectedBulan]} {selectedTahun} ({filteredData.length} Karyawan)
                                 </span>
                             </div>
                             <span className="text-[11px] text-gray-400">
-                                Geser horizontal jika tabel melebihi layar ➡️
+                                Geser horizontal jika tabel melebihi layar
                             </span>
                         </div>
 
@@ -751,21 +820,21 @@ export default function Index({
                                                                 {row.hari_hadir || 0} / {row.hari_kerja_default || 26} Hari
                                                             </span>
                                                             {row.perfect_attendance && (
-                                                                <span className="inline-block text-emerald-600 text-[10px]" title="Kehadiran Sempurna (0 Telat & 0 Alpa)">⭐</span>
+                                                                <Star className="w-3 h-3 text-amber-500 fill-amber-500 inline" title="Kehadiran Sempurna (0 Telat & 0 Alpa)" />
                                                             )}
                                                         </div>
                                                         <div className="flex flex-wrap items-center justify-center gap-1 mt-1 text-[9px] font-mono">
-                                                            <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-semibold" title="Total Hari Izin (Izin Absen/Cuti/Dinas/Sakit)">
-                                                                📋 {(row.hari_izin || 0) + (row.hari_sakit || 0)} Izin
+                                                            <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-semibold inline-flex items-center gap-1" title="Total Hari Izin (Izin Absen/Cuti/Dinas/Sakit)">
+                                                                <ClipboardList className="w-2.5 h-2.5" /> {(row.hari_izin || 0) + (row.hari_sakit || 0)} Izin
                                                             </span>
                                                             {(row.hari_terlambat || 0) > 0 && (
-                                                                <span className="px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200 font-semibold" title="Keterlambatan">
-                                                                    ⏱️ {row.hari_terlambat} Telat
+                                                                <span className="px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200 font-semibold inline-flex items-center gap-1" title="Keterlambatan">
+                                                                    <Clock className="w-2.5 h-2.5" /> {row.hari_terlambat} Telat
                                                                 </span>
                                                             )}
                                                             {(row.hari_alpha || 0) > 0 && (
-                                                                <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-semibold" title="Alpa / Mangkir">
-                                                                    ⚠️ {row.hari_alpha} Alpa
+                                                                <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-semibold inline-flex items-center gap-1" title="Alpa / Mangkir">
+                                                                    <AlertTriangle className="w-2.5 h-2.5" /> {row.hari_alpha} Alpa
                                                                 </span>
                                                             )}
                                                         </div>
@@ -781,8 +850,8 @@ export default function Index({
                                                                 <div className="flex items-center justify-between gap-1">
                                                                     <span className="text-gray-500">Komisi DP:</span>
                                                                     {run?.is_komisi_dp_unlocked ? (
-                                                                        <span className="px-1.5 py-0.2 rounded font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                                                            ✅ Cair (Min: {formatCurrency(cfg?.min_omzet_komisi_dp || 0)})
+                                                                        <span className="px-1.5 py-0.2 rounded font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1">
+                                                                            <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" /> Cair (Min: {formatCurrency(cfg?.min_omzet_komisi_dp || 0)})
                                                                         </span>
                                                                     ) : (
                                                                         <span className="px-1.5 py-0.2 rounded text-gray-500 bg-gray-100 border border-gray-200">
@@ -797,8 +866,8 @@ export default function Index({
                                                                 <div className="flex items-center justify-between gap-1">
                                                                     <span className="text-gray-500">Ach. Omzet:</span>
                                                                     {run?.is_achievement_omzet_unlocked ? (
-                                                                        <span className="px-1.5 py-0.2 rounded font-bold bg-purple-100 text-purple-800 border border-purple-300">
-                                                                            🎁 Bonus Aktif
+                                                                        <span className="px-1.5 py-0.2 rounded font-bold bg-purple-100 text-purple-800 border border-purple-300 inline-flex items-center gap-1">
+                                                                            <Gift className="w-2.5 h-2.5 text-purple-600" /> Bonus Aktif
                                                                         </span>
                                                                     ) : (
                                                                         <span className="px-1.5 py-0.2 rounded text-gray-500 bg-gray-100 border border-gray-200">
@@ -813,12 +882,12 @@ export default function Index({
                                                                 <div className="flex items-center justify-between gap-1">
                                                                     <span className="text-gray-500">Proyek:</span>
                                                                     {run?.is_success_project_unlocked ? (
-                                                                        <span className="px-1.5 py-0.2 rounded font-bold bg-blue-100 text-blue-800 border border-blue-300">
-                                                                            🎯 {run?.timeline_score || 100}% (Syarat {cfg?.min_success_project_persen}%)
+                                                                        <span className="px-1.5 py-0.2 rounded font-bold bg-blue-100 text-blue-800 border border-blue-300 inline-flex items-center gap-1">
+                                                                            <Target className="w-2.5 h-2.5 text-blue-600" /> {run?.timeline_score || 100}% (Syarat {cfg?.min_success_project_persen}%)
                                                                         </span>
                                                                     ) : (
-                                                                        <span className="px-1.5 py-0.2 rounded text-amber-700 bg-amber-50 border border-amber-200">
-                                                                            📊 {run?.timeline_score || 0}% / Min: {cfg?.min_success_project_persen}%
+                                                                        <span className="px-1.5 py-0.2 rounded text-amber-700 bg-amber-50 border border-amber-200 inline-flex items-center gap-1">
+                                                                            <BarChart3 className="w-2.5 h-2.5 text-amber-600" /> {run?.timeline_score || 0}% / Min: {cfg?.min_success_project_persen}%
                                                                         </span>
                                                                     )}
                                                                 </div>
@@ -829,8 +898,8 @@ export default function Index({
                                                                 <div className="flex items-center justify-between gap-1">
                                                                     <span className="text-gray-500">Tunj. Jabatan:</span>
                                                                     {run?.is_tunjangan_unlocked ? (
-                                                                        <span className="px-1.5 py-0.2 rounded font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                                                                            💼 Aktif
+                                                                        <span className="px-1.5 py-0.2 rounded font-bold bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center gap-1">
+                                                                            <Briefcase className="w-2.5 h-2.5 text-amber-600" /> Aktif
                                                                         </span>
                                                                     ) : (
                                                                         <span className="px-1.5 py-0.2 rounded text-gray-400 bg-gray-50 border border-gray-200">
@@ -885,16 +954,16 @@ export default function Index({
                                                     </td>
                                                     <td className="px-3 py-3 text-center">
                                                         {row.has_slip && row.slip?.status === 'final' ? (
-                                                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1">
-                                                                <span>🟢</span> Released
+                                                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1.5">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Released
                                                             </span>
                                                         ) : row.has_slip ? (
-                                                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center gap-1">
-                                                                <span>🟡</span> Draft
+                                                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center gap-1.5">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Draft
                                                             </span>
                                                         ) : (
                                                             <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300 inline-flex items-center gap-1">
-                                                                <span>📊</span> Monitoring
+                                                                <BarChart3 className="w-3 h-3 text-blue-600" /> Monitoring
                                                             </span>
                                                         )}
                                                     </td>
@@ -903,27 +972,27 @@ export default function Index({
                                                             <button
                                                                 type="button"
                                                                 onClick={() => openEditModal(row)}
-                                                                className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-semibold transition"
+                                                                className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-semibold transition inline-flex items-center gap-1"
                                                                 title="Edit input manual dan penyesuaian"
                                                             >
-                                                                ✏️ Input
+                                                                <Edit3 className="w-3 h-3" /> Input
                                                             </button>
                                                             {row.has_slip && row.slip?.status === 'draft' && (
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => handleReleaseSingle(row.slip!.id, row.nama)}
-                                                                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-xs"
+                                                                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-xs inline-flex items-center gap-1"
                                                                     title="Release resmi slip gaji karyawan ini"
                                                                 >
-                                                                    📢 Release
+                                                                    <Megaphone className="w-3 h-3" /> Release
                                                                 </button>
                                                             )}
                                                             {row.has_slip && (
                                                                 <a
                                                                     href={`/payroll-komisi/detail/${slip?.id}`}
-                                                                    className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 rounded-lg text-xs font-semibold transition"
+                                                                    className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 rounded-lg text-xs font-semibold transition inline-flex items-center gap-1"
                                                                 >
-                                                                    📄 Slip
+                                                                    <FileText className="w-3 h-3" /> Slip
                                                                 </a>
                                                             )}
                                                         </div>
@@ -967,9 +1036,9 @@ export default function Index({
                                             type="button"
                                             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                             disabled={safePage === 1}
-                                            className="px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition"
+                                            className="px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition inline-flex items-center gap-1"
                                         >
-                                            ◀ Sebelumnya
+                                            <ChevronLeft className="w-3.5 h-3.5" /> Sebelumnya
                                         </button>
 
                                         {Array.from({ length: totalPages }, (_, idx) => idx + 1)
@@ -1004,9 +1073,9 @@ export default function Index({
                                             type="button"
                                             onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                                             disabled={safePage === totalPages}
-                                            className="px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition"
+                                            className="px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition inline-flex items-center gap-1"
                                         >
-                                            Selanjutnya ▶
+                                            Selanjutnya <ChevronRight className="w-3.5 h-3.5" />
                                         </button>
                                     </div>
                                 )}
@@ -1021,15 +1090,18 @@ export default function Index({
                                 <form onSubmit={handleSaveSetting}>
                                     <div className="p-5 bg-gradient-to-r from-blue-700 to-indigo-800 text-white flex justify-between items-center">
                                         <div>
-                                            <h3 className="font-bold text-base">🗓️ Pengaturan Tanggal Gajian</h3>
+                                            <h3 className="font-bold text-base flex items-center gap-2">
+                                                <Calendar className="w-4 h-4 text-blue-200" />
+                                                Pengaturan Tanggal Gajian
+                                            </h3>
                                             <p className="text-xs text-blue-200 mt-0.5">Konfigurasi jadwal penggajian rutin sistem</p>
                                         </div>
                                         <button
                                             type="button"
                                             onClick={() => setSettingModalOpen(false)}
-                                            className="text-gray-300 hover:text-white text-lg font-bold"
+                                            className="text-gray-300 hover:text-white transition-colors"
                                         >
-                                            ✕
+                                            <X className="w-5 h-5" />
                                         </button>
                                     </div>
 
@@ -1129,7 +1201,7 @@ export default function Index({
                                 <div className="p-5 bg-gradient-to-r from-blue-700 to-indigo-800 text-white flex justify-between items-center">
                                     <div>
                                         <h3 className="font-bold text-base flex items-center gap-2">
-                                            <span>💼</span>
+                                            <Briefcase className="w-5 h-5 text-white" />
                                             <span>Tabel Komposisi Commitment Fee (CF) Per Jabatan</span>
                                         </h3>
                                         <p className="text-xs text-blue-100 mt-0.5">
@@ -1153,7 +1225,10 @@ export default function Index({
                                             Komposisi fee tersebut dibagi ke masing-masing <b>JABATAN</b> yang terlibat dalam penanganan awal client (bukan perorangan order).
                                         </p>
                                         <div className="pt-1 flex items-center gap-2 font-semibold">
-                                            <span>📊 Total Deal CF Perusahaan Bulan Ini:</span>
+                                            <span className="inline-flex items-center gap-1.5">
+                                                <BarChart3 className="w-4 h-4 text-blue-600" />
+                                                <span>Total Deal CF Perusahaan Bulan Ini:</span>
+                                            </span>
                                             <span className="px-2 py-0.5 bg-blue-600 text-white rounded-full font-mono text-[11px] font-bold">
                                                 {total_company_cf} Deal Client Completed
                                             </span>
@@ -1225,7 +1300,10 @@ export default function Index({
                                 <form onSubmit={handleSaveSingle}>
                                     <div className="p-5 bg-gradient-to-r from-gray-900 to-gray-800 text-white flex justify-between items-center sticky top-0 z-10">
                                         <div>
-                                            <h3 className="font-bold text-base">✏️ Input Manual & Variabel Penggajian</h3>
+                                            <h3 className="font-bold text-base flex items-center gap-2">
+                                                <Edit3 className="w-4 h-4" />
+                                                <span>Input Manual & Variabel Penggajian</span>
+                                            </h3>
                                             <p className="text-xs text-gray-300 mt-0.5">
                                                 {editingKaryawan.nama} ({editingKaryawan.nik}) — {BULAN_LABELS[selectedBulan]} {selectedTahun}
                                             </p>
@@ -1244,7 +1322,8 @@ export default function Index({
                                         <div className="p-3.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
                                             <div>
                                                 <div className="font-bold text-blue-900 flex items-center gap-1.5">
-                                                    <span>⚡</span> Terhubung Langsung dengan Sistem
+                                                    <Zap className="w-4 h-4 text-blue-600" />
+                                                    <span>Terhubung Langsung dengan Sistem</span>
                                                 </div>
                                                 <p className="text-[11px] text-blue-700 mt-0.5">
                                                     Tarik otomatis kehadiran (Presensi), omzet (RAB Internal), Commitment Fee (CF), invoice pelunasan, dan kasbon.
@@ -1256,7 +1335,17 @@ export default function Index({
                                                 disabled={fetchingSystemData}
                                                 className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition flex items-center gap-1.5 whitespace-nowrap disabled:opacity-50"
                                             >
-                                                {fetchingSystemData ? '⏳ Mengambil Data...' : '🔄 Tarik Otomatis Data Sistem'}
+                                                {fetchingSystemData ? (
+                                                    <>
+                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                        <span>Mengambil Data...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <RefreshCw className="w-3.5 h-3.5" />
+                                                        <span>Tarik Otomatis Data Sistem</span>
+                                                    </>
+                                                )}
                                             </button>
                                         </div>
 
@@ -1312,8 +1401,9 @@ export default function Index({
                                         {/* Capaian Omzet */}
                                         <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
                                             <div className="flex justify-between items-center">
-                                                <div className="font-bold text-gray-700 uppercase">
-                                                    📈 Capaian Omzet Bulan Ini (RAB Internal)
+                                                <div className="font-bold text-gray-700 uppercase flex items-center gap-1.5">
+                                                    <TrendingUp className="w-4 h-4 text-indigo-600" />
+                                                    <span>Capaian Omzet Bulan Ini (RAB Internal)</span>
                                                 </div>
                                                 <button
                                                     type="button"
@@ -1321,7 +1411,17 @@ export default function Index({
                                                     disabled={fetchingRab}
                                                     className="px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded text-xs font-semibold hover:bg-indigo-100 transition flex items-center gap-1 disabled:opacity-50"
                                                 >
-                                                    {fetchingRab ? '⏳ Memuat...' : '📥 Tarik dari RAB Internal'}
+                                                    {fetchingRab ? (
+                                                        <>
+                                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                            <span>Memuat...</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Download className="w-3.5 h-3.5" />
+                                                            <span>Tarik dari RAB Internal</span>
+                                                        </>
+                                                    )}
                                                 </button>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
@@ -1370,8 +1470,9 @@ export default function Index({
                                             if (!activeConfig) return null;
                                             return (
                                                 <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-xl space-y-1.5 text-[11px]">
-                                                    <div className="font-bold text-amber-900 flex items-center gap-1">
-                                                        <span>📋</span> Target & Ketentuan Jabatan {activeConfig.jabatan} ({activeConfig.divisi}):
+                                                    <div className="font-bold text-amber-900 flex items-center gap-1.5">
+                                                        <ClipboardList className="w-3.5 h-3.5 text-amber-700" />
+                                                        <span>Target & Ketentuan Jabatan {activeConfig.jabatan} ({activeConfig.divisi}):</span>
                                                     </div>
                                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-gray-700">
                                                         <div className="bg-white p-2 rounded border border-amber-100">
@@ -1404,8 +1505,9 @@ export default function Index({
                                             return (
                                                 <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-200 space-y-2">
                                                     <div className="flex flex-wrap justify-between items-center gap-2">
-                                                        <label className="block font-bold text-gray-800 uppercase">
-                                                            🎯 Capaian Kinerja / Progress Proyek (%)
+                                                        <label className="block font-bold text-gray-800 uppercase flex items-center gap-1.5">
+                                                            <Target className="w-4 h-4 text-blue-600" />
+                                                            <span>Capaian Kinerja / Progress Proyek (%)</span>
                                                         </label>
                                                         <div className="flex items-center gap-1.5">
                                                             <button
@@ -1434,7 +1536,8 @@ export default function Index({
                                                     />
                                                     {isMet ? (
                                                         <p className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
-                                                            <span>🎁</span> Capaian ({formData.capaian_project_persen}%) memenuhi syarat minimal jabatan ({reqPersen}%) — Komisi & bonus pelaksanaan proyek aktif!
+                                                            <Gift className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                                            <span>Capaian ({formData.capaian_project_persen}%) memenuhi syarat minimal jabatan ({reqPersen}%) — Komisi & bonus pelaksanaan proyek aktif!</span>
                                                         </p>
                                                     ) : (
                                                         <p className="text-[11px] text-gray-500">
@@ -1487,8 +1590,9 @@ export default function Index({
 
                                         {/* Kasbon & Timeline */}
                                         <div className="p-4 bg-amber-50/60 rounded-xl border border-amber-200 space-y-3">
-                                            <div className="font-bold text-amber-900 uppercase">
-                                                💳 Kasbon & Pemotongan Pinjaman
+                                            <div className="font-bold text-amber-900 uppercase flex items-center gap-1.5">
+                                                <CreditCard className="w-4 h-4 text-amber-800" />
+                                                <span>Kasbon & Pemotongan Pinjaman</span>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
@@ -1526,9 +1630,19 @@ export default function Index({
                                         <button
                                             type="submit"
                                             disabled={modalSubmitting}
-                                            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow disabled:opacity-50"
+                                            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow disabled:opacity-50 inline-flex items-center gap-1.5"
                                         >
-                                            {modalSubmitting ? 'Menyimpan & Menghitung...' : '💾 Simpan & Hitung Ulang Slip'}
+                                            {modalSubmitting ? (
+                                                <>
+                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    <span>Menyimpan & Menghitung...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Save className="w-3.5 h-3.5" />
+                                                    <span>Simpan & Hitung Ulang Slip</span>
+                                                </>
+                                            )}
                                         </button>
                                     </div>
                                 </form>

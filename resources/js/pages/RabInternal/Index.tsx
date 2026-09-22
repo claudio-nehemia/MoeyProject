@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar';
 import ExtendModal from '@/components/ExtendModal';
 import WorkStatusTabs from '@/components/WorkStatusTabs';
 import axios from 'axios';
+import { Clock, AlertTriangle, Check, FileEdit } from 'lucide-react';
 
 interface Order {
     id: number;
@@ -328,14 +329,22 @@ function Index({ itemPekerjaans }: Props) {
                                                                         }`}>
                                                                             <div className="flex justify-between items-center gap-2">
                                                                                 <div className="min-w-0">
-                                                                                    <p className={`font-semibold mb-0.5 ${
+                                                                                    <p className={`font-semibold mb-0.5 flex items-center gap-1 ${
                                                                                         daysLeftRegular !== null && daysLeftRegular < 0
                                                                                             ? 'text-red-900 dark:text-red-300'
                                                                                             : daysLeftRegular !== null && daysLeftRegular <= 3
                                                                                             ? 'text-orange-900 dark:text-orange-300'
                                                                                             : 'text-yellow-900 dark:text-yellow-300'
                                                                                     }`}>
-                                                                                        {daysLeftRegular !== null && daysLeftRegular < 0 ? '⚠️ Terlewat' : '⏰ Deadline'}
+                                                                                        {daysLeftRegular !== null && daysLeftRegular < 0 ? (
+                                                                                            <>
+                                                                                                <AlertTriangle className="w-3.5 h-3.5 inline" /> Terlewat
+                                                                                            </>
+                                                                                        ) : (
+                                                                                            <>
+                                                                                                <Clock className="w-3.5 h-3.5 inline" /> Deadline
+                                                                                            </>
+                                                                                        )}
                                                                                     </p>
                                                                                     <p className={`${
                                                                                         daysLeftRegular !== null && daysLeftRegular < 0
@@ -379,8 +388,8 @@ function Index({ itemPekerjaans }: Props) {
                                                                         <div className="p-2 rounded border text-xs bg-purple-50 border-purple-200">
                                                                             <div className="flex justify-between items-center gap-2">
                                                                                 <div className="min-w-0">
-                                                                                    <p className="font-semibold mb-0.5 text-purple-900">
-                                                                                        ⏰ Deadline (Marketing)
+                                                                                    <p className="font-semibold mb-0.5 text-purple-900 flex items-center gap-1">
+                                                                                        <Clock className="w-3.5 h-3.5 inline" /> Deadline (Marketing)
                                                                                     </p>
                                                                                     <p className="text-purple-700">
                                                                                         {formatDeadline(taskResponseMarketing.deadline)}
@@ -413,12 +422,12 @@ function Index({ itemPekerjaans }: Props) {
                                                         </td>
                                                         <td className="whitespace-nowrap px-6 py-4 text-sm">
                                                             {itemPekerjaan.status === 'published' ? (
-                                                                <span className="inline-flex rounded-full bg-emerald-100 px-2 text-xs font-semibold leading-5 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
-                                                                    ✓ Published
+                                                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold leading-5 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+                                                                    <Check className="w-3 h-3" /> Published
                                                                 </span>
                                                             ) : (
-                                                                <span className="inline-flex rounded-full bg-amber-100 px-2 text-xs font-semibold leading-5 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                                                                    📝 Draft
+                                                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold leading-5 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                                                                    <FileEdit className="w-3 h-3" /> Draft
                                                                 </span>
                                                             )}
                                                         </td>
@@ -429,8 +438,8 @@ function Index({ itemPekerjaans }: Props) {
                                                                         Sudah Ada ({itemPekerjaan.rabInternal.total_produks} produk)
                                                                     </span>
                                                                 ) : (
-                                                                    <span className="inline-flex rounded-full bg-amber-100 px-2 text-xs font-semibold leading-5 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                                                                        📝 Draft (Belum Input RAB)
+                                                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold leading-5 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                                                                        <FileEdit className="w-3 h-3" /> Draft (Belum Input RAB)
                                                                     </span>
                                                                 )
                                                             ) : (
@@ -485,8 +494,8 @@ function Index({ itemPekerjaans }: Props) {
                                                             )}
 
                                                             {itemPekerjaan.rabInternal?.response_time && (
-                                                                <div className="mt-2 rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-700">
-                                                                    ✓ Response RAB • {itemPekerjaan.rabInternal.response_by || '-'} • {formatDateTime(itemPekerjaan.rabInternal.response_time)}
+                                                                <div className="mt-2 rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-700 flex items-center gap-1">
+                                                                    <Check className="w-3 h-3 text-emerald-600 flex-shrink-0" /> Response RAB • {itemPekerjaan.rabInternal.response_by || '-'} • {formatDateTime(itemPekerjaan.rabInternal.response_time)}
                                                                 </div>
                                                             )}
 
@@ -502,8 +511,8 @@ function Index({ itemPekerjaans }: Props) {
                                                             )}
 
                                                             {(taskResponseMarketing?.response_time || itemPekerjaan.rabInternal?.pm_response_time) && (
-                                                                <div className="mt-2 rounded bg-purple-50 px-2 py-1 text-xs text-purple-700">
-                                                                    ✓ Marketing Response • {(taskResponseMarketing?.response_by || itemPekerjaan.rabInternal?.pm_response_by || '-')}
+                                                                <div className="mt-2 rounded bg-purple-50 px-2 py-1 text-xs text-purple-700 flex items-center gap-1">
+                                                                    <Check className="w-3 h-3 text-purple-600 flex-shrink-0" /> Marketing Response • {(taskResponseMarketing?.response_by || itemPekerjaan.rabInternal?.pm_response_by || '-')}
                                                                     {' • '}
                                                                     {formatDateTime(taskResponseMarketing?.response_time || itemPekerjaan.rabInternal?.pm_response_time || null)}
                                                                 </div>

@@ -5,6 +5,7 @@ import Sidebar from '@/components/Sidebar';
 import { Head, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { useEffect, useState, useMemo } from 'react';
+import { Eye, Trash2, Upload, Edit3, Check } from 'lucide-react';
 
 /* ================= TYPES ================= */
 
@@ -454,8 +455,8 @@ export default function GambarKerjaIndex({ items }: Props) {
                                                                         <span className="truncate text-[10px] text-stone-700">{file.original_name}</span>
                                                                     </div>
                                                                     <div className="flex items-center gap-1">
-                                                                        <a href={file.url} target="_blank" rel="noopener noreferrer" className="rounded p-1 font-medium text-blue-600 hover:bg-blue-100 transition" title="Lihat">👁️</a>
-                                                                        <button onClick={() => handleDeleteFile(file.id)} className="rounded p-1 text-red-600 hover:bg-red-100 transition" title="Hapus">🗑️</button>
+                                                                        <a href={file.url} target="_blank" rel="noopener noreferrer" className="rounded p-1 font-medium text-blue-600 hover:bg-blue-100 transition inline-flex items-center" title="Lihat"><Eye className="w-3.5 h-3.5" /></a>
+                                                                        <button onClick={() => handleDeleteFile(file.id)} className="rounded p-1 text-red-600 hover:bg-red-100 transition inline-flex items-center" title="Hapus"><Trash2 className="w-3.5 h-3.5" /></button>
                                                                     </div>
                                                                 </div>
                                                             ))}
@@ -523,25 +524,25 @@ export default function GambarKerjaIndex({ items }: Props) {
                                                         <>
                                                             <button
                                                                 onClick={() => { setSelectedItem(item); setShowUploadModal(true); }}
-                                                                className="w-full rounded-md bg-indigo-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-indigo-700 text-center"
+                                                                className="w-full rounded-md bg-indigo-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-indigo-700 text-center inline-flex items-center justify-center gap-1"
                                                             >
-                                                                ⬆️ Upload
+                                                                <Upload className="w-3 h-3" /> Upload
                                                             </button>
 
                                                             <button
                                                                 onClick={() => { setSelectedItem(item); setShowReviseModal(true); }}
-                                                                className="w-full rounded-md bg-orange-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-orange-700 text-center mt-1"
+                                                                className="w-full rounded-md bg-orange-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-orange-700 text-center mt-1 inline-flex items-center justify-center gap-1"
                                                             >
-                                                                ✏️ Revisi
+                                                                <Edit3 className="w-3 h-3" /> Revisi
                                                             </button>
 
                                                             {item.files.length > 0 && item.status !== 'approved' && (
                                                                 <button
                                                                     onClick={() => handleApprove(item)}
                                                                     disabled={loading}
-                                                                    className="w-full rounded-md bg-emerald-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-emerald-700 text-center mt-1 disabled:opacity-50"
+                                                                    className="w-full rounded-md bg-emerald-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-emerald-700 text-center mt-1 disabled:opacity-50 inline-flex items-center justify-center gap-1"
                                                                 >
-                                                                    ✓ Approve
+                                                                    <Check className="w-3 h-3" /> Approve
                                                                 </button>
                                                             )}
                                                         </>

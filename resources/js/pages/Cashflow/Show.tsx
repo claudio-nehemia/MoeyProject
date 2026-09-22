@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import CurrencyInput from '@/components/CurrencyInput';
+import { Clock, RotateCcw, Layers, BarChart3 } from 'lucide-react';
 
 interface OrderInfo { id: number; nama_project: string; customer_name: string; company_name: string; payment_status: string; tahapan_proyek: string; pm_name: string; }
 interface Split { internal: number; fisik: number; eksternal: number; total: number; is_manual?: boolean; }
@@ -683,7 +684,7 @@ export default function Show({
 
                     {/* Alert Reminders Info */}
                     <div className="bg-indigo-50/60 border border-indigo-200/70 p-4 rounded-2xl flex items-start gap-3">
-                        <span className="text-lg">⏰</span>
+                        <Clock className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
                         <div>
                             <h4 className="text-xs font-bold text-indigo-900">Legal Admin Payment Reminder System</h4>
                             <p className="text-[11px] text-indigo-700/80 mt-1 leading-relaxed">
@@ -725,7 +726,7 @@ export default function Show({
                                                         }}
                                                         className="text-[11px] text-amber-600 hover:text-amber-700 font-bold hover:underline flex items-center gap-1"
                                                     >
-                                                        <span>🔄</span> Reset Auto RAB
+                                                        <RotateCcw className="w-3.5 h-3.5" /> Reset Auto RAB
                                                     </button>
                                                 )}
                                             </div>
@@ -1048,15 +1049,19 @@ export default function Show({
                             {/* TAB: FASE DP */}
                             {activeTab === 'fase_dp' && (
                                 <div className="space-y-6">
-                                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 font-bold text-xs">
-                                        📌 FASE I: PEMBAYARAN VENDOR UTAMA & MATERIAL HUTANG (DP)
+                                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 font-bold text-xs flex items-center gap-2">
+                                        <Layers className="w-4 h-4" />
+                                        <span>FASE I: PEMBAYARAN VENDOR UTAMA & MATERIAL HUTANG (DP)</span>
                                     </div>
 
                                     {/* RPK Summary Card - Fase DP */}
                                     <div className="bg-gradient-to-br from-rose-900 via-stone-900 to-stone-900 rounded-2xl p-5 text-white shadow-md space-y-4">
                                         <div className="flex justify-between items-center border-b border-rose-800/60 pb-3">
                                             <div>
-                                                <h3 className="text-xs font-bold uppercase tracking-wider text-rose-200">📊 Rencana Pelaksanaan Keuangan (RPK) — Fase I (DP)</h3>
+                                                <h3 className="text-xs font-bold uppercase tracking-wider text-rose-200 flex items-center gap-1.5">
+                                                    <BarChart3 className="w-3.5 h-3.5" />
+                                                    <span>Rencana Pelaksanaan Keuangan (RPK) — Fase I (DP)</span>
+                                                </h3>
                                                 <span className="text-[10px] text-stone-300">Estimasi Cash In Klien & Allocation Breakdown (Membaca Rumus Excel)</span>
                                             </div>
                                             <div className="text-right">
@@ -1239,15 +1244,19 @@ export default function Show({
                             {/* TAB: FASE TERMIN */}
                             {activeTab === 'fase_termin' && (
                                 <div className="space-y-6">
-                                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 font-bold text-xs">
-                                        📌 FASE II: PEMBAYARAN VENDOR UTAMA & MATERIAL HUTANG (TERMIN)
+                                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 font-bold text-xs flex items-center gap-2">
+                                        <Layers className="w-4 h-4" />
+                                        <span>FASE II: PEMBAYARAN VENDOR UTAMA & MATERIAL HUTANG (TERMIN)</span>
                                     </div>
 
                                     {/* RPK Summary Card - Fase Termin */}
                                     <div className="bg-gradient-to-br from-blue-900 via-stone-900 to-stone-900 rounded-2xl p-5 text-white shadow-md space-y-4">
                                         <div className="flex justify-between items-center border-b border-blue-800/60 pb-3">
                                             <div>
-                                                <h3 className="text-xs font-bold uppercase tracking-wider text-blue-200">📊 Rencana Pelaksanaan Keuangan (RPK) — Fase II (Termin)</h3>
+                                                <h3 className="text-xs font-bold uppercase tracking-wider text-blue-200 flex items-center gap-1.5">
+                                                    <BarChart3 className="w-3.5 h-3.5" />
+                                                    <span>Rencana Pelaksanaan Keuangan (RPK) — Fase II (Termin)</span>
+                                                </h3>
                                                 <span className="text-[10px] text-stone-300">Estimasi Cash In & Allocation Breakdown Termin</span>
                                             </div>
                                             <div className="text-right">
@@ -1350,15 +1359,19 @@ export default function Show({
                             {/* TAB: FASE PELUNASAN */}
                             {activeTab === 'fase_pelunasan' && (
                                 <div className="space-y-6">
-                                    <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-indigo-800 font-bold text-xs">
-                                        📌 FASE III: PEMBAYARAN VENDOR UTAMA & MATERIAL HUTANG (PELUNASAN)
+                                    <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-indigo-800 font-bold text-xs flex items-center gap-2">
+                                        <Layers className="w-4 h-4" />
+                                        <span>FASE III: PEMBAYARAN VENDOR UTAMA & MATERIAL HUTANG (PELUNASAN)</span>
                                     </div>
 
                                     {/* RPK Summary Card - Fase Pelunasan */}
                                     <div className="bg-gradient-to-br from-indigo-900 via-stone-900 to-stone-900 rounded-2xl p-5 text-white shadow-md space-y-4">
                                         <div className="flex justify-between items-center border-b border-indigo-800/60 pb-3">
                                             <div>
-                                                <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-200">📊 Rencana Pelaksanaan Keuangan (RPK) — Fase III (Pelunasan)</h3>
+                                                <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-200 flex items-center gap-1.5">
+                                                    <BarChart3 className="w-3.5 h-3.5" />
+                                                    <span>Rencana Pelaksanaan Keuangan (RPK) — Fase III (Pelunasan)</span>
+                                                </h3>
                                                 <span className="text-[10px] text-stone-300">Estimasi Cash In & Allocation Breakdown Pelunasan</span>
                                             </div>
                                             <div className="text-right">

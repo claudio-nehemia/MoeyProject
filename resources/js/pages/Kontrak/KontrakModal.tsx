@@ -1,6 +1,7 @@
 import React, { FormEventHandler } from 'react';
 import Modal from '@/components/Modal';
 import { useForm } from '@inertiajs/react';
+import { CreditCard } from 'lucide-react';
 
 interface KontrakModalProps {
     show: boolean;
@@ -117,7 +118,10 @@ export default function KontrakModal({ show, onClose, itemPekerjaan, termins }: 
 
                 {/* Nilai Kontrak Info - Auto dari RAB Kontrak */}
                 <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border-2 border-indigo-200">
-                    <h3 className="font-semibold text-indigo-900 mb-3">💰 Nilai Kontrak (dari RAB Kontrak)</h3>
+                    <h3 className="font-semibold text-indigo-900 mb-3 flex items-center gap-2">
+                        <CreditCard className="w-5 h-5 text-indigo-600" />
+                        <span>Nilai Kontrak (dari RAB Kontrak)</span>
+                    </h3>
                     <div className="space-y-2">
                         <div className="flex justify-between items-center">
                             <span className="text-gray-600">Grand Total RAB Kontrak:</span>

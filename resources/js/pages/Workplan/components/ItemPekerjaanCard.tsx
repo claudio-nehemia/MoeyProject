@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ItemPekerjaanData } from './types';
 import TimelineInput from './TimelineInput';
 import RuanganCard from './RuanganCard';
+import { DoorOpen } from 'lucide-react';
 
 interface Props {
     itemPekerjaan: ItemPekerjaanData;
@@ -90,7 +91,9 @@ export default function ItemPekerjaanCard({
 
                     {/* Ruangan List */}
                     <div className="space-y-4">
-                        <h4 className="font-semibold text-stone-900">🚪 Daftar Ruangan</h4>
+                        <h4 className="font-semibold text-stone-900 flex items-center gap-1.5">
+                            <DoorOpen className="w-4 h-4 text-stone-600" /> Daftar Ruangan
+                        </h4>
 
                         {itemPekerjaan.ruangans.map((ruangan, ruanganIndex) => (
                             <RuanganCard

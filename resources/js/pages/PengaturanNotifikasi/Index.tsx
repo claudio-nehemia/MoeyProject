@@ -2,6 +2,11 @@ import { Head, router } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import { 
+    Settings, ClipboardList, Clock, HelpCircle, Search, Check, X, 
+    Bell, Smartphone, FlaskConical, Edit3, Target, AlertTriangle, 
+    Coins, CreditCard 
+} from 'lucide-react';
 
 interface RoleItem {
     id: number;
@@ -180,7 +185,8 @@ export default function Index({ settings, roles }: Props) {
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
                             <div>
                                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-violet-100 text-xs font-semibold backdrop-blur-sm mb-3">
-                                    <span>⚙️ Konfigurasi Sistem Dinamis</span>
+                                    <Settings className="w-3.5 h-3.5" />
+                                    <span>Konfigurasi Sistem Dinamis</span>
                                 </div>
                                 <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight">
                                     Pengaturan Notifikasi & Pengingat
@@ -198,7 +204,8 @@ export default function Index({ settings, roles }: Props) {
                                             : 'bg-white/15 hover:bg-white/25 text-white'
                                     }`}
                                 >
-                                    <span>📋 Tahapan Order ({stageSettings.length})</span>
+                                    <ClipboardList className="w-3.5 h-3.5" />
+                                    <span>Tahapan Order ({stageSettings.length})</span>
                                 </button>
                                 <button
                                     onClick={() => setActiveTab('reminder')}
@@ -208,7 +215,8 @@ export default function Index({ settings, roles }: Props) {
                                             : 'bg-white/15 hover:bg-white/25 text-white'
                                     }`}
                                 >
-                                    <span>⏰ Pengingat Otomatis ({reminderSettings.length})</span>
+                                    <Clock className="w-3.5 h-3.5" />
+                                    <span>Pengingat Otomatis ({reminderSettings.length})</span>
                                 </button>
                                 <button
                                     onClick={() => setActiveTab('guide')}
@@ -218,7 +226,8 @@ export default function Index({ settings, roles }: Props) {
                                             : 'bg-white/15 hover:bg-white/25 text-white'
                                     }`}
                                 >
-                                    <span>💡 Panduan Variabel</span>
+                                    <HelpCircle className="w-3.5 h-3.5" />
+                                    <span>Panduan Variabel</span>
                                 </button>
                             </div>
                         </div>
@@ -263,7 +272,7 @@ export default function Index({ settings, roles }: Props) {
                             <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3">
                                 <div className="relative w-full sm:w-80">
                                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                        🔍
+                                        <Search className="w-3.5 h-3.5" />
                                     </span>
                                     <input
                                         type="text"
@@ -343,13 +352,21 @@ export default function Index({ settings, roles }: Props) {
                                                 <span className="text-slate-500">Tembusan Manajemen (KM, PM, SPV):</span>
                                                 <button
                                                     onClick={() => handleQuickToggle(setting.id, 'send_to_management', setting.send_to_management)}
-                                                    className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                                                    className={`text-[10px] font-bold px-2 py-0.5 rounded inline-flex items-center gap-1 ${
                                                         setting.send_to_management
                                                             ? 'bg-blue-50 text-blue-700 border border-blue-100'
                                                             : 'bg-slate-100 text-slate-400'
                                                     }`}
                                                 >
-                                                    {setting.send_to_management ? '✓ Ya' : '✗ Tidak'}
+                                                    {setting.send_to_management ? (
+                                                        <>
+                                                            <Check className="w-2.5 h-2.5" /> Ya
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <X className="w-2.5 h-2.5" /> Tidak
+                                                        </>
+                                                    )}
                                                 </button>
                                             </div>
 
@@ -357,25 +374,29 @@ export default function Index({ settings, roles }: Props) {
                                             <div className="flex items-center gap-2 pt-1">
                                                 <button
                                                     onClick={() => handleQuickToggle(setting.id, 'send_database', setting.send_database)}
-                                                    className={`px-2 py-1 rounded text-[10px] font-semibold flex items-center gap-1 transition-all ${
+                                                    className={`px-2 py-1 rounded text-[10px] font-semibold flex items-center gap-1.5 transition-all ${
                                                         setting.send_database
                                                             ? 'bg-purple-100 text-purple-700'
                                                             : 'bg-slate-100 text-slate-400'
                                                     }`}
                                                     title="In-App Database Notification"
                                                 >
-                                                    <span>🔔 In-App {setting.send_database ? '✓' : '✗'}</span>
+                                                    <Bell className="w-3 h-3" />
+                                                    <span>In-App</span>
+                                                    {setting.send_database ? <Check className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
                                                 </button>
                                                 <button
                                                     onClick={() => handleQuickToggle(setting.id, 'send_fcm', setting.send_fcm)}
-                                                    className={`px-2 py-1 rounded text-[10px] font-semibold flex items-center gap-1 transition-all ${
+                                                    className={`px-2 py-1 rounded text-[10px] font-semibold flex items-center gap-1.5 transition-all ${
                                                         setting.send_fcm
                                                             ? 'bg-indigo-100 text-indigo-700'
                                                             : 'bg-slate-100 text-slate-400'
                                                     }`}
                                                     title="Firebase Cloud Messaging Push"
                                                 >
-                                                    <span>📱 Push FCM {setting.send_fcm ? '✓' : '✗'}</span>
+                                                    <Smartphone className="w-3 h-3" />
+                                                    <span>Push FCM</span>
+                                                    {setting.send_fcm ? <Check className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
                                                 </button>
                                             </div>
                                         </div>
@@ -385,15 +406,17 @@ export default function Index({ settings, roles }: Props) {
                                             <button
                                                 onClick={() => handleTestSend(setting.id)}
                                                 disabled={testSendingId === setting.id}
-                                                className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 disabled:opacity-50"
+                                                className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 disabled:opacity-50 inline-flex items-center gap-1"
                                             >
-                                                {testSendingId === setting.id ? 'Mengirim...' : '🧪 Uji Coba'}
+                                                <FlaskConical className="w-3.5 h-3.5" />
+                                                {testSendingId === setting.id ? 'Mengirim...' : 'Uji Coba'}
                                             </button>
                                             <button
                                                 onClick={() => openEditModal(setting)}
-                                                className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-all shadow-sm"
+                                                className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-all shadow-sm inline-flex items-center gap-1.5"
                                             >
-                                                ✏️ Ubah Pengaturan
+                                                <Edit3 className="w-3 h-3" />
+                                                Ubah Pengaturan
                                             </button>
                                         </div>
                                     </div>
@@ -406,7 +429,7 @@ export default function Index({ settings, roles }: Props) {
                     {activeTab === 'reminder' && (
                         <div className="space-y-4">
                             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-800 text-xs flex items-start gap-3">
-                                <span className="text-xl">⏰</span>
+                                <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                                 <div>
                                     <p className="font-bold">Informasi Scheduler Otomatis (Cron)</p>
                                     <p className="mt-0.5 text-amber-700">
@@ -428,10 +451,11 @@ export default function Index({ settings, roles }: Props) {
                                         <div className="flex items-start justify-between gap-3">
                                             <div>
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-lg">
-                                                        {reminder.event_key === 'reminder_task_deadline' ? '🎯' :
-                                                         reminder.event_key === 'reminder_payment_h_min' ? '⚠️' :
-                                                         reminder.event_key === 'reminder_payment_due' ? '💰' : '💸'}
+                                                    <span className="p-1.5 rounded-lg bg-violet-50 text-violet-600 inline-flex">
+                                                        {reminder.event_key === 'reminder_task_deadline' ? <Target className="w-4 h-4" /> :
+                                                         reminder.event_key === 'reminder_payment_h_min' ? <AlertTriangle className="w-4 h-4 text-amber-600" /> :
+                                                         reminder.event_key === 'reminder_payment_due' ? <Coins className="w-4 h-4 text-emerald-600" /> :
+                                                         <CreditCard className="w-4 h-4 text-rose-600" />}
                                                     </span>
                                                     <h3 className="text-base font-bold text-slate-800">
                                                         {reminder.nama_pengaturan}
@@ -513,15 +537,17 @@ export default function Index({ settings, roles }: Props) {
                                             <button
                                                 onClick={() => handleTestSend(reminder.id)}
                                                 disabled={testSendingId === reminder.id}
-                                                className="text-xs font-semibold text-slate-500 hover:text-slate-800 disabled:opacity-50"
+                                                className="text-xs font-semibold text-slate-500 hover:text-slate-800 disabled:opacity-50 inline-flex items-center gap-1"
                                             >
-                                                {testSendingId === reminder.id ? 'Mengirim...' : '🧪 Uji Coba Pengingat'}
+                                                <FlaskConical className="w-3.5 h-3.5" />
+                                                {testSendingId === reminder.id ? 'Mengirim...' : 'Uji Coba Pengingat'}
                                             </button>
                                             <button
                                                 onClick={() => openEditModal(reminder)}
-                                                className="px-4 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-all shadow-sm"
+                                                className="px-4 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-all shadow-sm inline-flex items-center gap-1.5"
                                             >
-                                                ✏️ Atur Jeda & Template
+                                                <Edit3 className="w-3 h-3" />
+                                                Atur Jeda & Template
                                             </button>
                                         </div>
                                     </div>
@@ -587,9 +613,9 @@ export default function Index({ settings, roles }: Props) {
                             </div>
                             <button
                                 onClick={() => setModalOpen(false)}
-                                className="text-white/80 hover:text-white text-xl leading-none"
+                                className="text-white/80 hover:text-white transition-colors"
                             >
-                                ✕
+                                <X className="w-5 h-5" />
                             </button>
                         </div>
 

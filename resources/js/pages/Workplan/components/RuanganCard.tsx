@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { RuanganData, DEFAULT_TAHAPAN, calculateMaxDays } from './types';
 import ProdukCard from './ProdukCard';
+import { Clock, Package } from 'lucide-react';
 
 interface Props {
     ruangan: RuanganData;
@@ -48,7 +49,7 @@ export default function RuanganCard({
                         {ipIndex + 1}.{ruanganIndex + 1}
                     </div>
                     <div>
-                        <h4 className="font-bold text-cyan-900">🚪 {ruangan.nama_ruangan || 'Tanpa Ruangan'}</h4>
+                        <h4 className="font-bold text-cyan-900">{ruangan.nama_ruangan || 'Tanpa Ruangan'}</h4>
                         <p className="text-xs text-cyan-600">
                             {totalProduks} produk • {totalQty} unit
                         </p>
@@ -62,13 +63,13 @@ export default function RuanganCard({
                             e.stopPropagation();
                             setShowTimelineForm(!showTimelineForm);
                         }}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors inline-flex items-center gap-1.5 ${
                             showTimelineForm 
                                 ? 'bg-cyan-600 text-white' 
                                 : 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200'
                         }`}
                     >
-                        ⏱️ Atur Timeline Ruangan
+                        <Clock className="w-3.5 h-3.5" /> Atur Timeline Ruangan
                     </button>
                     <svg
                         className={`h-5 w-5 text-cyan-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
@@ -85,8 +86,8 @@ export default function RuanganCard({
             {showTimelineForm && (
                 <div className="border-t border-cyan-200 bg-gradient-to-br from-cyan-50 to-teal-50 p-4">
                     <div className="mb-3 flex items-center justify-between">
-                        <h5 className="font-semibold text-cyan-800 text-sm">
-                            ⏱️ Timeline per Tahapan (akan auto-fill ke semua produk di ruangan ini)
+                        <h5 className="font-semibold text-cyan-800 text-sm flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-cyan-700" /> Timeline per Tahapan (akan auto-fill ke semua produk di ruangan ini)
                         </h5>
                     </div>
                     <div className="space-y-2 max-h-[400px] overflow-y-auto">
@@ -143,7 +144,7 @@ export default function RuanganCard({
                         }}
                         className="mt-3 w-full rounded-lg bg-gradient-to-r from-cyan-500 to-teal-600 px-4 py-2 text-sm font-semibold text-white shadow hover:from-cyan-600 hover:to-teal-700"
                     >
-                        ✨ Apply Semua Timeline ke Produk
+                        Apply Semua Timeline ke Produk
                     </button>
                 </div>
             )}
@@ -151,7 +152,9 @@ export default function RuanganCard({
             {/* Expanded Content - List Produk */}
             {isExpanded && (
                 <div className="border-t border-cyan-200 p-4">
-                    <h5 className="mb-3 font-semibold text-stone-700 text-sm">📦 Daftar Produk</h5>
+                    <h5 className="mb-3 font-semibold text-stone-700 text-sm flex items-center gap-1.5">
+                        <Package className="w-4 h-4 text-stone-600" /> Daftar Produk
+                    </h5>
                     <div className="space-y-3">
                         {ruangan.produks.map((produk, produkIndex) => (
                             <ProdukCard

@@ -2,6 +2,7 @@ import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import { Head, router } from '@inertiajs/react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { Package, Palette, Trash2 } from 'lucide-react';
 
 const formatNumberWithSeparator = (value: number | string): string => {
     if (value === '' || value === null || value === undefined) return '';
@@ -523,14 +524,20 @@ export default function Edit({ rabInternal }: Props) {
                             <div className="bg-white dark:bg-gray-800 rounded-lg p-2 border-l-4 border-indigo-500">
                                 <div className="space-y-1.5">
                                     <div>
-                                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-0.5">📦 Harga Satuan Produk:</p>
+                                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-0.5 flex items-center gap-1.5">
+                                            <Package className="w-3.5 h-3.5 text-indigo-500" />
+                                            Harga Satuan Produk:
+                                        </p>
                                         <code className="text-xs bg-gray-100 dark:bg-gray-900 px-2 py-1 rounded block">
                                             (BB + Finishing) ÷ (1 - Markup/100) × Dimensi × Qty
                                         </code>
                                     </div>
                                     
                                     <div>
-                                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-0.5">🎨 Harga Aksesoris:</p>
+                                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-0.5 flex items-center gap-1.5">
+                                            <Palette className="w-3.5 h-3.5 text-pink-500" />
+                                            Harga Aksesoris:
+                                        </p>
                                         <code className="text-xs bg-gray-100 dark:bg-gray-900 px-2 py-1 rounded block">
                                             Harga Aks ÷ (1 - Markup/100) × Qty
                                         </code>
@@ -882,9 +889,9 @@ export default function Edit({ rabInternal }: Props) {
                                                                                                     itemIndex,
                                                                                                 )
                                                                                             }
-                                                                                            className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700"
+                                                                                            className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 inline-flex items-center justify-center"
                                                                                         >
-                                                                                            🗑️
+                                                                                            <Trash2 size={13} />
                                                                                         </button>
                                                                                     </td>
                                                                                 </tr>
@@ -1135,9 +1142,9 @@ export default function Edit({ rabInternal }: Props) {
                                                                                                     aksesorisIndex,
                                                                                                 )
                                                                                             }
-                                                                                            className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700"
+                                                                                            className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 inline-flex items-center justify-center"
                                                                                         >
-                                                                                            🗑️
+                                                                                            <Trash2 size={13} />
                                                                                         </button>
                                                                                     </td>
                                                                                 </tr>

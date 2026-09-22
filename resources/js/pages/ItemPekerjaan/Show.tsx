@@ -2,6 +2,7 @@ import { useState, useMemo, useRef } from 'react';
 import { router, Head, Link } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
+import { Home } from 'lucide-react';
 
 interface Item {
     id: number;
@@ -358,8 +359,9 @@ export default function Show({ itemPekerjaan }: Props) {
                     {/* Ruangan List */}
                     <div className="space-y-6">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-2xl font-semibold text-stone-800">
-                                🏠 Daftar Ruangan & Produk
+                            <h2 className="text-2xl font-semibold text-stone-800 flex items-center gap-2">
+                                <Home className="w-6 h-6 text-stone-700" />
+                                <span>Daftar Ruangan & Produk</span>
                             </h2>
                             <span className="text-sm text-stone-500">
                                 {ruanganGroups.length} Ruangan • {itemPekerjaan.produks.length} Produk

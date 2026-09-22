@@ -878,6 +878,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('/{id}/quick-toggle', [\App\Http\Controllers\NotificationSettingController::class, 'quickToggle'])->name('quick-toggle');
         Route::post('/{id}/test-send', [\App\Http\Controllers\NotificationSettingController::class, 'testSend'])->name('test-send');
     });
+
+    // ==========================================
+    // MASTER DATA - CUSTOMER PORTAL
+    // ==========================================
+    Route::prefix('master-customer')->name('master-customer.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\MasterCustomerController::class, 'index'])->name('index');
+        Route::post('/create-account', [\App\Http\Controllers\MasterCustomerController::class, 'storeAccount'])->name('store-account');
+        Route::post('/reset-password/{userId}', [\App\Http\Controllers\MasterCustomerController::class, 'resetPassword'])->name('reset-password');
+    });
+
+    // ==========================================
+    // CUSTOMER PORTAL
+    // ==========================================
+    Route::prefix('customer')->name('customer.')->group(function () {
+        Route::get('/portal', [\App\Http\Controllers\CustomerPortalController::class, 'index'])->name('portal');
+        Route::get('/portal/bast/{itemPekerjaanId}/download', [\App\Http\Controllers\CustomerPortalController::class, 'downloadBast'])->name('bast.download');
+    });
 });
 
 require __DIR__ . '/settings.php';

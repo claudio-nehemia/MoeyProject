@@ -142,8 +142,9 @@ export default function Index({ pengumuman, filters }: Props) {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
                         <div>
                             <div className="flex items-center gap-2 mb-1">
-                                <h1 className="text-2xl font-bold tracking-tight text-slate-800">
-                                    📢 Pengumuman Karyawan
+                                <h1 className="text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-2">
+                                    <Megaphone className="w-6 h-6 text-amber-500" />
+                                    <span>Pengumuman Karyawan</span>
                                 </h1>
                                 <span className="inline-flex px-2.5 py-0.5 rounded bg-amber-50 border border-amber-100 text-amber-800 text-[10px] font-extrabold uppercase tracking-wider">
                                     Beranda Mobile
@@ -316,7 +317,8 @@ export default function Index({ pengumuman, filters }: Props) {
                     </button>
 
                     <h3 className="text-base font-extrabold text-slate-800 mb-4 flex items-center gap-2">
-                        📢 Terbitkan Pengumuman Baru
+                        <Megaphone className="w-5 h-5 text-amber-500" />
+                        <span>Terbitkan Pengumuman Baru</span>
                     </h3>
                     <form onSubmit={handleCreate} className="space-y-4">
                         <div>
@@ -385,7 +387,8 @@ export default function Index({ pengumuman, filters }: Props) {
                     </button>
 
                     <h3 className="text-base font-extrabold text-slate-800 mb-4 flex items-center gap-2">
-                        ✏️ Ubah Pengumuman
+                        <Edit3 className="w-5 h-5 text-amber-500" />
+                        <span>Ubah Pengumuman</span>
                     </h3>
                     <form onSubmit={handleUpdate} className="space-y-4">
                         <div>

@@ -72,6 +72,19 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    public function customerOrders()
+    {
+        return $this->hasMany(Order::class, 'customer_user_id');
+    }
+
+    public function isCustomer(): bool
+    {
+        if ($this->role && $this->role->nama_role === 'Customer') {
+            return true;
+        }
+        return $this->roles()->where('nama_role', 'Customer')->exists();
+    }
+
     /**
      * Get all permissions for this user through all of their roles
      */

@@ -2,6 +2,7 @@ import { Head } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import { Home, Bed, Utensils, Armchair, Building, Coffee, Store, Bath, LucideIcon } from 'lucide-react';
 
 interface JenisInterior {
     id: number;
@@ -114,20 +115,20 @@ export default function Dashboard({
         return `${diffInDays} days ago`;
     };
 
-    const getEmojiForInterior = (jenisInterior?: string): string => {
-        const emojiMap: Record<string, string> = {
-            'Living Room': '🏠',
-            'Bedroom': '🛏️',
-            'Kitchen': '🍽️',
-            'Office': '🛋️',
-            'Restaurant': '🍽️',
-            'Hotel': '🏢',
-            'Cafe': '☕',
-            'Retail': '🏪',
-            'Bathroom': '🚿',
-            'Dining Room': '🍴'
+    const getIconForInterior = (jenisInterior?: string): LucideIcon => {
+        const iconMap: Record<string, LucideIcon> = {
+            'Living Room': Home,
+            'Bedroom': Bed,
+            'Kitchen': Utensils,
+            'Office': Armchair,
+            'Restaurant': Utensils,
+            'Hotel': Building,
+            'Cafe': Coffee,
+            'Retail': Store,
+            'Bathroom': Bath,
+            'Dining Room': Utensils,
         };
-        return jenisInterior ? (emojiMap[jenisInterior] || '🏠') : '🏠';
+        return jenisInterior ? (iconMap[jenisInterior] || Home) : Home;
     };
 
     const getColorGradient = (index: number): string => {
@@ -461,7 +462,9 @@ export default function Dashboard({
                         
                         {recentOrders && recentOrders.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {recentOrders.map((order, index) => (
+                                {recentOrders.map((order, index) => {
+                                    const InteriorIcon = getIconForInterior(order.jenis_interior?.nama_jenis);
+                                    return (
                                     <div 
                                         key={order.id} 
                                         className={`group p-4 rounded-xl bg-gradient-to-br from-stone-50 to-white border border-stone-200 hover:border-amber-300 hover:shadow-md transition-all cursor-pointer ${mounted ? 'animate-fadeInUp' : 'opacity-0'}`} 
@@ -469,9 +472,7 @@ export default function Dashboard({
                                     >
                                         <div className="flex items-start justify-between mb-3">
                                             <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getColorGradient(index)} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
-                                                <span className="text-lg">
-                                                    {getEmojiForInterior(order.jenis_interior?.nama_jenis)}
-                                                </span>
+                                                <InteriorIcon className="w-5 h-5 text-white" />
                                             </div>
                                             <div className="flex items-center space-x-1 text-stone-400">
                                                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -517,7 +518,7 @@ export default function Dashboard({
                                             </span>
                                         </div>
                                     </div>
-                                ))}
+                                )})}
                             </div>
                         ) : (
                             <div className="text-center py-12">

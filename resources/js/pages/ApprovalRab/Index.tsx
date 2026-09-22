@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import ExtendModal from '@/components/ExtendModal';
 import WorkStatusTabs from '@/components/WorkStatusTabs';
 import axios from 'axios';
+import { Edit2, FileText, Check } from 'lucide-react';
 
 interface ItemPreview {
     item_name: string;
@@ -290,13 +291,17 @@ export default function ApprovalRabIndex({ items }: Props) {
                                                     <div className="flex flex-col gap-1.5 mt-2">
                                                         {row.approval_rab_response_time && (
                                                             <div className="inline-flex flex-col gap-0.5 px-2 py-1.5 bg-green-50 border border-green-200 rounded max-w-fit">
-                                                                <span className="text-[9px] font-bold text-green-700 uppercase tracking-wider">✓ Response: {row.approval_rab_response_by}</span>
+                                                                <span className="text-[9px] font-bold text-green-700 uppercase tracking-wider flex items-center gap-1">
+                                                                    <Check className="w-2.5 h-2.5" /> Response: {row.approval_rab_response_by}
+                                                                </span>
                                                                 <span className="text-[10px] text-green-600">{formatDateTime(row.approval_rab_response_time)}</span>
                                                             </div>
                                                         )}
                                                         {row.pm_approval_rab_response_time && (
                                                             <div className="inline-flex flex-col gap-0.5 px-2 py-1.5 bg-indigo-50 border border-indigo-200 rounded max-w-fit">
-                                                                <span className="text-[9px] font-bold text-indigo-700 uppercase tracking-wider">✓ PM Res: {row.pm_approval_rab_response_by}</span>
+                                                                <span className="text-[9px] font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-1">
+                                                                    <Check className="w-2.5 h-2.5" /> PM Res: {row.pm_approval_rab_response_by}
+                                                                </span>
                                                                 <span className="text-[10px] text-indigo-600">{formatDateTime(row.pm_approval_rab_response_time)}</span>
                                                             </div>
                                                         )}
@@ -388,21 +393,19 @@ export default function ApprovalRabIndex({ items }: Props) {
                                                     <div className="flex flex-col items-end gap-1.5">
                                                         <button
                                                             onClick={() => router.visit(`/approval-material/${row.id}/edit`)}
-                                                            className="w-full rounded-md bg-amber-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-amber-700 text-center"
+                                                            className="w-full rounded-md bg-amber-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-amber-700 text-center inline-flex items-center justify-center gap-1.5"
                                                         >
-                                                            ✏️ Edit & Isi Keterangan
+                                                            <Edit2 className="w-3 h-3" /> Edit & Isi Keterangan
                                                         </button>
 
                                                         <a
                                                             href={`/approval-material/${row.id}/export-pdf`}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className="w-full rounded-md bg-red-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-red-700 text-center inline-block"
+                                                            className="w-full rounded-md bg-red-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-red-700 text-center inline-flex items-center justify-center gap-1.5"
                                                         >
-                                                            📄 Export PDF
+                                                            <FileText className="w-3 h-3" /> Export PDF
                                                         </a>
-
-
 
                                                         {isKepalaMarketing && !row.pm_approval_rab_response_time && (
                                                             <button
@@ -416,9 +419,9 @@ export default function ApprovalRabIndex({ items }: Props) {
                                                         {!isKepalaMarketing && !row.approval_rab_response_time && (
                                                             <button
                                                                 onClick={() => handleResponse(row.id)}
-                                                                className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-blue-700 text-center mt-1"
+                                                                className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-blue-700 text-center mt-1 inline-flex items-center justify-center gap-1.5"
                                                             >
-                                                                ✓ Response Approval
+                                                                <Check className="w-3 h-3" /> Response Approval
                                                             </button>
                                                         )}
                                                     </div>
