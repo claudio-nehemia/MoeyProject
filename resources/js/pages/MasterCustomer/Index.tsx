@@ -1,5 +1,5 @@
-import { Head, router, usePage } from '@inertiajs/react';
-import { useState, useMemo, useEffect } from 'react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import {
@@ -68,16 +68,37 @@ interface FlashSuccess {
     credentials?: FlashCredentials;
 }
 
+interface Paginator<T> {
+    data: T[];
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    from: number | null;
+    to: number | null;
+    links: {
+        url: string | null;
+        label: string;
+        active: boolean;
+    }[];
+    prev_page_url: string | null;
+    next_page_url: string | null;
+}
+
 interface Props {
-    customers: CustomerData[];
+    customers: Paginator<CustomerData>;
     stats: Stats;
+    filters?: {
+        search?: string;
+        status?: 'all' | 'with_account' | 'without_account';
+    };
     flash?: {
         success?: FlashSuccess | string;
         error?: string;
     };
 }
 
-export default function Index({ customers = [], stats, flash }: Props) {
+export default function Index({ customers, stats, filters, flash }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 1024;
@@ -85,8 +106,18 @@ export default function Index({ customers = [], stats, flash }: Props) {
         return true;
     });
 
-    const [searchQuery, setSearchQuery] = useState('');
-    const [filterStatus, setFilterStatus] = useState<'all' | 'with_account' | 'without_account'>('all');
+    const { auth, flash: pageFlash } = usePage<{
+        auth: { user?: { permissions?: string[] } };
+        flash?: { success?: FlashSuccess | string; error?: string };
+    }>().props;
+    const permissions = auth?.user?.permissions || [];
+    const canCreate = permissions.includes('customer.create');
+    const canEdit = permissions.includes('customer.edit');
+
+    const [searchQuery, setSearchQuery] = useState(filters?.search || '');
+    const [filterStatus, setFilterStatus] = useState<'all' | 'with_account' | 'without_account'>(
+        filters?.status || 'all',
+    );
 
     // Modal Create Account State
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -111,7 +142,6 @@ export default function Index({ customers = [], stats, flash }: Props) {
     const [copied, setCopied] = useState(false);
 
     // Watch flash message from session
-    const { flash: pageFlash } = usePage<{ flash?: { success?: FlashSuccess | string; error?: string } }>().props;
     useEffect(() => {
         const activeFlash = flash?.success || pageFlash?.success;
         if (activeFlash && typeof activeFlash === 'object' && activeFlash.credentials) {
@@ -119,25 +149,47 @@ export default function Index({ customers = [], stats, flash }: Props) {
         }
     }, [flash, pageFlash]);
 
-    // Filter customers
-    const filteredCustomers = useMemo(() => {
-        return customers.filter((cust) => {
-            // Filter by status
-            if (filterStatus === 'with_account' && !cust.has_account) return false;
-            if (filterStatus === 'without_account' && cust.has_account) return false;
+    // Debounce search input to query server
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (searchQuery !== (filters?.search || '')) {
+                router.get(
+                    '/master-customer',
+                    {
+                        search: searchQuery,
+                        status: filterStatus,
+                        page: 1,
+                    },
+                    {
+                        preserveState: true,
+                        preserveScroll: true,
+                        replace: true,
+                    },
+                );
+            }
+        }, 350);
 
-            // Search query
-            if (!searchQuery.trim()) return true;
-            const q = searchQuery.toLowerCase();
-            const matchName = cust.customer_name.toLowerCase().includes(q);
-            const matchEmail = cust.customer_email.toLowerCase().includes(q);
-            const matchPhone = cust.phone_number.toLowerCase().includes(q);
-            const matchCompany = cust.company_name.toLowerCase().includes(q);
-            const matchProject = cust.orders.some((o) => o.nama_project.toLowerCase().includes(q));
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
 
-            return matchName || matchEmail || matchPhone || matchCompany || matchProject;
-        });
-    }, [customers, searchQuery, filterStatus]);
+    const handleStatusFilterChange = (status: 'all' | 'with_account' | 'without_account') => {
+        setFilterStatus(status);
+        router.get(
+            '/master-customer',
+            {
+                search: searchQuery,
+                status: status,
+                page: 1,
+            },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            },
+        );
+    };
+
+    const customerList = customers?.data || [];
 
     // Open modal create account
     const handleOpenCreateModal = (cust?: CustomerData) => {
@@ -350,25 +402,41 @@ export default function Index({ customers = [], stats, flash }: Props) {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Cari nama customer, email, nomor telepon, atau proyek..."
-                                className="w-full rounded-xl border border-stone-200 py-2 pr-4 pl-9 text-sm text-stone-800 placeholder-stone-400 transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                                className="w-full rounded-xl border border-stone-200 py-2 pr-9 pl-9 text-sm text-stone-800 placeholder-stone-400 transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                             />
+                            {searchQuery && (
+                                <button
+                                    onClick={() => {
+                                        setSearchQuery('');
+                                        router.get(
+                                            '/master-customer',
+                                            { search: '', status: filterStatus, page: 1 },
+                                            { preserveState: true, preserveScroll: true, replace: true },
+                                        );
+                                    }}
+                                    className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-0.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600"
+                                    title="Bersihkan pencarian"
+                                >
+                                    <X className="h-3.5 w-3.5" />
+                                </button>
+                            )}
                         </div>
 
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-medium text-stone-500">Status:</span>
                             <div className="flex rounded-xl bg-stone-100 p-1">
                                 <button
-                                    onClick={() => setFilterStatus('all')}
+                                    onClick={() => handleStatusFilterChange('all')}
                                     className={`rounded-lg px-3 py-1 text-xs font-medium transition-all ${
                                         filterStatus === 'all'
                                             ? 'bg-white text-stone-800 shadow-sm'
                                             : 'text-stone-500 hover:text-stone-800'
                                     }`}
                                 >
-                                    Semua ({customers.length})
+                                    Semua ({stats?.total ?? 0})
                                 </button>
                                 <button
-                                    onClick={() => setFilterStatus('with_account')}
+                                    onClick={() => handleStatusFilterChange('with_account')}
                                     className={`rounded-lg px-3 py-1 text-xs font-medium transition-all ${
                                         filterStatus === 'with_account'
                                             ? 'bg-white text-emerald-700 shadow-sm'
@@ -378,7 +446,7 @@ export default function Index({ customers = [], stats, flash }: Props) {
                                     Sudah Aktif ({stats?.with_account ?? 0})
                                 </button>
                                 <button
-                                    onClick={() => setFilterStatus('without_account')}
+                                    onClick={() => handleStatusFilterChange('without_account')}
                                     className={`rounded-lg px-3 py-1 text-xs font-medium transition-all ${
                                         filterStatus === 'without_account'
                                             ? 'bg-white text-amber-700 shadow-sm'
@@ -405,7 +473,7 @@ export default function Index({ customers = [], stats, flash }: Props) {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-stone-100 text-stone-700">
-                                    {filteredCustomers.length === 0 ? (
+                                    {customerList.length === 0 ? (
                                         <tr>
                                             <td colSpan={5} className="py-12 text-center text-stone-400">
                                                 <Users className="mx-auto mb-3 h-10 w-10 opacity-30" />
@@ -416,7 +484,7 @@ export default function Index({ customers = [], stats, flash }: Props) {
                                             </td>
                                         </tr>
                                     ) : (
-                                        filteredCustomers.map((cust) => (
+                                        customerList.map((cust) => (
                                             <tr key={cust.group_key} className="transition-colors hover:bg-stone-50/60">
                                                 {/* Customer Details */}
                                                 <td className="px-5 py-4">
@@ -429,74 +497,76 @@ export default function Index({ customers = [], stats, flash }: Props) {
                                                             {cust.company_name && cust.company_name !== '-' && (
                                                                 <p className="flex items-center gap-1 text-xs text-stone-500">
                                                                     <Building2 className="h-3 w-3" />
-                                                                    {cust.company_name}
+                                                                    <span>{cust.company_name}</span>
                                                                 </p>
                                                             )}
                                                             {cust.phone_number && cust.phone_number !== '-' && (
                                                                 <p className="flex items-center gap-1 text-xs text-stone-500">
                                                                     <Phone className="h-3 w-3" />
-                                                                    {cust.phone_number}
+                                                                    <span>{cust.phone_number}</span>
                                                                 </p>
                                                             )}
                                                         </div>
                                                     </div>
                                                 </td>
 
-                                                {/* Email in Order */}
+                                                {/* Email di Order */}
                                                 <td className="px-5 py-4">
                                                     {cust.customer_email ? (
-                                                        <span className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1 font-mono text-xs text-blue-700">
-                                                            <Mail className="h-3.5 w-3.5" />
-                                                            {cust.customer_email}
+                                                        <span className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 border border-blue-100/80">
+                                                            <Mail className="h-3.5 w-3.5 text-blue-500" />
+                                                            <span>{cust.customer_email}</span>
                                                         </span>
                                                     ) : (
-                                                        <span className="text-xs italic text-stone-400">
-                                                            Belum diinput di order
+                                                        <span className="text-xs text-stone-400 italic">
+                                                            (Belum ada email di order)
                                                         </span>
                                                     )}
                                                 </td>
 
-                                                {/* Related Orders */}
+                                                {/* Projects */}
                                                 <td className="px-5 py-4">
-                                                    {cust.orders.length === 0 ? (
-                                                        <span className="text-xs text-stone-400">-</span>
-                                                    ) : (
-                                                        <div className="flex flex-wrap gap-1.5">
-                                                            {cust.orders.map((ord) => (
+                                                    {cust.orders.length > 0 ? (
+                                                        <div className="flex flex-wrap gap-1.5 max-w-xs">
+                                                            {cust.orders.slice(0, 2).map((ord) => (
                                                                 <span
                                                                     key={ord.id}
-                                                                    className="inline-flex items-center gap-1 rounded-md border border-stone-200 bg-white px-2 py-0.5 text-xs text-stone-700 shadow-2xs"
-                                                                    title={`Order #${ord.id} (${ord.tahapan_proyek})`}
+                                                                    className="inline-flex items-center gap-1 rounded-md bg-stone-100 px-2 py-0.5 text-xs text-stone-700"
+                                                                    title={`Order #${ord.id}: ${ord.nama_project} (${ord.tahapan_proyek})`}
                                                                 >
                                                                     <FolderKanban className="h-3 w-3 text-stone-400" />
-                                                                    <span>#{ord.id}</span>
-                                                                    <span className="max-w-[120px] truncate font-medium">
-                                                                        {ord.nama_project}
-                                                                    </span>
+                                                                    <span className="max-w-[120px] truncate">{ord.nama_project}</span>
                                                                 </span>
                                                             ))}
+                                                            {cust.orders.length > 2 && (
+                                                                <span className="inline-flex items-center rounded-md bg-stone-100 px-1.5 py-0.5 text-xs text-stone-500 font-medium">
+                                                                    +{cust.orders.length - 2} lagi
+                                                                </span>
+                                                            )}
                                                         </div>
+                                                    ) : (
+                                                        <span className="text-xs text-stone-400">-</span>
                                                     )}
                                                 </td>
 
                                                 {/* Account Status */}
                                                 <td className="px-5 py-4">
                                                     {cust.has_account ? (
-                                                        <div>
-                                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
-                                                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="inline-flex items-center gap-1 w-fit rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                                                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                                                                 Akun Aktif
                                                             </span>
                                                             {cust.user && (
-                                                                <p className="mt-1 text-[11px] text-stone-500">
-                                                                    Login: <span className="font-mono text-stone-700">{cust.user.email}</span>
-                                                                </p>
+                                                                <span className="text-[11px] text-stone-500">
+                                                                    Login: <span className="font-medium text-stone-700">{cust.user.email}</span>
+                                                                </span>
                                                             )}
                                                         </div>
                                                     ) : (
-                                                        <div>
-                                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-200">
-                                                                <AlertCircle className="h-3.5 w-3.5" />
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 border border-amber-200">
+                                                                <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
                                                                 Belum Ada Akun
                                                             </span>
                                                         </div>
@@ -507,23 +577,31 @@ export default function Index({ customers = [], stats, flash }: Props) {
                                                 <td className="px-5 py-4 text-center">
                                                     {cust.has_account ? (
                                                         <div className="flex items-center justify-center gap-2">
-                                                            <button
-                                                                onClick={() => cust.user && handleOpenResetModal(cust.user)}
-                                                                className="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 shadow-2xs hover:bg-stone-50 hover:text-stone-900 transition-all active:scale-95"
-                                                                title="Reset Password Akun Customer"
-                                                            >
-                                                                <Key className="h-3.5 w-3.5 text-stone-500" />
-                                                                <span>Reset Password</span>
-                                                            </button>
+                                                            {canEdit ? (
+                                                                <button
+                                                                    onClick={() => cust.user && handleOpenResetModal(cust.user)}
+                                                                    className="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 shadow-2xs hover:bg-stone-50 hover:text-stone-900 transition-all active:scale-95"
+                                                                    title="Reset Password Akun Customer"
+                                                                >
+                                                                    <Key className="h-3.5 w-3.5 text-stone-500" />
+                                                                    <span>Reset Password</span>
+                                                                </button>
+                                                            ) : (
+                                                                <span className="text-xs text-stone-400">Siap Digunakan</span>
+                                                            )}
                                                         </div>
                                                     ) : (
-                                                        <button
-                                                            onClick={() => handleOpenCreateModal(cust)}
-                                                            className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 px-3.5 py-1.5 text-xs font-medium text-white shadow-sm hover:from-cyan-700 hover:to-blue-700 transition-all active:scale-95"
-                                                        >
-                                                            <UserPlus className="h-3.5 w-3.5" />
-                                                            <span>Buat Akun Portal</span>
-                                                        </button>
+                                                        canCreate ? (
+                                                            <button
+                                                                onClick={() => handleOpenCreateModal(cust)}
+                                                                className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 px-3.5 py-1.5 text-xs font-medium text-white shadow-sm hover:from-cyan-700 hover:to-blue-700 transition-all active:scale-95"
+                                                            >
+                                                                <UserPlus className="h-3.5 w-3.5" />
+                                                                <span>Buat Akun Portal</span>
+                                                            </button>
+                                                        ) : (
+                                                            <span className="text-xs text-stone-400">Belum Ada Akun</span>
+                                                        )
                                                     )}
                                                 </td>
                                             </tr>
@@ -532,6 +610,90 @@ export default function Index({ customers = [], stats, flash }: Props) {
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Pagination Controls */}
+                        {customers?.links && customers.links.length > 3 && (
+                            <div className="flex items-center justify-between border-t border-stone-200 bg-white px-5 py-3.5">
+                                {/* Mobile Pagination */}
+                                <div className="flex flex-1 justify-between sm:hidden">
+                                    {customers.prev_page_url ? (
+                                        <Link
+                                            href={customers.prev_page_url}
+                                            preserveScroll
+                                            preserveState
+                                            className="relative inline-flex items-center rounded-lg border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-stone-700 shadow-2xs hover:bg-stone-50"
+                                        >
+                                            Sebelumnya
+                                        </Link>
+                                    ) : (
+                                        <span className="relative inline-flex items-center rounded-lg border border-stone-200 bg-stone-50 px-4 py-2 text-xs font-semibold text-stone-400 cursor-not-allowed">
+                                            Sebelumnya
+                                        </span>
+                                    )}
+                                    {customers.next_page_url ? (
+                                        <Link
+                                            href={customers.next_page_url}
+                                            preserveScroll
+                                            preserveState
+                                            className="relative ml-3 inline-flex items-center rounded-lg border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-stone-700 shadow-2xs hover:bg-stone-50"
+                                        >
+                                            Selanjutnya
+                                        </Link>
+                                    ) : (
+                                        <span className="relative ml-3 inline-flex items-center rounded-lg border border-stone-200 bg-stone-50 px-4 py-2 text-xs font-semibold text-stone-400 cursor-not-allowed">
+                                            Selanjutnya
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Desktop Pagination */}
+                                <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                                    <div>
+                                        <p className="text-xs text-stone-500 font-medium">
+                                            Menampilkan <span className="font-bold text-stone-800">{customers.from || 0}</span> sampai{' '}
+                                            <span className="font-bold text-stone-800">{customers.to || 0}</span> dari{' '}
+                                            <span className="font-bold text-stone-800">{customers.total}</span> customer
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <nav className="relative z-0 inline-flex -space-x-px rounded-lg shadow-2xs" aria-label="Pagination">
+                                            {customers.links.map((link, idx) => {
+                                                let label = link.label;
+                                                if (label.includes('Previous') || label.includes('&laquo;')) {
+                                                    label = '‹';
+                                                } else if (label.includes('Next') || label.includes('&raquo;')) {
+                                                    label = '›';
+                                                }
+
+                                                if (!link.url) {
+                                                    return (
+                                                        <span
+                                                            key={idx}
+                                                            className="relative inline-flex items-center border border-stone-200 bg-stone-50 px-3.5 py-1.5 text-xs font-semibold text-stone-400 cursor-not-allowed first:rounded-l-lg last:rounded-r-lg"
+                                                            dangerouslySetInnerHTML={{ __html: label }}
+                                                        />
+                                                    );
+                                                }
+                                                return (
+                                                    <Link
+                                                        key={idx}
+                                                        href={link.url}
+                                                        preserveScroll
+                                                        preserveState
+                                                        className={`relative inline-flex items-center border px-3.5 py-1.5 text-xs font-bold transition-all first:rounded-l-lg last:rounded-r-lg ${
+                                                            link.active
+                                                                ? 'z-10 border-blue-600 bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-2xs'
+                                                                : 'border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:text-blue-600'
+                                                        }`}
+                                                        dangerouslySetInnerHTML={{ __html: label }}
+                                                    />
+                                                );
+                                            })}
+                                        </nav>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

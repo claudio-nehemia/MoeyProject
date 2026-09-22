@@ -331,7 +331,7 @@ export default function Sidebar({
             name: 'Customer Portal',
             href: '/master-customer',
             page: 'master-customer',
-            permission: null,
+            permission: 'customer.index',
             icon: (
                 <svg
                     className="h-3.5 w-3.5 text-white"

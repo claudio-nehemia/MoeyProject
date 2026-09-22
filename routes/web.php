@@ -883,9 +883,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // MASTER DATA - CUSTOMER PORTAL
     // ==========================================
     Route::prefix('master-customer')->name('master-customer.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\MasterCustomerController::class, 'index'])->name('index');
-        Route::post('/create-account', [\App\Http\Controllers\MasterCustomerController::class, 'storeAccount'])->name('store-account');
-        Route::post('/reset-password/{userId}', [\App\Http\Controllers\MasterCustomerController::class, 'resetPassword'])->name('reset-password');
+        Route::get('/', [\App\Http\Controllers\MasterCustomerController::class, 'index'])
+            ->middleware('permission:customer.index')
+            ->name('index');
+        Route::post('/create-account', [\App\Http\Controllers\MasterCustomerController::class, 'storeAccount'])
+            ->middleware('permission:customer.create')
+            ->name('store-account');
+        Route::post('/reset-password/{userId}', [\App\Http\Controllers\MasterCustomerController::class, 'resetPassword'])
+            ->middleware('permission:customer.edit')
+            ->name('reset-password');
     });
 
     // ==========================================

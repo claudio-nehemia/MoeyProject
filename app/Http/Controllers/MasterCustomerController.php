@@ -9,6 +9,8 @@ use App\Models\Divisi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Inertia\Inertia;
 
 class MasterCustomerController extends Controller
@@ -153,19 +155,81 @@ class MasterCustomerController extends Controller
             }
         }
 
-        $customersList = array_values($customerMap);
+        $customersCollection = collect(array_values($customerMap));
 
-        // Statistik
-        $totalCustomers = count($customersList);
-        $totalWithAccount = collect($customersList)->where('has_account', true)->count();
+        // Statistik keseluruhan sebelum filter
+        $totalCustomers = $customersCollection->count();
+        $totalWithAccount = $customersCollection->where('has_account', true)->count();
         $totalWithoutAccount = $totalCustomers - $totalWithAccount;
 
+        // Filter status akun
+        $statusFilter = $request->input('status', 'all');
+        if ($statusFilter === 'with_account') {
+            $customersCollection = $customersCollection->where('has_account', true);
+        } elseif ($statusFilter === 'without_account') {
+            $customersCollection = $customersCollection->where('has_account', false);
+        }
+
+        // Filter search keyword
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $q = strtolower($search);
+            $customersCollection = $customersCollection->filter(function ($item) use ($q) {
+                if (str_contains(strtolower($item['customer_name'] ?? ''), $q)) {
+                    return true;
+                }
+                if (str_contains(strtolower($item['customer_email'] ?? ''), $q)) {
+                    return true;
+                }
+                if (str_contains(strtolower($item['phone_number'] ?? ''), $q)) {
+                    return true;
+                }
+                if (str_contains(strtolower($item['company_name'] ?? ''), $q)) {
+                    return true;
+                }
+                if (str_contains(strtolower($item['alamat'] ?? ''), $q)) {
+                    return true;
+                }
+                foreach ($item['orders'] as $ord) {
+                    if (str_contains(strtolower($ord['nama_project'] ?? ''), $q)) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+        }
+
+        // Pagination
+        $perPage = (int) $request->input('per_page', 10);
+        if ($perPage < 5 || $perPage > 100) {
+            $perPage = 10;
+        }
+
+        $currentPage = Paginator::resolveCurrentPage() ?: 1;
+        $filteredCount = $customersCollection->count();
+        $currentItems = $customersCollection->slice(($currentPage - 1) * $perPage, $perPage)->values();
+
+        $paginatedCustomers = new LengthAwarePaginator(
+            $currentItems,
+            $filteredCount,
+            $perPage,
+            $currentPage,
+            [
+                'path' => Paginator::resolveCurrentPath(),
+                'query' => $request->query(),
+            ]
+        );
+
         return Inertia::render('MasterCustomer/Index', [
-            'customers' => $customersList,
+            'customers' => $paginatedCustomers,
             'stats' => [
                 'total' => $totalCustomers,
                 'with_account' => $totalWithAccount,
                 'without_account' => $totalWithoutAccount,
+            ],
+            'filters' => [
+                'search' => $search,
+                'status' => $statusFilter,
             ],
             'flash' => [
                 'success' => session('success'),

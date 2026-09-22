@@ -286,6 +286,23 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Delete Supplier',
                 'group' => 'Master Data - Supplier'
             ],
+
+            // Customer Portal Permissions
+            [
+                'name' => 'customer.index',
+                'display_name' => 'View Customer Portal List',
+                'group' => 'Master Data - Customer Portal'
+            ],
+            [
+                'name' => 'customer.create',
+                'display_name' => 'Create Customer Portal Account',
+                'group' => 'Master Data - Customer Portal'
+            ],
+            [
+                'name' => 'customer.edit',
+                'display_name' => 'Reset Customer Portal Password',
+                'group' => 'Master Data - Customer Portal'
+            ],
             
             // ==================== OPERATIONS ====================
             
