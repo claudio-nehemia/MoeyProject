@@ -25,129 +25,25 @@ import {
     Search
 } from 'lucide-react';
 
-type StageMap = Record<string, number>;
-
-type StageEvidence = {
-    id: number;
-    evidence_path: string;
-    notes: string | null;
-    uploaded_by: string;
-    created_at: string;
-};
-
-type WorkplanItem = {
-    id: number | null;
-    nama_tahapan: string;
-    start_date: string | null;
-    end_date: string | null;
-    duration_days: number | null;
-    status: string;
-    catatan: string | null;
-    urutan: number;
-};
-
-type Produk = {
-    id: number;
-    nama_produk: string;
-    nama_ruangan: string | null;
-    quantity: number;
-    dimensi: string;
-    total_harga: number;
-    progress: number;
-    current_stage?: string | null;
-    weight_percentage: number;
-    actual_contribution: number;
-    can_report_defect: boolean;
-    has_active_defect: boolean;
-    has_pending_approval: boolean;
-    defect_id: number | null;
-    is_completed: boolean;
-    stage_evidences: Record<string, StageEvidence[]>;
-    workplan_items: WorkplanItem[];
-};
-
-type PaymentStep = {
-    step: number;
-    text: string;
-    persentase: number;
-    nominal: number;
-    status: 'locked' | 'available' | 'pending' | 'paid' | 'waiting_bast';
-    can_pay: boolean;
-    is_last_step: boolean;
-    locked_reason: string | null;
-    invoice: {
-        id: number;
-        invoice_number: string;
-        total_amount: number;
-        status: string;
-        paid_at: string | null;
-    } | null;
-};
-
-type PaymentInfo = {
-    termin_nama: string;
-    total_steps: number;
-    unlocked_step: number;
-    last_paid_step: number;
-    harga_kontrak: number;
-    sisa_pembayaran: number;
-    total_paid: number;
-    remaining: number;
-    is_fully_paid: boolean;
-    can_unlock_next: boolean;
-    next_step_to_unlock: number | null;
-    steps: PaymentStep[];
-} | null;
-
-type PengajuanPerpanjangan = {
-    id: number;
-    status: 'pending' | 'approved' | 'rejected' | 'none';
-    reason: string | null;
-};
-
-type Item = {
-    id: number;
-    produks: Produk[];
-    progress: number;
-    total_harga: number;
-    workplan_start_date: string | null;
-    workplan_end_date: string | null;
-    workplan_duration: number | null;
-    payment_info: PaymentInfo;
-    // BAST per Item Pekerjaan
-    is_completed: boolean;
-    has_bast: boolean;
-    bast_number: string | null;
-    bast_date: string | null;
-    bast_pdf_path: string | null;
-    has_bast_foto_klien: boolean;
-    bast_foto_klien: string | null;
-    bast_foto_klien_uploaded_at: string | null;
-    pengajuan_perpanjangan: PengajuanPerpanjangan | null;
-};
-
-type Order = {
-    id: number;
-    nama_project: string;
-    company_name: string;
-    customer_name: string;
-    progress: number;
-    item_pekerjaans: Item[];
-};
-
-type KontrakInfo = {
-    id: number;
-    durasi_kontrak: number;
-    tanggal_mulai: string | null;
-    tanggal_selesai: string | null;
-    sisa_hari: number | null;
-    deadline_status: 'overdue' | 'urgent' | 'warning' | 'normal' | null;
-} | null;
-
-type QcCounts = {
-    finishing_qc: number;
-    install_qc: number;
-};
+import { StageUpdateModal } from './detail/modals/StageUpdateModal';
+import { EvidenceViewerModal } from './detail/modals/EvidenceViewerModal';
+import { BastFotoModal } from './detail/modals/BastFotoModal';
+import { DefectReportModal } from './detail/modals/DefectReportModal';
+import { ProgressNotesModal } from './detail/modals/ProgressNotesModal';
+import { PhotoZoomModal } from './detail/modals/PhotoZoomModal';
+import {
+    Order,
+    KontrakInfo,
+    StageMap,
+    QcCounts,
+    Produk,
+    Item,
+    PaymentStep,
+    PaymentInfo,
+    StageEvidence,
+    WorkplanItem,
+    PengajuanPerpanjangan,
+} from './detail/types';
 
 export default function Detail({
     order,
@@ -2633,588 +2529,69 @@ export default function Detail({
 
             {/* Stage Update Modal with Evidence */}
             {showStageUpdateModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
-                        <div className="p-6">
-                            <div className="mb-4 flex items-center justify-between">
-                                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                                    <Camera className="w-5 h-5 text-blue-600" />
-                                    <span>Upload Bukti Tahapan</span>
-                                </h2>
-                                <button
-                                    onClick={() =>
-                                        setShowStageUpdateModal(null)
-                                    }
-                                    className="text-gray-400 hover:text-gray-600"
-                                >
-                                    <svg
-                                        className="h-6 w-6"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M6 18L18 6M6 6l12 12"
-                                        />
-                                    </svg>
-                                </button>
-                            </div>
-
-                            <div className="mb-4 rounded-lg bg-blue-50 p-4">
-                                <p className="text-sm text-blue-700">
-                                    Update ke tahap:{' '}
-                                    <strong>
-                                        {showStageUpdateModal.targetStage}
-                                    </strong>
-                                </p>
-                            </div>
-
-                            <form onSubmit={handleStageUpdate}>
-                                <div className="mb-4">
-                                    <label className="mb-2 block text-sm font-medium text-gray-700">
-                                        Foto Bukti Tahapan{' '}
-                                        <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        required
-                                        onChange={(e) =>
-                                            setStageEvidence(
-                                                e.target.files?.[0] || null,
-                                            )
-                                        }
-                                        className="w-full rounded-lg border border-gray-300 p-2"
-                                    />
-                                    {stageEvidence && (
-                                        <p className="mt-2 text-sm text-green-600">
-                                            ✓ {stageEvidence.name}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div className="mb-6">
-                                    <label className="mb-2 block text-sm font-medium text-gray-700">
-                                        Catatan (Opsional)
-                                    </label>
-                                    <textarea
-                                        value={stageNotes}
-                                        onChange={(e) =>
-                                            setStageNotes(e.target.value)
-                                        }
-                                        className="w-full rounded-lg border border-gray-300 p-2"
-                                        rows={3}
-                                        placeholder="Tambahkan catatan jika diperlukan..."
-                                    />
-                                </div>
-
-                                <div className="flex gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setShowStageUpdateModal(null)
-                                        }
-                                        className="flex-1 rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 hover:bg-gray-50"
-                                    >
-                                        Batal
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={!stageEvidence}
-                                        className="flex-1 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 font-medium text-white hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50"
-                                    >
-                                        Update Tahap
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+                <StageUpdateModal
+                    targetStage={showStageUpdateModal.targetStage}
+                    stageEvidence={stageEvidence}
+                    stageNotes={stageNotes}
+                    onClose={() => setShowStageUpdateModal(null)}
+                    onSubmit={handleStageUpdate}
+                    onEvidenceChange={setStageEvidence}
+                    onNotesChange={setStageNotes}
+                />
             )}
 
             {/* Evidence Viewer Modal */}
             {showEvidenceModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
-                        <div className="p-6">
-                            <div className="mb-6 flex items-center justify-between">
-                                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                                    <Camera className="w-6 h-6 text-blue-600" />
-                                    <span>Bukti Tahapan: {showEvidenceModal.stage}</span>
-                                </h2>
-                                <button
-                                    onClick={() => setShowEvidenceModal(null)}
-                                    className="text-gray-400 hover:text-gray-600"
-                                >
-                                    <svg
-                                        className="h-6 w-6"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M6 18L18 6M6 6l12 12"
-                                        />
-                                    </svg>
-                                </button>
-                            </div>
-
-                            <div className="flex flex-row overflow-x-auto gap-6 pb-4 scrollbar-thin scrollbar-thumb-gray-300">
-                                {showEvidenceModal.evidences.map((evidence) => (
-                                    <div
-                                        key={evidence.id}
-                                        className="w-80 flex-shrink-0 overflow-hidden rounded-xl border-2 border-gray-200 shadow-md"
-                                    >
-                                        <div className="relative aspect-video bg-gray-100">
-                                            <img
-                                                src={`/storage/${evidence.evidence_path}`}
-                                                alt={`Bukti ${showEvidenceModal.stage}`}
-                                                className="h-full w-full object-cover"
-                                            />
-                                        </div>
-                                        <div className="bg-white p-4">
-                                            <div className="mb-2 flex items-center gap-2 text-sm text-gray-600">
-                                                <svg
-                                                    className="h-4 w-4"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        strokeWidth={2}
-                                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                                    />
-                                                </svg>
-                                                <span className="font-medium">
-                                                    {evidence.uploaded_by}
-                                                </span>
-                                            </div>
-                                            <div className="mb-2 flex items-center gap-2 text-sm text-gray-600">
-                                                <svg
-                                                    className="h-4 w-4"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        strokeWidth={2}
-                                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                    />
-                                                </svg>
-                                                <span>
-                                                    {evidence.created_at}
-                                                </span>
-                                            </div>
-                                            {evidence.notes && (
-                                                <div className="mt-3 rounded-lg bg-gray-50 p-3">
-                                                    <p className="text-sm text-gray-700">
-                                                        <span className="font-semibold">
-                                                            Catatan:
-                                                        </span>{' '}
-                                                        {evidence.notes}
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="mt-6 flex justify-end">
-                                <button
-                                    onClick={() => setShowEvidenceModal(null)}
-                                    className="rounded-lg bg-gray-100 px-6 py-2 font-medium text-gray-700 hover:bg-gray-200"
-                                >
-                                    Tutup
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <EvidenceViewerModal
+                    stage={showEvidenceModal.stage}
+                    evidences={showEvidenceModal.evidences}
+                    onClose={() => setShowEvidenceModal(null)}
+                />
             )}
+
+            {/* BAST Foto Modal */}
             {showBastFotoModal && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
-                    onClick={() => setShowBastFotoModal(null)}
-                >
-                    <div
-                        className="relative max-w-5xl"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        {/* Close Button */}
-                        <button
-                            onClick={() => setShowBastFotoModal(null)}
-                            className="absolute -top-12 right-0 flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-white backdrop-blur-sm transition-all hover:bg-white/20"
-                        >
-                            <span className="text-sm font-medium">Tutup</span>
-                            <svg
-                                className="h-5 w-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M6 18L18 6M6 6l12 12"
-                                />
-                            </svg>
-                        </button>
-
-                        {/* Image */}
-                        <img
-                            src={`/storage/${showBastFotoModal}`}
-                            alt="BAST Foto dengan Klien"
-                            className="max-h-[85vh] w-auto rounded-2xl shadow-2xl"
-                        />
-
-                        {/* Caption */}
-                        <div className="mt-4 rounded-lg bg-white/10 p-3 text-center backdrop-blur-sm">
-                            <p className="text-sm font-medium text-white">
-                                📷 Foto BAST dengan Klien
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                <BastFotoModal
+                    fotoPath={showBastFotoModal}
+                    onClose={() => setShowBastFotoModal(null)}
+                />
             )}
 
-            {/* Defect Modal - Moved to root level to prevent glitches */}
+            {/* Defect Modal */}
             {showDefectModal && selectedProduk && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
-                        <div className="p-6">
-                            <div className="mb-4 flex items-center justify-between">
-                                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                                    <Search className="w-6 h-6 text-red-600" />
-                                    Report Defect - {selectedProduk.nama_produk}
-                                </h2>
-                                <button
-                                    onClick={() => {
-                                        setShowDefectModal(null);
-                                        setSelectedProduk(null);
-                                    }}
-                                    className="text-gray-400 transition-colors hover:text-gray-600"
-                                >
-                                    <svg
-                                        className="h-6 w-6"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M6 18L18 6M6 6l12 12"
-                                        />
-                                    </svg>
-                                </button>
-                            </div>
-
-                            <div className="mb-4 rounded-lg bg-red-50 p-3">
-                                <p className="text-sm text-red-700">
-                                    <strong>QC Stage:</strong> {selectedProduk.current_stage || 'Belum Dimulai'}
-                                </p>
-                            </div>
-
-                            <form onSubmit={handleSubmitDefect}>
-                                <input
-                                    type="hidden"
-                                    name="item_pekerjaan_produk_id"
-                                    value={selectedProduk.id}
-                                />
-                                <input
-                                    type="hidden"
-                                    name="qc_stage"
-                                    value={selectedProduk.current_stage || ''}
-                                />
-
-                                {/* Dynamic Defect Items */}
-                                {defectItems.map((item, index) => (
-                                    <div
-                                        key={index}
-                                        className="mb-4 rounded-lg border-2 border-gray-200 bg-gray-50 p-4"
-                                    >
-                                        <div className="mb-3 flex items-center justify-between">
-                                            <h3 className="text-lg font-semibold text-gray-800">
-                                                Cacat #{index + 1}
-                                            </h3>
-                                            {defectItems.length > 1 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeDefectItem(index)}
-                                                    className="text-red-600 transition-colors hover:text-red-800 inline-flex items-center gap-1"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                    <span>Hapus</span>
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        <div className="mb-3">
-                                            <label className="mb-1 block text-sm font-medium text-gray-700 flex items-center gap-1.5">
-                                                <Camera className="w-4 h-4 text-slate-500" />
-                                                <span>Foto Cacat *</span>
-                                            </label>
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                required
-                                                onChange={(e) =>
-                                                    updateDefectItem(
-                                                        index,
-                                                        'photo',
-                                                        e.target.files?.[0] || null,
-                                                    )
-                                                }
-                                                className="w-full rounded-lg border border-gray-300 bg-white p-2 transition-colors focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-1 block text-sm font-medium text-gray-700 flex items-center gap-1.5">
-                                                <FileEdit className="w-4 h-4 text-slate-500" />
-                                                <span>Catatan Cacat *</span>
-                                            </label>
-                                            <textarea
-                                                required
-                                                value={item.notes}
-                                                onChange={(e) =>
-                                                    updateDefectItem(index, 'notes', e.target.value)
-                                                }
-                                                className="w-full rounded-lg border border-gray-300 bg-white p-2 transition-colors focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200"
-                                                rows={3}
-                                                placeholder="Jelaskan cacat yang ditemukan..."
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-
-                                <button
-                                    type="button"
-                                    onClick={addDefectItem}
-                                    className="mb-6 w-full rounded-lg border-2 border-dashed border-gray-300 bg-white px-4 py-3 font-medium text-gray-600 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600 inline-flex items-center justify-center gap-1.5"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    <span>Tambah Cacat Lain</span>
-                                </button>
-
-                                <div className="flex gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setShowDefectModal(null);
-                                            setSelectedProduk(null);
-                                            setDefectItems([{ photo: null, notes: '' }]);
-                                        }}
-                                        className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-50"
-                                    >
-                                        Batal
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="flex-1 rounded-lg bg-gradient-to-r from-red-600 to-orange-600 px-4 py-2 font-medium text-white shadow-lg transition-all hover:from-red-700 hover:to-orange-700"
-                                    >
-                                        Submit Defect
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+                <DefectReportModal
+                    selectedProduk={selectedProduk}
+                    defectItems={defectItems}
+                    onClose={() => {
+                        setShowDefectModal(null);
+                        setSelectedProduk(null);
+                        setDefectItems([{ photo: null, notes: '' }]);
+                    }}
+                    onSubmit={handleSubmitDefect}
+                    onAddItem={addDefectItem}
+                    onRemoveItem={removeDefectItem}
+                    onUpdateItem={updateDefectItem}
+                />
             )}
 
-            {/* Catatan Pengerjaan Progress Modal */}
-            {showNotesModal && (() => {
-                const selectedProduct = allProducts.find((p) => p.id === selectedProductId);
-                
-                // Get completed stages by converting stage_evidences record into sorted array
-                const completedStages = selectedProduct
-                    ? Object.entries(selectedProduct.stage_evidences)
-                          .flatMap(([stageName, evList]) =>
-                              evList.map((ev) => ({
-                                  ...ev,
-                                  stageName,
-                              }))
-                          )
-                          .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-                    : [];
-
-                const productImages = completedStages.filter((ev) => ev.evidence_path);
-
-                return (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                        <div className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-xl border border-slate-200 bg-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-                            {/* Close Button */}
-                            <button
-                                onClick={() => setShowNotesModal(false)}
-                                className="absolute top-4 right-4 text-slate-400 hover:text-slate-650 transition-colors z-10"
-                            >
-                                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-
-                            {/* Modal Header */}
-                            <div className="p-6 pb-3 flex-shrink-0 border-b border-slate-100">
-                                <h3 className="text-xl font-bold text-slate-900 pr-8">
-                                    Catatan Pengerjaan Progress
-                                </h3>
-                                <p className="text-sm text-slate-500 mb-4">
-                                    Proyek: <span className="font-semibold text-slate-700">{order.nama_project}</span>
-                                </p>
-
-                                {/* Product Switch Selector */}
-                                <div>
-                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
-                                        Pilih Produk (Switch)
-                                    </label>
-                                    <select
-                                        value={selectedProductId}
-                                        onChange={(e) => setSelectedProductId(Number(e.target.value))}
-                                        className="w-full rounded-lg border border-slate-350 bg-white px-4 py-2.5 text-sm shadow-sm transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                                    >
-                                        {allProducts.map((prod) => (
-                                            <option key={prod.id} value={prod.id}>
-                                                {prod.nama_produk} {prod.nama_ruangan ? `(${prod.nama_ruangan})` : ''}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            {/* Modal Body Container */}
-                            <div className="flex-1 overflow-y-auto p-6 pr-4 scrollbar-thin scrollbar-thumb-slate-200">
-                                {/* Product Images Horizontal Gallery (Gambarnya dibuat berderet) */}
-                                {productImages.length > 0 && (
-                                    <div className="mb-6 rounded-lg border border-slate-150 bg-slate-50/50 p-4">
-                                        <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5">
-                                            Galeri Foto Progress (Berderet)
-                                        </h5>
-                                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
-                                            {productImages.map((stage, i) => (
-                                                <div key={i} className="flex-shrink-0 relative group rounded-lg overflow-hidden border border-slate-200 shadow-sm bg-white p-1">
-                                                    <img
-                                                        src={`/storage/${stage.evidence_path}`}
-                                                        alt={stage.stageName}
-                                                        className="h-20 w-28 object-cover rounded cursor-pointer hover:opacity-90 transition-opacity"
-                                                        onClick={() => setSelectedZoomImage(`/storage/${stage.evidence_path}`)}
-                                                    />
-                                                    <div className="mt-1 text-[9px] font-bold text-center text-slate-650 truncate w-26 px-0.5">
-                                                        {stage.stageName}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Completed Stages Notes Timeline */}
-                                <h5 className="text-xs font-bold text-slate-505 uppercase tracking-wider mb-3">
-                                    Timeline Catatan & Bukti
-                                </h5>
-
-                                {completedStages.length === 0 ? (
-                                    <p className="text-sm text-slate-450 italic py-6 text-center">
-                                        Belum ada progress pengerjaan yang diselesaikan untuk produk ini.
-                                    </p>
-                                ) : (
-                                    <div className="relative border-l border-slate-200 pl-6 space-y-6">
-                                        {completedStages.map((stage, index) => (
-                                            <div key={index} className="relative">
-                                                {/* Timeline Node dot */}
-                                                <span className="absolute -left-[31px] top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 ring-4 ring-white">
-                                                    <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                                                </span>
-                                                <div>
-                                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                                                        <span className="text-sm font-bold text-slate-900">
-                                                            {stage.stageName}
-                                                        </span>
-                                                        <span className="text-xs text-slate-500 font-semibold">
-                                                            {new Date(stage.created_at).toLocaleString('id-ID', {
-                                                                year: 'numeric',
-                                                                month: 'short',
-                                                                day: 'numeric',
-                                                                hour: '2-digit',
-                                                                minute: '2-digit',
-                                                            })}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-[10px] text-indigo-650 font-bold mt-0.5">
-                                                        Oleh: {stage.uploaded_by || 'System'}
-                                                    </div>
-                                                    
-                                                    {/* Text and Image Flex Row (Gambarnya dibuat berderet / berdampingan) */}
-                                                    <div className="mt-2 flex flex-col md:flex-row gap-4 items-start bg-slate-50/50 p-3 rounded-lg border border-slate-100">
-                                                        <div className="flex-1 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
-                                                            {stage.notes || <span className="text-slate-400 italic">Tidak ada catatan tertulis</span>}
-                                                        </div>
-                                                        {stage.evidence_path && (
-                                                            <div className="flex-shrink-0">
-                                                                <img
-                                                                    src={`/storage/${stage.evidence_path}`}
-                                                                    alt={stage.stageName}
-                                                                    className="h-16 w-24 object-cover rounded-lg border border-slate-200 shadow-sm cursor-pointer hover:opacity-95 transition-opacity"
-                                                                    onClick={() => setSelectedZoomImage(`/storage/${stage.evidence_path}`)}
-                                                                />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Modal Footer */}
-                            <div className="p-6 border-t border-slate-150 flex justify-end flex-shrink-0">
-                                <button
-                                    onClick={() => setShowNotesModal(false)}
-                                    className="rounded-lg border border-slate-350 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
-                                >
-                                    Tutup
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                );
-            })()}
+            {/* Progress Notes Modal */}
+            {showNotesModal && (
+                <ProgressNotesModal
+                    allProducts={allProducts}
+                    selectedProductId={selectedProductId}
+                    orderProjectName={order.nama_project}
+                    onSelectProduct={setSelectedProductId}
+                    onClose={() => setShowNotesModal(false)}
+                    onZoomImage={setSelectedZoomImage}
+                />
+            )}
 
             {/* Photo Zoom Modal */}
             {selectedZoomImage && (
-                <div 
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm cursor-zoom-out"
-                    onClick={() => setSelectedZoomImage(null)}
-                >
-                    <div className="relative max-w-5xl max-h-[90vh] overflow-hidden rounded-lg bg-white p-2">
-                        <img
-                            src={selectedZoomImage}
-                            alt="Zoomed Evidence"
-                            className="max-w-full max-h-[85vh] object-contain rounded"
-                        />
-                        <button
-                            onClick={() => setSelectedZoomImage(null)}
-                            className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
-                        >
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
+                <PhotoZoomModal
+                    imageSrc={selectedZoomImage}
+                    onClose={() => setSelectedZoomImage(null)}
+                />
             )}
 
             <style>{`

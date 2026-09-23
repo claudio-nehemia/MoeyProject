@@ -2,84 +2,77 @@
 
 namespace App\Http\Controllers;
 
-use Carbon\Carbon;
-use App\Models\User;
-use Inertia\Inertia;
-use App\Models\Order;
-use App\Models\TaskResponse;
-use Illuminate\Http\Request;
+use App\Http\Controllers\Order\Traits\HasOrderExports;
+use App\Http\Controllers\Order\Traits\HasOrderMutations;
 use App\Models\JenisInterior;
-use App\Services\NotificationService;
-use Illuminate\Support\Facades\Storage;
-use Barryvdh\DomPDF\Facade\Pdf;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\OrderExport;
-use App\Services\ImageService;
-use App\Services\ActivityLogService;
+use App\Models\Order;
 use App\Models\Role;
+use App\Models\User;
+use App\Services\ActivityLogService;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class OrderController extends Controller
 {
+    use HasOrderMutations, HasOrderExports;
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
         $user = auth()->user();
-        \Log::info('=== ORDER INDEX DEBUG ===');
-        \Log::info('User ID: ' . $user->id);
-        \Log::info('User Name: ' . $user->name);
-        \Log::info('User Role: ' . ($user->role ? $user->role->nama_role : 'NO ROLE'));
 
-        $orders = Order::with('users', 'jenisInterior', 'creator')
+        $orders = Order::with('users', 'jenisInterior')
             ->visibleToUser($user)
             ->orderBy('created_at', 'desc')
             ->get();
 
-        \Log::info('Orders count: ' . $orders->count());
-        \Log::info('Order IDs: ' . $orders->pluck('id')->implode(', '));
+        $statusCounts = [
+            'pending' => $orders->where('project_status', 'pending')->count(),
+            'in_progress' => $orders->where('project_status', 'in_progress')->count(),
+            'completed' => $orders->where('project_status', 'completed')->count(),
+        ];
 
         return Inertia::render('Order/Index', [
             'orders' => $orders,
+            'statusCounts' => $statusCounts,
         ]);
     }
 
     /**
-     * Helper to get team users grouped by role ID
+     * Get team users grouped by role for order assignment
      */
     private function getOrderTeamUsers()
     {
-        $kmId = Role::getKepalaMarketingRoleId();
-        $desainerId = Role::getDesainerRoleId();
-        $surveyorId = Role::getSurveyorRoleId();
-        $drafterId = Role::getDrafterRoleId();
-        $supervisorId = Role::getSupervisorRoleId();
-        $pmId = Role::getProjectManagerRoleId();
+        $surveyorId = Role::where('nama_role', 'like', '%Surveyor%')->pluck('id');
+        $drafterId = Role::where('nama_role', 'like', '%Drafter%')->pluck('id');
+        $desainerId = Role::where('nama_role', 'like', '%Desainer%')->pluck('id');
+        $supervisorId = Role::where('nama_role', 'like', '%Supervisor%')->pluck('id');
+        $pmId = Role::where('nama_role', 'like', '%Project Manager%')->pluck('id');
+        $kmId = Role::where('nama_role', 'like', '%Kepala Marketing%')->pluck('id');
 
         $marketings = User::where(function ($query) use ($kmId) {
-            $query->where('role_id', $kmId)
-                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $kmId));
-        })->get();
+            $query->whereIn('role_id', $kmId)
+                ->orWhere('role_id', 1);
+        })->get(['id', 'name', 'role_id']);
 
         $drafters = User::where(function ($query) use ($surveyorId, $drafterId) {
-            $query->whereIn('role_id', [$surveyorId, $drafterId])
-                ->orWhereHas('roles', fn($q) => $q->whereIn('roles.id', [$surveyorId, $drafterId]));
-        })->get();
+            $query->whereIn('role_id', $surveyorId)
+                ->orWhereIn('role_id', $drafterId);
+        })->get(['id', 'name', 'role_id']);
 
         $desainers = User::where(function ($query) use ($desainerId) {
-            $query->where('role_id', $desainerId)
-                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $desainerId));
-        })->get();
+            $query->whereIn('role_id', $desainerId);
+        })->get(['id', 'name', 'role_id']);
 
         $supervisors = User::where(function ($query) use ($supervisorId) {
-            $query->where('role_id', $supervisorId)
-                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $supervisorId));
-        })->get();
+            $query->whereIn('role_id', $supervisorId);
+        })->get(['id', 'name', 'role_id']);
 
         $projectManagers = User::where(function ($query) use ($pmId) {
-            $query->where('role_id', $pmId)
-                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $pmId));
-        })->get();
+            $query->whereIn('role_id', $pmId);
+        })->get(['id', 'name', 'role_id']);
 
         return [
             'marketings' => $marketings,
@@ -95,162 +88,18 @@ class OrderController extends Controller
      */
     public function create()
     {
-        $teams = $this->getOrderTeamUsers();
-        $jenisInteriors = JenisInterior::select('id', 'nama_interior')->get();
+        $teamUsers = $this->getOrderTeamUsers();
+        $customers = User::role('Customer')->get(['id', 'name', 'email']);
 
-        $customers = User::whereHas('role', fn($q) => $q->where('nama_role', 'Customer'))
-            ->orWhereHas('roles', fn($q) => $q->where('nama_role', 'Customer'))
-            ->select('id', 'name', 'email')
-            ->get();
-
-        return Inertia::render('Order/Create', array_merge($teams, [
-            'jenisInteriors' => $jenisInteriors,
+        return Inertia::render('Order/Create', [
+            'jenisInteriors' => JenisInterior::all(),
+            'drafters' => $teamUsers['drafters'],
+            'desainers' => $teamUsers['desainers'],
+            'supervisors' => $teamUsers['supervisors'],
+            'projectManagers' => $teamUsers['projectManagers'],
+            'marketings' => $teamUsers['marketings'],
             'customers' => $customers,
-        ]));
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        // DEBUG: Log semua data yang diterima
-        \Log::info('=== DEBUG ORDER STORE ===');
-        \Log::info('All Request Data:', $request->all());
-        \Log::info('User IDs from request:', ['user_ids' => $request->input('user_ids', [])]);
-        \Log::info('Has user_ids key?', ['has_user_ids' => $request->has('user_ids')]);
-
-        // Log each field individually for debugging
-        \Log::info('Individual Fields:', [
-            'nama_project' => $request->input('nama_project'),
-            'jenis_interior_id' => $request->input('jenis_interior_id'),
-            'company_name' => $request->input('company_name'),
-            'customer_name' => $request->input('customer_name'),
-            'phone_number' => $request->input('phone_number'),
-            'tanggal_masuk_customer' => $request->input('tanggal_masuk_customer'),
         ]);
-
-        $validated = $request->validate([
-            'nama_project' => 'required|string|max:255',
-            'jenis_interior_id' => 'required|exists:jenis_interiors,id',
-            'company_name' => 'required|string|max:255',
-            'customer_name' => 'required|string|max:255',
-            'customer_email' => 'nullable|email|max:255',
-            'customer_user_id' => 'nullable|exists:users,id',
-            'customer_additional_info' => 'nullable|string',
-            'nomor_unit' => 'nullable|string|max:100',
-            'phone_number' => 'required|string|max:20',
-            'alamat' => 'required|string',
-            'tanggal_masuk_customer' => 'required|date',
-            'project_status' => 'nullable|string|max:100',
-            'priority_level' => 'nullable|string|max:100',
-            'mom_file' => 'nullable|file|mimes:pdf,doc,docx',
-            'user_ids' => 'nullable|array',
-            'tanggal_survey' => 'nullable|string',
-        ]);
-
-        // Set defaults for nullable fields if not provided
-        $validated['project_status'] = $validated['project_status'] ?? 'pending';
-        $validated['priority_level'] = $validated['priority_level'] ?? 'medium';
-
-        $validated['tanggal_masuk_customer'] = now()->toDateString();
-
-        // Auto-link customer user if email matches existing customer or sync email from user
-        if (empty($validated['customer_user_id']) && !empty($validated['customer_email'])) {
-            $existingUser = User::where('email', $validated['customer_email'])->first();
-            if ($existingUser) {
-                $validated['customer_user_id'] = $existingUser->id;
-            }
-        } elseif (!empty($validated['customer_user_id']) && empty($validated['customer_email'])) {
-            $custUser = User::find($validated['customer_user_id']);
-            if ($custUser) {
-                $validated['customer_email'] = $custUser->email;
-            }
-        }
-
-        \Log::info('Validated Data:', $validated);
-        \Log::info('User IDs after validation:', ['user_ids' => $validated['user_ids'] ?? []]);
-
-        // Handle file upload
-        if ($request->hasFile('mom_file')) {
-            $result = app(ImageService::class)->saveRawFile($request->file('mom_file'), 'mom_files');
-            $validated['mom_file'] = $result['path'];
-            $validated['mom_files'] = [$result];
-            \Log::info('MOM file uploaded:', ['file' => $validated['mom_file'], 'original_name' => $result['original_name'] ?? null]);
-        }
-
-        // Remove user_ids from validated data before creating order
-        $userIds = $validated['user_ids'] ?? [];
-        unset($validated['user_ids']);
-
-        // Set who created the order
-        $validated['created_by'] = auth()->id();
-
-        $order = Order::create($validated);
-        \Log::info('Order created with ID:', ['order_id' => $order->id]);
-
-        $teamNames = [];
-        if (!empty($userIds)) {
-            \Log::info('Attaching users to order:', ['user_ids' => $userIds]);
-            $order->users()->attach($userIds);
-            \Log::info('Users attached successfully');
-            $teamNames = User::whereIn('id', $userIds)->pluck('name')->toArray();
-            $notificationService = new NotificationService();
-            $notificationService->sendSurveyRequestNotification($order);
-        } else {
-            \Log::warning('No user_ids to attach - skipping team assignment');
-        }
-
-        ActivityLogService::log(
-            $order->id,
-            $order,
-            'create',
-            'Order Dibuat',
-            "Membuat order baru #{$order->id}: {$order->nama_project} (Customer: {$order->customer_name})",
-            [
-                'order' => [
-                    'nama_project' => $order->nama_project,
-                    'customer_name' => $order->customer_name,
-                    'company_name' => $order->company_name,
-                    'phone_number' => $order->phone_number,
-                    'alamat' => $order->alamat,
-                ],
-                'team' => $teamNames,
-                'has_mom' => !empty($order->mom_file) || !empty($order->mom_files),
-            ]
-        );
-
-        $nextTaskExist = TaskResponse::where('order_id', $order->id)
-            ->where('tahap', 'survey')
-            ->exists();
-        if (!$nextTaskExist) {
-            TaskResponse::create([
-                'order_id' => $order->id,
-                'user_id' => null, // Akan diisi saat user klik Response
-                'tahap' => 'survey',
-                'start_time' => now(),
-                'deadline' => now()->addDays(3), // Deadline 3 hari
-                'duration' => 3, // Durasi awal 3 hari
-                'duration_actual' => 3, // Durasi actual 3 hari
-                'extend_time' => 0,
-                'status' => 'menunggu_response',
-            ]);
-
-            TaskResponse::create([
-                'order_id' => $order->id,
-                'user_id' => null, // Akan diisi saat user klik Response
-                'tahap' => 'survey',
-                'start_time' => now(),
-                'deadline' => now()->addDays(3), // Deadline 3 hari
-                'duration' => 3, // Durasi awal 3 hari
-                'duration_actual' => 3, // Durasi actual 3 hari
-                'extend_time' => 0,
-                'status' => 'menunggu_response',
-                'is_marketing' => true,
-            ]);
-        }
-
-        return redirect('/order')->with('success', 'Order created successfully.');
     }
 
     /**
@@ -258,10 +107,10 @@ class OrderController extends Controller
      */
     public function show(Order $order)
     {
-        $order->load(['users.role', 'jenisInterior', 'activityLogs.user']);
+        $order->load(['users', 'jenisInterior']);
+
         return Inertia::render('Order/Show', [
             'order' => $order,
-            'activityLogs' => $order->activityLogs,
         ]);
     }
 
@@ -270,195 +119,21 @@ class OrderController extends Controller
      */
     public function edit(Order $order)
     {
-        $teams = $this->getOrderTeamUsers();
-        $jenisInteriors = JenisInterior::select('id', 'nama_interior')->get();
+        $order->load('users');
+        $teamUsers = $this->getOrderTeamUsers();
+        $customers = User::role('Customer')->get(['id', 'name', 'email']);
 
-        // Get existing team members (ambil ID dari User model, bukan dari pivot)
-        $existingUserIds = $order->users->pluck('id')->toArray();
-
-        $customers = User::whereHas('role', fn($q) => $q->where('nama_role', 'Customer'))
-            ->orWhereHas('roles', fn($q) => $q->where('nama_role', 'Customer'))
-            ->select('id', 'name', 'email')
-            ->get();
-
-        return Inertia::render('Order/Edit', array_merge($teams, [
+        return Inertia::render('Order/Edit', [
             'order' => $order,
-            'jenisInteriors' => $jenisInteriors,
-            'existingUserIds' => $existingUserIds,
+            'jenisInteriors' => JenisInterior::all(),
+            'drafters' => $teamUsers['drafters'],
+            'desainers' => $teamUsers['desainers'],
+            'supervisors' => $teamUsers['supervisors'],
+            'projectManagers' => $teamUsers['projectManagers'],
+            'marketings' => $teamUsers['marketings'],
+            'selectedUsers' => $order->users->pluck('id')->toArray(),
             'customers' => $customers,
-        ]));
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Order $order)
-    {
-        // DEBUG: Log semua data yang diterima
-        \Log::info('=== DEBUG ORDER UPDATE ===');
-        \Log::info('Order ID:', ['order_id' => $order->id]);
-        \Log::info('All Request Data:', $request->all());
-        \Log::info('User IDs from request:', ['user_ids' => $request->input('user_ids', [])]);
-        \Log::info('Has user_ids key?', ['has_user_ids' => $request->has('user_ids')]);
-
-        $validated = $request->validate([
-            'nama_project' => 'required|string|max:255',
-            'jenis_interior_id' => 'required|exists:jenis_interiors,id',
-            'company_name' => 'required|string|max:255',
-            'customer_name' => 'required|string|max:255',
-            'customer_email' => 'nullable|email|max:255',
-            'customer_user_id' => 'nullable|exists:users,id',
-            'customer_additional_info' => 'nullable|string',
-            'nomor_unit' => 'nullable|string|max:100',
-            'phone_number' => 'required|string|max:20',
-            'alamat' => 'required|string',
-            'tanggal_masuk_customer' => 'required|date',
-            'project_status' => 'nullable|string|max:100',
-            'priority_level' => 'nullable|string|max:100',
-            'mom_file' => 'nullable|file|mimes:pdf,doc,docx',
-            'user_ids' => 'nullable|array',
-            'tanggal_survey' => 'nullable|string',
         ]);
-
-        // Set defaults for nullable fields if not provided
-        $validated['project_status'] = $validated['project_status'] ?? $order->project_status ?? 'pending';
-        $validated['priority_level'] = $validated['priority_level'] ?? $order->priority_level ?? 'medium';
-        $validated['tanggal_masuk_customer'] = now()->toDateString();
-
-        // Auto-link customer user if email matches existing customer or sync email from user
-        if (empty($validated['customer_user_id']) && !empty($validated['customer_email'])) {
-            $existingUser = User::where('email', $validated['customer_email'])->first();
-            if ($existingUser) {
-                $validated['customer_user_id'] = $existingUser->id;
-            }
-        } elseif (!empty($validated['customer_user_id']) && empty($validated['customer_email'])) {
-            $custUser = User::find($validated['customer_user_id']);
-            if ($custUser) {
-                $validated['customer_email'] = $custUser->email;
-            }
-        }
-
-        \Log::info('Validated Data:', $validated);
-        \Log::info('User IDs after validation:', ['user_ids' => $validated['user_ids'] ?? []]);
-
-        // Handle file upload - delete old file if new one is uploaded
-        if ($request->hasFile('mom_file')) {
-            // Delete old file if exists
-            if ($order->mom_file && \Storage::disk('public')->exists($order->mom_file)) {
-                \Storage::disk('public')->delete($order->mom_file);
-                \Log::info('Old MOM file deleted:', ['file' => $order->mom_file]);
-            }
-
-            // Also delete any existing MOM files stored in mom_files
-            $existingMomFiles = $order->mom_files ?? [];
-            foreach ($existingMomFiles as $entry) {
-                $path = is_array($entry) ? ($entry['path'] ?? null) : (is_string($entry) ? $entry : null);
-                if ($path && \Storage::disk('public')->exists($path)) {
-                    \Storage::disk('public')->delete($path);
-                }
-            }
-
-            // Store new file
-            $result = app(ImageService::class)->saveRawFile($request->file('mom_file'), 'mom_files');
-            $validated['mom_file'] = $result['path'];
-            $validated['mom_files'] = [$result];
-            \Log::info('New MOM file uploaded:', ['file' => $validated['mom_file'], 'original_name' => $result['original_name'] ?? null]);
-        }
-
-        // Capture dirty attributes before saving
-        $order->fill($validated);
-        $changedAttributes = ActivityLogService::getChangedAttributes($order);
-
-        // Previous team
-        $previousUserIds = $order->users->pluck('id')->toArray();
-        $teamChanged = false;
-        $newTeamNames = [];
-
-        $order->save();
-        \Log::info('Order updated successfully');
-
-        if ($request->has('user_ids')) {
-            $userIds = $request->input('user_ids', []);
-            \Log::info('Syncing users to order:', ['user_ids' => $userIds]);
-            $order->users()->sync($userIds);
-            \Log::info('Users synced successfully');
-
-            sort($previousUserIds);
-            $sortedNewUserIds = $userIds;
-            sort($sortedNewUserIds);
-            if ($previousUserIds !== $sortedNewUserIds) {
-                $teamChanged = true;
-                $newTeamNames = User::whereIn('id', $userIds)->pluck('name')->toArray();
-            }
-        } else {
-            \Log::info('Skipping team sync - user_ids not provided in request');
-        }
-
-
-        $logDescriptionParts = [];
-        if (!empty($changedAttributes)) {
-            $logDescriptionParts[] = ActivityLogService::formatChangesSummary($changedAttributes);
-        }
-        if ($request->hasFile('mom_file')) {
-            $logDescriptionParts[] = "Mengunggah file MoM baru: " . ($validated['mom_file'] ?? 'file');
-        }
-        if ($teamChanged) {
-            $logDescriptionParts[] = "Memperbarui tim project (" . count($newTeamNames) . " anggota)";
-        }
-
-        $logDescription = !empty($logDescriptionParts)
-            ? implode(' | ', $logDescriptionParts)
-            : "Memperbarui data order #{$order->id}";
-
-        ActivityLogService::log(
-            $order->id,
-            $order,
-            'update',
-            'Order Diperbarui',
-            $logDescription,
-            [
-                'changes' => $changedAttributes,
-                'team_changed' => $teamChanged,
-                'team' => $teamChanged ? $newTeamNames : null,
-                'uploaded_mom' => $request->hasFile('mom_file'),
-            ]
-        );
-
-
-        $nextTaskExist = TaskResponse::where('order_id', $order->id)
-            ->where('tahap', 'survey')
-            ->exists();
-        if (!$nextTaskExist) {
-            TaskResponse::create([
-                'order_id' => $order->id,
-                'user_id' => null, // Akan diisi saat user klik Response
-                'tahap' => 'survey',
-                'start_time' => now(),
-                'deadline' => now()->addDays(3), // Deadline 3 hari
-                'duration' => 3, // Durasi awal 3 hari
-                'duration_actual' => 3, // Durasi actual 3 hari
-                'extend_time' => 0,
-                'status' => 'menunggu_response',
-            ]);
-
-            TaskResponse::create([
-                'order_id' => $order->id,
-                'user_id' => null, // Akan diisi saat user klik Response
-                'tahap' => 'survey',
-                'start_time' => now(),
-                'deadline' => now()->addDays(3), // Deadline 3 hari
-                'duration' => 3, // Durasi awal 3 hari
-                'duration_actual' => 3, // Durasi actual 3 hari
-                'extend_time' => 0,
-                'status' => 'menunggu_response',
-                'is_marketing' => true,
-            ]);
-
-            $notificationService = new NotificationService();
-            $notificationService->sendSurveyRequestNotification($order);
-        }
-
-        return redirect()->route('order.index')->with('success', 'Order updated successfully.');
     }
 
     /**
@@ -466,84 +141,17 @@ class OrderController extends Controller
      */
     public function destroy(Order $order)
     {
+        ActivityLogService::log(
+            $order->id,
+            $order,
+            'delete',
+            'Order Dihapus',
+            "Menghapus order #{$order->id}: {$order->nama_project}",
+            ['order' => ['id' => $order->id, 'nama_project' => $order->nama_project]]
+        );
+
         $order->delete();
 
         return redirect()->back()->with('success', 'Order deleted successfully.');
-    }
-
-    /**
-     * Export orders as PDF
-     */
-    public function exportPdf()
-    {
-        $user = auth()->user();
-        $orders = Order::with('users', 'jenisInterior')
-            ->visibleToUser($user)
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        $statusCounts = [
-            'pending' => $orders->where('project_status', 'pending')->count(),
-            'in_progress' => $orders->where('project_status', 'in_progress')->count(),
-            'completed' => $orders->where('project_status', 'completed')->count(),
-        ];
-
-        $data = [
-            'orders' => $orders,
-            'totalOrders' => $orders->count(),
-            'statusCounts' => $statusCounts,
-        ];
-
-        $pdf = PDF::loadView('pdf.order-report', $data);
-        $pdf->setPaper('a4', 'landscape');
-
-        $filename = 'Order-Report-' . date('Ymd') . '.pdf';
-        return $pdf->download($filename);
-    }
-
-    /**
-     * Export orders as Word
-     */
-    public function exportWord()
-    {
-        $user = auth()->user();
-        $orders = Order::with('users', 'jenisInterior')
-            ->visibleToUser($user)
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        $statusCounts = [
-            'pending' => $orders->where('project_status', 'pending')->count(),
-            'in_progress' => $orders->where('project_status', 'in_progress')->count(),
-            'completed' => $orders->where('project_status', 'completed')->count(),
-        ];
-
-        $data = [
-            'orders' => $orders,
-            'totalOrders' => $orders->count(),
-            'statusCounts' => $statusCounts,
-        ];
-
-        $html = view('pdf.order-report', $data)->render();
-        $filename = 'Order-Report-' . date('Ymd') . '.doc';
-
-        return response($html)
-            ->header('Content-Type', 'application/vnd.ms-word')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
-    }
-
-    /**
-     * Export orders as Excel
-     */
-    public function exportExcel()
-    {
-        $user = auth()->user();
-        $orders = Order::with('users', 'jenisInterior')
-            ->visibleToUser($user)
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        $filename = 'Order-Report-' . date('Ymd') . '.xlsx';
-        return Excel::download(new OrderExport($orders), $filename);
     }
 }
