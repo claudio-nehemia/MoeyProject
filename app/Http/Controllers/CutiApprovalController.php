@@ -41,8 +41,18 @@ class CutiApprovalController extends Controller
             ->concat($izindinas)
             ->concat($koreksi)
             ->concat($lembur)
-            ->sortByDesc('tanggal')
+            ->sortByDesc(function ($item) {
+                return $item->created_at ? strtotime($item->created_at) : strtotime($item->tanggal);
+            })
             ->values()
+            ->map(function ($item) {
+                $item->id = (string) $item->id;
+                $createdAt = $item->created_at ? \Carbon\Carbon::parse($item->created_at)->timezone('Asia/Jakarta') : null;
+                $item->jam_pengajuan = $createdAt ? $createdAt->format('H:i:s') : null;
+                $item->waktu_pengajuan = $createdAt ? $createdAt->translatedFormat('d F Y, H:i:s') : null;
+                $item->created_at_raw = $createdAt ? $createdAt->toIso8601String() : null;
+                return $item;
+            })
             ->all();
 
         return Inertia::render('Cuti/Approval', [
@@ -54,7 +64,7 @@ class CutiApprovalController extends Controller
     {
         return Izinabsen::where('status', 0)
             ->join('karyawan', 'presensi_izinabsen.nik', '=', 'karyawan.nik')
-            ->select('presensi_izinabsen.kode_izin as id', 'presensi_izinabsen.tanggal', 'presensi_izinabsen.keterangan', 'presensi_izinabsen.dari', 'presensi_izinabsen.sampai', DB::raw("'Izin Absen' as tipe"), 'karyawan.nama_karyawan', 'karyawan.nik')
+            ->select('presensi_izinabsen.kode_izin as id', 'presensi_izinabsen.tanggal', 'presensi_izinabsen.created_at', 'presensi_izinabsen.keterangan', 'presensi_izinabsen.dari', 'presensi_izinabsen.sampai', DB::raw("'Izin Absen' as tipe"), 'karyawan.nama_karyawan', 'karyawan.nik')
             ->get();
     }
 
@@ -62,7 +72,7 @@ class CutiApprovalController extends Controller
     {
         return Izincuti::where('status', 0)
             ->join('karyawan', 'presensi_izincuti.nik', '=', 'karyawan.nik')
-            ->select('presensi_izincuti.kode_izin_cuti as id', 'presensi_izincuti.tanggal', 'presensi_izincuti.keterangan', 'presensi_izincuti.dari', 'presensi_izincuti.sampai', DB::raw("'Cuti' as tipe"), 'karyawan.nama_karyawan', 'karyawan.nik')
+            ->select('presensi_izincuti.kode_izin_cuti as id', 'presensi_izincuti.tanggal', 'presensi_izincuti.created_at', 'presensi_izincuti.keterangan', 'presensi_izincuti.dari', 'presensi_izincuti.sampai', DB::raw("'Cuti' as tipe"), 'karyawan.nama_karyawan', 'karyawan.nik')
             ->get();
     }
 
@@ -70,7 +80,7 @@ class CutiApprovalController extends Controller
     {
         return Izinsakit::where('status', 0)
             ->join('karyawan', 'presensi_izinsakit.nik', '=', 'karyawan.nik')
-            ->select('presensi_izinsakit.kode_izin_sakit as id', 'presensi_izinsakit.tanggal', 'presensi_izinsakit.keterangan', 'presensi_izinsakit.dari', 'presensi_izinsakit.sampai', DB::raw("'Sakit' as tipe"), 'karyawan.nama_karyawan', 'karyawan.nik')
+            ->select('presensi_izinsakit.kode_izin_sakit as id', 'presensi_izinsakit.tanggal', 'presensi_izinsakit.created_at', 'presensi_izinsakit.keterangan', 'presensi_izinsakit.dari', 'presensi_izinsakit.sampai', DB::raw("'Sakit' as tipe"), 'karyawan.nama_karyawan', 'karyawan.nik')
             ->get();
     }
 
@@ -78,7 +88,7 @@ class CutiApprovalController extends Controller
     {
         return Izindinas::where('status', 0)
             ->join('karyawan', 'presensi_izindinas.nik', '=', 'karyawan.nik')
-            ->select('presensi_izindinas.kode_izin_dinas as id', 'presensi_izindinas.tanggal', 'presensi_izindinas.keterangan', 'presensi_izindinas.dari', 'presensi_izindinas.sampai', DB::raw("'Dinas' as tipe"), 'karyawan.nama_karyawan', 'karyawan.nik')
+            ->select('presensi_izindinas.kode_izin_dinas as id', 'presensi_izindinas.tanggal', 'presensi_izindinas.created_at', 'presensi_izindinas.keterangan', 'presensi_izindinas.dari', 'presensi_izindinas.sampai', DB::raw("'Dinas' as tipe"), 'karyawan.nama_karyawan', 'karyawan.nik')
             ->get();
     }
 
@@ -86,7 +96,7 @@ class CutiApprovalController extends Controller
     {
         return Koreksi::where('status', 0)
             ->join('karyawan', 'presensi_koreksi.nik', '=', 'karyawan.nik')
-            ->select('presensi_koreksi.kode_koreksi as id', 'presensi_koreksi.tanggal', 'presensi_koreksi.keterangan', 'presensi_koreksi.tanggal as dari', 'presensi_koreksi.tanggal as sampai', DB::raw("'Koreksi Absen' as tipe"), 'karyawan.nama_karyawan', 'karyawan.nik')
+            ->select('presensi_koreksi.kode_koreksi as id', 'presensi_koreksi.tanggal', 'presensi_koreksi.created_at', 'presensi_koreksi.jam_in', 'presensi_koreksi.jam_out', 'presensi_koreksi.keterangan', 'presensi_koreksi.tanggal as dari', 'presensi_koreksi.tanggal as sampai', DB::raw("'Koreksi Absen' as tipe"), 'karyawan.nama_karyawan', 'karyawan.nik')
             ->get();
     }
 
@@ -94,7 +104,7 @@ class CutiApprovalController extends Controller
     {
         return Lembur::where('status', 0)
             ->join('karyawan', 'lembur.nik', '=', 'karyawan.nik')
-            ->select('lembur.id as id', 'lembur.tanggal', 'lembur.keterangan', 'lembur.lembur_mulai as dari', 'lembur.lembur_selesai as sampai', DB::raw("'Lembur' as tipe"), 'karyawan.nama_karyawan', 'karyawan.nik')
+            ->select('lembur.id as id', 'lembur.tanggal', 'lembur.created_at', 'lembur.keterangan', 'lembur.lembur_mulai as dari', 'lembur.lembur_selesai as sampai', DB::raw("'Lembur' as tipe"), 'karyawan.nama_karyawan', 'karyawan.nik')
             ->get()->map(function($item) {
                 $item->id = (string) $item->id;
                 return $item;

@@ -21,12 +21,18 @@ import {
 interface PendingRequest {
     id: string;
     tanggal: string;
+    created_at?: string | null;
+    created_at_raw?: string | null;
+    jam_pengajuan?: string | null;
+    waktu_pengajuan?: string | null;
     keterangan: string;
     dari: string;
     sampai: string;
     tipe: string;
     nama_karyawan: string;
     nik: string;
+    jam_in?: string | null;
+    jam_out?: string | null;
 }
 
 interface Props {
@@ -270,11 +276,20 @@ export default function Approval({ pendingList }: Props) {
                     ) : (
                         <div className="space-y-4">
                             {filteredList.map((item) => {
-                                const submittedDate = new Date(item.tanggal).toLocaleDateString('id-ID', {
+                                const submissionDateObj = item.created_at ? new Date(item.created_at) : new Date(item.tanggal);
+                                const submittedDate = submissionDateObj.toLocaleDateString('id-ID', {
                                     day: 'numeric',
                                     month: 'long',
                                     year: 'numeric'
                                 });
+
+                                // Jam, menit, dan detik pengajuan (HH:mm:ss)
+                                const submittedTime = item.jam_pengajuan || (item.created_at ? submissionDateObj.toLocaleTimeString('id-ID', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit',
+                                    hour12: false
+                                }).replace(/\./g, ':') : null);
 
                                 const dateFrom = new Date(item.dari).toLocaleDateString('id-ID', {
                                     day: 'numeric',
@@ -309,10 +324,16 @@ export default function Approval({ pendingList }: Props) {
                                                             {item.nik}
                                                         </span>
                                                     </div>
-                                                    <p className="text-[10px] text-stone-400 flex items-center gap-1 font-bold">
+                                                    <div className="text-[10px] text-stone-400 flex items-center gap-1.5 font-bold flex-wrap">
                                                         <span>Diajukan:</span>
                                                         <span className="text-stone-500 font-bold">{submittedDate}</span>
-                                                    </p>
+                                                        {submittedTime && (
+                                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 font-mono text-[9px] font-extrabold">
+                                                                <Clock size={10} className="text-amber-600" />
+                                                                {submittedTime} WIB
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -339,6 +360,12 @@ export default function Approval({ pendingList }: Props) {
                                                                 <span>{dateFrom} - {dateTo}</span>
                                                             )}
                                                         </div>
+                                                        {submittedTime && (
+                                                            <div className="text-[10px] text-stone-500 font-medium flex items-center gap-1 mt-0.5">
+                                                                <Clock size={11} className="text-stone-400 flex-shrink-0" />
+                                                                <span>Waktu Pengajuan: <strong className="font-mono text-stone-700 font-bold">{submittedTime} WIB</strong></span>
+                                                            </div>
+                                                        )}
                                                     </div>
 
                                                     {/* Reason / Keterangan */}
