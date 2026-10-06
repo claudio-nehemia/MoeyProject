@@ -57,6 +57,12 @@ class CutiApprovalController extends Controller
                     $item->doc_url = asset('storage/uploads/cuti/' . $item->doc_cuti);
                 } elseif (!empty($item->doc_sid)) {
                     $item->doc_url = asset('storage/uploads/sid/' . $item->doc_sid);
+                } elseif (!empty($item->doc_izin)) {
+                    $item->doc_url = asset('storage/uploads/absen/' . $item->doc_izin);
+                } elseif (!empty($item->doc_dinas)) {
+                    $item->doc_url = asset('storage/uploads/dinas/' . $item->doc_dinas);
+                } elseif (!empty($item->doc_koreksi)) {
+                    $item->doc_url = asset('storage/uploads/koreksi/' . $item->doc_koreksi);
                 }
 
                 return $item;
@@ -70,9 +76,21 @@ class CutiApprovalController extends Controller
 
     private function getPendingIzinAbsen()
     {
+        $hasDoc = \Illuminate\Support\Facades\Schema::hasColumn('presensi_izinabsen', 'doc_izin');
         return Izinabsen::where('status', 0)
             ->join('karyawan', 'presensi_izinabsen.nik', '=', 'karyawan.nik')
-            ->select('presensi_izinabsen.kode_izin as id', 'presensi_izinabsen.tanggal', 'presensi_izinabsen.created_at', 'presensi_izinabsen.keterangan', 'presensi_izinabsen.dari', 'presensi_izinabsen.sampai', DB::raw("'Izin Absen' as tipe"), 'karyawan.nama_karyawan', 'karyawan.nik')
+            ->select(
+                'presensi_izinabsen.kode_izin as id',
+                'presensi_izinabsen.tanggal',
+                'presensi_izinabsen.created_at',
+                'presensi_izinabsen.keterangan',
+                'presensi_izinabsen.dari',
+                'presensi_izinabsen.sampai',
+                DB::raw("'Izin Absen' as tipe"),
+                'karyawan.nama_karyawan',
+                'karyawan.nik',
+                $hasDoc ? 'presensi_izinabsen.doc_izin' : DB::raw('NULL as doc_izin')
+            )
             ->get();
     }
 
@@ -117,17 +135,43 @@ class CutiApprovalController extends Controller
 
     private function getPendingIzinDinas()
     {
+        $hasDoc = \Illuminate\Support\Facades\Schema::hasColumn('presensi_izindinas', 'doc_dinas');
         return Izindinas::where('status', 0)
             ->join('karyawan', 'presensi_izindinas.nik', '=', 'karyawan.nik')
-            ->select('presensi_izindinas.kode_izin_dinas as id', 'presensi_izindinas.tanggal', 'presensi_izindinas.created_at', 'presensi_izindinas.keterangan', 'presensi_izindinas.dari', 'presensi_izindinas.sampai', DB::raw("'Dinas' as tipe"), 'karyawan.nama_karyawan', 'karyawan.nik')
+            ->select(
+                'presensi_izindinas.kode_izin_dinas as id',
+                'presensi_izindinas.tanggal',
+                'presensi_izindinas.created_at',
+                'presensi_izindinas.keterangan',
+                'presensi_izindinas.dari',
+                'presensi_izindinas.sampai',
+                DB::raw("'Dinas' as tipe"),
+                'karyawan.nama_karyawan',
+                'karyawan.nik',
+                $hasDoc ? 'presensi_izindinas.doc_dinas' : DB::raw('NULL as doc_dinas')
+            )
             ->get();
     }
 
     private function getPendingKoreksi()
     {
+        $hasDoc = \Illuminate\Support\Facades\Schema::hasColumn('presensi_koreksi', 'doc_koreksi');
         return Koreksi::where('status', 0)
             ->join('karyawan', 'presensi_koreksi.nik', '=', 'karyawan.nik')
-            ->select('presensi_koreksi.kode_koreksi as id', 'presensi_koreksi.tanggal', 'presensi_koreksi.created_at', 'presensi_koreksi.jam_in', 'presensi_koreksi.jam_out', 'presensi_koreksi.keterangan', 'presensi_koreksi.tanggal as dari', 'presensi_koreksi.tanggal as sampai', DB::raw("'Koreksi Absen' as tipe"), 'karyawan.nama_karyawan', 'karyawan.nik')
+            ->select(
+                'presensi_koreksi.kode_koreksi as id',
+                'presensi_koreksi.tanggal',
+                'presensi_koreksi.created_at',
+                'presensi_koreksi.jam_in',
+                'presensi_koreksi.jam_out',
+                'presensi_koreksi.keterangan',
+                'presensi_koreksi.tanggal as dari',
+                'presensi_koreksi.tanggal as sampai',
+                DB::raw("'Koreksi Absen' as tipe"),
+                'karyawan.nama_karyawan',
+                'karyawan.nik',
+                $hasDoc ? 'presensi_koreksi.doc_koreksi' : DB::raw('NULL as doc_koreksi')
+            )
             ->get();
     }
 

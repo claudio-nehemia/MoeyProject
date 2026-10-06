@@ -34,9 +34,12 @@ class IzinController extends Controller
         $nik = $karyawan->nik;
 
         $hasDocCuti = Schema::hasColumn('presensi_izincuti', 'doc_cuti');
+        $hasDocIzin = Schema::hasColumn('presensi_izinabsen', 'doc_izin');
+        $hasDocDinas = Schema::hasColumn('presensi_izindinas', 'doc_dinas');
+        $hasDocKoreksi = Schema::hasColumn('presensi_koreksi', 'doc_koreksi');
 
         $izinabsen = DB::table('presensi_izinabsen')->where('nik', $nik)
-            ->select('kode_izin as kode', 'tanggal', 'keterangan', 'dari', 'sampai', DB::raw("'i' as ket"), 'status', 'approval_step', DB::raw('NULL as doc_sid'));
+            ->select('kode_izin as kode', 'tanggal', 'keterangan', 'dari', 'sampai', DB::raw("'i' as ket"), 'status', 'approval_step', $hasDocIzin ? 'doc_izin as doc_sid' : DB::raw('NULL as doc_sid'));
 
         $izinsakit = DB::table('presensi_izinsakit')->where('nik', $nik)
             ->select('kode_izin_sakit as kode', 'tanggal', 'keterangan', 'dari', 'sampai', DB::raw("'s' as ket"), 'status', 'approval_step', 'doc_sid');
@@ -45,18 +48,24 @@ class IzinController extends Controller
             ->select('kode_izin_cuti as kode', 'tanggal', 'keterangan', 'dari', 'sampai', DB::raw("'c' as ket"), 'status', 'approval_step', $hasDocCuti ? 'doc_cuti as doc_sid' : DB::raw('NULL as doc_sid'));
 
         $izin_dinas = DB::table('presensi_izindinas')->where('nik', $nik)
-            ->select('kode_izin_dinas as kode', 'tanggal', 'keterangan', 'dari', 'sampai', DB::raw("'d' as ket"), 'status', 'approval_step', DB::raw('NULL as doc_sid'));
+            ->select('kode_izin_dinas as kode', 'tanggal', 'keterangan', 'dari', 'sampai', DB::raw("'d' as ket"), 'status', 'approval_step', $hasDocDinas ? 'doc_dinas as doc_sid' : DB::raw('NULL as doc_sid'));
 
         // Koreksi
         $koreksi = DB::table('presensi_koreksi')->where('nik', $nik)
-            ->select('kode_koreksi as kode', 'tanggal', 'keterangan', 'tanggal as dari', 'tanggal as sampai', DB::raw("'k' as ket"), 'status', 'approval_step', DB::raw('NULL as doc_sid'));
+            ->select('kode_koreksi as kode', 'tanggal', 'keterangan', 'tanggal as dari', 'tanggal as sampai', DB::raw("'k' as ket"), 'status', 'approval_step', $hasDocKoreksi ? 'doc_koreksi as doc_sid' : DB::raw('NULL as doc_sid'));
 
         $pengajuan_izin = $izinabsen->union($izinsakit)->union($izincuti)->union($izin_dinas)->union($koreksi)
             ->orderBy('tanggal', 'desc')
             ->get()
             ->map(function ($item) {
                 if ($item->doc_sid) {
-                    $folder = $item->ket === 'c' ? 'cuti' : 'sid';
+                    $folder = match ($item->ket) {
+                        'c' => 'cuti',
+                        'i' => 'absen',
+                        'd' => 'dinas',
+                        'k' => 'koreksi',
+                        default => 'sid',
+                    };
                     $item->doc_sid_url = asset('storage/uploads/' . $folder . '/' . $item->doc_sid);
                     $item->doc_url = $item->doc_sid_url;
                 } else {
@@ -93,8 +102,11 @@ class IzinController extends Controller
             'dari' => 'required|date_format:Y-m-d',
             'sampai' => 'required|date_format:Y-m-d|after_or_equal:dari',
             'keterangan' => 'required|string',
-            'sid' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240', // for sickness
-            'doc_cuti' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240', // for leave
+            'sid' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
+            'doc_cuti' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
+            'doc_izin' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
+            'doc_dinas' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
+            'doc_koreksi' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
             'lampiran' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
             'kode_jam_kerja' => 'required_if:jenis_izin,k|string',
             'jam_in' => 'nullable|string',
@@ -160,6 +172,30 @@ class IzinController extends Controller
             }
         }
 
+        $uploadedFile = $request->file('lampiran')
+            ?? $request->file('doc_izin')
+            ?? $request->file('doc_cuti')
+            ?? $request->file('sid')
+            ?? $request->file('doc_dinas')
+            ?? $request->file('doc_koreksi');
+
+        $saveFile = function ($file, $folder, $fileName) {
+            $destination_path = "uploads/" . $folder;
+            $ext = strtolower($file->getClientOriginalExtension() ?: 'jpg');
+            if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
+                try {
+                    $manager = new \Intervention\Image\ImageManager(new \Intervention\Image\Drivers\Gd\Driver());
+                    $image = $manager->read($file);
+                    $encodedImage = (string) $image->toJpeg(80);
+                    Storage::disk('public')->put($destination_path . "/" . $fileName, $encodedImage);
+                } catch (\Exception $e) {
+                    $file->storeAs($destination_path, $fileName, 'public');
+                }
+            } else {
+                $file->storeAs($destination_path, $fileName, 'public');
+            }
+        };
+
         DB::beginTransaction();
         try {
             if ($jenis == 'i') {
@@ -172,6 +208,12 @@ class IzinController extends Controller
                 $last_kode = $lastizin ? $lastizin->kode_izin : '';
                 $kode = buatkode($last_kode, "IA" . date('ym', strtotime($dari)), 4);
 
+                $docIzinName = null;
+                if ($uploadedFile) {
+                    $ext = strtolower($uploadedFile->getClientOriginalExtension() ?: 'jpg');
+                    $docIzinName = $kode . "." . $ext;
+                }
+
                 $izin = new Izinabsen();
                 $izin->kode_izin = $kode;
                 $izin->nik = $nik;
@@ -181,7 +223,14 @@ class IzinController extends Controller
                 $izin->keterangan = $keterangan;
                 $izin->status = 0;
                 $izin->approval_step = 1;
+                if ($docIzinName && Schema::hasColumn('presensi_izinabsen', 'doc_izin')) {
+                    $izin->doc_izin = $docIzinName;
+                }
                 $izin->save();
+
+                if ($uploadedFile && $docIzinName) {
+                    $saveFile($uploadedFile, 'absen', $docIzinName);
+                }
 
             } elseif ($jenis == 's') {
                 // Izin Sakit
@@ -194,9 +243,8 @@ class IzinController extends Controller
                 $kode = buatkode($last_kode, "IS" . date('ym', strtotime($dari)), 4);
 
                 $sid_name = null;
-                $file_sid = $request->file('sid');
-                if ($file_sid) {
-                    $ext = strtolower($file_sid->getClientOriginalExtension() ?: 'jpg');
+                if ($uploadedFile) {
+                    $ext = strtolower($uploadedFile->getClientOriginalExtension() ?: 'jpg');
                     $sid_name = $kode . "." . $ext;
                 }
 
@@ -215,22 +263,8 @@ class IzinController extends Controller
                 }
                 $sakit->save();
 
-                if ($file_sid && $sid_name) {
-                    $destination_sid_path = "uploads/sid";
-                    $ext = strtolower($file_sid->getClientOriginalExtension() ?: 'jpg');
-                    if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
-                        try {
-                            $manager = new \Intervention\Image\ImageManager(new \Intervention\Image\Drivers\Gd\Driver());
-                            $image = $manager->read($file_sid);
-                            $encodedImage = (string) $image->toJpeg(75);
-                            Storage::disk('public')->put($destination_sid_path . "/" . $sid_name, $encodedImage);
-                        } catch (\Exception $e) {
-                            $file_sid->storeAs($destination_sid_path, $sid_name, 'public');
-                        }
-                    } else {
-                        // PDF
-                        $file_sid->storeAs($destination_sid_path, $sid_name, 'public');
-                    }
+                if ($uploadedFile && $sid_name) {
+                    $saveFile($uploadedFile, 'sid', $sid_name);
                 }
 
             } elseif ($jenis == 'c') {
@@ -256,11 +290,9 @@ class IzinController extends Controller
                 $last_kode = $lastizincuti ? $lastizincuti->kode_izin_cuti : '';
                 $kode = buatkode($last_kode, "IC" . date('ym', strtotime($dari)), 4);
 
-                // Handle attachment for cuti (PDF / Gambar)
                 $docCutiName = null;
-                $fileCuti = $request->file('doc_cuti') ?? $request->file('lampiran') ?? $request->file('sid');
-                if ($fileCuti) {
-                    $ext = strtolower($fileCuti->getClientOriginalExtension() ?: 'jpg');
+                if ($uploadedFile) {
+                    $ext = strtolower($uploadedFile->getClientOriginalExtension() ?: 'jpg');
                     $docCutiName = $kode . "." . $ext;
                 }
 
@@ -280,22 +312,8 @@ class IzinController extends Controller
                 }
                 $cuti->save();
 
-                if ($fileCuti && $docCutiName) {
-                    $destination_cuti_path = "uploads/cuti";
-                    $ext = strtolower($fileCuti->getClientOriginalExtension() ?: 'jpg');
-                    if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
-                        try {
-                            $manager = new \Intervention\Image\ImageManager(new \Intervention\Image\Drivers\Gd\Driver());
-                            $image = $manager->read($fileCuti);
-                            $encodedImage = (string) $image->toJpeg(80);
-                            Storage::disk('public')->put($destination_cuti_path . "/" . $docCutiName, $encodedImage);
-                        } catch (\Exception $e) {
-                            $fileCuti->storeAs($destination_cuti_path, $docCutiName, 'public');
-                        }
-                    } else {
-                        // PDF
-                        $fileCuti->storeAs($destination_cuti_path, $docCutiName, 'public');
-                    }
+                if ($uploadedFile && $docCutiName) {
+                    $saveFile($uploadedFile, 'cuti', $docCutiName);
                 }
 
             } elseif ($jenis == 'd') {
@@ -308,6 +326,12 @@ class IzinController extends Controller
                 $last_kode = $lastizindinas ? $lastizindinas->kode_izin_dinas : '';
                 $kode = buatkode($last_kode, "ID" . date('ym', strtotime($dari)), 4);
 
+                $docDinasName = null;
+                if ($uploadedFile) {
+                    $ext = strtolower($uploadedFile->getClientOriginalExtension() ?: 'jpg');
+                    $docDinasName = $kode . "." . $ext;
+                }
+
                 $dinas = new Izindinas();
                 $dinas->kode_izin_dinas = $kode;
                 $dinas->nik = $nik;
@@ -317,7 +341,15 @@ class IzinController extends Controller
                 $dinas->keterangan = $keterangan;
                 $dinas->status = 0;
                 $dinas->approval_step = 1;
+                if ($docDinasName && Schema::hasColumn('presensi_izindinas', 'doc_dinas')) {
+                    $dinas->doc_dinas = $docDinasName;
+                }
                 $dinas->save();
+
+                if ($uploadedFile && $docDinasName) {
+                    $saveFile($uploadedFile, 'dinas', $docDinasName);
+                }
+
             } elseif ($jenis == 'k') {
                 // Koreksi Absen
                 $lastkoreksi = Koreksi::select('kode_koreksi')
@@ -327,6 +359,12 @@ class IzinController extends Controller
                     ->first();
                 $last_kode = $lastkoreksi ? $lastkoreksi->kode_koreksi : '';
                 $kode = buatkode($last_kode, "KP" . date('ym', strtotime($dari)), 4);
+
+                $docKoreksiName = null;
+                if ($uploadedFile) {
+                    $ext = strtolower($uploadedFile->getClientOriginalExtension() ?: 'jpg');
+                    $docKoreksiName = $kode . "." . $ext;
+                }
 
                 $koreksi = new Koreksi();
                 $koreksi->kode_koreksi = $kode;
@@ -339,7 +377,14 @@ class IzinController extends Controller
                 $koreksi->status = 0;
                 $koreksi->approval_step = 1;
                 $koreksi->id_user = $user->id;
+                if ($docKoreksiName && Schema::hasColumn('presensi_koreksi', 'doc_koreksi')) {
+                    $koreksi->doc_koreksi = $docKoreksiName;
+                }
                 $koreksi->save();
+
+                if ($uploadedFile && $docKoreksiName) {
+                    $saveFile($uploadedFile, 'koreksi', $docKoreksiName);
+                }
             }
 
             DB::commit();
@@ -402,17 +447,30 @@ class IzinController extends Controller
             ], 400);
         }
 
-        if ($prefix === 'IS' && $record->doc_sid) {
-            $sid_path = "uploads/sid/" . $record->doc_sid;
-            if (Storage::disk('public')->exists($sid_path)) {
-                Storage::disk('public')->delete($sid_path);
+        if ($prefix === 'IA' && !empty($record->doc_izin)) {
+            $path = "uploads/absen/" . $record->doc_izin;
+            if (Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
             }
-        }
-
-        if ($prefix === 'IC' && !empty($record->doc_cuti)) {
-            $cuti_path = "uploads/cuti/" . $record->doc_cuti;
-            if (Storage::disk('public')->exists($cuti_path)) {
-                Storage::disk('public')->delete($cuti_path);
+        } elseif ($prefix === 'IS' && !empty($record->doc_sid)) {
+            $path = "uploads/sid/" . $record->doc_sid;
+            if (Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
+        } elseif ($prefix === 'IC' && !empty($record->doc_cuti)) {
+            $path = "uploads/cuti/" . $record->doc_cuti;
+            if (Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
+        } elseif ($prefix === 'ID' && !empty($record->doc_dinas)) {
+            $path = "uploads/dinas/" . $record->doc_dinas;
+            if (Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
+        } elseif ($prefix === 'KP' && !empty($record->doc_koreksi)) {
+            $path = "uploads/koreksi/" . $record->doc_koreksi;
+            if (Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
             }
         }
 
