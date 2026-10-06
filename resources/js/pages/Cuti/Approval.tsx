@@ -15,7 +15,9 @@ import {
     CheckCircle,
     UserCheck,
     MapPin,
-    Smartphone
+    Smartphone,
+    Paperclip,
+    ExternalLink
 } from 'lucide-react';
 
 interface PendingRequest {
@@ -33,6 +35,7 @@ interface PendingRequest {
     nik: string;
     jam_in?: string | null;
     jam_out?: string | null;
+    doc_url?: string | null;
 }
 
 interface Props {
@@ -374,6 +377,20 @@ export default function Approval({ pendingList }: Props) {
                                                         <p className="text-xs text-stone-600 italic bg-stone-50 p-2 rounded-xl border border-stone-150 leading-relaxed line-clamp-2" title={item.keterangan}>
                                                             "{item.keterangan || 'Tidak ada alasan khusus'}"
                                                         </p>
+                                                        {item.doc_url && (
+                                                            <div className="mt-2">
+                                                                <a
+                                                                    href={item.doc_url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors"
+                                                                >
+                                                                    <Paperclip size={12} className="text-indigo-600" />
+                                                                    <span>Lihat Lampiran</span>
+                                                                    <ExternalLink size={10} className="text-indigo-400" />
+                                                                </a>
+                                                            </div>
+                                                        )}
                                                     </div>
 
                                                 </div>

@@ -51,6 +51,14 @@ class CutiApprovalController extends Controller
                 $item->jam_pengajuan = $createdAt ? $createdAt->format('H:i:s') : null;
                 $item->waktu_pengajuan = $createdAt ? $createdAt->translatedFormat('d F Y, H:i:s') : null;
                 $item->created_at_raw = $createdAt ? $createdAt->toIso8601String() : null;
+
+                $item->doc_url = null;
+                if (!empty($item->doc_cuti)) {
+                    $item->doc_url = asset('storage/uploads/cuti/' . $item->doc_cuti);
+                } elseif (!empty($item->doc_sid)) {
+                    $item->doc_url = asset('storage/uploads/sid/' . $item->doc_sid);
+                }
+
                 return $item;
             })
             ->all();
@@ -70,9 +78,21 @@ class CutiApprovalController extends Controller
 
     private function getPendingIzinCuti()
     {
+        $hasDocCuti = \Illuminate\Support\Facades\Schema::hasColumn('presensi_izincuti', 'doc_cuti');
         return Izincuti::where('status', 0)
             ->join('karyawan', 'presensi_izincuti.nik', '=', 'karyawan.nik')
-            ->select('presensi_izincuti.kode_izin_cuti as id', 'presensi_izincuti.tanggal', 'presensi_izincuti.created_at', 'presensi_izincuti.keterangan', 'presensi_izincuti.dari', 'presensi_izincuti.sampai', DB::raw("'Cuti' as tipe"), 'karyawan.nama_karyawan', 'karyawan.nik')
+            ->select(
+                'presensi_izincuti.kode_izin_cuti as id',
+                'presensi_izincuti.tanggal',
+                'presensi_izincuti.created_at',
+                'presensi_izincuti.keterangan',
+                'presensi_izincuti.dari',
+                'presensi_izincuti.sampai',
+                DB::raw("'Cuti' as tipe"),
+                'karyawan.nama_karyawan',
+                'karyawan.nik',
+                $hasDocCuti ? 'presensi_izincuti.doc_cuti' : DB::raw('NULL as doc_cuti')
+            )
             ->get();
     }
 
@@ -80,7 +100,18 @@ class CutiApprovalController extends Controller
     {
         return Izinsakit::where('status', 0)
             ->join('karyawan', 'presensi_izinsakit.nik', '=', 'karyawan.nik')
-            ->select('presensi_izinsakit.kode_izin_sakit as id', 'presensi_izinsakit.tanggal', 'presensi_izinsakit.created_at', 'presensi_izinsakit.keterangan', 'presensi_izinsakit.dari', 'presensi_izinsakit.sampai', DB::raw("'Sakit' as tipe"), 'karyawan.nama_karyawan', 'karyawan.nik')
+            ->select(
+                'presensi_izinsakit.kode_izin_sakit as id',
+                'presensi_izinsakit.tanggal',
+                'presensi_izinsakit.created_at',
+                'presensi_izinsakit.keterangan',
+                'presensi_izinsakit.dari',
+                'presensi_izinsakit.sampai',
+                DB::raw("'Sakit' as tipe"),
+                'karyawan.nama_karyawan',
+                'karyawan.nik',
+                'presensi_izinsakit.doc_sid'
+            )
             ->get();
     }
 
