@@ -8,6 +8,7 @@ use App\Models\Karyawan;
 use App\Models\Presensi;
 use App\Models\Jamkerja;
 use App\Models\Pengaturanumum;
+use App\Models\Facerecognition;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -59,6 +60,23 @@ class PresensiController extends Controller
                 'message' => 'Validasi gagal',
                 'errors' => $validator->errors()
             ], 422);
+        }
+
+        // Validasi: Wajib memiliki data wajah terdaftar di profil karyawan sebelum Clock In / Clock Out
+        $nama_folder_wajah = $karyawan->nik . "-" . getNamaDepan(strtolower($karyawan->nama_karyawan));
+        $folderWajahPath = "uploads/facerecognition/" . $nama_folder_wajah;
+
+        $hasRegisteredFacesInDb = Facerecognition::where('nik', $karyawan->nik)->exists();
+        $hasRegisteredFacesInStorage = Storage::disk('public')->exists($folderWajahPath) 
+            && count(Storage::disk('public')->files($folderWajahPath)) > 0;
+
+        if (!$hasRegisteredFacesInDb || !$hasRegisteredFacesInStorage) {
+            $actionText = $status == 1 ? 'masuk (Clock In)' : 'pulang (Clock Out)';
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak dapat melakukan absen ' . $actionText . ' karena belum ada data wajah yang terdaftar pada profil karyawan Anda. Silakan hubungi admin atau daftarkan wajah Anda terlebih dahulu.',
+                'code' => 'FACE_NOT_REGISTERED'
+            ], 400);
         }
 
         try {
@@ -174,13 +192,7 @@ class PresensiController extends Controller
             $selfieFullPath = Storage::disk('public')->path($folderPath . $fileName);
             $nama_folder_wajah = $karyawan->nik . "-" . getNamaDepan(strtolower($karyawan->nama_karyawan));
             $folderWajahPath = "uploads/facerecognition/" . $nama_folder_wajah;
-            
-            $hasRegisteredFaces = Storage::disk('public')->exists($folderWajahPath) && count(Storage::disk('public')->files($folderWajahPath)) > 0;
-            
-            $registeredDirArg = "";
-            if ($generalsetting && $generalsetting->face_recognition == 1 && $hasRegisteredFaces) {
-                $registeredDirArg = Storage::disk('public')->path($folderWajahPath);
-            }
+            $registeredDirArg = Storage::disk('public')->path($folderWajahPath);
 
             $pythonPath = PHP_OS_FAMILY === 'Windows' ? 'python' : 'python3';
             if (PHP_OS_FAMILY === 'Windows') {
@@ -451,6 +463,22 @@ class PresensiController extends Controller
                 'message' => 'Validasi gagal',
                 'errors' => $validator->errors()
             ], 422);
+        }
+
+        // Validasi: Wajib memiliki data wajah terdaftar di profil karyawan
+        $nama_folder_wajah = $karyawan->nik . "-" . getNamaDepan(strtolower($karyawan->nama_karyawan));
+        $folderWajahPath = "uploads/facerecognition/" . $nama_folder_wajah;
+
+        $hasRegisteredFacesInDb = Facerecognition::where('nik', $karyawan->nik)->exists();
+        $hasRegisteredFacesInStorage = Storage::disk('public')->exists($folderWajahPath) 
+            && count(Storage::disk('public')->files($folderWajahPath)) > 0;
+
+        if (!$hasRegisteredFacesInDb || !$hasRegisteredFacesInStorage) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak dapat melakukan absensi istirahat karena belum ada data wajah yang terdaftar pada profil karyawan Anda. Silakan hubungi admin atau daftarkan wajah Anda terlebih dahulu.',
+                'code' => 'FACE_NOT_REGISTERED'
+            ], 400);
         }
 
         try {

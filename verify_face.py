@@ -266,17 +266,16 @@ selfie_feature = extract_feature(selfie_path)
 if selfie_feature is None:
     exit_with_json(False, "Wajah tidak terdeteksi pada foto selfie Anda. Pastikan wajah tegak, tidak tertutup masker/kacamata hitam, dan menghadap kamera.")
 
-# If registered directory is not provided or empty, we succeed on quality validation!
+# Pengecekan direktori wajah terdaftar: Karyawan WAJIB memiliki data wajah terdaftar
 if not registered_dir or not os.path.exists(registered_dir) or not os.path.isdir(registered_dir):
-    exit_with_json(True, "Kualitas foto selfie memenuhi syarat (Pencocokan wajah dilewati).", 1.0)
+    exit_with_json(False, "Data wajah karyawan belum terdaftar di sistem. Silakan daftarkan wajah terlebih dahulu.")
 
 # Scan registered folder and compare
 registered_files = [os.path.join(registered_dir, f) for f in os.listdir(registered_dir) 
                     if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp'))]
 
 if not registered_files:
-    # If folder has no images, still succeed on quality validation
-    exit_with_json(True, "Kualitas foto selfie memenuhi syarat (Tidak ada wajah pembanding terdaftar).", 1.0)
+    exit_with_json(False, "Berkas foto wajah terdaftar tidak ditemukan di sistem. Silakan hubungi admin atau daftarkan ulang wajah Anda.")
 
 best_score = -1.0
 

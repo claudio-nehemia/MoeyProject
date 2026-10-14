@@ -8,9 +8,11 @@ use App\Models\Pengumuman;
 use App\Models\Karyawan;
 use App\Models\Pengaturanumum;
 use App\Models\Cabang;
+use App\Models\Facerecognition;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class DashboardController extends Controller
 {
@@ -267,6 +269,13 @@ class DashboardController extends Controller
                     'lokasi_cabang' => $cabang->lokasi_cabang,
                     'radius_cabang' => (int) $cabang->radius_cabang,
                 ] : null,
+                'has_face_registered' => (
+                    $karyawan ? (
+                        Facerecognition::where('nik', $nik)->exists() &&
+                        Storage::disk('public')->exists('uploads/facerecognition/' . $nik . '-' . getNamaDepan(strtolower($karyawan->nama_karyawan))) &&
+                        count(Storage::disk('public')->files('uploads/facerecognition/' . $nik . '-' . getNamaDepan(strtolower($karyawan->nama_karyawan)))) > 0
+                    ) : false
+                ),
                 'lock_location' => $karyawan ? (int) $karyawan->lock_location : 1,
                 'jam_kerja' => $jamkerja ? [
                     'kode_jam_kerja' => $jamkerja->kode_jam_kerja,
