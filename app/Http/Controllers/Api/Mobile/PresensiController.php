@@ -451,10 +451,10 @@ class PresensiController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'status' => 'required|in:1,2', // 1 = Mulai Istirahat, 2 = Selesai Istirahat
+            'status' => 'nullable|in:1,2', // 1 = Mulai Istirahat, 2 = Selesai Istirahat
             'lokasi' => 'required|string',
             'kode_jam_kerja' => 'nullable|string',
-            'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
         ]);
 
         if ($validator->fails()) {
@@ -482,10 +482,6 @@ class PresensiController extends Controller
         }
 
         try {
-            $status = $request->input('status');
-            $lokasi = $request->input('lokasi');
-            $kode_jam_kerja = $request->input('kode_jam_kerja');
-
             $generalsetting = Pengaturanumum::where('id', 1)->first();
             $tanggal_sekarang = Carbon::now(config('app.timezone'))->format('Y-m-d');
             $jam_sekarang = Carbon::now(config('app.timezone'))->format('H:i');
@@ -510,6 +506,15 @@ class PresensiController extends Controller
                 ], 400);
             }
 
+            // Tentukan status (jika tidak dikirim dari request, otomatis toggle berdasarkan kondisi saat ini)
+            $status = $request->input('status');
+            if (empty($status)) {
+                $status = ($presensi_hariini->istirahat_out != null) ? 2 : 1;
+            }
+
+            $lokasi = $request->input('lokasi');
+            $kode_jam_kerja = $request->input('kode_jam_kerja');
+
             $jam_kerja = null;
             if (!empty($kode_jam_kerja)) {
                 $jam_kerja = Jamkerja::where('kode_jam_kerja', $kode_jam_kerja)->first();
@@ -525,18 +530,19 @@ class PresensiController extends Controller
                 ], 400);
             }
 
-            // Save break selfie
+            // Handle optional break selfie
+            $fileName = null;
             $in_out = $status == 1 ? "out" : "in";
-            $folderPath = "public/uploads/istirahat/";
-            if (!Storage::exists($folderPath)) {
-                Storage::makeDirectory($folderPath, 0775, true);
-            }
-
             $jam_presensi = Carbon::now(config('app.timezone'))->format('Y-m-d H:i:s');
-            $fileName = $karyawan->nik . "-" . $tanggal_presensi . "-" . $in_out . ".png";
 
-            $imageFile = $request->file('image');
-            Storage::put($folderPath . $fileName, file_get_contents($imageFile));
+            if ($request->hasFile('image')) {
+                $folderPath = "uploads/istirahat/";
+                if (!Storage::disk('public')->exists($folderPath)) {
+                    Storage::disk('public')->makeDirectory($folderPath, 0775, true);
+                }
+                $fileName = $karyawan->nik . "-" . $tanggal_presensi . "-" . $in_out . ".png";
+                Storage::disk('public')->put($folderPath . $fileName, file_get_contents($request->file('image')));
+            }
 
             $batas_jam_absen = 30;
             $jam_awal_istirahat = $tanggal_presensi . " " . date('H:i', strtotime($jam_kerja->jam_awal_istirahat));
@@ -569,7 +575,7 @@ class PresensiController extends Controller
                     'message' => 'Berhasil memulai istirahat',
                     'data' => [
                         'istirahat_out' => Carbon::now(config('app.timezone'))->format('H:i'),
-                        'foto_istirahat_out' => asset('storage/uploads/istirahat/' . $fileName)
+                        'foto_istirahat_out' => $fileName ? asset('storage/uploads/istirahat/' . $fileName) : null
                     ]
                 ]);
             } else {
@@ -599,7 +605,7 @@ class PresensiController extends Controller
                     'message' => 'Berhasil mengakhiri istirahat',
                     'data' => [
                         'istirahat_in' => Carbon::now(config('app.timezone'))->format('H:i'),
-                        'foto_istirahat_in' => asset('storage/uploads/istirahat/' . $fileName)
+                        'foto_istirahat_in' => $fileName ? asset('storage/uploads/istirahat/' . $fileName) : null
                     ]
                 ]);
             }
