@@ -62,7 +62,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Face Registration
         Route::get('face-recognition', [\App\Http\Controllers\Api\Mobile\FacerecognitionController::class, 'index']);
         Route::post('face-recognition', [\App\Http\Controllers\Api\Mobile\FacerecognitionController::class, 'store']);
-        Route::delete('face-recognition', [\App\Http\Controllers\Api\Mobile\FacerecognitionController::class, 'destroy']);
+        Route::delete('face-recognition/{id?}', [\App\Http\Controllers\Api\Mobile\FacerecognitionController::class, 'destroy']);
         
         // Visit Tracking (Opsional)
         Route::get('kunjungan', [\App\Http\Controllers\Api\Mobile\KunjunganController::class, 'index']);
