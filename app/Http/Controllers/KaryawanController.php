@@ -306,7 +306,7 @@ class KaryawanController extends Controller
         $karyawan = Karyawan::findOrFail($nik);
 
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg|max:2048'
+            'image' => 'required|file|mimes:jpeg,png,jpg,webp,heic,heif|max:10240'
         ]);
 
         $image = $request->file('image');
@@ -321,8 +321,23 @@ class KaryawanController extends Controller
 
         $existingCount = Facerecognition::where('nik', $nik)->count();
         $fileName = ($existingCount + 1) . "_front.png";
+        $ext = strtolower($image->getClientOriginalExtension());
+        $targetFullPath = Storage::disk('public')->path($folderPath . '/' . $fileName);
 
-        $image->storeAs($folderPath, $fileName, 'public');
+        if (in_array($ext, ['heic', 'heif'])) {
+            $tempName = 'temp_' . uniqid() . '.' . $ext;
+            $image->storeAs($folderPath, $tempName, 'public');
+            $tempFullPath = Storage::disk('public')->path($folderPath . '/' . $tempName);
+            $converted = convertHeicToStandardImage($tempFullPath, $targetFullPath);
+            if (file_exists($tempFullPath)) {
+                @unlink($tempFullPath);
+            }
+            if (!$converted || !file_exists($targetFullPath)) {
+                $image->storeAs($folderPath, $fileName, 'public');
+            }
+        } else {
+            $image->storeAs($folderPath, $fileName, 'public');
+        }
 
         Facerecognition::create([
             'nik' => $nik,

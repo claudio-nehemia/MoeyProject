@@ -94,7 +94,7 @@ class AktivitasController extends Controller
         $validator = Validator::make($request->all(), [
             'aktivitas' => 'required|string|max:1000',
             'lokasi' => 'required|string|max:255', // "lat,lng"
-            'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:4096'
+            'image' => 'required|file|mimes:jpeg,png,jpg,webp,heic,heif|max:10240'
         ]);
 
         if ($validator->fails()) {
@@ -115,7 +115,23 @@ class AktivitasController extends Controller
             }
 
             $imageFile = $request->file('image');
-            Storage::disk('public')->put($filepath, file_get_contents($imageFile));
+            $ext = strtolower($imageFile->getClientOriginalExtension());
+            $targetFullPath = Storage::disk('public')->path($filepath);
+
+            if (in_array($ext, ['heic', 'heif'])) {
+                $tempName = 'temp_' . uniqid() . '.' . $ext;
+                $imageFile->storeAs($destinationPath, $tempName, 'public');
+                $tempFullPath = Storage::disk('public')->path($destinationPath . $tempName);
+                $converted = convertHeicToStandardImage($tempFullPath, $targetFullPath);
+                if (file_exists($tempFullPath)) {
+                    @unlink($tempFullPath);
+                }
+                if (!$converted || !file_exists($targetFullPath)) {
+                    Storage::disk('public')->put($filepath, file_get_contents($imageFile));
+                }
+            } else {
+                Storage::disk('public')->put($filepath, file_get_contents($imageFile));
+            }
 
             $aktivitas = AktivitasKaryawan::create([
                 'nik' => $karyawan->nik,

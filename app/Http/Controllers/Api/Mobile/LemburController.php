@@ -132,7 +132,7 @@ class LemburController extends Controller
             'id_lembur' => 'required|integer',
             'status' => 'required|in:1,2', // 1 = masuk, 2 = pulang
             'lokasi' => 'required|string', // "latitude,longitude"
-            'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'image' => 'required|file|mimes:jpeg,png,jpg,webp,heic,heif|max:10240',
         ]);
 
         if ($validator->fails()) {
@@ -224,7 +224,23 @@ class LemburController extends Controller
 
             $fileName = $karyawan->nik . "-" . $tanggal_sekarang . "-" . $in_out . ".png";
             $imageFile = $request->file('image');
-            Storage::disk('public')->put($folderPath . $fileName, file_get_contents($imageFile));
+            $ext = strtolower($imageFile->getClientOriginalExtension());
+            $selfieFullPath = Storage::disk('public')->path($folderPath . $fileName);
+
+            if (in_array($ext, ['heic', 'heif'])) {
+                $tempName = 'temp_' . uniqid() . '.' . $ext;
+                $imageFile->storeAs($folderPath, $tempName, 'public');
+                $tempFullPath = Storage::disk('public')->path($folderPath . $tempName);
+                $converted = convertHeicToStandardImage($tempFullPath, $selfieFullPath);
+                if (file_exists($tempFullPath)) {
+                    @unlink($tempFullPath);
+                }
+                if (!$converted || !file_exists($selfieFullPath)) {
+                    Storage::disk('public')->put($folderPath . $fileName, file_get_contents($imageFile));
+                }
+            } else {
+                Storage::disk('public')->put($folderPath . $fileName, file_get_contents($imageFile));
+            }
 
             // Run Selfie Quality Check & Face Recognition
             $selfieFullPath = Storage::disk('public')->path($folderPath . $fileName);

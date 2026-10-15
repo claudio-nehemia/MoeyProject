@@ -93,17 +93,17 @@ class FacerecognitionController extends Controller
             }
 
             $extension = strtolower($file->getClientOriginalExtension());
-            if (!in_array($extension, ['jpg', 'jpeg', 'png', 'webp'])) {
+            if (!in_array($extension, ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Format berkas harus berupa JPG, JPEG, PNG, atau WEBP'
+                    'message' => 'Format berkas harus berupa JPG, JPEG, PNG, WEBP, atau HEIC'
                 ], 400);
             }
 
-            if ($file->getSize() > 5 * 1024 * 1024) {
+            if ($file->getSize() > 10 * 1024 * 1024) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Ukuran gambar maksimal adalah 5MB'
+                    'message' => 'Ukuran gambar maksimal adalah 10MB'
                 ], 400);
             }
         }
@@ -121,10 +121,28 @@ class FacerecognitionController extends Controller
             $urutan = $cekWajah + 1;
 
             foreach ($files as $index => $file) {
+                $ext = strtolower($file->getClientOriginalExtension());
                 $direction = $request->input("directions.$index", 'front');
                 $fileName = $urutan . "_" . $direction . ".png";
+                $targetFullPath = Storage::disk('public')->path($folderPath . $fileName);
                 
-                $file->storeAs($folderPath, $fileName, 'public');
+                if (in_array($ext, ['heic', 'heif'])) {
+                    $tempName = 'temp_' . uniqid() . '.' . $ext;
+                    $file->storeAs($folderPath, $tempName, 'public');
+                    $tempFullPath = Storage::disk('public')->path($folderPath . $tempName);
+
+                    $converted = convertHeicToStandardImage($tempFullPath, $targetFullPath);
+                    if (file_exists($tempFullPath)) {
+                        @unlink($tempFullPath);
+                    }
+
+                    if (!$converted || !file_exists($targetFullPath)) {
+                        // Fallback store as is
+                        $file->storeAs($folderPath, $fileName, 'public');
+                    }
+                } else {
+                    $file->storeAs($folderPath, $fileName, 'public');
+                }
 
                 $faceRecord = Facerecognition::create([
                     'nik' => $karyawan->nik,

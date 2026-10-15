@@ -51,7 +51,7 @@ class PresensiController extends Controller
         $validator = Validator::make($request->all(), [
             'lokasi' => 'required|string', // "latitude,longitude"
             'kode_jam_kerja' => 'nullable|string',
-            'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'image' => 'required|file|mimes:jpeg,png,jpg,webp,heic,heif|max:10240',
         ]);
 
         if ($validator->fails()) {
@@ -184,9 +184,25 @@ class PresensiController extends Controller
             $jam_presensi = $tanggal_sekarang . " " . $carbon_now->format('H:i:s');
             $fileName = $karyawan->nik . "-" . $tanggal_presensi . "-" . $in_out . ".png";
 
-            // Save uploaded selfie
+            // Save uploaded selfie (convert HEIC/HEIF to PNG if needed)
             $imageFile = $request->file('image');
-            Storage::disk('public')->put($folderPath . $fileName, file_get_contents($imageFile));
+            $ext = strtolower($imageFile->getClientOriginalExtension());
+            $selfieFullPath = Storage::disk('public')->path($folderPath . $fileName);
+
+            if (in_array($ext, ['heic', 'heif'])) {
+                $tempName = 'temp_' . uniqid() . '.' . $ext;
+                $imageFile->storeAs($folderPath, $tempName, 'public');
+                $tempFullPath = Storage::disk('public')->path($folderPath . $tempName);
+                $converted = convertHeicToStandardImage($tempFullPath, $selfieFullPath);
+                if (file_exists($tempFullPath)) {
+                    @unlink($tempFullPath);
+                }
+                if (!$converted || !file_exists($selfieFullPath)) {
+                    Storage::disk('public')->put($folderPath . $fileName, file_get_contents($imageFile));
+                }
+            } else {
+                Storage::disk('public')->put($folderPath . $fileName, file_get_contents($imageFile));
+            }
 
             // Run Selfie Quality Check & Face Recognition
             $selfieFullPath = Storage::disk('public')->path($folderPath . $fileName);
@@ -454,7 +470,7 @@ class PresensiController extends Controller
             'status' => 'nullable|in:1,2', // 1 = Mulai Istirahat, 2 = Selesai Istirahat
             'lokasi' => 'required|string',
             'kode_jam_kerja' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'image' => 'nullable|file|mimes:jpeg,png,jpg,webp,heic,heif|max:10240',
         ]);
 
         if ($validator->fails()) {
@@ -541,7 +557,24 @@ class PresensiController extends Controller
                     Storage::disk('public')->makeDirectory($folderPath, 0775, true);
                 }
                 $fileName = $karyawan->nik . "-" . $tanggal_presensi . "-" . $in_out . ".png";
-                Storage::disk('public')->put($folderPath . $fileName, file_get_contents($request->file('image')));
+                $breakFile = $request->file('image');
+                $ext = strtolower($breakFile->getClientOriginalExtension());
+                $targetFullPath = Storage::disk('public')->path($folderPath . $fileName);
+
+                if (in_array($ext, ['heic', 'heif'])) {
+                    $tempName = 'temp_' . uniqid() . '.' . $ext;
+                    $breakFile->storeAs($folderPath, $tempName, 'public');
+                    $tempFullPath = Storage::disk('public')->path($folderPath . $tempName);
+                    $converted = convertHeicToStandardImage($tempFullPath, $targetFullPath);
+                    if (file_exists($tempFullPath)) {
+                        @unlink($tempFullPath);
+                    }
+                    if (!$converted || !file_exists($targetFullPath)) {
+                        Storage::disk('public')->put($folderPath . $fileName, file_get_contents($breakFile));
+                    }
+                } else {
+                    Storage::disk('public')->put($folderPath . $fileName, file_get_contents($breakFile));
+                }
             }
 
             $batas_jam_absen = 30;

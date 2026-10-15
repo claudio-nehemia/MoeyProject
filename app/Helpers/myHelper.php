@@ -174,3 +174,24 @@ function getnamaHari($hari)
     }
     return $hari_ini;
 }
+
+function convertHeicToStandardImage($inputPath, $outputPath)
+{
+    $pythonPath = PHP_OS_FAMILY === 'Windows' ? 'python' : 'python3';
+    if (PHP_OS_FAMILY === 'Windows') {
+        if (file_exists(base_path('venv/Scripts/python.exe'))) {
+            $pythonPath = escapeshellarg(base_path('venv/Scripts/python.exe'));
+        }
+    } else {
+        if (file_exists(base_path('venv/bin/python'))) {
+            $pythonPath = escapeshellarg(base_path('venv/bin/python'));
+        } elseif (file_exists(base_path('venv/bin/python3'))) {
+            $pythonPath = escapeshellarg(base_path('venv/bin/python3'));
+        }
+    }
+
+    $scriptPath = base_path('convert_heic.py');
+    $command = $pythonPath . " " . escapeshellarg($scriptPath) . " " . escapeshellarg($inputPath) . " " . escapeshellarg($outputPath) . " 2>&1";
+    $output = shell_exec($command);
+    return strpos($output, 'CONVERT_SUCCESS') !== false && file_exists($outputPath);
+}

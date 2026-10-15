@@ -23,9 +23,31 @@ registered_dir = sys.argv[2] if len(sys.argv) >= 3 else ""
 if not os.path.exists(selfie_path):
     exit_with_json(False, f"Selfie file not found: {selfie_path}")
 
+# Safely read image with OpenCV and Pillow-HEIF fallback for HEIC/HEIF
+def read_image_safely(img_path, flags=cv2.IMREAD_COLOR):
+    try:
+        img = cv2.imread(img_path, flags)
+        if img is not None:
+            return img
+    except Exception:
+        pass
+
+    try:
+        from PIL import Image
+        import pillow_heif
+        pillow_heif.register_heif_opener()
+        with Image.open(img_path) as pil_img:
+            rgb_arr = np.array(pil_img.convert('RGB'))
+            if flags == cv2.IMREAD_GRAYSCALE:
+                return cv2.cvtColor(rgb_arr, cv2.COLOR_RGB2GRAY)
+            return cv2.cvtColor(rgb_arr, cv2.COLOR_RGB2BGR)
+    except Exception as e:
+        sys.stderr.write(f"read_image_safely fallback failed on {img_path}: {str(e)}\n")
+        return None
+
 # Check blur using Laplacian variance
 def check_blur(img_path):
-    img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+    img = read_image_safely(img_path, cv2.IMREAD_GRAYSCALE)
     if img is None:
         return False, "Gagal membaca berkas gambar untuk pengecekan blur."
     laplacian_var = cv2.Laplacian(img, cv2.CV_64F).var()
@@ -35,7 +57,7 @@ def check_blur(img_path):
 
 # Check exposure / brightness levels
 def check_exposure(img_path):
-    img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+    img = read_image_safely(img_path, cv2.IMREAD_GRAYSCALE)
     if img is None:
         return False, "Gagal membaca berkas gambar untuk pengecekan pencahayaan."
     mean_brightness = img.mean()
@@ -146,7 +168,7 @@ except Exception as e:
 
 def extract_feature(img_path):
     try:
-        img = cv2.imread(img_path)
+        img = read_image_safely(img_path)
         if img is None:
             sys.stderr.write(f"Failed to read image path: {img_path}\n")
             return None
@@ -272,7 +294,7 @@ if not registered_dir or not os.path.exists(registered_dir) or not os.path.isdir
 
 # Scan registered folder and compare
 registered_files = [os.path.join(registered_dir, f) for f in os.listdir(registered_dir) 
-                    if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp'))]
+                    if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.heic', '.heif'))]
 
 if not registered_files:
     exit_with_json(False, "Berkas foto wajah terdaftar tidak ditemukan di sistem. Silakan hubungi admin atau daftarkan ulang wajah Anda.")
