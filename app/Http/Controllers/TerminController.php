@@ -47,6 +47,19 @@ class TerminController extends Controller
         return redirect()->back()->with('success', 'Termin created successfully.');
     }
 
+    public function create()
+    {
+        return redirect()->route('termin.index');
+    }
+
+    public function show(Termin $termin)
+    {
+        if (request()->wantsJson()) {
+            return $this->edit($termin);
+        }
+        return redirect()->route('termin.index');
+    }
+
     public function edit(Termin $termin)
     {
         // Transform DB → FE format

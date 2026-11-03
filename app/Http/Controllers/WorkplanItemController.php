@@ -369,6 +369,8 @@ class WorkplanItemController extends Controller
                     $existingWorkplans = $produk->workplanItems;
                     $responseTime = $existingWorkplans->first()?->response_time;
                     $responseBy = $existingWorkplans->first()?->response_by;
+                    $pmResponseTime = $existingWorkplans->first()?->pm_response_time;
+                    $pmResponseBy = $existingWorkplans->first()?->pm_response_by;
 
                     $produk->workplanItems()->delete();
 
@@ -392,6 +394,8 @@ class WorkplanItemController extends Controller
                             'catatan' => $item['catatan'] ?? null,
                             'response_time' => $responseTime, // Preserve response tracking
                             'response_by' => $responseBy,
+                            'pm_response_time' => $pmResponseTime,
+                            'pm_response_by' => $pmResponseBy,
                         ]);
                     }
                 }
@@ -485,7 +489,13 @@ class WorkplanItemController extends Controller
                 foreach ($ipData['produks'] as $produkData) {
                     $produk = ItemPekerjaanProduk::find($produkData['id']);
 
-                    // Hapus workplan lama dan buat baru
+                    // Hapus workplan lama dan buat baru dengan preserve response info
+                    $existingWorkplans = $produk->workplanItems;
+                    $responseTime = $existingWorkplans->first()?->response_time;
+                    $responseBy = $existingWorkplans->first()?->response_by;
+                    $pmResponseTime = $existingWorkplans->first()?->pm_response_time;
+                    $pmResponseBy = $existingWorkplans->first()?->pm_response_by;
+
                     $produk->workplanItems()->delete();
 
                     foreach ($produkData['workplan_items'] as $index => $item) {
@@ -506,6 +516,10 @@ class WorkplanItemController extends Controller
                             'urutan' => $index + 1,
                             'status' => $item['status'],
                             'catatan' => $item['catatan'] ?? null,
+                            'response_time' => $responseTime,
+                            'response_by' => $responseBy,
+                            'pm_response_time' => $pmResponseTime,
+                            'pm_response_by' => $pmResponseBy,
                         ]);
                     }
                 }

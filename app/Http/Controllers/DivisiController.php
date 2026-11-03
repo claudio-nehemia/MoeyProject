@@ -29,6 +29,14 @@ class DivisiController extends Controller
         return redirect()->back()->with('success', 'Divisi created successfully.');
     }
 
+    public function show(Divisi $divisi)
+    {
+        if (request()->wantsJson()) {
+            return response()->json($divisi);
+        }
+        return redirect()->route('divisi.index');
+    }
+
     public function edit(Divisi $divisi)
     {
         return response()->json($divisi);

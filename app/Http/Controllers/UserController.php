@@ -55,6 +55,15 @@ class UserController extends Controller
         return redirect()->back()->with('success', 'User created successfully.');
     }
 
+    public function show(User $user)
+    {
+        $user->load('role.divisi', 'roles');
+        if (request()->wantsJson()) {
+            return response()->json($user);
+        }
+        return redirect()->route('user.index');
+    }
+
     public function edit(User $user)
     {
         $roles = Role::select('id', 'nama_role')->get();

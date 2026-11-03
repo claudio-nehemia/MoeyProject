@@ -67,10 +67,30 @@ class SlipgajiHarianController extends Controller
         $slipgaji = SlipgajiHarian::where('kode_slip_gaji_harian', $kode_slip)->firstOrFail();
         $detail = SlipgajiHarianDetail::where('kode_slip_gaji_harian', $kode_slip)
             ->join('karyawan', 'slip_gaji_harian_detail.nik', '=', 'karyawan.nik')
-            ->join('jabatan', 'karyawan.kode_jabatan', '=', 'jabatan.kode_jabatan')
-            ->join('departemen', 'karyawan.kode_dept', '=', 'departemen.kode_dept')
-            ->select('slip_gaji_harian_detail.nik', 'karyawan.nama_karyawan', 'karyawan.nik_show', 'jabatan.nama_jabatan', 'departemen.nama_dept')
+            ->leftJoin('jabatan', 'karyawan.kode_jabatan', '=', 'jabatan.kode_jabatan')
+            ->leftJoin('departemen', 'karyawan.kode_dept', '=', 'departemen.kode_dept')
+            ->leftJoin('users', 'karyawan.user_id', '=', 'users.id')
+            ->leftJoin('roles', 'users.role_id', '=', 'roles.id')
+            ->leftJoin('divisis', 'roles.divisi_id', '=', 'divisis.id')
+            ->select(
+                'slip_gaji_harian_detail.nik',
+                'karyawan.nama_karyawan',
+                'karyawan.nik_show',
+                DB::raw("COALESCE(jabatan.nama_jabatan, roles.nama_role, '-') as nama_jabatan"),
+                DB::raw("COALESCE(departemen.nama_dept, divisis.nama_divisi, '-') as nama_dept")
+            )
             ->get();
+
+        if (request()->wantsJson()) {
+            return response()->json([
+                'slipgaji' => $slipgaji,
+                'detail' => $detail,
+                'props' => [
+                    'slipgaji' => $slipgaji,
+                    'detail' => $detail,
+                ],
+            ]);
+        }
 
         return Inertia::render('SlipgajiHarian/Show', [
             'slipgaji' => $slipgaji,
@@ -142,12 +162,20 @@ class SlipgajiHarianController extends Controller
         $karyawan = Karyawan::whereIn('karyawan.nik', $nik)
             ->leftJoin('jabatan', 'karyawan.kode_jabatan', '=', 'jabatan.kode_jabatan')
             ->leftJoin('departemen', 'karyawan.kode_dept', '=', 'departemen.kode_dept')
-            ->select('karyawan.*', 'jabatan.nama_jabatan', 'departemen.nama_dept')
+            ->leftJoin('users', 'karyawan.user_id', '=', 'users.id')
+            ->leftJoin('roles', 'users.role_id', '=', 'roles.id')
+            ->leftJoin('divisis', 'roles.divisi_id', '=', 'divisis.id')
+            ->select(
+                'karyawan.*',
+                DB::raw("COALESCE(jabatan.nama_jabatan, roles.nama_role, '-') as nama_jabatan"),
+                DB::raw("COALESCE(departemen.nama_dept, divisis.nama_divisi, '-') as nama_dept"),
+                DB::raw("COALESCE(karyawan.kode_dept, divisis.nama_divisi, '-') as kode_dept")
+            )
             ->get();
 
         $presensi = Presensi::whereIn('nik', $nik)
             ->whereBetween('tanggal', [$periode_dari, $periode_sampai])
-            ->join('presensi_jamkerja', 'presensi.kode_jam_kerja', '=', 'presensi_jamkerja.kode_jam_kerja')
+            ->leftJoin('presensi_jamkerja', 'presensi.kode_jam_kerja', '=', 'presensi_jamkerja.kode_jam_kerja')
             ->select('presensi.*', 'presensi_jamkerja.jam_masuk', 'presensi_jamkerja.jam_pulang')
             ->get();
 

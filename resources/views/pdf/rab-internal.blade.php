@@ -604,7 +604,7 @@
                             GRAND TOTAL RAB INTERNAL
                         </div>
                         <div class="final-total-sublabel">
-                            Total produk internal ({{ count(array_filter($produks, fn($p) => strtolower($p['kategori'] ?? 'internal') === 'internal')) }} produk)
+                            Total produk internal ({{ collect($produks)->filter(fn($p) => strtolower($p['kategori'] ?? 'internal') === 'internal')->count() }} produk)
                         </div>
                     </td>
                     <td style="width: 35%;" class="final-total-amount">

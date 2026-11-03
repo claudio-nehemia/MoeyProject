@@ -173,11 +173,12 @@ export default function Index({ slipgajis, slipgaji_harian, karyawans, list_bula
         });
 
         // Fetch detail employees for this slip
-        fetch(`/slip-gaji-harian/${item.kode_slip_gaji_harian}`, { headers: { 'X-Inertia': 'true', 'X-Inertia-Version': '1.0' } })
+        fetch(`/slip-gaji-harian/${item.kode_slip_gaji_harian}`, { headers: { 'Accept': 'application/json' } })
             .then(res => res.json())
             .then(json => {
-                if (json.props && json.props.detail) {
-                    const niks = json.props.detail.map((d: any) => d.nik);
+                const detailList = json.detail || (json.props && json.props.detail);
+                if (detailList) {
+                    const niks = detailList.map((d: any) => d.nik);
                     setSelectedNiks(niks);
                     formH.setData(prev => ({ ...prev, nik: niks }));
                 }

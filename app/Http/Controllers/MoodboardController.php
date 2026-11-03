@@ -102,8 +102,9 @@ class MoodboardController extends Controller
     public function show($id)
     {
         $moodboard = Moodboard::with('order')->findOrFail($id);
-        return Inertia::render('Moodboard/Show', [
-            'moodboard' => $moodboard,
-        ]);
+        if (request()->wantsJson()) {
+            return response()->json(['moodboard' => $moodboard]);
+        }
+        return redirect()->route('moodboard.index');
     }
 }

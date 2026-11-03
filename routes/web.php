@@ -59,10 +59,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::prefix('notifications')->name('notifications.')->group(function () {
             Route::get('/', [NotificationController::class, 'index'])->name('index');
             Route::get('/unread-count', [NotificationController::class, 'unreadCount'])->name('unread-count');
-            Route::post('/{id}/mark-as-read', [NotificationController::class, 'markAsRead'])->name('mark-as-read');
             Route::post('/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('mark-all-as-read');
-            Route::post('/{id}/response', [NotificationController::class, 'handleResponse'])->name('response');
-            Route::delete('/{id}', [NotificationController::class, 'destroy'])->name('destroy');
+            Route::post('/{id}/mark-as-read', [NotificationController::class, 'markAsRead'])->whereNumber('id')->name('mark-as-read');
+            Route::post('/{id}/response', [NotificationController::class, 'handleResponse'])->whereNumber('id')->name('response');
+            Route::delete('/{id}', [NotificationController::class, 'destroy'])->whereNumber('id')->name('destroy');
         });
     });
 
@@ -118,7 +118,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // User Routes
     Route::middleware(['permission:user.index'])->group(function () {
         Route::get('user', [UserController::class, 'index'])->name('user.index');
+        Route::get('user/create', [UserController::class, 'create'])->name('user.create');
         Route::get('user/{user}', [UserController::class, 'show'])->name('user.show');
+        Route::get('user/{user}/edit', [UserController::class, 'edit'])->name('user.edit');
         Route::get('/api/user/roles', [UserController::class, 'fetchRoles'])->name('user.fetchRoles');
     });
     Route::post('user', [UserController::class, 'store'])
@@ -522,7 +524,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['permission:workplan.index'])->group(function () {
         Route::get('/workplan', [WorkplanItemController::class, 'index'])->name('workplan.index');
         Route::post('/workplan/{order}/response', [WorkplanItemController::class, 'response'])->name('workplan.response');
-        Route::post('/workplan/{order}/response', [WorkplanItemController::class, 'response'])->name('workplan.response');
         Route::get('/workplan/{order}/create', [WorkplanItemController::class, 'create'])->name('workplan.create');
         Route::post('/workplan/{order}', [WorkplanItemController::class, 'store'])->name('workplan.store');
         Route::get('/workplan/{order}/edit', [WorkplanItemController::class, 'edit'])->name('workplan.edit');
@@ -819,10 +820,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Payroll Slip Gaji Harian
     Route::post('slip-gaji-harian', [\App\Http\Controllers\SlipgajiHarianController::class, 'store'])->name('slip-gaji-harian.store');
+    Route::get('slip-gaji-harian/cetak', [\App\Http\Controllers\SlipgajiHarianController::class, 'cetak'])->name('slip-gaji-harian.cetak');
     Route::get('slip-gaji-harian/{kode}', [\App\Http\Controllers\SlipgajiHarianController::class, 'show'])->name('slip-gaji-harian.show');
     Route::put('slip-gaji-harian/{kode}', [\App\Http\Controllers\SlipgajiHarianController::class, 'update'])->name('slip-gaji-harian.update');
     Route::delete('slip-gaji-harian/{kode}', [\App\Http\Controllers\SlipgajiHarianController::class, 'destroy'])->name('slip-gaji-harian.destroy');
-    Route::get('slip-gaji-harian/cetak', [\App\Http\Controllers\SlipgajiHarianController::class, 'cetak'])->name('slip-gaji-harian.cetak');
 
     // Payroll PPh 21
     Route::get('pph21', [\App\Http\Controllers\Pph21Controller::class, 'index'])->name('pph21.index');

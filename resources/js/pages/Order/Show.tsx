@@ -427,8 +427,8 @@ useEffect(() => {
                                             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center text-white font-bold text-lg">
                                                 {user.name.charAt(0).toUpperCase()}
                                             </div>
-                                            <div className={`badge ${getRoleColor(user.role.nama_role)} text-xs`}>
-                                                {user.role.nama_role}
+                                            <div className={`badge ${getRoleColor(user.role?.nama_role || 'Staff')} text-xs`}>
+                                                {user.role?.nama_role || 'Staff'}
                                             </div>
                                         </div>
                                         <h4 className="font-semibold text-stone-900 text-sm line-clamp-1">

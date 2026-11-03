@@ -31,6 +31,19 @@ class SupplierController extends Controller
         return redirect()->back()->with('success', 'Supplier created successfully.');
     }
 
+    public function create()
+    {
+        return redirect()->route('suppliers.index');
+    }
+
+    public function show(Supplier $supplier)
+    {
+        if (request()->wantsJson()) {
+            return response()->json($supplier);
+        }
+        return redirect()->route('suppliers.index');
+    }
+
     public function edit(Supplier $supplier)
     {
         return response()->json($supplier);

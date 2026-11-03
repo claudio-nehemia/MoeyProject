@@ -89,7 +89,9 @@ class OrderController extends Controller
     public function create()
     {
         $teamUsers = $this->getOrderTeamUsers();
-        $customers = User::role('Customer')->get(['id', 'name', 'email']);
+        $customers = User::whereHas('role', fn($q) => $q->where('nama_role', 'Customer'))
+            ->orWhereHas('roles', fn($q) => $q->where('nama_role', 'Customer'))
+            ->get(['id', 'name', 'email']);
 
         return Inertia::render('Order/Create', [
             'jenisInteriors' => JenisInterior::all(),
@@ -107,7 +109,7 @@ class OrderController extends Controller
      */
     public function show(Order $order)
     {
-        $order->load(['users', 'jenisInterior']);
+        $order->load(['users.role', 'jenisInterior']);
 
         return Inertia::render('Order/Show', [
             'order' => $order,
@@ -119,9 +121,12 @@ class OrderController extends Controller
      */
     public function edit(Order $order)
     {
-        $order->load('users');
+        $order->load('users.role');
         $teamUsers = $this->getOrderTeamUsers();
-        $customers = User::role('Customer')->get(['id', 'name', 'email']);
+        $customers = User::whereHas('role', fn($q) => $q->where('nama_role', 'Customer'))
+            ->orWhereHas('roles', fn($q) => $q->where('nama_role', 'Customer'))
+            ->get(['id', 'name', 'email']);
+        $userIds = $order->users->pluck('id')->toArray();
 
         return Inertia::render('Order/Edit', [
             'order' => $order,
@@ -131,7 +136,8 @@ class OrderController extends Controller
             'supervisors' => $teamUsers['supervisors'],
             'projectManagers' => $teamUsers['projectManagers'],
             'marketings' => $teamUsers['marketings'],
-            'selectedUsers' => $order->users->pluck('id')->toArray(),
+            'selectedUsers' => $userIds,
+            'existingUserIds' => $userIds,
             'customers' => $customers,
         ]);
     }

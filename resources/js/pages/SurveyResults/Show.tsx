@@ -113,14 +113,15 @@ export default function Show({ survey, activityLogs = [] }: Props) {
         });
     };
 
-    const getFileIcon = (mimeType: string) => {
-        if (mimeType.includes('image')) {
+    const getFileIcon = (mimeType?: string) => {
+        const safeMime = mimeType || '';
+        if (safeMime.includes('image')) {
             return (
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
             );
-        } else if (mimeType.includes('pdf')) {
+        } else if (safeMime.includes('pdf')) {
             return (
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -427,7 +428,7 @@ export default function Show({ survey, activityLogs = [] }: Props) {
                             <div className="relative">
                                 <div className="overflow-hidden rounded-xl bg-gradient-to-br from-cyan-50 to-blue-50 border-2 border-cyan-200">
                                     <div className="aspect-video flex items-center justify-center p-8">
-                                        {survey.layout_files[currentLayoutIndex].mime_type.includes('image') ? (
+                                        {(survey.layout_files[currentLayoutIndex]?.mime_type || '').includes('image') ? (
                                             <div className="flex flex-col items-center gap-4">
                                                 <img
                                                     src={`/storage/${survey.layout_files[currentLayoutIndex].path}`}
@@ -515,7 +516,7 @@ export default function Show({ survey, activityLogs = [] }: Props) {
                                                     : 'border-stone-300 hover:border-cyan-400'
                                             }`}
                                         >
-                                            {file.mime_type.includes('image') ? (
+                                            {(file.mime_type || '').includes('image') ? (
                                                 <img
                                                     src={`/storage/${file.path}`}
                                                     alt={file.original_name}

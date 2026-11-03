@@ -210,11 +210,27 @@ class KontrakController extends Controller
     }
 
     /**
+     * Display the specified resource.
+     */
+    public function show(Kontrak $kontrak)
+    {
+        $kontrak->load(['itemPekerjaan.moodboard.order', 'termin']);
+        if (request()->wantsJson()) {
+            return response()->json($kontrak);
+        }
+        return redirect()->route('kontrak.index');
+    }
+
+    /**
      * Show the form for editing the specified resource.
      */
     public function edit(Kontrak $kontrak)
     {
-        //
+        $kontrak->load(['itemPekerjaan.moodboard.order', 'termin']);
+        if (request()->wantsJson()) {
+            return response()->json($kontrak);
+        }
+        return redirect()->route('kontrak.index');
     }
 
     /**

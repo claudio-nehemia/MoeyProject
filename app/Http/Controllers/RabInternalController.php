@@ -80,7 +80,8 @@ class RabInternalController extends Controller
             }
 
             if ($itemPekerjaan->rabInternal) {
-                $itemPekerjaan->rabInternal->update(
+                $rabInternal = $itemPekerjaan->rabInternal;
+                $rabInternal->update(
                     [
                         'response_by' => auth()->user()->name,
                         'response_time' => now(),

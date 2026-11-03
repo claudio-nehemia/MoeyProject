@@ -873,6 +873,28 @@ export default function Sidebar({
             gradient: 'from-cyan-400 to-cyan-600',
         },
         {
+            name: 'Mesin Fingerprint',
+            href: '/mesin-fingerprint',
+            page: 'mesin-fingerprint',
+            permission: 'mesinfingerprint.index',
+            icon: (
+                <svg
+                    className="h-3.5 w-3.5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+                    />
+                </svg>
+            ),
+            gradient: 'from-violet-500 to-purple-600',
+        },
+        {
             name: 'Riwayat Presensi',
             href: '/presensi-karyawan',
             page: 'presensi-karyawan',
@@ -1004,6 +1026,30 @@ export default function Sidebar({
                 </svg>
             ),
             gradient: 'from-emerald-500 to-emerald-600',
+        },
+        {
+            name: 'BPJS Kesehatan',
+            href: '/bpjs-kesehatan',
+            page: 'bpjs-kesehatan',
+            permission: 'karyawan.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+            ),
+            gradient: 'from-teal-500 to-emerald-600',
+        },
+        {
+            name: 'BPJS Ketenagakerjaan',
+            href: '/bpjs-ketenagakerjaan',
+            page: 'bpjs-ketenagakerjaan',
+            permission: 'karyawan.index',
+            icon: (
+                <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+            ),
+            gradient: 'from-cyan-500 to-blue-600',
         },
         {
             name: 'Jenis Tunjangan',

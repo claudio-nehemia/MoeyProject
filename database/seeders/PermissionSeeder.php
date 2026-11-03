@@ -1060,6 +1060,28 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Delete Cabang',
                 'group' => 'Master Data - Cabang'
             ],
+
+            // Mesin Fingerprint Permissions
+            [
+                'name' => 'mesinfingerprint.index',
+                'display_name' => 'View Mesin Fingerprint List',
+                'group' => 'Master Data - Mesin Fingerprint'
+            ],
+            [
+                'name' => 'mesinfingerprint.create',
+                'display_name' => 'Create Mesin Fingerprint',
+                'group' => 'Master Data - Mesin Fingerprint'
+            ],
+            [
+                'name' => 'mesinfingerprint.edit',
+                'display_name' => 'Edit Mesin Fingerprint',
+                'group' => 'Master Data - Mesin Fingerprint'
+            ],
+            [
+                'name' => 'mesinfingerprint.delete',
+                'display_name' => 'Delete Mesin Fingerprint',
+                'group' => 'Master Data - Mesin Fingerprint'
+            ],
         ];
 
         foreach ($permissions as $permission) {

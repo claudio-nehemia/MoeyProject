@@ -129,6 +129,20 @@ class ProdukController extends Controller
         return redirect()->back()->with('success', 'Produk created successfully.');
     }
 
+    public function create()
+    {
+        return redirect()->route('produk.index');
+    }
+
+    public function show(Produk $produk)
+    {
+        $produk->load('produkImages', 'bahanBakus', 'supplier');
+        if (request()->wantsJson()) {
+            return response()->json($produk);
+        }
+        return redirect()->route('produk.index');
+    }
+
     public function edit(Produk $produk)
     {
         $produk->load('produkImages', 'bahanBakus');

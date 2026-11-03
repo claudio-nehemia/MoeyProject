@@ -234,10 +234,14 @@ class LogController extends Controller
                 ];
             });
 
-        return Inertia::render('Log/ByUser', [
-            'user' => $user,
-            'taskResponses' => $taskResponses,
-        ]);
+        if (request()->wantsJson()) {
+            return response()->json([
+                'user' => $user,
+                'taskResponses' => $taskResponses,
+            ]);
+        }
+
+        return redirect()->route('log.index', ['user_id' => $userId]);
     }
 
     /**
@@ -271,10 +275,14 @@ class LogController extends Controller
                 ];
             });
 
-        return Inertia::render('Log/ByOrder', [
-            'order' => $order,
-            'taskResponses' => $taskResponses,
-        ]);
+        if (request()->wantsJson()) {
+            return response()->json([
+                'order' => $order,
+                'taskResponses' => $taskResponses,
+            ]);
+        }
+
+        return redirect()->route('log.index', ['order_id' => $orderId]);
     }
 
     /**

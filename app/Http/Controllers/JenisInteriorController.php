@@ -34,6 +34,19 @@ class JenisInteriorController extends Controller
         return redirect()->back()->with('success', 'Jenis Interior created successfully.');
     }
 
+    public function create()
+    {
+        return redirect()->route('jenis-interior.index');
+    }
+
+    public function show(JenisInterior $jenisInterior)
+    {
+        if (request()->wantsJson()) {
+            return response()->json($jenisInterior);
+        }
+        return redirect()->route('jenis-interior.index');
+    }
+
     /**
      * Show the form for editing the specified resource.
      */

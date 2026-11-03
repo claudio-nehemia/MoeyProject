@@ -75,14 +75,15 @@ class ItemController extends Controller
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * Display the specified resource.
      */
     public function show(Item $item)
     {
-        $item->load('jenisItem');
-        return Inertia::render('Item/Show', [
-            'item' => $item,
-        ]);
+        $item->load(['jenisItem', 'supplier']);
+        if (request()->wantsJson()) {
+            return response()->json(['item' => $item]);
+        }
+        return redirect()->route('item.index');
     }
 
     /**
@@ -90,7 +91,7 @@ class ItemController extends Controller
      */
     public function edit(Item $item)
     {
-        $jenisItems = JenisItem::select('id', 'nama_item')->get();
+        $jenisItems = JenisItem::select('id', 'nama_jenis_item')->get();
         return response()->json([
             'item' => $item,
             'jenisItems' => $jenisItems,
