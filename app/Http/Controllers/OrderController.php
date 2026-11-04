@@ -112,10 +112,11 @@ class OrderController extends Controller
      */
     public function show(Order $order)
     {
-        $order->load(['users.role', 'jenisInterior']);
+        $order->load(['users.role', 'jenisInterior', 'activityLogs.user']);
 
         return Inertia::render('Order/Show', [
             'order' => $order,
+            'activityLogs' => $order->activityLogs,
         ]);
     }
 

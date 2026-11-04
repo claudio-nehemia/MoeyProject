@@ -33,6 +33,7 @@ interface OrderDetail {
     phone_number: string;
     alamat: string | null;
     tanggal_masuk_customer: string;
+    tanggal_survey?: string | null;
     project_status: string;
     priority_level: string;
     payment_status: string;
@@ -153,13 +154,76 @@ useEffect(() => {
     };
 
     const formatDate = (date: string) => {
-        return new Date(date).toLocaleDateString('id-ID', {
+        if (!date) return '-';
+        const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(date)
+            ? date.replace(' ', 'T')
+            : date;
+        return new Date(normalized).toLocaleDateString('id-ID', {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
         });
+    };
+
+    const formatEntryDate = (entryDate: string, createdAt?: string) => {
+        if (!entryDate) return '-';
+        const trimmed = entryDate.trim();
+        // Jika hanya YYYY-MM-DD (tanpa jam), jangan parse langsung dengan new Date("YYYY-MM-DD")
+        // karena JS menganggapnya 00:00 UTC yang berubah menjadi jam 07.00 WIB!
+        if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+            const [year, month, day] = trimmed.split('-').map(Number);
+            if (createdAt) {
+                const createdObj = new Date(createdAt);
+                if (!isNaN(createdObj.getTime())) {
+                    const localDateWithTime = new Date(
+                        year,
+                        month - 1,
+                        day,
+                        createdObj.getHours(),
+                        createdObj.getMinutes(),
+                    );
+                    return localDateWithTime.toLocaleDateString('id-ID', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                    });
+                }
+            }
+            const localDateOnly = new Date(year, month - 1, day);
+            return localDateOnly.toLocaleDateString('id-ID', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+            });
+        }
+        return formatDate(trimmed);
+    };
+
+    const formatSurveyDateTime = (surveyDate?: string | null) => {
+        if (!surveyDate || !surveyDate.trim()) {
+            return 'Belum dijadwalkan';
+        }
+        const trimmed = surveyDate.trim();
+        const [datePart, timePart] = trimmed.split(/[ T]/);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+            const [year, month, day] = datePart.split('-').map(Number);
+            const localDate = new Date(year, month - 1, day);
+            const formattedDate = localDate.toLocaleDateString('id-ID', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+            });
+            if (timePart && timePart.trim()) {
+                const hhmm = timePart.trim().substring(0, 5);
+                return `${formattedDate}, pukul ${hhmm} WIB`;
+            }
+            return formattedDate;
+        }
+        return formatDate(trimmed);
     };
 
     const handleDelete = () => {
@@ -361,7 +425,11 @@ useEffect(() => {
                             </div>
                             <div className="info-card detail-section">
                                 <div className="info-label">Entry Date</div>
-                                <div className="info-value">{formatDate(order.tanggal_masuk_customer)}</div>
+                                <div className="info-value">{formatEntryDate(order.tanggal_masuk_customer, order.created_at)}</div>
+                            </div>
+                            <div className="info-card detail-section">
+                                <div className="info-label">Survey Date & Time</div>
+                                <div className="info-value">{formatSurveyDateTime(order.tanggal_survey)}</div>
                             </div>
                         </div>
 

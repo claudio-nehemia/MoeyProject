@@ -81,7 +81,7 @@ export default function Edit({
         nomor_unit: order.nomor_unit || '',
         phone_number: order.phone_number,
         alamat: order.alamat || '',
-        tanggal_masuk_customer: order.tanggal_masuk_customer,
+        tanggal_masuk_customer: order.tanggal_masuk_customer ? order.tanggal_masuk_customer.split(' ')[0] : '',
         project_status: order.project_status,
         tanggal_survey: order.tanggal_survey ? order.tanggal_survey.split(' ')[0] : '',
         priority_level: order.priority_level,

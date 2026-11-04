@@ -51,7 +51,7 @@ trait HasOrderMutations
 
         $validated['project_status'] = $validated['project_status'] ?? 'pending';
         $validated['priority_level'] = $validated['priority_level'] ?? 'medium';
-        $validated['tanggal_masuk_customer'] = now()->toDateString();
+        $validated['tanggal_masuk_customer'] = now()->toDateTimeString();
 
         if (empty($validated['customer_user_id']) && !empty($validated['customer_email'])) {
             $existingUser = User::where('email', $validated['customer_email'])->first();
@@ -176,7 +176,7 @@ trait HasOrderMutations
 
         $validated['project_status'] = $validated['project_status'] ?? $order->project_status ?? 'pending';
         $validated['priority_level'] = $validated['priority_level'] ?? $order->priority_level ?? 'medium';
-        $validated['tanggal_masuk_customer'] = now()->toDateString();
+        $validated['tanggal_masuk_customer'] = $order->tanggal_masuk_customer ?: now()->toDateTimeString();
 
         if (empty($validated['customer_user_id']) && !empty($validated['customer_email'])) {
             $existingUser = User::where('email', $validated['customer_email'])->first();

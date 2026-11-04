@@ -23,6 +23,7 @@ interface Order {
     customer_name: string;
     phone_number: string;
     tanggal_masuk_customer: string;
+    tanggal_survey?: string | null;
     project_status: string;
     jenis_interior: JenisInterior;
     users: User[];
@@ -111,6 +112,26 @@ export default function Show({ survey, activityLogs = [] }: Props) {
             hour: '2-digit',
             minute: '2-digit'
         });
+    };
+
+    const formatSurveyDateTime = (surveyDate?: string | null) => {
+        if (!surveyDate || !surveyDate.trim()) return 'Belum dijadwalkan';
+        const trimmed = surveyDate.trim();
+        const [datePart, timePart] = trimmed.split(/[ T]/);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+            const [year, month, day] = datePart.split('-').map(Number);
+            const localDate = new Date(year, month - 1, day);
+            const formattedDate = localDate.toLocaleDateString('id-ID', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+            });
+            if (timePart && timePart.trim()) {
+                return `${formattedDate}, pukul ${timePart.trim().substring(0, 5)} WIB`;
+            }
+            return formattedDate;
+        }
+        return formatDate(trimmed);
     };
 
     const getFileIcon = (mimeType?: string) => {
@@ -250,6 +271,10 @@ export default function Show({ survey, activityLogs = [] }: Props) {
                                 <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs sm:text-sm font-semibold">
                                     {survey.order.project_status}
                                 </span>
+                            </div>
+                            <div className="bg-stone-50 rounded-lg p-3 sm:p-4">
+                                <p className="text-xs font-semibold text-stone-600 uppercase mb-1">Survey Date & Time</p>
+                                <p className="text-sm sm:text-base lg:text-lg font-bold text-stone-900">{formatSurveyDateTime(survey.order.tanggal_survey)}</p>
                             </div>
                         </div>
                     </div>

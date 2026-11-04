@@ -328,7 +328,8 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing, isProjec
                                                                 const parts = order.tanggal_survey.split(' ');
                                                                 const datePart = parts[0];
                                                                 const timePart = parts[1] ? parts[1].substring(0, 5) : '';
-                                                                const d = new Date(datePart);
+                                                                const [y, m, dayNum] = datePart.split('-').map(Number);
+                                                                const d = y && m && dayNum ? new Date(y, m - 1, dayNum) : new Date(datePart);
                                                                 const dateStr = !Number.isNaN(d.getTime())
                                                                     ? d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
                                                                     : datePart;

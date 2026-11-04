@@ -275,10 +275,28 @@ export default function Index({ surveys }: Props) {
     };
 
     const formatSimpleDate = (date: string) => {
-        return new Date(date).toLocaleDateString('id-ID', {
+        if (!date || !date.trim()) return '-';
+        const trimmed = date.trim();
+        const [datePart, timePart] = trimmed.split(/[ T]/);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+            const [year, month, day] = datePart.split('-').map(Number);
+            const localDate = new Date(year, month - 1, day);
+            const formattedDate = localDate.toLocaleDateString('id-ID', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+            });
+            if (timePart && timePart.trim()) {
+                return `${formattedDate}, ${timePart.trim().substring(0, 5)} WIB`;
+            }
+            return formattedDate;
+        }
+        return new Date(trimmed).toLocaleDateString('id-ID', {
             year: 'numeric',
             month: 'short',
             day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
         });
     };
 
