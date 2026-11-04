@@ -164,6 +164,13 @@ export default function Index({ notifications, unreadCount }: Props) {
         responseBy: string | null;
     } => {
         const order = notification.order;
+        if (!order) {
+            return {
+                responded: false,
+                responseTime: null,
+                responseBy: null,
+            };
+        }
 
         switch (notification.type) {
             case 'survey_request':
@@ -306,6 +313,14 @@ export default function Index({ notifications, unreadCount }: Props) {
                     responseBy: itemPekerjaanApproval?.approval_rab_response_by || null,
                 };
 
+            case 'jadwal_meeting_vendor_request':
+            case 'jadwal_meeting_approval_request':
+                return {
+                    responded: !!(order as any).meeting_vendor?.response_time,
+                    responseTime: (order as any).meeting_vendor?.response_time || null,
+                    responseBy: (order as any).meeting_vendor?.response_by || null,
+                };
+
             default:
                 return {
                     responded: false,
@@ -323,6 +338,13 @@ export default function Index({ notifications, unreadCount }: Props) {
         responseBy: string | null;
     } => {
         const order = notification.order;
+        if (!order) {
+            return {
+                responded: false,
+                responseTime: null,
+                responseBy: null,
+            };
+        }
 
         switch (notification.type) {
             case 'survey_request':
@@ -512,6 +534,8 @@ export default function Index({ notifications, unreadCount }: Props) {
             'kontrak_request',
             'invoice_request',
             'gambar_kerja_request',
+            'jadwal_meeting_vendor_request',
+            'jadwal_meeting_approval_request',
             'approval_material_request',
             'workplan_request',
         ];
@@ -523,6 +547,12 @@ export default function Index({ notifications, unreadCount }: Props) {
         const typesWithoutResponse = [
             'design_approval',
             'project_management_request',
+            'test_notification',
+            'task_deadline_reminder',
+            'payment_reminder',
+            'payment_reminder_h7',
+            'fee_reminder',
+            'approval_rab_update',
         ];
         return typesWithoutResponse.includes(type);
     };

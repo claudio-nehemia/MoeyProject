@@ -6,7 +6,9 @@ interface FilterOption {
 }
 
 interface SearchFilterProps {
-    onSearch: (query: string) => void;
+    onSearch?: (query: string) => void;
+    onChange?: (query: string) => void;
+    value?: string;
     onFilterChange?: (filterKey: string, value: string) => void;
     filters?: {
         [key: string]: {
@@ -15,32 +17,45 @@ interface SearchFilterProps {
         };
     };
     searchPlaceholder?: string;
+    placeholder?: string;
 }
 
 export default function SearchFilter({
     onSearch,
+    onChange,
+    value,
     onFilterChange,
     filters = {},
-    searchPlaceholder = "Search...",
+    searchPlaceholder,
+    placeholder,
 }: SearchFilterProps) {
-    const [searchQuery, setSearchQuery] = useState("");
+    const [searchQuery, setSearchQuery] = useState(value ?? "");
     const [activeFilters, setActiveFilters] = useState<{ [key: string]: string }>({});
+    const resolvedPlaceholder = searchPlaceholder || placeholder || "Search...";
 
-    const handleSearch = (value: string) => {
-        setSearchQuery(value);
-        onSearch(value);
+    const handleSearch = (val: string) => {
+        setSearchQuery(val);
+        if (typeof onSearch === 'function') {
+            onSearch(val);
+        } else if (typeof onChange === 'function') {
+            onChange(val);
+        }
     };
 
-    const handleFilterChange = (filterKey: string, value: string) => {
-        const newFilters = { ...activeFilters, [filterKey]: value };
+    const handleFilterChange = (filterKey: string, val: string) => {
+        const newFilters = { ...activeFilters, [filterKey]: val };
         setActiveFilters(newFilters);
-        onFilterChange?.(filterKey, value);
+        onFilterChange?.(filterKey, val);
     };
 
     const clearFilters = () => {
         setSearchQuery("");
         setActiveFilters({});
-        onSearch("");
+        if (typeof onSearch === 'function') {
+            onSearch("");
+        } else if (typeof onChange === 'function') {
+            onChange("");
+        }
         Object.keys(filters).forEach((key) => {
             onFilterChange?.(key, "");
         });
@@ -69,7 +84,7 @@ export default function SearchFilter({
                     type="text"
                     value={searchQuery}
                     onChange={(e) => handleSearch(e.target.value)}
-                    placeholder={searchPlaceholder}
+                    placeholder={resolvedPlaceholder}
                     className="w-full pl-9 pr-3 py-2 text-sm border border-stone-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-stone-50"
                 />
                 {searchQuery && (

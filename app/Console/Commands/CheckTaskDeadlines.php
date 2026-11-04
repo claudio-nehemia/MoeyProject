@@ -40,9 +40,9 @@ class CheckTaskDeadlines extends Command
                 $order = $task->order;
                 if (!$order) continue;
 
-                // Tentukan user yang harus dikirim notifikasi berdasarkan tahap
+                // Tentukan user yang harus dikirim notifikasi berdasarkan tahap & NotificationSetting
                 /** @var Collection<int, User> $usersToNotify */
-                $usersToNotify = $this->getUsersForTahap($order, $task->tahap);
+                $usersToNotify = $this->getUsersForTahap($order, $task->tahap, $setting);
 
                 foreach ($usersToNotify as $user) {
                     $notificationService->sendTaskDeadlineReminderNotification(
@@ -69,97 +69,55 @@ class CheckTaskDeadlines extends Command
     }
 
     /**
-     * Get users yang harus dikirim notifikasi berdasarkan tahap
+     * Get users yang harus dikirim notifikasi berdasarkan tahap dan konfigurasi NotificationSetting
      */
-    private function getUsersForTahap(Order $order, string $tahap): Collection
+    private function getUsersForTahap(Order $order, string $tahap, ?\App\Models\NotificationSetting $setting = null): Collection
     {
         /** @var Collection<int, User> $users */
         $users = collect();
 
         switch ($tahap) {
             case 'survey':
-                // Hanya drafter dan surveyor dari order team
                 $users = $order->users()->whereHas('role', function ($query) {
                     $query->whereIn('nama_role', ['Surveyor', 'Drafter']);
                 })->get();
                 break;
 
             case 'moodboard':
-                // Desainer dari order team
+            case 'approval_design':
+            case 'desain_final':
+            case 'item_pekerjaan':
+            case 'item-pekerjaan':
                 $desainerId = \App\Models\Role::getDesainerRoleId();
                 $users = $order->users()->where('role_id', $desainerId)->get();
                 break;
 
             case 'estimasi':
-                // CM Fee dan Desainer dari order team
+            case 'rab_internal':
+            case 'rab':
                 $users = User::whereHas('role', function ($query) {
                     $query->where('nama_role', 'Estimator');
                 })->get();
                 break;
 
             case 'cm_fee':
-                // CM Fee dari order team
-                $users = User::whereHas('role', function ($query) {
-                    $query->where('nama_role', 'Legal Admin');
-                })->get();
-                break;
-
-            case 'approval_design':
-                // Desainer dari order team
-                $desainerId = \App\Models\Role::getDesainerRoleId();
-                $users = $order->users()->where('role_id', $desainerId)->get();
-                break;
-
-            case 'desain_final':
-                // Desainer dari order team
-                $desainerId = \App\Models\Role::getDesainerRoleId();
-                $users = $order->users()->where('role_id', $desainerId)->get();
-                break;
-
-            case 'item_pekerjaan':
-                // desainer dari order teams
-                $desainerId = \App\Models\Role::getDesainerRoleId();
-                $users = $order->users()->where('role_id', $desainerId)->get();
-                break;
-
-            case 'rab_internal':
-                // Estimator dari order team
-                $users = User::whereHas('role', function ($query) {
-                    $query->where('nama_role', 'Estimator');
-                })->get();
-                break;
-
             case 'kontrak':
-                // Legal Admin dari order team
-                $users = User::whereHas('role', function ($query) {
-                    $query->where('nama_role', 'Legal Admin');
-                })->get();
-                break;
-
             case 'invoice':
-                // Finance dari order team
                 $users = User::whereHas('role', function ($query) {
-                    $query->where('nama_role', 'Finance');
+                    $query->whereIn('nama_role', ['Legal Admin', 'Finance']);
                 })->get();
                 break;
 
             case 'survey_schedule':
-                // Surveyor dari order team
                 $users = User::whereHas('role', function ($query) {
                     $query->where('nama_role', 'Project Manager');
                 })->get();
                 break;
 
             case 'survey_ulang':
-                $desainerId = \App\Models\Role::getDesainerRoleId();
-                $users = $order->surveyUsers()->where(function ($q) use ($desainerId) {
-                    $q->whereHas('role', fn($rq) => $rq->whereIn('nama_role', ['Surveyor', 'Drafter']))
-                      ->orWhere('role_id', $desainerId);
-                })->get();
-                break;
-
             case 'gambar_kerja':
-                // Drafter dari order team
+            case 'meeting_vendor':
+            case 'meeting_approval':
                 $desainerId = \App\Models\Role::getDesainerRoleId();
                 $users = $order->surveyUsers()->where(function ($q) use ($desainerId) {
                     $q->whereHas('role', fn($rq) => $rq->whereIn('nama_role', ['Surveyor', 'Drafter']))
@@ -168,30 +126,48 @@ class CheckTaskDeadlines extends Command
                 break;
 
             case 'approval_material':
-                // project manager dari survey users
                 $users = $order->surveyUsers()->whereHas('role', function ($query) {
-                    $query->where('nama_role', 'Drafter');
+                    $query->whereIn('nama_role', ['Drafter', 'Project Manager']);
                 })->get();
                 break;
 
             case 'workplan':
-                // project manager dari survey users
-                $users = $order->surveyUsers()->whereHas('role', function ($query) {
-                    $query->where('nama_role', 'Project Manager');
-                })->get();
-                break;
-
             case 'produksi':
-                // project manager dari survey users dan supervisor dari user model
                 $users = $order->surveyUsers()->whereHas('role', function ($query) {
-                    $query->where('nama_role', 'Project Manager');
+                    $query->whereIn('nama_role', ['Project Manager', 'Supervisor']);
                 })->get();
                 break;
-            
-            // Tambahkan case lain sesuai kebutuhan
-            // case 'cm_fee': ...
-            // case 'desain_final': ...
-            // dll
+        }
+
+        // Respect NotificationSetting target_role_ids filter if configured
+        if ($setting && !empty($setting->target_role_ids)) {
+            $allowedRoleIds = $setting->target_role_ids;
+            if ($setting->recipient_type === 'all_by_role') {
+                $users = User::where(function ($query) use ($allowedRoleIds) {
+                    $query->whereIn('role_id', $allowedRoleIds)
+                        ->orWhereHas('roles', fn($q) => $q->whereIn('roles.id', $allowedRoleIds));
+                })->get();
+            } else {
+                $users = $users->filter(fn(User $u) => in_array((int) $u->role_id, $allowedRoleIds))->values();
+            }
+        }
+
+        // Respect NotificationSetting send_to_management if enabled
+        if ($setting && $setting->send_to_management) {
+            $mgmtRoleIds = !empty($setting->management_role_ids)
+                ? $setting->management_role_ids
+                : [
+                    \App\Models\Role::getKepalaMarketingRoleId(),
+                    \App\Models\Role::getProjectManagerRoleId(),
+                    \App\Models\Role::getSupervisorRoleId(),
+                ];
+
+            $orderManagers = $order->users()->whereIn('role_id', $mgmtRoleIds)->get();
+            $surveyManagers = method_exists($order, 'surveyUsers')
+                ? $order->surveyUsers()->whereIn('role_id', $mgmtRoleIds)->get()
+                : collect();
+
+            $users = $users->merge($orderManagers)->merge($surveyManagers)->unique('id')->values();
         }
 
         return $users;

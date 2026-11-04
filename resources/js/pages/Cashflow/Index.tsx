@@ -94,6 +94,7 @@ export default function Index({ orders, total_hutang, daily_payments, upcoming_p
             flag: flagField,
             value: newValue
         }, {
+            preserveState: true,
             preserveScroll: true,
         });
     };
@@ -206,8 +207,8 @@ export default function Index({ orders, total_hutang, daily_payments, upcoming_p
                                 <div className="flex-1">
                                     <SearchFilter
                                         value={search}
-                                        onChange={handleSearch}
-                                        placeholder="Cari nama project atau customer..."
+                                        onSearch={handleSearch}
+                                        searchPlaceholder="Cari nama project atau customer..."
                                     />
                                 </div>
                                 <div className="w-full md:w-48">

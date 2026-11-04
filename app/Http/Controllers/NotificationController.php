@@ -46,16 +46,17 @@ class NotificationController extends Controller
             ->with([
                 'order.surveyResults',
                 'order.surveyUlang',
-                'order.surveyUsers', // TAMBAH INI untuk Survey Schedule
-                'order.estimasi', // TAMBAH INI untuk direct estimasi access
+                'order.surveyUsers',
+                'order.estimasi',
                 'order.moodboard.commitmentFee',
                 'order.moodboard.estimasi',
                 'order.moodboard.itemPekerjaans.produks.workplanItems',
-                'order.itemPekerjaans', // Load item pekerjaan for approval_rab response
+                'order.itemPekerjaans',
                 'order.itemPekerjaans.rabInternal',
                 'order.itemPekerjaans.kontrak',
                 'order.itemPekerjaans.invoices',
                 'order.gambarKerja',
+                'order.meetingVendor',
                 'order.users.role',
             ])
             ->orderBy('created_at', 'desc')
@@ -118,11 +119,15 @@ class NotificationController extends Controller
     /**
      * Delete notification
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $this->notificationService->deleteNotification($id, auth()->id());
 
-        return redirect()->back()->with('success', 'Notification deleted successfully.');
+        if (!$request->header('X-Inertia') && ($request->wantsJson() || $request->ajax())) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->route('notifications.index')->with('success', 'Notification deleted successfully.');
     }
 
     /**
@@ -151,6 +156,15 @@ class NotificationController extends Controller
             }
 
             return $this->handleMarketingResponse($notification, $order);
+        }
+
+        // Direct redirect for notifications without order (e.g., test_notification) or reminder notifications
+        if (!$order) {
+            $actionUrl = $notification->data['action_url'] ?? '/dashboard';
+            if ($actionUrl === '/cashflow-manual') {
+                $actionUrl = '/cashflow';
+            }
+            return redirect($actionUrl);
         }
 
         // Handle different notification types
@@ -195,6 +209,7 @@ class NotificationController extends Controller
                 return $this->handleGambarKerjaRequest($order);
 
             case Notification::TYPE_JADWAL_MEETING_VENDOR_REQUEST:
+            case Notification::TYPE_JADWAL_MEETING_APPROVAL_REQUEST:
                 return $this->handleMeetingVendorRequest($order);
 
             case Notification::TYPE_APPROVAL_MATERIAL_REQUEST:
@@ -207,9 +222,15 @@ class NotificationController extends Controller
                 return $this->handleProjectManagementRequest($order);
 
             default:
+                $actionUrl = $notification->data['action_url'] ?? null;
+                if ($actionUrl) {
+                    if ($actionUrl === '/cashflow-manual') {
+                        $actionUrl = '/cashflow/' . $order->id;
+                    }
+                    return redirect($actionUrl);
+                }
                 return redirect()->route('notifications.index')
                     ->with('error', 'Unknown notification type.');
         }
     }
-
 }

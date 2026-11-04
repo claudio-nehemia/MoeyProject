@@ -104,8 +104,11 @@ class CashflowController extends Controller
         }
 
         $rawEntries = CashflowVendorEntry::with('order')
-            ->whereNotNull('tanggal_pembayaran')
-            ->orWhereNotNull('tanggal_pembayaran_termin')
+            ->where(function ($q) {
+                $q->whereNotNull('tanggal_pembayaran')
+                  ->orWhereNotNull('tanggal_pembayaran_termin');
+            })
+            ->orderBy('id')
             ->get();
 
         $dailyPayments = [];
@@ -121,7 +124,7 @@ class CashflowController extends Controller
                     'vendor_type' => $entry->vendor_type,
                     'category' => $entry->section,
                     'label' => $entry->label ?: 'DP / Pembayaran Utama',
-                    'vendor_name' => $entry->vendor_name ?: '-',
+                    'vendor_name' => $entry->vendor_name ?: ($entry->vendor_group ?: '-'),
                     'type' => 'DP / Pembayaran',
                     'amount' => (float) $entry->pembayaran,
                     'date' => $entry->tanggal_pembayaran->format('Y-m-d'),
@@ -140,7 +143,7 @@ class CashflowController extends Controller
                     'vendor_type' => $entry->vendor_type,
                     'category' => $entry->section,
                     'label' => $entry->label ?: 'Termin Pembayaran',
-                    'vendor_name' => $entry->vendor_name ?: '-',
+                    'vendor_name' => $entry->vendor_name ?: ($entry->vendor_group ?: '-'),
                     'type' => 'Termin',
                     'amount' => (float) $entry->pembayaran_termin,
                     'date' => $entry->tanggal_pembayaran_termin->format('Y-m-d'),
@@ -152,7 +155,8 @@ class CashflowController extends Controller
         }
 
         usort($dailyPayments, function($a, $b) {
-            return strcmp($b['date'], $a['date']);
+            $cmp = strcmp($b['date'], $a['date']);
+            return $cmp !== 0 ? $cmp : strcmp($a['id'], $b['id']);
         });
 
         $upcomingPayments = [];
@@ -162,7 +166,8 @@ class CashflowController extends Controller
             }
         }
         usort($upcomingPayments, function($a, $b) {
-            return strcmp($a['date'], $b['date']);
+            $cmp = strcmp($a['date'], $b['date']);
+            return $cmp !== 0 ? $cmp : strcmp($a['id'], $b['id']);
         });
 
         return Inertia::render('Cashflow/Index', [

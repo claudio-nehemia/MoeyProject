@@ -36,17 +36,6 @@ class KpiService
 
     public function syncAndCalculateMonthlyKpi(User $user, string $month, KpiSetting $settings)
     {
-        $isCurrentMonth = ($month === Carbon::now()->format('Y-m'));
-
-        if (!$isCurrentMonth) {
-            $existing = KpiHistory::where('user_id', $user->id)
-                ->where('month', $month)
-                ->first();
-            if ($existing) {
-                return $existing;
-            }
-        }
-
         $startOfMonth = Carbon::parse($month . '-01')->startOfMonth();
         $endOfMonth = Carbon::parse($month . '-01')->endOfMonth();
 
@@ -72,41 +61,47 @@ class KpiService
 
         foreach ($tasks as $task) {
             $isLate = false;
+            $durationActual = max(1, (int) ($task->duration_actual ?: 1));
 
-            // Check response time
+            // Check response time (start_time -> response_time)
             if ($task->response_time) {
                 $respTime = Carbon::parse($task->response_time);
                 if ($respTime->between($startOfMonth, $endOfMonth)) {
                     $startTime = Carbon::parse($task->start_time);
-                    $diffDays = $respTime->diffInDays($startTime);
+                    $diffDays = max(0, $startTime->diffInDays($respTime, false));
                     
-                    if ($diffDays < $task->duration_actual) {
+                    if ($diffDays < $durationActual && !$respTime->greaterThan(Carbon::parse($task->deadline))) {
                         $fastResponsesCount++;
-                        $daysEarly = $task->duration_actual - $diffDays;
+                        $daysEarly = max(1, $durationActual - floor($diffDays));
                         if ($settings->bonus_type === 'flat') {
                             $fastResponsesBonus += $settings->points_fast_response;
                         } else {
-                            $fastResponsesBonus += round(($settings->points_fast_response * $daysEarly) / $task->duration_actual);
+                            $fastResponsesBonus += round(($settings->points_fast_response * $daysEarly) / $durationActual);
                         }
                     }
 
-                    if ($respTime->greaterThan(Carbon::parse($task->deadline))) {
-                        $isLate = true;
+                    if ($diffDays > $durationActual || $respTime->greaterThan(Carbon::parse($task->deadline))) {
+                        if (!$task->update_data_time) {
+                            $isLate = true;
+                        }
                     }
                 }
             }
 
-            // Check update data time
+            // Check update data time (response_time/start_time -> update_data_time)
             if ($task->update_data_time) {
                 $updTime = Carbon::parse($task->update_data_time);
                 if ($updTime->between($startOfMonth, $endOfMonth)) {
                     $baseTime = Carbon::parse($task->response_time ?? $task->start_time);
-                    $diffDays = $updTime->diffInDays($baseTime);
+                    $diffDays = max(0, $baseTime->diffInDays($updTime, false));
                     
-                    $targetUpdateDays = max(1, $task->duration - $task->duration_actual);
-                    if ($diffDays < $targetUpdateDays) {
+                    $targetUpdateDays = $task->duration > $durationActual
+                        ? ($task->duration - $durationActual)
+                        : max(1, (int) $task->duration);
+                    $isUpdateOverdue = $updTime->greaterThan(Carbon::parse($task->deadline)) || in_array($task->status, ['telat', 'telat_submit']);
+                    if ($diffDays < $targetUpdateDays && !$isUpdateOverdue) {
                         $fastUpdatesCount++;
-                        $daysEarly = $targetUpdateDays - $diffDays;
+                        $daysEarly = max(1, $targetUpdateDays - floor($diffDays));
                         if ($settings->bonus_type === 'flat') {
                             $fastUpdatesBonus += $settings->points_fast_update;
                         } else {
@@ -114,7 +109,7 @@ class KpiService
                         }
                     }
 
-                    if ($updTime->greaterThan(Carbon::parse($task->deadline))) {
+                    if ($isUpdateOverdue) {
                         $isLate = true;
                     }
                 }
@@ -207,9 +202,11 @@ class KpiService
             $parsedDate = Carbon::parse($month . '-01');
             $attSummary = $attService->getMonthlyAttendanceSummary($karyawan->nik, $parsedDate->month, $parsedDate->year);
 
-            $latePresences = $attSummary['hari_terlambat'];
-            $alphaDays = $attSummary['hari_alpha'];
-            $perfectAttendanceBonus = $attSummary['perfect_attendance'];
+            if (!empty($attSummary['has_attendance_data'])) {
+                $latePresences = $attSummary['hari_terlambat'];
+                $alphaDays = $attSummary['hari_alpha'];
+                $perfectAttendanceBonus = $attSummary['perfect_attendance'];
+            }
         }
 
         $penaltyLate = $settings->penalty_attendance_late ?? 5;

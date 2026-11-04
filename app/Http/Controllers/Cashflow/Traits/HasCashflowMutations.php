@@ -114,7 +114,7 @@ trait HasCashflowMutations
             }
         }
 
-        return back()->with('success', 'Data cashflow berhasil disimpan');
+        return redirect()->route('cashflow.show', $order->id)->with('success', 'Data cashflow berhasil disimpan');
     }
 
     public function storeVendorEntries(Request $request, Order $order)
@@ -133,11 +133,12 @@ trait HasCashflowMutations
                 foreach ($items as $idx => $item) {
                     $oldDate = null;
                     $oldTerminDate = null;
-                    if (isset($item['id'])) {
-                        $entry = CashflowVendorEntry::find($item['id']);
-                        if ($entry) {
-                            $oldDate = $entry->tanggal_pembayaran;
-                            $oldTerminDate = $entry->tanggal_pembayaran_termin;
+                    $existingEntry = null;
+                    if (!empty($item['id'])) {
+                        $existingEntry = CashflowVendorEntry::find($item['id']);
+                        if ($existingEntry) {
+                            $oldDate = $existingEntry->tanggal_pembayaran;
+                            $oldTerminDate = $existingEntry->tanggal_pembayaran_termin;
                         }
                     }
 
@@ -162,9 +163,9 @@ trait HasCashflowMutations
                         'sort_order' => $idx + 1,
                     ];
 
-                    if (isset($item['id'])) {
-                        $entry = CashflowVendorEntry::find($item['id']);
-                        $entry->update($data);
+                    if ($existingEntry) {
+                        $existingEntry->update($data);
+                        $entry = $existingEntry;
                     } else {
                         $entry = CashflowVendorEntry::create($data);
                     }
@@ -194,11 +195,12 @@ trait HasCashflowMutations
                 foreach ($items as $idx => $item) {
                     $oldDate = null;
                     $oldTerminDate = null;
-                    if (isset($item['id'])) {
-                        $entry = CashflowVendorEntry::find($item['id']);
-                        if ($entry) {
-                            $oldDate = $entry->tanggal_pembayaran;
-                            $oldTerminDate = $entry->tanggal_pembayaran_termin;
+                    $existingEntry = null;
+                    if (!empty($item['id'])) {
+                        $existingEntry = CashflowVendorEntry::find($item['id']);
+                        if ($existingEntry) {
+                            $oldDate = $existingEntry->tanggal_pembayaran;
+                            $oldTerminDate = $existingEntry->tanggal_pembayaran_termin;
                         }
                     }
 
@@ -223,9 +225,9 @@ trait HasCashflowMutations
                         'sort_order' => $idx + 1,
                     ];
 
-                    if (isset($item['id'])) {
-                        $entry = CashflowVendorEntry::find($item['id']);
-                        $entry->update($data);
+                    if ($existingEntry) {
+                        $existingEntry->update($data);
+                        $entry = $existingEntry;
                     } else {
                         $entry = CashflowVendorEntry::create($data);
                     }
@@ -270,10 +272,11 @@ trait HasCashflowMutations
                         if (isset($group['items']) && is_array($group['items'])) {
                             foreach ($group['items'] as $item) {
                                 $oldDate = null;
-                                if (isset($item['id'])) {
-                                    $entry = CashflowVendorEntry::find($item['id']);
-                                    if ($entry) {
-                                        $oldDate = $entry->tanggal_pembayaran;
+                                $existingEntry = null;
+                                if (!empty($item['id'])) {
+                                    $existingEntry = CashflowVendorEntry::find($item['id']);
+                                    if ($existingEntry) {
+                                        $oldDate = $existingEntry->tanggal_pembayaran;
                                     }
                                 }
 
@@ -292,9 +295,9 @@ trait HasCashflowMutations
                                     'flag_jw' => $item['flag_jw'] ?: null,
                                 ];
 
-                                if (isset($item['id'])) {
-                                    $entry = CashflowVendorEntry::find($item['id']);
-                                    $entry->update($data);
+                                if ($existingEntry) {
+                                    $existingEntry->update($data);
+                                    $entry = $existingEntry;
                                 } else {
                                     $entry = CashflowVendorEntry::create($data);
                                 }
@@ -330,11 +333,12 @@ trait HasCashflowMutations
                     foreach ($items as $item) {
                         $oldDate = null;
                         $oldTerminDate = null;
-                        if (isset($item['id'])) {
-                            $entry = CashflowVendorEntry::find($item['id']);
-                            if ($entry) {
-                                $oldDate = $entry->tanggal_pembayaran;
-                                $oldTerminDate = $entry->tanggal_pembayaran_termin;
+                        $existingEntry = null;
+                        if (!empty($item['id'])) {
+                            $existingEntry = CashflowVendorEntry::find($item['id']);
+                            if ($existingEntry) {
+                                $oldDate = $existingEntry->tanggal_pembayaran;
+                                $oldTerminDate = $existingEntry->tanggal_pembayaran_termin;
                             }
                         }
 
@@ -359,9 +363,9 @@ trait HasCashflowMutations
                             'flag_jw_termin' => $item['flag_jw_termin'] ?: null,
                         ];
 
-                        if (isset($item['id'])) {
-                            $entry = CashflowVendorEntry::find($item['id']);
-                            $entry->update($data);
+                        if ($existingEntry) {
+                            $existingEntry->update($data);
+                            $entry = $existingEntry;
                         } else {
                             $entry = CashflowVendorEntry::create($data);
                         }
@@ -377,7 +381,7 @@ trait HasCashflowMutations
             }
         }
 
-        return back()->with('success', 'Detail pembayaran vendor berhasil disimpan');
+        return redirect()->route('cashflow.show', $order->id)->with('success', 'Detail pembayaran vendor berhasil disimpan');
     }
 
     public function toggleVendorFlag(Request $request, CashflowVendorEntry $entry)
@@ -391,9 +395,35 @@ trait HasCashflowMutations
             $validated['flag'] => $validated['value'],
         ]);
 
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+            return response()->json(['success' => true, 'entry' => $entry]);
+        }
+        return redirect()->route('cashflow.index')->with('success', 'Status approval berhasil diperbarui');
+    }
+
+    public function updateManualEntry(Request $request, CashflowManualEntry $entry)
+    {
+        $validated = $request->validate([
+            'label' => 'sometimes|string|max:255',
+            'amount_estimasi' => 'sometimes|numeric',
+            'notes' => 'nullable|string',
+        ]);
+
+        $entry->update($validated);
+
         if ($request->wantsJson()) {
             return response()->json(['success' => true, 'entry' => $entry]);
         }
-        return back()->with('success', 'Status approval berhasil diperbarui');
+        return back()->with('success', 'Data cashflow manual berhasil diperbarui');
+    }
+
+    public function deleteManualEntry(Request $request, CashflowManualEntry $entry)
+    {
+        $entry->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+        return back()->with('success', 'Data cashflow manual berhasil dihapus');
     }
 }

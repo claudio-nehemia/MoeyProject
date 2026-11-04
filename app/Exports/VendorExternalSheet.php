@@ -53,7 +53,7 @@ class VendorExternalSheet implements FromArray, WithTitle, WithStyles, ShouldAut
         foreach ($this->data['addendums'] as $item) {
             $rows[] = [
                 $item['label'],
-                $item['spk_amount'],
+                $item['spk_amount'] ?: $item['nilai'],
                 $item['pembayaran'],
                 $item['tanggal_pembayaran'] ?: '—',
                 $item['flag_af'] ? '✔' : '—',
@@ -69,7 +69,7 @@ class VendorExternalSheet implements FromArray, WithTitle, WithStyles, ShouldAut
         foreach ($this->data['pengeluaran_luar'] as $item) {
             $rows[] = [
                 $item['label'],
-                $item['spk_amount'],
+                $item['spk_amount'] ?: $item['nilai'],
                 $item['pembayaran'],
                 $item['tanggal_pembayaran'] ?: '—',
                 $item['flag_af'] ? '✔' : '—',

@@ -44,12 +44,17 @@ class NotificationService
         $title = $setting->formatTitle($replacements);
         $message = $setting->formatMessage($replacements);
         $actionUrl = $setting->action_url ?: ($customData['action_url'] ?? '/order');
+        if ($actionUrl === '/cashflow-manual') {
+            $actionUrl = $customData['action_url'] ?? '/cashflow';
+        } elseif (!empty($customData['action_url']) && str_starts_with($customData['action_url'], $actionUrl . '/')) {
+            $actionUrl = $customData['action_url'];
+        }
 
         $notificationData = array_merge([
             'order_name' => $order->nama_project,
             'customer_name' => $order->customer_name,
             'action_url' => $actionUrl,
-        ], $customData);
+        ], $customData, ['action_url' => $actionUrl]);
 
         $sendDb = $setting->send_database;
         $sendFcm = $setting->send_fcm;
@@ -64,14 +69,25 @@ class NotificationService
                         ->orWhereHas('roles', fn($q) => $q->whereIn('roles.id', $roleIds));
                 })->get();
             } else {
-                // 'order_team'
-                $recipients = $order->users()->where(function ($query) use ($roleIds) {
+                // 'order_team': merge both order_teams ($order->users) and survey_users ($order->surveyUsers)
+                $teamUsers = $order->users()->where(function ($query) use ($roleIds) {
                     $query->whereIn('role_id', $roleIds)
                         ->orWhereHas('roles', fn($q) => $q->whereIn('roles.id', $roleIds));
                 })->get();
 
-                if ($recipients->isEmpty() && method_exists($order, 'surveyUsers')) {
-                    $recipients = $order->surveyUsers()->where(function ($query) use ($roleIds) {
+                $surveyUsers = collect();
+                if (method_exists($order, 'surveyUsers')) {
+                    $surveyUsers = $order->surveyUsers()->where(function ($query) use ($roleIds) {
+                        $query->whereIn('role_id', $roleIds)
+                            ->orWhereHas('roles', fn($q) => $q->whereIn('roles.id', $roleIds));
+                    })->get();
+                }
+
+                $recipients = $teamUsers->merge($surveyUsers)->unique('id')->values();
+
+                // Fallback: if no user with the target roles is assigned to this order yet, notify users of those roles so notifications aren't lost
+                if ($recipients->isEmpty()) {
+                    $recipients = User::where(function ($query) use ($roleIds) {
                         $query->whereIn('role_id', $roleIds)
                             ->orWhereHas('roles', fn($q) => $q->whereIn('roles.id', $roleIds));
                     })->get();
@@ -115,10 +131,20 @@ class NotificationService
                     \App\Models\Role::getSupervisorRoleId(),
                 ];
 
-            $managers = $order->users()->where(function ($query) use ($mgmtRoleIds) {
+            $orderManagers = $order->users()->where(function ($query) use ($mgmtRoleIds) {
                 $query->whereIn('role_id', $mgmtRoleIds)
                     ->orWhereHas('roles', fn($q) => $q->whereIn('roles.id', $mgmtRoleIds));
             })->get();
+
+            $surveyManagers = collect();
+            if (method_exists($order, 'surveyUsers')) {
+                $surveyManagers = $order->surveyUsers()->where(function ($query) use ($mgmtRoleIds) {
+                    $query->whereIn('role_id', $mgmtRoleIds)
+                        ->orWhereHas('roles', fn($q) => $q->whereIn('roles.id', $mgmtRoleIds));
+                })->get();
+            }
+
+            $managers = $orderManagers->merge($surveyManagers)->unique('id')->values();
 
             foreach ($managers as $manager) {
                 if ($recipients->contains('id', $manager->id)) {
@@ -1303,8 +1329,10 @@ class NotificationService
             'cm_fee' => 'Commitment Fee',
             'approval_design' => 'Approval Desain',
             'desain_final' => 'Desain Final',
+            'item_pekerjaan' => 'Item Pekerjaan',
             'item-pekerjaan' => 'Item Pekerjaan',
             'rab_internal' => 'Rab Internal',
+            'rab' => 'Rab Internal',
             'kontrak' => 'Kontrak',
             'invoice' => 'Invoice',
             'survey_schedule' => 'Jadwal Survey',
@@ -1321,32 +1349,55 @@ class NotificationService
         $statusText = $taskResponse->status === 'menunggu_response'
             ? 'Response'
             : 'Input Data';
+        $daysOffset = $setting ? (int) $setting->days_offset : 1;
+        $statusWaktu = $daysOffset === 0 ? 'hari ini' : ($daysOffset === 1 ? 'besok' : "dalam {$daysOffset} hari");
+        $deadlineFormatted = $taskResponse->deadline ? $taskResponse->deadline->format('d-m-Y') : '-';
+        $actionUrl = $this->getActionUrlForTahap($taskResponse->tahap);
 
-        $notification = Notification::create([
-            'user_id' => $user->id,
-            'order_id' => $order->id,
-            'type' => 'task_deadline_reminder',
-            'title' => "Reminder: {$tahapName} - {$order->nama_project}",
-            'message' => "Deadline {$tahapName} untuk project \"{$order->nama_project}\" besok. Segera {$statusText}.",
-            'data' => [
-                'order_name' => $order->nama_project,
-                'customer_name' => $order->customer_name,
-                'tahap' => $taskResponse->tahap,
-                'deadline' => $taskResponse->deadline->toDateString(),
-                'action_url' => $this->getActionUrlForTahap($taskResponse->tahap),
-            ],
-        ]);
+        $replacements = [
+            'tahap' => $tahapName,
+            'nama_project' => $order->nama_project ?? '-',
+            'customer_name' => $order->customer_name ?? '-',
+            'deadline' => $deadlineFormatted,
+            'status_waktu' => $statusWaktu,
+            'status_aksi' => $statusText,
+            'days_offset' => $daysOffset,
+        ];
 
-        // Send FCM push notification
-        $this->fcmService->sendToUser($user->id, [
-            'title' => $notification->title,
-            'body' => $notification->message,
-            'data' => [
-                'notification_id' => $notification->id,
-                'type' => $notification->type,
+        $title = $setting ? $setting->formatTitle($replacements) : "Reminder: {$tahapName} - {$order->nama_project}";
+        $message = $setting ? $setting->formatMessage($replacements) : "Deadline {$tahapName} untuk project \"{$order->nama_project}\" {$statusWaktu}. Segera {$statusText}.";
+        $sendDb = $setting ? $setting->send_database : true;
+        $sendFcm = $setting ? $setting->send_fcm : true;
+
+        $notification = null;
+        if ($sendDb) {
+            $notification = Notification::create([
+                'user_id' => $user->id,
                 'order_id' => $order->id,
-            ],
-        ]);
+                'type' => 'task_deadline_reminder',
+                'title' => $title,
+                'message' => $message,
+                'data' => [
+                    'order_name' => $order->nama_project,
+                    'customer_name' => $order->customer_name,
+                    'tahap' => $taskResponse->tahap,
+                    'deadline' => $taskResponse->deadline ? $taskResponse->deadline->toDateString() : null,
+                    'action_url' => $actionUrl,
+                ],
+            ]);
+        }
+
+        if ($sendFcm) {
+            $this->fcmService->sendToUser($user->id, [
+                'title' => $title,
+                'body' => $message,
+                'data' => [
+                    'notification_id' => $notification ? $notification->id : 0,
+                    'type' => 'task_deadline_reminder',
+                    'order_id' => $order->id,
+                ],
+            ]);
+        }
     }
 
     /**
@@ -1354,7 +1405,6 @@ class NotificationService
      */
     private function getActionUrlForTahap(string $tahap): string
     {
-        // disamakan dengan send task remindeer notification
         $urls = [
             'survey' => '/survey-results',
             'moodboard' => '/moodboard',
@@ -1362,7 +1412,9 @@ class NotificationService
             'cm_fee' => '/commitment-fee',
             'approval_design' => '/moodboard',
             'desain_final' => '/desain-final',
+            'item_pekerjaan' => '/item-pekerjaan',
             'item-pekerjaan' => '/item-pekerjaan',
+            'rab_internal' => '/rab-internal',
             'rab' => '/rab-internal',
             'kontrak' => '/kontrak',
             'invoice' => '/invoice',
@@ -1380,22 +1432,34 @@ class NotificationService
     }
 
     /**
-     * Send payment reminder notification to Legal Admin users
+     * Send payment reminder notification (H-0)
      */
     public function sendPaymentReminderNotification(Order $order, \App\Models\CashflowVendorEntry $entry, string $paymentType = 'dp')
     {
-        $setting = NotificationSetting::getByKey('reminder_payment_due');
-        if ($setting && !$setting->is_active) {
+        $amount = $paymentType === 'termin' ? $entry->pembayaran_termin : $entry->pembayaran;
+        $formattedAmount = 'Rp ' . number_format((float) $amount, 0, ',', '.');
+        $label = $entry->label ?: $entry->vendor_name ?: $entry->vendor_group ?: 'Vendor';
+        $typeLabel = $paymentType === 'termin' ? 'Termin' : 'DP/Pembayaran';
+        $dueDate = $paymentType === 'termin' ? $entry->tanggal_pembayaran_termin : $entry->tanggal_pembayaran;
+        $dueDateFormatted = $dueDate ? \Carbon\Carbon::parse($dueDate)->format('d-m-Y') : now()->format('d-m-Y');
+
+        if ($this->dispatchDynamicNotification('reminder_payment_due', $order, Notification::TYPE_PAYMENT_REMINDER, [
+            'payment_type' => $typeLabel,
+            'vendor_label' => $label,
+            'nominal' => $formattedAmount,
+            'days_offset' => 0,
+            'tanggal_jatuh_tempo' => $dueDateFormatted,
+            'vendor_entry_id' => $entry->id,
+            'vendor_type' => $entry->vendor_type,
+            'amount' => $amount,
+            'action_url' => '/cashflow/' . $order->id,
+        ])) {
             return;
         }
+
         $legalAdmins = User::whereHas('role', function ($query) {
             $query->where('nama_role', 'Legal Admin');
         })->get();
-
-        $amount = $paymentType === 'termin' ? $entry->pembayaran_termin : $entry->pembayaran;
-        $formattedAmount = 'Rp ' . number_format($amount, 0, ',', '.');
-        $label = $entry->label ?: $entry->vendor_name ?: 'Vendor';
-        $typeLabel = $paymentType === 'termin' ? 'Termin' : 'DP/Pembayaran';
 
         foreach ($legalAdmins as $legalAdmin) {
             $notification = Notification::create([
@@ -1415,7 +1479,6 @@ class NotificationService
                 ],
             ]);
 
-            // 🔥 Send FCM push notification to mobile
             $this->fcmService->sendToUser($legalAdmin->id, [
                 'title' => $notification->title,
                 'body' => $notification->message,
@@ -1431,25 +1494,40 @@ class NotificationService
     public function sendPaymentReminderH7Notification(Order $order, \App\Models\CashflowVendorEntry $entry, string $paymentType = 'dp')
     {
         $setting = NotificationSetting::getByKey('reminder_payment_h_min');
-        if ($setting && !$setting->is_active) {
+        $daysOffset = $setting ? (int) $setting->days_offset : 7;
+
+        $amount = $paymentType === 'termin' ? $entry->pembayaran_termin : $entry->pembayaran;
+        $formattedAmount = 'Rp ' . number_format((float) $amount, 0, ',', '.');
+        $label = $entry->label ?: $entry->vendor_name ?: $entry->vendor_group ?: 'Vendor';
+        $typeLabel = $paymentType === 'termin' ? 'Termin' : 'DP/Pembayaran';
+        $dueDate = $paymentType === 'termin' ? $entry->tanggal_pembayaran_termin : $entry->tanggal_pembayaran;
+        $dueDateFormatted = $dueDate ? \Carbon\Carbon::parse($dueDate)->format('d-m-Y') : now()->addDays($daysOffset)->format('d-m-Y');
+
+        if ($this->dispatchDynamicNotification('reminder_payment_h_min', $order, 'payment_reminder_h7', [
+            'payment_type' => $typeLabel,
+            'vendor_label' => $label,
+            'nominal' => $formattedAmount,
+            'days_offset' => $daysOffset,
+            'tanggal_jatuh_tempo' => $dueDateFormatted,
+            'vendor_entry_id' => $entry->id,
+            'vendor_type' => $entry->vendor_type,
+            'amount' => $amount,
+            'action_url' => '/cashflow/' . $order->id,
+        ])) {
             return;
         }
+
         $legalAdmins = User::whereHas('role', function ($query) {
             $query->where('nama_role', 'Legal Admin');
         })->get();
-
-        $amount = $paymentType === 'termin' ? $entry->pembayaran_termin : $entry->pembayaran;
-        $formattedAmount = 'Rp ' . number_format($amount, 0, ',', '.');
-        $label = $entry->label ?: $entry->vendor_name ?: 'Vendor';
-        $typeLabel = $paymentType === 'termin' ? 'Termin' : 'DP/Pembayaran';
 
         foreach ($legalAdmins as $legalAdmin) {
             $notification = Notification::create([
                 'user_id' => $legalAdmin->id,
                 'order_id' => $order->id,
                 'type' => 'payment_reminder_h7',
-                'title' => "⚠️ Reminder H-7 Pembayaran - {$order->nama_project}",
-                'message' => "Pembayaran {$typeLabel} untuk \"{$label}\" sebesar {$formattedAmount} pada project \"{$order->nama_project}\" jatuh tempo dalam 7 hari.",
+                'title' => "⚠️ Reminder H-{$daysOffset} Pembayaran - {$order->nama_project}",
+                'message' => "Pembayaran {$typeLabel} untuk \"{$label}\" sebesar {$formattedAmount} pada project \"{$order->nama_project}\" jatuh tempo dalam {$daysOffset} hari ({$dueDateFormatted}).",
                 'data' => [
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
@@ -1476,9 +1554,15 @@ class NotificationService
     public function sendFeeReminderNotification(Order $order)
     {
         $setting = NotificationSetting::getByKey('reminder_material_fee');
-        if ($setting && !$setting->is_active) {
+        $daysOffset = $setting ? (int) $setting->days_offset : 3;
+
+        if ($this->dispatchDynamicNotification('reminder_material_fee', $order, 'fee_reminder', [
+            'days_offset' => $daysOffset,
+            'action_url' => '/cashflow/' . $order->id,
+        ])) {
             return;
         }
+
         $pmUsers = $order->users;
 
         foreach ($pmUsers as $user) {
@@ -1487,7 +1571,7 @@ class NotificationService
                 'order_id' => $order->id,
                 'type' => 'fee_reminder',
                 'title' => "💰 Reminder Fee Proyek - {$order->nama_project}",
-                'message' => "Fee Team/PM untuk project \"{$order->nama_project}\" harus segera disetujui (3 hari setelah Meeting Approval Material).",
+                'message' => "Fee Team/PM untuk project \"{$order->nama_project}\" harus segera disetujui ({$daysOffset} hari setelah Meeting Approval Material).",
                 'data' => [
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,

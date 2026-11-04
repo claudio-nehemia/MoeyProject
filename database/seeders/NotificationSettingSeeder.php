@@ -133,7 +133,7 @@ class NotificationSettingSeeder extends Seeder
                 'send_database' => true,
                 'send_fcm' => true,
                 'recipient_type' => 'order_team',
-                'target_role_ids' => [6, 10], // Estimator, PM
+                'target_role_ids' => [7, 6, 10], // Desainer, Estimator, PM
                 'send_to_management' => true,
                 'management_role_ids' => [11, 10, 9],
                 'days_offset' => 0,
@@ -359,7 +359,7 @@ class NotificationSettingSeeder extends Seeder
                 'days_offset' => 7, // H-7
                 'title_template' => '⚠️ Reminder Pembayaran H-{days_offset} - {nama_project}',
                 'message_template' => 'Pembayaran {payment_type} untuk "{vendor_label}" sebesar {nominal} pada project "{nama_project}" akan jatuh tempo dalam {days_offset} hari ({tanggal_jatuh_tempo}).',
-                'action_url' => '/cashflow-manual',
+                'action_url' => '/cashflow',
                 'available_placeholders' => ['{payment_type}', '{vendor_label}', '{nominal}', '{nama_project}', '{days_offset}', '{tanggal_jatuh_tempo}'],
             ],
             [
@@ -377,7 +377,7 @@ class NotificationSettingSeeder extends Seeder
                 'days_offset' => 0,
                 'title_template' => '💰 Reminder Pembayaran - {nama_project}',
                 'message_template' => 'Pembayaran {payment_type} untuk "{vendor_label}" sebesar {nominal} pada project "{nama_project}" jatuh tempo hari ini.',
-                'action_url' => '/cashflow-manual',
+                'action_url' => '/cashflow',
                 'available_placeholders' => ['{payment_type}', '{vendor_label}', '{nominal}', '{nama_project}'],
             ],
             [
@@ -395,7 +395,7 @@ class NotificationSettingSeeder extends Seeder
                 'days_offset' => 3, // H+3
                 'title_template' => '💸 Reminder Fee Vendor - {nama_project}',
                 'message_template' => 'Material telah disetujui {days_offset} hari lalu untuk project "{nama_project}". Silakan proses pembayaran fee vendor.',
-                'action_url' => '/cashflow-manual',
+                'action_url' => '/cashflow',
                 'available_placeholders' => ['{nama_project}', '{customer_name}', '{days_offset}'],
             ],
         ];

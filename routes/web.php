@@ -144,19 +144,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('cashflow/export-daily-payments', [CashflowController::class, 'exportDailyPayments'])
             ->name('cashflow.export-daily-payments');
         Route::get('cashflow/{order}/export-vendor-payments', [CashflowController::class, 'exportProjectVendorPayments'])
-            ->name('cashflow.export-vendor-payments');
-        Route::get('cashflow/{order}', [CashflowController::class, 'show'])->name('cashflow.show');
+            ->whereNumber('order')->name('cashflow.export-vendor-payments');
+        Route::get('cashflow/{order}', [CashflowController::class, 'show'])
+            ->whereNumber('order')->name('cashflow.show');
     });
     Route::post('cashflow/{order}/manual-entry', [CashflowController::class, 'storeManualEntry'])
-        ->middleware('permission:cashflow.create')->name('cashflow.store-manual');
+        ->whereNumber('order')->middleware('permission:cashflow.create')->name('cashflow.store-manual');
     Route::post('cashflow/{order}/vendor-entries', [CashflowController::class, 'storeVendorEntries'])
-        ->middleware('permission:cashflow.create')->name('cashflow.store-vendor-entries');
+        ->whereNumber('order')->middleware('permission:cashflow.create')->name('cashflow.store-vendor-entries');
     Route::put('cashflow/manual-entry/{entry}', [CashflowController::class, 'updateManualEntry'])
-        ->middleware('permission:cashflow.edit')->name('cashflow.update-manual');
+        ->whereNumber('entry')->middleware('permission:cashflow.edit')->name('cashflow.update-manual');
     Route::delete('cashflow/manual-entry/{entry}', [CashflowController::class, 'deleteManualEntry'])
-        ->middleware('permission:cashflow.delete')->name('cashflow.delete-manual');
+        ->whereNumber('entry')->middleware('permission:cashflow.delete')->name('cashflow.delete-manual');
     Route::post('cashflow/vendor-entries/{entry}/toggle-flag', [CashflowController::class, 'toggleVendorFlag'])
-        ->name('cashflow.vendor-entries.toggle-flag');
+        ->whereNumber('entry')->name('cashflow.vendor-entries.toggle-flag');
 
     // Jenis Interior Routes
     Route::resource('jenis-interior', JenisInteriorController::class)
@@ -875,9 +876,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ==========================================
     Route::prefix('pengaturan-notifikasi')->name('pengaturan-notifikasi.')->group(function () {
         Route::get('/', [\App\Http\Controllers\NotificationSettingController::class, 'index'])->name('index');
-        Route::put('/{id}', [\App\Http\Controllers\NotificationSettingController::class, 'update'])->name('update');
-        Route::patch('/{id}/quick-toggle', [\App\Http\Controllers\NotificationSettingController::class, 'quickToggle'])->name('quick-toggle');
-        Route::post('/{id}/test-send', [\App\Http\Controllers\NotificationSettingController::class, 'testSend'])->name('test-send');
+        Route::put('/{id}', [\App\Http\Controllers\NotificationSettingController::class, 'update'])->whereNumber('id')->name('update');
+        Route::patch('/{id}/quick-toggle', [\App\Http\Controllers\NotificationSettingController::class, 'quickToggle'])->whereNumber('id')->name('quick-toggle');
+        Route::post('/{id}/test-send', [\App\Http\Controllers\NotificationSettingController::class, 'testSend'])->whereNumber('id')->name('test-send');
     });
 
     // ==========================================

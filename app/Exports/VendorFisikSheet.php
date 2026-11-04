@@ -99,6 +99,6 @@ class VendorFisikSheet implements FromArray, WithTitle, WithStyles, ShouldAutoSi
         }
 
         $sheet->getStyle('D4:E20')->getNumberFormat()->setFormatCode('#,##0');
-        $sheet->getStyle('H4:H20')->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle('J4:J20')->getNumberFormat()->setFormatCode('#,##0');
     }
 }

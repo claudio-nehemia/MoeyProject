@@ -164,21 +164,22 @@ class KpiController extends Controller
             $isFastUpdate = false;
             $isLate = false;
             $pointsImpact = 0;
+            $durationActual = max(1, (int) ($task->duration_actual ?: 1));
 
             if ($task->response_time) {
                 $startTime = Carbon::parse($task->start_time);
                 $responseTime = Carbon::parse($task->response_time);
-                $diffDays = $responseTime->diffInDays($startTime);
-                if ($diffDays < $task->duration_actual) {
+                $diffDays = max(0, $startTime->diffInDays($responseTime, false));
+                if ($diffDays < $durationActual && !$responseTime->greaterThan(Carbon::parse($task->deadline))) {
                     $isFastResponse = true;
-                    $daysEarly = $task->duration_actual - $diffDays;
+                    $daysEarly = max(1, $durationActual - floor($diffDays));
                     if ($settings->bonus_type === 'flat') {
                         $pointsImpact += $settings->points_fast_response;
                     } else {
-                        $pointsImpact += round(($settings->points_fast_response * $daysEarly) / $task->duration_actual);
+                        $pointsImpact += round(($settings->points_fast_response * $daysEarly) / $durationActual);
                     }
                 }
-                if ($responseTime->greaterThan(Carbon::parse($task->deadline))) {
+                if (($diffDays > $durationActual || $responseTime->greaterThan(Carbon::parse($task->deadline))) && !$task->update_data_time) {
                     $isLate = true;
                 }
             }
@@ -186,18 +187,21 @@ class KpiController extends Controller
             if ($task->update_data_time) {
                 $baseTime = Carbon::parse($task->response_time ?? $task->start_time);
                 $updateTime = Carbon::parse($task->update_data_time);
-                $diffDays = $updateTime->diffInDays($baseTime);
-                $targetUpdateDays = max(1, $task->duration - $task->duration_actual);
-                if ($diffDays < $targetUpdateDays) {
+                $diffDays = max(0, $baseTime->diffInDays($updateTime, false));
+                $targetUpdateDays = $task->duration > $durationActual
+                    ? ($task->duration - $durationActual)
+                    : max(1, (int) $task->duration);
+                $isUpdateOverdue = $updateTime->greaterThan(Carbon::parse($task->deadline)) || in_array($task->status, ['telat', 'telat_submit']);
+                if ($diffDays < $targetUpdateDays && !$isUpdateOverdue) {
                     $isFastUpdate = true;
-                    $daysEarly = $targetUpdateDays - $diffDays;
+                    $daysEarly = max(1, $targetUpdateDays - floor($diffDays));
                     if ($settings->bonus_type === 'flat') {
                         $pointsImpact += $settings->points_fast_update;
                     } else {
                         $pointsImpact += round(($settings->points_fast_update * $daysEarly) / $targetUpdateDays);
                     }
                 }
-                if ($updateTime->greaterThan(Carbon::parse($task->deadline))) {
+                if ($isUpdateOverdue) {
                     $isLate = true;
                 }
             }

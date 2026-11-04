@@ -14,8 +14,11 @@ trait HasCashflowExports
     public function exportDailyPayments()
     {
         $rawEntries = CashflowVendorEntry::with('order')
-            ->whereNotNull('tanggal_pembayaran')
-            ->orWhereNotNull('tanggal_pembayaran_termin')
+            ->where(function ($q) {
+                $q->whereNotNull('tanggal_pembayaran')
+                  ->orWhereNotNull('tanggal_pembayaran_termin');
+            })
+            ->orderBy('id')
             ->get();
 
         $dailyPayments = [];
@@ -29,7 +32,7 @@ trait HasCashflowExports
                     'vendor_type' => $entry->vendor_type,
                     'category' => $entry->section,
                     'label' => $entry->label ?: 'DP / Pembayaran Utama',
-                    'vendor_name' => $entry->vendor_name ?: '-',
+                    'vendor_name' => $entry->vendor_name ?: ($entry->vendor_group ?: '-'),
                     'type' => 'DP / Pembayaran',
                     'amount' => (float) $entry->pembayaran,
                     'date' => $entry->tanggal_pembayaran->format('Y-m-d'),
@@ -46,7 +49,7 @@ trait HasCashflowExports
                     'vendor_type' => $entry->vendor_type,
                     'category' => $entry->section,
                     'label' => $entry->label ?: 'Termin Pembayaran',
-                    'vendor_name' => $entry->vendor_name ?: '-',
+                    'vendor_name' => $entry->vendor_name ?: ($entry->vendor_group ?: '-'),
                     'type' => 'Termin',
                     'amount' => (float) $entry->pembayaran_termin,
                     'date' => $entry->tanggal_pembayaran_termin->format('Y-m-d'),
@@ -58,7 +61,8 @@ trait HasCashflowExports
         }
 
         usort($dailyPayments, function($a, $b) {
-            return strcmp($b['date'], $a['date']);
+            $cmp = strcmp($b['date'], $a['date']);
+            return $cmp !== 0 ? $cmp : strcmp($a['id'], $b['id']);
         });
 
         return Excel::download(new DailyPaymentsExport($dailyPayments), 'pembayaran_harian.xlsx');

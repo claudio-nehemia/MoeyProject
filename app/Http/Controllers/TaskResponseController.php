@@ -49,11 +49,16 @@ class TaskResponseController extends Controller
                 ->firstOrFail();
 
             $newDeadline = $taskResponse->deadline->copy()->addDays($validated['days']);
+            $newStatus = $taskResponse->status;
+            if ($newStatus === 'telat' && $newDeadline->isFuture()) {
+                $newStatus = $taskResponse->response_time ? 'menunggu_input' : 'menunggu_response';
+            }
 
             $taskResponse->update([
                 'deadline' => $newDeadline,
                 'duration' => $taskResponse->duration + $validated['days'],
                 'extend_time' => $taskResponse->extend_time + 1,
+                'status' => $newStatus,
                 'extend_reason' => ($taskResponse->extend_reason ? $taskResponse->extend_reason . "\n\n" : '')
                     . "Perpanjangan #{$taskResponse->extend_time}: {$validated['reason']}",
             ]);

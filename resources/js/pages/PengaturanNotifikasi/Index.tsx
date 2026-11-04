@@ -1,11 +1,11 @@
-import { Head, router } from '@inertiajs/react';
-import { useState, useMemo } from 'react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { useState, useMemo, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import { 
     Settings, ClipboardList, Clock, HelpCircle, Search, Check, X, 
     Bell, Smartphone, FlaskConical, Edit3, Target, AlertTriangle, 
-    Coins, CreditCard 
+    Coins, CreditCard, CheckCircle2
 } from 'lucide-react';
 
 interface RoleItem {
@@ -57,20 +57,45 @@ export default function Index({ settings, roles }: Props) {
     const [formData, setFormData] = useState<Partial<NotificationSettingItem>>({});
     const [submitting, setSubmitting] = useState<boolean>(false);
     const [testSendingId, setTestSendingId] = useState<number | null>(null);
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+    const { flash } = usePage<{ flash?: { success?: string; error?: string } }>().props;
+
+    useEffect(() => {
+        if (flash?.success) {
+            setToastMessage(flash.success);
+            const timer = setTimeout(() => setToastMessage(null), 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [flash?.success]);
+
+    const totalStageCount = useMemo(() => settings.filter(s => s.category === 'order_stage').length, [settings]);
+    const totalReminderCount = useMemo(() => settings.filter(s => s.category === 'reminder').length, [settings]);
 
     // Filtered lists
     const stageSettings = useMemo(() => {
+        const q = search.trim().toLowerCase();
         return settings.filter(s => s.category === 'order_stage' && (
-            !search ||
-            s.nama_pengaturan.toLowerCase().includes(search.toLowerCase()) ||
-            s.event_key.toLowerCase().includes(search.toLowerCase()) ||
-            s.title_template.toLowerCase().includes(search.toLowerCase())
+            !q ||
+            s.nama_pengaturan.toLowerCase().includes(q) ||
+            s.event_key.toLowerCase().includes(q) ||
+            (s.deskripsi && s.deskripsi.toLowerCase().includes(q)) ||
+            s.title_template.toLowerCase().includes(q) ||
+            s.message_template.toLowerCase().includes(q)
         ));
     }, [settings, search]);
 
     const reminderSettings = useMemo(() => {
-        return settings.filter(s => s.category === 'reminder');
-    }, [settings]);
+        const q = search.trim().toLowerCase();
+        return settings.filter(s => s.category === 'reminder' && (
+            !q ||
+            s.nama_pengaturan.toLowerCase().includes(q) ||
+            s.event_key.toLowerCase().includes(q) ||
+            (s.deskripsi && s.deskripsi.toLowerCase().includes(q)) ||
+            s.title_template.toLowerCase().includes(q) ||
+            s.message_template.toLowerCase().includes(q)
+        ));
+    }, [settings, search]);
 
     // Role map helper
     const roleMap = useMemo(() => {
@@ -86,6 +111,7 @@ export default function Index({ settings, roles }: Props) {
             value: !currentValue,
         }, {
             preserveScroll: true,
+            preserveState: true,
         });
     };
 
@@ -102,7 +128,7 @@ export default function Index({ settings, roles }: Props) {
             target_role_ids: setting.target_role_ids || [],
             send_to_management: setting.send_to_management,
             management_role_ids: setting.management_role_ids || [],
-            days_offset: setting.days_offset || 0,
+            days_offset: setting.days_offset ?? 0,
             title_template: setting.title_template,
             message_template: setting.message_template,
             action_url: setting.action_url || '',
@@ -118,6 +144,7 @@ export default function Index({ settings, roles }: Props) {
         setSubmitting(true);
         router.put(`/pengaturan-notifikasi/${editingSetting.id}`, formData as any, {
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 setModalOpen(false);
             },
@@ -130,6 +157,10 @@ export default function Index({ settings, roles }: Props) {
         setTestSendingId(id);
         router.post(`/pengaturan-notifikasi/${id}/test-send`, {}, {
             preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                window.dispatchEvent(new Event('notifications-updated'));
+            },
             onFinish: () => setTestSendingId(null),
         });
     };
@@ -205,7 +236,7 @@ export default function Index({ settings, roles }: Props) {
                                     }`}
                                 >
                                     <ClipboardList className="w-3.5 h-3.5" />
-                                    <span>Tahapan Order ({stageSettings.length})</span>
+                                    <span>Tahapan Order ({totalStageCount})</span>
                                 </button>
                                 <button
                                     onClick={() => setActiveTab('reminder')}
@@ -216,7 +247,7 @@ export default function Index({ settings, roles }: Props) {
                                     }`}
                                 >
                                     <Clock className="w-3.5 h-3.5" />
-                                    <span>Pengingat Otomatis ({reminderSettings.length})</span>
+                                    <span>Pengingat Otomatis ({totalReminderCount})</span>
                                 </button>
                                 <button
                                     onClick={() => setActiveTab('guide')}
@@ -232,6 +263,21 @@ export default function Index({ settings, roles }: Props) {
                             </div>
                         </div>
                     </div>
+
+                    {toastMessage && (
+                        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl flex items-center justify-between shadow-sm">
+                            <div className="flex items-center gap-2 text-xs font-semibold">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                <span>{toastMessage}</span>
+                            </div>
+                            <button
+                                onClick={() => setToastMessage(null)}
+                                className="text-emerald-500 hover:text-emerald-700"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    )}
 
                     {/* Stats Overview */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -863,22 +909,33 @@ export default function Index({ settings, roles }: Props) {
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                                     Pratinjau Tampilan Notifikasi di Smartphone:
                                 </span>
-                                <div className="text-xs font-bold text-amber-300">
-                                    {formData.title_template
-                                        ?.replace('{nama_project}', 'Project Villa Canggu')
-                                        ?.replace('{customer_name}', 'Bpk. Hendra Gunawan')
-                                        ?.replace('{tahap}', 'Survey Lapangan')
-                                        ?.replace('{deadline}', 'Besok') || 'Judul Notifikasi'}
-                                </div>
-                                <div className="text-xs text-slate-300">
-                                    {formData.message_template
-                                        ?.replace('{nama_project}', 'Project Villa Canggu')
-                                        ?.replace('{customer_name}', 'Bpk. Hendra Gunawan')
-                                        ?.replace('{tahap}', 'Survey Lapangan')
-                                        ?.replace('{deadline}', 'Besok')
-                                        ?.replace('{status_waktu}', 'besok')
-                                        ?.replace('{status_aksi}', 'Input Data') || 'Isi pesan notifikasi...'}
-                                </div>
+                                {(() => {
+                                    const offsetVal = formData.days_offset ?? 1;
+                                    const formatPreview = (tpl?: string) =>
+                                        (tpl || '')
+                                            .replaceAll('{nama_project}', 'Project Villa Canggu')
+                                            .replaceAll('{customer_name}', 'Bpk. Hendra Gunawan')
+                                            .replaceAll('{tanggal_survey}', '15-09-2026')
+                                            .replaceAll('{tahap}', 'Survey Lapangan')
+                                            .replaceAll('{deadline}', 'Besok')
+                                            .replaceAll('{status_waktu}', offsetVal === 0 ? 'hari ini' : offsetVal === 1 ? 'besok' : `dalam ${offsetVal} hari`)
+                                            .replaceAll('{status_aksi}', 'Input Data')
+                                            .replaceAll('{payment_type}', 'DP/Pembayaran')
+                                            .replaceAll('{vendor_label}', 'Mitra Kayu Sejahtera')
+                                            .replaceAll('{nominal}', 'Rp 25.000.000')
+                                            .replaceAll('{days_offset}', String(offsetVal))
+                                            .replaceAll('{tanggal_jatuh_tempo}', '20-09-2026');
+                                    return (
+                                        <>
+                                            <div className="text-xs font-bold text-amber-300">
+                                                {formatPreview(formData.title_template) || 'Judul Notifikasi'}
+                                            </div>
+                                            <div className="text-xs text-slate-300">
+                                                {formatPreview(formData.message_template) || 'Isi pesan notifikasi...'}
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </div>
 
                             {/* Footer Submit */}

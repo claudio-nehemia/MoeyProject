@@ -55,7 +55,8 @@ class NotificationSettingController extends Controller
 
         $setting->update($validated);
 
-        return back()->with('success', "Pengaturan \"{$setting->nama_pengaturan}\" berhasil diperbarui.");
+        return redirect()->route('pengaturan-notifikasi.index')
+            ->with('success', "Pengaturan \"{$setting->nama_pengaturan}\" berhasil diperbarui.");
     }
 
     /**
@@ -74,7 +75,8 @@ class NotificationSettingController extends Controller
             $validated['field'] => $validated['value'],
         ]);
 
-        return back()->with('success', "Status {$validated['field']} untuk \"{$setting->nama_pengaturan}\" berhasil diubah.");
+        return redirect()->route('pengaturan-notifikasi.index')
+            ->with('success', "Status {$validated['field']} untuk \"{$setting->nama_pengaturan}\" berhasil diubah.");
     }
 
     /**
@@ -86,42 +88,46 @@ class NotificationSettingController extends Controller
         $user = auth()->user();
 
         if (!$user) {
-            return back()->with('error', 'User tidak terautentikasi.');
+            return redirect()->route('pengaturan-notifikasi.index')
+                ->with('error', 'User tidak terautentikasi.');
         }
 
+        $daysOffset = $setting->days_offset ?? 1;
         $sampleReplacements = [
             'nama_project' => 'Project Renovasi Villa Bali (Uji Coba)',
             'customer_name' => 'Bpk. Hendra Gunawan',
             'tanggal_survey' => now()->addDays(2)->format('d-m-Y'),
             'tahap' => 'Survey Lapangan',
-            'deadline' => now()->addDays(1)->format('d-m-Y'),
-            'status_waktu' => 'besok',
+            'deadline' => now()->addDays(max(1, $daysOffset))->format('d-m-Y'),
+            'status_waktu' => $daysOffset === 0 ? 'hari ini' : ($daysOffset === 1 ? 'besok' : "dalam {$daysOffset} hari"),
             'status_aksi' => 'Input Data',
             'payment_type' => 'DP/Pembayaran',
             'vendor_label' => 'Mitra Kayu Sejahtera',
             'nominal' => 'Rp 25.000.000',
-            'days_offset' => $setting->days_offset ?: 1,
-            'tanggal_jatuh_tempo' => now()->addDays($setting->days_offset ?: 1)->format('d-m-Y'),
+            'days_offset' => $daysOffset,
+            'tanggal_jatuh_tempo' => now()->addDays($daysOffset)->format('d-m-Y'),
         ];
 
         $title = $setting->formatTitle($sampleReplacements);
         $message = $setting->formatMessage($sampleReplacements);
-
-        $createdNotification = null;
-        if ($setting->send_database) {
-            $createdNotification = Notification::create([
-                'user_id' => $user->id,
-                'order_id' => null,
-                'type' => 'test_notification',
-                'title' => '[TEST] ' . $title,
-                'message' => $message,
-                'data' => [
-                    'is_test' => true,
-                    'event_key' => $setting->event_key,
-                    'action_url' => $setting->action_url ?: '/dashboard',
-                ],
-            ]);
+        $actionUrl = $setting->action_url ?: '/dashboard';
+        if ($actionUrl === '/cashflow-manual') {
+            $actionUrl = '/cashflow';
         }
+
+        $sampleOrderId = \App\Models\Order::latest('id')->value('id');
+        $createdNotification = Notification::create([
+            'user_id' => $user->id,
+            'order_id' => $sampleOrderId,
+            'type' => 'test_notification',
+            'title' => '[TEST] ' . $title,
+            'message' => $message,
+            'data' => [
+                'is_test' => true,
+                'event_key' => $setting->event_key,
+                'action_url' => $actionUrl,
+            ],
+        ]);
 
         if ($setting->send_fcm) {
             try {
@@ -139,6 +145,7 @@ class NotificationSettingController extends Controller
             }
         }
 
-        return back()->with('success', "Tes notifikasi berhasil dikirimkan ke akun Anda.");
+        return redirect()->route('pengaturan-notifikasi.index')
+            ->with('success', "Tes notifikasi \"{$setting->nama_pengaturan}\" berhasil dikirimkan ke akun Anda.");
     }
 }

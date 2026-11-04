@@ -329,9 +329,13 @@ export default function Show({
     const handleRemoveFeeMember = (idx: number) => {
         generalForm.setData('fee_team_items', generalForm.data.fee_team_items.filter((_, i) => i !== idx));
     };
-    const handleUpdateFeeMember = (idx: number, key: 'label'|'amount'|'type'|'fixed'|'pct'|'formula', val: any) => {
+    const handleUpdateFeeMember = (idx: number, keyOrUpdates: ('label'|'amount'|'type'|'fixed'|'pct'|'formula') | Partial<FeeTeamItem>, val?: any) => {
         const current = [...generalForm.data.fee_team_items];
-        current[idx] = { ...current[idx], [key]: val };
+        if (typeof keyOrUpdates === 'string') {
+            current[idx] = { ...current[idx], [keyOrUpdates]: val };
+        } else {
+            current[idx] = { ...current[idx], ...keyOrUpdates };
+        }
         generalForm.setData('fee_team_items', current);
     };
 
@@ -972,8 +976,10 @@ export default function Show({
                                                                 value={item.pct || 0}
                                                                 onChange={(e) => {
                                                                     const pctVal = parseFloat(e.target.value) || 0;
-                                                                    handleUpdateFeeMember(idx, 'pct', pctVal);
-                                                                    handleUpdateFeeMember(idx, 'amount', Math.round(computed.marginBase * (pctVal / 100)));
+                                                                    handleUpdateFeeMember(idx, {
+                                                                        pct: pctVal,
+                                                                        amount: Math.round(computed.marginBase * (pctVal / 100)),
+                                                                    });
                                                                 }}
                                                                 className="w-full pr-5 pl-2 py-1 text-right font-mono text-xs text-stone-700 bg-white border border-stone-200 rounded-lg focus:outline-none focus:border-stone-300"
                                                             />
@@ -987,8 +993,10 @@ export default function Show({
                                                             <CurrencyInput
                                                                 value={item.fixed}
                                                                 onChange={(val) => {
-                                                                    handleUpdateFeeMember(idx, 'fixed', val);
-                                                                    handleUpdateFeeMember(idx, 'amount', val);
+                                                                    handleUpdateFeeMember(idx, {
+                                                                        fixed: val,
+                                                                        amount: val,
+                                                                    });
                                                                 }}
                                                                 className="w-full pl-6 pr-2 py-1 text-right font-mono text-xs text-stone-700 bg-white border border-stone-200 rounded-lg focus:outline-none focus:border-stone-300"
                                                                 placeholder="0"
@@ -1001,7 +1009,6 @@ export default function Show({
                                                             value={item.formula || ''}
                                                             onChange={(e) => {
                                                                     const f = e.target.value;
-                                                                    handleUpdateFeeMember(idx, 'formula', f);
                                                                     let amount = 0;
                                                                     if (f === 'designer1/4') {
                                                                         const d1 = generalForm.data.fee_team_items.find(f => f.label === 'Designer 1');
@@ -1010,7 +1017,10 @@ export default function Show({
                                                                     } else if (f === 'target_ext_10pct') {
                                                                         amount = computed.target_external * 0.10;
                                                                     }
-                                                                    handleUpdateFeeMember(idx, 'amount', Math.round(amount));
+                                                                    handleUpdateFeeMember(idx, {
+                                                                        formula: f,
+                                                                        amount: Math.round(amount),
+                                                                    });
                                                             }}
                                                             className="w-full sm:w-1/4 px-2 py-1 text-xs text-stone-600 bg-white border border-stone-200 rounded-lg focus:outline-none focus:ring-0 focus:border-stone-300"
                                                         >
@@ -1339,7 +1349,7 @@ export default function Show({
                                                 <tbody>
                                                     {vendorForm.data.pembayaran_vendor_internal.map((item, idx) => (
                                                         <tr key={item.id || idx} className="border-b border-stone-100">
-                                                            <td className="p-1"><input type="text" value={item.label} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'label', e.target.value)} className="w-full px-2 py-1 text-xs border border-stone-200 rounded font-semibold text-stone-700" /></td>
+                                                            <td className="p-1"><input type="text" value={item.label} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'label', e.target.value)} className="w-full px-2 py-1 text-xs border border-stone-200 rounded font-semibold text-stone-700" required /></td>
                                                             <td className="p-1"><span className="text-xs font-semibold text-stone-600 uppercase">{item.notes || 'termin'}</span></td>
                                                             <td className="p-1"><CurrencyInput value={item.pembayaran_termin || 0} onChange={(val) => handleUpdateMainVendorField('internal', idx, 'pembayaran_termin', val)} className="w-24 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded" /></td>
                                                             <td className="p-1"><input type="date" value={item.tanggal_pembayaran_termin || ''} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'tanggal_pembayaran_termin', e.target.value)} className="px-1 py-1 text-[11px] rounded border border-stone-200 bg-white text-stone-600" /></td>
@@ -1352,6 +1362,162 @@ export default function Show({
                                                 </tbody>
                                             </table>
                                         </div>
+                                    </div>
+
+                                    {/* Main Pembayaran Table Fisik (Termin) */}
+                                    <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm p-5 space-y-4">
+                                        <div className="flex justify-between items-center border-b border-stone-100 pb-2">
+                                            <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">2B. Rincian Pembayaran Vendor Utama Fisik (Fase Termin)</h3>
+                                            <button type="button" onClick={() => handleAddMainPaymentRow('fisik')} className="text-[10px] font-bold text-amber-600 hover:text-amber-700">+ Tambah Pembayaran Utama</button>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs text-left text-stone-600">
+                                                <thead className="text-[10px] text-stone-400 uppercase bg-stone-50 border-b border-stone-200">
+                                                    <tr>
+                                                        <th className="px-4 py-2">Keterangan</th>
+                                                        <th className="px-4 py-2">Target Fase</th>
+                                                        <th className="px-4 py-2 text-right">Termin (V2)</th>
+                                                        <th className="px-4 py-2">Tanggal Termin</th>
+                                                        <th className="px-4 py-2 text-center">AF (T)</th>
+                                                        <th className="px-4 py-2 text-center">FB (T)</th>
+                                                        <th className="px-4 py-2 text-center">JW (T)</th>
+                                                        <th className="px-4 py-2 text-center">Aksi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {vendorForm.data.pembayaran_vendor_fisik.map((item, idx) => (
+                                                        <tr key={item.id || idx} className="border-b border-stone-100">
+                                                            <td className="p-1"><input type="text" value={item.label} onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'label', e.target.value)} className="w-full px-2 py-1 text-xs border border-stone-200 rounded font-semibold text-stone-700" required /></td>
+                                                            <td className="p-1"><span className="text-xs font-semibold text-stone-600 uppercase">{item.notes || 'termin'}</span></td>
+                                                            <td className="p-1"><CurrencyInput value={item.pembayaran_termin || 0} onChange={(val) => handleUpdateMainVendorField('fisik', idx, 'pembayaran_termin', val)} className="w-24 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded" /></td>
+                                                            <td className="p-1"><input type="date" value={item.tanggal_pembayaran_termin || ''} onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'tanggal_pembayaran_termin', e.target.value)} className="px-1 py-1 text-[11px] rounded border border-stone-200 bg-white text-stone-600" /></td>
+                                                            {['flag_af_termin', 'flag_fb_termin', 'flag_jw_termin'].map((flag) => (
+                                                                <td key={flag} className="p-1 text-center"><input type="checkbox" checked={!!item[flag as keyof VendorMainEntry]} onChange={(e) => handleUpdateMainVendorField('fisik', idx, flag as keyof VendorMainEntry, e.target.checked ? '✔' : null)} className="rounded border-stone-300 text-amber-500 scale-90" /></td>
+                                                            ))}
+                                                            <td className="p-1 text-center"><button type="button" onClick={() => handleRemoveMainPaymentRow('fisik', idx)} className="text-rose-500 hover:text-rose-600 font-bold px-2 py-0.5 rounded">x</button></td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    {/* Material Hutang Internal (Dinamis) */}
+                                    <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm p-5 space-y-6">
+                                        <div className="flex justify-between items-center border-b border-stone-100 pb-2">
+                                            <div>
+                                                <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">2C. Material Hutang Supplier Internal (Dinamis)</h3>
+                                                <span className="text-[10px] text-stone-400 mt-1 block">Status PO: <span className={`font-bold uppercase ${vendor_internal.status_po === 'Bisa PO' ? 'text-emerald-600' : 'text-rose-500'}`}>{vendor_internal.status_po}</span></span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openSupplierModal('internal')}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition"
+                                                >
+                                                    Pilih Vendor
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setModalTargetType('internal'); setShowGroupModal(true); }}
+                                                    className="text-xs font-bold text-amber-600 hover:text-amber-700"
+                                                >
+                                                    + Tambah Vendor Group
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {vendorForm.data.material_groups_internal.length === 0 ? (
+                                            <div className="text-center py-6 text-stone-400 text-xs">Belum ada vendor group material internal. Silakan pilih vendor atau tambahkan group baru.</div>
+                                        ) : (
+                                            vendorForm.data.material_groups_internal.map((group, groupIdx) => (
+                                                <div key={groupIdx} className="bg-stone-50/50 border border-stone-200 rounded-xl p-4 space-y-3">
+                                                    <div className="flex justify-between items-center border-b border-stone-200 pb-2">
+                                                        <span className="font-bold text-xs text-stone-700">Vendor: {group.name}</span>
+                                                        <div className="flex items-center gap-3">
+                                                            <button type="button" onClick={() => handleAddInvoiceRow('internal', groupIdx)} className="text-[10px] font-bold text-amber-600 hover:text-amber-700">+ Tambah Baris INV</button>
+                                                            <button type="button" onClick={() => handleRemoveMaterialGroup('internal', groupIdx)} className="text-[10px] text-rose-500 font-bold">Hapus Group</button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="overflow-x-auto">
+                                                        <table className="w-full text-xs text-left">
+                                                            <thead className="text-[9px] uppercase text-stone-400">
+                                                                <tr>
+                                                                    <th className="px-2 py-1">Keterangan / No INV</th>
+                                                                    <th className="px-2 py-1 text-right">Nilai</th>
+                                                                    <th className="px-2 py-1 text-right">Pembayaran</th>
+                                                                    <th className="px-2 py-1">Tanggal INV</th>
+                                                                    <th className="px-2 py-1">Tanggal Bayar</th>
+                                                                    <th className="px-2 py-1 text-center">AF</th>
+                                                                    <th className="px-2 py-1 text-center">FB</th>
+                                                                    <th className="px-2 py-1 text-center">JW</th>
+                                                                    <th className="px-2 py-1 text-center">Aksi</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {group.items.map((item, itemIdx) => (
+                                                                    <tr key={itemIdx} className="border-b border-stone-100">
+                                                                        <td className="p-1">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={item.label}
+                                                                                onChange={(e) => handleUpdateInvoiceRow('internal', groupIdx, itemIdx, 'label', e.target.value)}
+                                                                                className="w-full px-2 py-1 text-xs border border-stone-200 rounded"
+                                                                                placeholder="No/Ket Invoice"
+                                                                            />
+                                                                        </td>
+                                                                        <td className="p-1">
+                                                                            <CurrencyInput
+                                                                                value={item.nilai}
+                                                                                onChange={(val) => handleUpdateInvoiceRow('internal', groupIdx, itemIdx, 'nilai', val)}
+                                                                                className="w-24 px-2 py-1 text-right text-xs font-mono border border-stone-200 rounded"
+                                                                            />
+                                                                        </td>
+                                                                        <td className="p-1">
+                                                                            <CurrencyInput
+                                                                                value={item.pembayaran}
+                                                                                onChange={(val) => handleUpdateInvoiceRow('internal', groupIdx, itemIdx, 'pembayaran', val)}
+                                                                                className="w-24 px-2 py-1 text-right text-xs font-mono border border-stone-200 rounded"
+                                                                            />
+                                                                        </td>
+                                                                        <td className="p-1">
+                                                                            <input
+                                                                                type="date"
+                                                                                value={item.tanggal_inv || ''}
+                                                                                onChange={(e) => handleUpdateInvoiceRow('internal', groupIdx, itemIdx, 'tanggal_inv', e.target.value)}
+                                                                                className="px-2 py-1 text-xs text-stone-600 border border-stone-200 rounded"
+                                                                            />
+                                                                        </td>
+                                                                        <td className="p-1">
+                                                                            <input
+                                                                                type="date"
+                                                                                value={item.tanggal_pembayaran || ''}
+                                                                                onChange={(e) => handleUpdateInvoiceRow('internal', groupIdx, itemIdx, 'tanggal_pembayaran', e.target.value)}
+                                                                                className="px-2 py-1 text-xs text-stone-600 border border-stone-200 rounded"
+                                                                            />
+                                                                        </td>
+                                                                        {['flag_af', 'flag_fb', 'flag_jw'].map((flag) => (
+                                                                            <td key={flag} className="p-1 text-center">
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={!!item[flag as keyof MaterialItem]}
+                                                                                    onChange={(e) => handleInvoiceCheckboxChange('internal', groupIdx, itemIdx, flag as any, e.target.checked)}
+                                                                                    className="rounded border-stone-300 text-amber-500 focus:ring-amber-500"
+                                                                                />
+                                                                            </td>
+                                                                        ))}
+                                                                        <td className="p-1 text-center">
+                                                                            <button type="button" onClick={() => handleRemoveInvoiceRow('internal', groupIdx, itemIdx)} className="text-rose-500 hover:text-rose-600 font-bold px-1.5 py-0.5 hover:bg-rose-50 rounded">x</button>
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -1434,7 +1600,7 @@ export default function Show({
                                     {/* Main Pembayaran Table Internal (Pelunasan) */}
                                     <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm p-5 space-y-4">
                                         <div className="flex justify-between items-center border-b border-stone-100 pb-2">
-                                            <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">3A. Rincian Pembayaran Vendor Utama (Pelunasan)</h3>
+                                            <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">3A. Rincian Pembayaran Vendor Utama Internal (Pelunasan)</h3>
                                             <button type="button" onClick={() => handleAddMainPaymentRow('internal')} className="text-[10px] font-bold text-amber-600 hover:text-amber-700">+ Tambah Pembayaran Utama</button>
                                         </div>
                                         <div className="overflow-x-auto">
@@ -1452,28 +1618,189 @@ export default function Show({
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {vendorForm.data.pembayaran_vendor_internal.filter(x => x.notes === 'pelunasan').map((item, idx) => (
-                                                        <tr key={item.id || idx} className="border-b border-stone-100">
-                                                            <td className="p-1 font-semibold text-stone-700 px-3">{item.label}</td>
-                                                            <td className="p-1"><span className="text-xs font-semibold text-stone-600 uppercase">Pelunasan</span></td>
-                                                            <td className="px-2 py-3 text-right font-mono text-stone-500">{fmt(item.nilai || 0)}</td>
-                                                            <td className="p-1"><CurrencyInput value={item.pembayaran} onChange={(val) => handleUpdateMainVendorField('internal', idx, 'pembayaran', val)} className="w-24 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded" /></td>
-                                                            <td className="p-1"><input type="date" value={item.tanggal_pembayaran || ''} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'tanggal_pembayaran', e.target.value)} className="px-1 py-1 text-[11px] rounded border border-stone-200 bg-white text-stone-600" /></td>
-                                                            {['flag_af', 'flag_fb', 'flag_jw'].map((flag) => (
-                                                                <td key={flag} className="p-1 text-center"><input type="checkbox" checked={!!item[flag as keyof VendorMainEntry]} onChange={(e) => handleUpdateMainVendorField('internal', idx, flag as keyof VendorMainEntry, e.target.checked ? '✔' : null)} className="rounded border-stone-300 text-amber-500 scale-90" /></td>
-                                                            ))}
-                                                        </tr>
-                                                    ))}
+                                                    {vendorForm.data.pembayaran_vendor_internal.map((item, idx) => {
+                                                        if (item.notes !== 'pelunasan') return null;
+                                                        return (
+                                                            <tr key={item.id || idx} className="border-b border-stone-100">
+                                                                <td className="p-1 font-semibold text-stone-700 px-3">{item.label}</td>
+                                                                <td className="p-1"><span className="text-xs font-semibold text-stone-600 uppercase">Pelunasan</span></td>
+                                                                <td className="px-2 py-3 text-right font-mono text-stone-500">{fmt(item.nilai || 0)}</td>
+                                                                <td className="p-1"><CurrencyInput value={item.pembayaran} onChange={(val) => handleUpdateMainVendorField('internal', idx, 'pembayaran', val)} className="w-24 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded" /></td>
+                                                                <td className="p-1"><input type="date" value={item.tanggal_pembayaran || ''} onChange={(e) => handleUpdateMainVendorField('internal', idx, 'tanggal_pembayaran', e.target.value)} className="px-1 py-1 text-[11px] rounded border border-stone-200 bg-white text-stone-600" /></td>
+                                                                {['flag_af', 'flag_fb', 'flag_jw'].map((flag) => (
+                                                                    <td key={flag} className="p-1 text-center"><input type="checkbox" checked={!!item[flag as keyof VendorMainEntry]} onChange={(e) => handleUpdateMainVendorField('internal', idx, flag as keyof VendorMainEntry, e.target.checked ? '✔' : null)} className="rounded border-stone-300 text-amber-500 scale-90" /></td>
+                                                                ))}
+                                                            </tr>
+                                                        );
+                                                    })}
                                                 </tbody>
                                             </table>
                                         </div>
                                     </div>
+
+                                    {/* Main Pembayaran Table Fisik (Pelunasan) */}
+                                    <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm p-5 space-y-4">
+                                        <div className="flex justify-between items-center border-b border-stone-100 pb-2">
+                                            <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">3B. Rincian Pembayaran Vendor Utama Fisik (Pelunasan)</h3>
+                                            <button type="button" onClick={() => handleAddMainPaymentRow('fisik')} className="text-[10px] font-bold text-amber-600 hover:text-amber-700">+ Tambah Pembayaran Utama</button>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs text-left text-stone-600">
+                                                <thead className="text-[10px] text-stone-400 uppercase bg-stone-50 border-b border-stone-200">
+                                                    <tr>
+                                                        <th className="px-4 py-2">Keterangan</th>
+                                                        <th className="px-4 py-2">Target Fase</th>
+                                                        <th className="px-4 py-2 text-right">Nilai Akhir (Pelunasan)</th>
+                                                        <th className="px-4 py-2 text-right">Pembayaran Pelunasan</th>
+                                                        <th className="px-4 py-2">Tanggal Pembayaran</th>
+                                                        <th className="px-4 py-2 text-center">AF</th>
+                                                        <th className="px-4 py-2 text-center">FB</th>
+                                                        <th className="px-4 py-2 text-center">JW</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {vendorForm.data.pembayaran_vendor_fisik.map((item, idx) => {
+                                                        if (item.notes !== 'pelunasan') return null;
+                                                        return (
+                                                            <tr key={item.id || idx} className="border-b border-stone-100">
+                                                                <td className="p-1 font-semibold text-stone-700 px-3">{item.label}</td>
+                                                                <td className="p-1"><span className="text-xs font-semibold text-stone-600 uppercase">Pelunasan</span></td>
+                                                                <td className="px-2 py-3 text-right font-mono text-stone-500">{fmt(item.nilai || 0)}</td>
+                                                                <td className="p-1"><CurrencyInput value={item.pembayaran} onChange={(val) => handleUpdateMainVendorField('fisik', idx, 'pembayaran', val)} className="w-24 px-2 py-1 text-right text-xs font-mono font-semibold bg-white border border-stone-200 rounded" /></td>
+                                                                <td className="p-1"><input type="date" value={item.tanggal_pembayaran || ''} onChange={(e) => handleUpdateMainVendorField('fisik', idx, 'tanggal_pembayaran', e.target.value)} className="px-1 py-1 text-[11px] rounded border border-stone-200 bg-white text-stone-600" /></td>
+                                                                {['flag_af', 'flag_fb', 'flag_jw'].map((flag) => (
+                                                                    <td key={flag} className="p-1 text-center"><input type="checkbox" checked={!!item[flag as keyof VendorMainEntry]} onChange={(e) => handleUpdateMainVendorField('fisik', idx, flag as keyof VendorMainEntry, e.target.checked ? '✔' : null)} className="rounded border-stone-300 text-amber-500 scale-90" /></td>
+                                                                ))}
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    {/* Material Hutang Fisik (Dinamis) */}
+                                    <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm p-5 space-y-6">
+                                        <div className="flex justify-between items-center border-b border-stone-100 pb-2">
+                                            <div>
+                                                <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">3C. Material Hutang Supplier Fisik (Dinamis)</h3>
+                                                <div className="flex gap-4 text-[10px] text-stone-400 mt-1 font-mono">
+                                                    <span>Budget Material: <b>{fmt(vendor_fisik.budget_material)}</b></span>
+                                                    <span>Sisa Budget: <b className="text-amber-600">{fmt(vendor_fisik.sisa_budget)}</b></span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openSupplierModal('fisik')}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition"
+                                                >
+                                                    Pilih Vendor
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setModalTargetType('fisik'); setShowGroupModal(true); }}
+                                                    className="text-xs font-bold text-amber-600 hover:text-amber-700"
+                                                >
+                                                    + Tambah Vendor Group
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {vendorForm.data.material_groups_fisik.length === 0 ? (
+                                            <div className="text-center py-6 text-stone-400 text-xs">Belum ada vendor group material fisik. Silakan pilih vendor atau tambahkan group baru.</div>
+                                        ) : (
+                                            vendorForm.data.material_groups_fisik.map((group, groupIdx) => (
+                                                <div key={groupIdx} className="bg-stone-50/50 border border-stone-200 rounded-xl p-4 space-y-3">
+                                                    <div className="flex justify-between items-center border-b border-stone-200 pb-2">
+                                                        <span className="font-bold text-xs text-stone-700">Vendor: {group.name}</span>
+                                                        <div className="flex items-center gap-3">
+                                                            <button type="button" onClick={() => handleAddInvoiceRow('fisik', groupIdx)} className="text-[10px] font-bold text-amber-600 hover:text-amber-700">+ Tambah Baris INV</button>
+                                                            <button type="button" onClick={() => handleRemoveMaterialGroup('fisik', groupIdx)} className="text-[10px] text-rose-500 font-bold">Hapus Group</button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="overflow-x-auto">
+                                                        <table className="w-full text-xs text-left">
+                                                            <thead className="text-[9px] uppercase text-stone-400">
+                                                                <tr>
+                                                                    <th className="px-2 py-1">Keterangan / No INV</th>
+                                                                    <th className="px-2 py-1 text-right">Nilai</th>
+                                                                    <th className="px-2 py-1 text-right">Pembayaran</th>
+                                                                    <th className="px-2 py-1">Tanggal INV</th>
+                                                                    <th className="px-2 py-1">Tanggal Bayar</th>
+                                                                    <th className="px-2 py-1 text-center">AF</th>
+                                                                    <th className="px-2 py-1 text-center">FB</th>
+                                                                    <th className="px-2 py-1 text-center">JW</th>
+                                                                    <th className="px-2 py-1 text-center">Aksi</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {group.items.map((item, itemIdx) => (
+                                                                    <tr key={itemIdx} className="border-b border-stone-100">
+                                                                        <td className="p-1">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={item.label}
+                                                                                onChange={(e) => handleUpdateInvoiceRow('fisik', groupIdx, itemIdx, 'label', e.target.value)}
+                                                                                className="w-full px-2 py-1 text-xs border border-stone-200 rounded"
+                                                                                placeholder="No/Ket Invoice"
+                                                                            />
+                                                                        </td>
+                                                                        <td className="p-1">
+                                                                            <CurrencyInput
+                                                                                value={item.nilai}
+                                                                                onChange={(val) => handleUpdateInvoiceRow('fisik', groupIdx, itemIdx, 'nilai', val)}
+                                                                                className="w-24 px-2 py-1 text-right text-xs font-mono border border-stone-200 rounded"
+                                                                            />
+                                                                        </td>
+                                                                        <td className="p-1">
+                                                                            <CurrencyInput
+                                                                                value={item.pembayaran}
+                                                                                onChange={(val) => handleUpdateInvoiceRow('fisik', groupIdx, itemIdx, 'pembayaran', val)}
+                                                                                className="w-24 px-2 py-1 text-right text-xs font-mono border border-stone-200 rounded"
+                                                                            />
+                                                                        </td>
+                                                                        <td className="p-1">
+                                                                            <input
+                                                                                type="date"
+                                                                                value={item.tanggal_inv || ''}
+                                                                                onChange={(e) => handleUpdateInvoiceRow('fisik', groupIdx, itemIdx, 'tanggal_inv', e.target.value)}
+                                                                                className="px-2 py-1 text-xs text-stone-600 border border-stone-200 rounded"
+                                                                            />
+                                                                        </td>
+                                                                        <td className="p-1">
+                                                                            <input
+                                                                                type="date"
+                                                                                value={item.tanggal_pembayaran || ''}
+                                                                                onChange={(e) => handleUpdateInvoiceRow('fisik', groupIdx, itemIdx, 'tanggal_pembayaran', e.target.value)}
+                                                                                className="px-2 py-1 text-xs text-stone-600 border border-stone-200 rounded"
+                                                                            />
+                                                                        </td>
+                                                                        {['flag_af', 'flag_fb', 'flag_jw'].map((flag) => (
+                                                                            <td key={flag} className="p-1 text-center">
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={!!item[flag as keyof MaterialItem]}
+                                                                                    onChange={(e) => handleInvoiceCheckboxChange('fisik', groupIdx, itemIdx, flag as any, e.target.checked)}
+                                                                                    className="rounded border-stone-300 text-amber-500 focus:ring-amber-500"
+                                                                                />
+                                                                            </td>
+                                                                        ))}
+                                                                        <td className="p-1 text-center">
+                                                                            <button type="button" onClick={() => handleRemoveInvoiceRow('fisik', groupIdx, itemIdx)} className="text-rose-500 hover:text-rose-600 font-bold px-1.5 py-0.5 hover:bg-rose-50 rounded">x</button>
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
                                 </div>
                             )}
-
-
-
-
 
                             {/* TAB: PEMBAYARAN MATERIAL EKSTERNAL */}
                             {activeTab === 'material_eksternal' && (
@@ -1482,7 +1809,16 @@ export default function Show({
                                     <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm p-5 space-y-4">
                                         <div className="flex justify-between items-center border-b border-stone-100 pb-2">
                                             <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">3A. Daftar Item External</h3>
-                                            <button type="button" onClick={() => handleAddExternalRow('items')} className="text-xs font-bold text-amber-600 hover:text-amber-700">+ Tambah Item</button>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openSupplierModal('eksternal')}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition"
+                                                >
+                                                    Pilih Vendor
+                                                </button>
+                                                <button type="button" onClick={() => handleAddExternalRow('items')} className="text-xs font-bold text-amber-600 hover:text-amber-700">+ Tambah Item</button>
+                                            </div>
                                         </div>
 
                                         <div className="overflow-x-auto">
@@ -1621,6 +1957,61 @@ export default function Show({
                                                             ))}
                                                             <td className="p-1 text-center">
                                                                 <button type="button" onClick={() => handleRemoveExternalRow('addendums', idx)} className="text-rose-500 hover:text-rose-600 font-bold px-2 py-0.5 rounded">x</button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    {/* 3C. Pengeluaran Luar Workshop */}
+                                    <div className="bg-white border border-stone-200/80 rounded-2xl shadow-sm p-5 space-y-4">
+                                        <div className="flex justify-between items-center border-b border-stone-100 pb-2">
+                                            <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider">3C. Pengeluaran Luar Workshop (Operasional / Lainnya)</h3>
+                                            <button type="button" onClick={() => handleAddExternalRow('pengeluaran_luar')} className="text-xs font-bold text-amber-600 hover:text-amber-700">+ Tambah Pengeluaran</button>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs text-left">
+                                                <thead className="text-[9px] uppercase text-stone-400 bg-stone-50">
+                                                    <tr>
+                                                        <th className="px-2 py-1">Deskripsi</th>
+                                                        <th className="px-2 py-1 text-right">Nilai Estimasi</th>
+                                                        <th className="px-2 py-1 text-right">Pembayaran</th>
+                                                        <th className="px-2 py-1">Tanggal Pembayaran</th>
+                                                        <th className="px-2 py-1 text-center">AF</th>
+                                                        <th className="px-2 py-1 text-center">FB</th>
+                                                        <th className="px-2 py-1 text-center">JW</th>
+                                                        <th className="px-2 py-1 text-center">Aksi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {vendorForm.data.external_pengeluaran_luar.map((item, idx) => (
+                                                        <tr key={idx} className="border-b border-stone-100">
+                                                            <td className="p-1">
+                                                                <input type="text" value={item.label} onChange={(e) => handleUpdateExternalRow('pengeluaran_luar', idx, 'label', e.target.value)} className="w-full px-2 py-1 border border-stone-200 rounded" />
+                                                            </td>
+                                                            <td className="p-1">
+                                                                <CurrencyInput value={item.nilai} onChange={(val) => handleUpdateExternalRow('pengeluaran_luar', idx, 'nilai', val)} className="w-28 px-2 py-1 text-right font-mono border border-stone-200 rounded" />
+                                                            </td>
+                                                            <td className="p-1">
+                                                                <CurrencyInput value={item.pembayaran} onChange={(val) => handleUpdateExternalRow('pengeluaran_luar', idx, 'pembayaran', val)} className="w-28 px-2 py-1 text-right font-mono border border-stone-200 rounded" />
+                                                            </td>
+                                                            <td className="p-1">
+                                                                <input type="date" value={item.tanggal_pembayaran || ''} onChange={(e) => handleUpdateExternalRow('pengeluaran_luar', idx, 'tanggal_pembayaran', e.target.value)} className="px-2 py-1 border border-stone-200 rounded" />
+                                                            </td>
+                                                            {['flag_af', 'flag_fb', 'flag_jw'].map((flag) => (
+                                                                <td key={flag} className="p-1 text-center">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={!!item[flag as keyof ExternalEntry]}
+                                                                        onChange={(e) => handleUpdateExternalRow('pengeluaran_luar', idx, flag as any, e.target.checked ? '✔' : null)}
+                                                                        className="rounded text-amber-500 scale-90"
+                                                                    />
+                                                                </td>
+                                                            ))}
+                                                            <td className="p-1 text-center">
+                                                                <button type="button" onClick={() => handleRemoveExternalRow('pengeluaran_luar', idx)} className="text-rose-500 hover:text-rose-600 font-bold px-2 py-0.5 rounded">x</button>
                                                             </td>
                                                         </tr>
                                                     ))}
