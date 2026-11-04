@@ -37,7 +37,7 @@ class SurveyScheduleController extends Controller
                 $query->whereRaw("LOWER(payment_status) LIKE '%dp%'")
                     ->orWhereHas('surveyUsers')
                     ->orWhereHas('taskResponses', fn($tq) => $tq->where('tahap', 'survey_schedule'))
-                    ->orWhere('tahap_survey', 'survey_ulang')
+                    ->orWhere('tahapan_proyek', 'survey_ulang')
                     ->orWhereNotNull('survey_response_time')
                     ->orWhereNotNull('pm_survey_response_time');
             })
@@ -94,10 +94,6 @@ class SurveyScheduleController extends Controller
             ->orderByDesc('id')
             ->where('is_marketing', false)
             ->first();
-
-        $order->update([
-            'tahap_survey' => 'survey_ulang',
-        ]);
 
         if ($taskResponse) {
             if ($taskResponse->isOverdue()) {
