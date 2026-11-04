@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Head, useForm, Link } from '@inertiajs/react';
+import { Head, useForm, Link, usePage } from '@inertiajs/react';
 import JenisPengukuranModal from '@/components/JenisPengukuranModal';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
@@ -24,13 +24,24 @@ interface Order {
     phone_number: string;
     jenis_interior: JenisInterior;
     mom_file: string | null;
-        mom_files?: Array<string | { path: string; original_name?: string }> | null;
+    mom_files?: Array<string | { path: string; original_name?: string }> | null;
     users: User[];
+}
+
+interface FileMetadata {
+    path: string;
+    original_name: string;
+    mime_type: string;
+    size: number;
+    thumbnail?: string;
 }
 
 interface Survey {
     id: number;
     order_id: number;
+    feedback?: string | null;
+    layout_files?: FileMetadata[] | null;
+    foto_lokasi_files?: FileMetadata[] | null;
     response_time: string;
     response_by: string;
 }
@@ -55,11 +66,12 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
         return true;
     });
 
+    const { flash } = usePage<{ flash?: { error?: string; success?: string } }>().props;
     const initialSelectedPengukuran = selectedPengukuranIds || [];
 
     const { data, setData, post, processing, errors, progress, transform } = useForm({
         survey_id: survey.id,
-        feedback: '',
+        feedback: survey.feedback || '',
         layout_files: [] as File[],
         foto_lokasi_files: [] as File[],
         mom_files: [] as File[],
@@ -119,6 +131,19 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
 
     const [clientErrors, setClientErrors] = useState<Record<string, string>>({});
 
+    const getFieldErrors = (prefix: string): string[] => {
+        const list: string[] = [];
+        if (clientErrors[prefix]) list.push(clientErrors[prefix]);
+        const errMap = errors as Record<string, string>;
+        if (errMap[prefix]) list.push(errMap[prefix]);
+        Object.keys(errMap).forEach((key) => {
+            if (key.startsWith(`${prefix}.`) && errMap[key]) {
+                list.push(errMap[key]);
+            }
+        });
+        return Array.from(new Set(list));
+    };
+
     const handleSubmit = (action: 'save_draft' | 'publish') => {
         if (processing) return;
 
@@ -127,11 +152,13 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
         if (action === 'publish') {
             const newClientErrors: Record<string, string> = {};
 
-            if (data.layout_files.length === 0) {
+            const hasLayout = data.layout_files.length > 0 || !!(survey.layout_files && survey.layout_files.length > 0);
+            if (!hasLayout) {
                 newClientErrors.layout_files = 'File Layout wajib diunggah minimal 1 file untuk mempublikasikan hasil survey.';
             }
 
-            if (data.foto_lokasi_files.length === 0) {
+            const hasFoto = data.foto_lokasi_files.length > 0 || !!(survey.foto_lokasi_files && survey.foto_lokasi_files.length > 0);
+            if (!hasFoto) {
                 newClientErrors.foto_lokasi_files = 'Foto Lokasi wajib diunggah minimal 1 foto untuk mempublikasikan hasil survey.';
             }
 
@@ -148,14 +175,19 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
 
         setSubmitAction(action);
 
-        // Ensure action is sent in the request payload
-        transform((form) => ({ ...form, action }));
+        // Ensure survey_id, jenis_pengukuran_ids, and action are sent in the request payload
+        transform((form) => ({
+            ...form,
+            survey_id: survey.id,
+            jenis_pengukuran_ids: selectedPengukuran,
+            action,
+        }));
 
         post('/survey-results', {
             preserveScroll: true,
             forceFormData: true,
             onError: (errs) => {
-                console.log('Validation errors:', errs);
+                console.error('Validation errors:', errs);
             },
             onFinish: () => {
                 // Reset transform to identity for subsequent submits
@@ -310,6 +342,19 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                             </div>
 
                             <div className="p-8 space-y-6">
+                                {(flash?.error || (errors as any).general || Object.keys(errors).length > 0 || Object.keys(clientErrors).length > 0) && (
+                                    <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs space-y-1">
+                                        <p className="font-bold text-sm">Gagal menyimpan data survey:</p>
+                                        {flash?.error && <p>• {flash.error}</p>}
+                                        {Object.entries(errors).map(([k, v]) => (
+                                            <p key={k}>• {v}</p>
+                                        ))}
+                                        {Object.entries(clientErrors).map(([k, v]) => (
+                                            <p key={`client-${k}`}>• {v}</p>
+                                        ))}
+                                    </div>
+                                )}
+
                                 {/* Feedback */}
                                 <div>
                                     <label className="block text-sm font-semibold text-stone-700 mb-2">
@@ -375,9 +420,9 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                             ))}
                                         </div>
                                     )}
-                                    {(errors.layout_files || clientErrors.layout_files) && (
-                                        <p className="text-red-500 text-xs mt-1 font-semibold">{errors.layout_files || clientErrors.layout_files}</p>
-                                    )}
+                                    {getFieldErrors('layout_files').map((msg, idx) => (
+                                        <p key={idx} className="text-red-500 text-xs mt-1 font-semibold">{msg}</p>
+                                    ))}
                                 </div>
 
                                 {/* Foto Lokasi (Multiple) */}
@@ -430,9 +475,9 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                             ))}
                                         </div>
                                     )}
-                                    {(errors.foto_lokasi_files || clientErrors.foto_lokasi_files) && (
-                                        <p className="text-red-500 text-xs mt-1 font-semibold">{errors.foto_lokasi_files || clientErrors.foto_lokasi_files}</p>
-                                    )}
+                                    {getFieldErrors('foto_lokasi_files').map((msg, idx) => (
+                                        <p key={idx} className="text-red-500 text-xs mt-1 font-semibold">{msg}</p>
+                                    ))}
                                 </div>
 
 
@@ -585,11 +630,10 @@ export default function Create({ order, survey, jenisPengukuran, selectedPenguku
                                         </div>
                                     )}
 
-                                    {((errors as any).mom_files || clientErrors.mom_files) && (
-                                        <p className="text-red-500 text-xs mt-1 font-semibold">{(errors as any).mom_files || clientErrors.mom_files}</p>
-                                    )}
-                                    {(errors as any)['mom_files.0'] && <p className="text-red-500 text-xs mt-1">{(errors as any)['mom_files.0']}</p>}
-                                    {(errors as any).mom_file && <p className="text-red-500 text-xs mt-1">{(errors as any).mom_file}</p>}
+                                    {getFieldErrors('mom_files').map((msg, idx) => (
+                                        <p key={idx} className="text-red-500 text-xs mt-1 font-semibold">{msg}</p>
+                                    ))}
+                                    {(errors as any).mom_file && <p className="text-red-500 text-xs mt-1 font-semibold">{(errors as any).mom_file}</p>}
 
                                 </div>
                             </div>

@@ -121,16 +121,16 @@
                 $nilai = abs($nilai);
                 $huruf = array("", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas");
                 $temp = "";
-                if ($nilai < 12) { $temp = " ". $huruf[$nilai]; }
+                if ($nilai < 12) { $temp = " ". $huruf[(int)$nilai]; }
                 else if ($nilai < 20) { $temp = penyebut($nilai - 10). " Belas"; }
-                else if ($nilai < 100) { $temp = penyebut($nilai/10)." Puluh". penyebut($nilai % 10); }
-                else if ($nilai < 200) { $temp = " Seratus" . penyebut($nilai - 100); }
-                else if ($nilai < 1000) { $temp = penyebut($nilai/100) . " Ratus" . penyebut($nilai % 100); }
-                else if ($nilai < 2000) { $temp = " Seribu" . penyebut($nilai - 1000); }
-                else if ($nilai < 1000000) { $temp = penyebut($nilai/1000) . " Ribu" . penyebut($nilai % 1000); }
-                else if ($nilai < 1000000000) { $temp = penyebut($nilai/1000000) . " Juta" . penyebut($nilai % 1000000); }
-                else if ($nilai < 1000000000000) { $temp = penyebut($nilai/1000000000) . " Milyar" . penyebut(fmod($nilai,1000000000)); }
-                return $temp;
+                else if ($nilai < 100) { $temp = penyebut(floor($nilai/10))." Puluh ". penyebut($nilai % 10); }
+                else if ($nilai < 200) { $temp = " Seratus " . penyebut($nilai - 100); }
+                else if ($nilai < 1000) { $temp = penyebut(floor($nilai/100)) . " Ratus " . penyebut($nilai % 100); }
+                else if ($nilai < 2000) { $temp = " Seribu " . penyebut($nilai - 1000); }
+                else if ($nilai < 1000000) { $temp = penyebut(floor($nilai/1000)) . " Ribu " . penyebut($nilai % 1000); }
+                else if ($nilai < 1000000000) { $temp = penyebut(floor($nilai/1000000)) . " Juta " . penyebut($nilai % 1000000); }
+                else if ($nilai < 1000000000000) { $temp = penyebut(floor($nilai/1000000000)) . " Milyar " . penyebut(fmod($nilai,1000000000)); }
+                return trim(preg_replace('/\s+/', ' ', $temp));
             }
         }
 
@@ -151,7 +151,7 @@
 
         $date = \Carbon\Carbon::parse($invoice->created_at);
         $day = $date->format('d');
-        $monthName = $date->translatedFormat('F');
+        $monthName = $date->locale('id')->translatedFormat('F');
         $year = $date->format('Y');
         $romanMonth = getRomanMonth($date->format('m'));
         
@@ -161,8 +161,10 @@
         $nomorKWT = "{$sequence}/MJA/KWT/{$romanMonth}/{$year}";
         $nomorINV = "{$sequence}/MJA/INV/{$romanMonth}/{$year}";
         
-        $terbilangTotal = terbilang($totalAmount);
-        $terbilangKontrak = terbilang($paymentSummary['harga_kontrak']);
+        $terbilangTotalRaw = terbilang($totalAmount);
+        $terbilangTotal = str_ends_with(strtolower($terbilangTotalRaw), 'rupiah') ? $terbilangTotalRaw : ($terbilangTotalRaw . ' Rupiah');
+        $terbilangKontrakRaw = terbilang($paymentSummary['harga_kontrak']);
+        $terbilangKontrak = str_ends_with(strtolower($terbilangKontrakRaw), 'rupiah') ? $terbilangKontrakRaw : ($terbilangKontrakRaw . ' Rupiah');
 
         $terminText = $invoice->termin_text; // e.g. "DP", "Termin 2", "Pelunasan"
         $customerName = $invoice->itemPekerjaan->moodboard->order->customer_name;

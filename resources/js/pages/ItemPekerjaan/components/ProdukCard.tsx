@@ -1,5 +1,6 @@
 import React from 'react';
 import JenisItemCard from '@/pages/ItemPekerjaan/components/JenisItemCard';
+import SearchableSelect from '@/pages/ItemPekerjaan/components/SearchableSelect';
 
 interface BahanBaku {
     id: number;
@@ -154,19 +155,15 @@ export default function ProdukCard({
                             <label className="block text-sm font-medium text-slate-700 mb-1.5">
                                 Pilih Produk <span className="text-red-500">*</span>
                             </label>
-                            <select
+                            <SearchableSelect
                                 value={produk.produk_id}
-                                onChange={(e) => onUpdateProduk(ruanganTempId, produk.temp_id, 'produk_id', e.target.value)}
-                                className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all text-sm"
+                                onChange={(val) => onUpdateProduk(ruanganTempId, produk.temp_id, 'produk_id', val)}
+                                options={produksList.map((p) => ({ value: p.id, label: p.nama_produk }))}
+                                placeholder="-- Pilih Produk --"
+                                searchPlaceholder="Cari nama produk..."
+                                size="md"
                                 required
-                            >
-                                <option value="">-- Pilih Produk --</option>
-                                {produksList.map((p) => (
-                                    <option key={p.id} value={p.id}>
-                                        {p.nama_produk}
-                                    </option>
-                                ))}
-                            </select>
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1.5">

@@ -293,14 +293,14 @@ class KontrakController extends Controller
             // KONTRAK DATA
             // ======================================
             'nominal_kontrak' => $kontrak->harga_kontrak,
-            'tanggal' => now()->format('d F Y'),
+            'tanggal' => now()->locale('id')->translatedFormat('d F Y'),
             'nomor' => str_pad($kontrak->id, 3, '0', STR_PAD_LEFT) . '/MJA/PNW/' . $this->getRomanMonth(now()->format('m')) . '/' . now()->format('Y'),
             'nomor_kontrak' => str_pad($kontrak->id, 3, '0', STR_PAD_LEFT) . '/MJA/KTK/' . $this->getRomanMonth(now()->format('m')) . '/' . now()->format('Y'),
-            'today' => now()->translatedFormat('d F Y'),
-            'hari_ini' => now()->translatedFormat('l'),
+            'today' => now()->locale('id')->translatedFormat('d F Y'),
+            'hari_ini' => now()->locale('id')->translatedFormat('l'),
             'tgl_angka' => now()->format('d-m-Y'),
             'tgl_terbilang' => terbilang((int)now()->format('d')),
-            'bln_terbilang' => now()->translatedFormat('F'),
+            'bln_terbilang' => now()->locale('id')->translatedFormat('F'),
             'thn_terbilang' => terbilang((int)now()->format('Y')),
             'nominal_terbilang' => terbilang((int)$kontrak->harga_kontrak) . ' Rupiah',
             'durasi_kontrak' => $kontrak->durasi_kontrak ?? 90,
@@ -383,16 +383,16 @@ class KontrakController extends Controller
                 // KONTRAK DATA
                 // ======================================
                 'nominal_kontrak' => $nominalKontrak,
-                'tanggal' => now()->format('d F Y'),
+                'tanggal' => now()->locale('id')->translatedFormat('d F Y'),
                 'nomor' => str_pad($kontrak->id, 3, '0', STR_PAD_LEFT) . '/MJA/PNW/' . 
                            $this->getRomanMonth(now()->format('m')) . '/' . now()->format('Y'),
                 'nomor_kontrak' => str_pad($kontrak->id, 3, '0', STR_PAD_LEFT) . '/MJA/KTK/' . 
                                    $this->getRomanMonth(now()->format('m')) . '/' . now()->format('Y'),
-                'today' => now()->translatedFormat('d F Y'),
-                'hari_ini' => now()->translatedFormat('l'),
+                'today' => now()->locale('id')->translatedFormat('d F Y'),
+                'hari_ini' => now()->locale('id')->translatedFormat('l'),
                 'tgl_angka' => now()->format('d-m-Y'),
                 'tgl_terbilang' => terbilang((int)now()->format('d')) ?? '1',
-                'bln_terbilang' => now()->translatedFormat('F'),
+                'bln_terbilang' => now()->locale('id')->translatedFormat('F'),
                 'thn_terbilang' => terbilang((int)now()->format('Y')) ?? '2024',
                 'nominal_terbilang' => $nominalTerbilang . ' Rupiah',
                 'durasi_kontrak' => $kontrak->durasi_kontrak ?? 90,
@@ -575,7 +575,7 @@ class KontrakController extends Controller
         $textRun->addText('Perjanjian Kerjasama (selanjutnya disebut Perjanjian) ini dibuat dan ditandatangani pada hari ini ');
         $textRun->addText($contractData['hari_ini'] ?? '', ['bold' => true]);
         $textRun->addText(', tanggal ');
-        $textRun->addText('(' . ($contractData['tgl_angka'] ?? '') . ' (Tanggal ' . ($contractData['tgl_terbilang'] ?? '') . ', Bulan ' . ($contractData['bln_terbilang'] ?? '') . ', Tahun ' . ($contractData['thn_terbilang'] ?? '') . '))', ['bold' => true]);
+        $textRun->addText(($contractData['tgl_angka'] ?? '') . ' (Tanggal ' . ($contractData['tgl_terbilang'] ?? '') . ', Bulan ' . ($contractData['bln_terbilang'] ?? '') . ', Tahun ' . ($contractData['thn_terbilang'] ?? '') . ')', ['bold' => true]);
         $textRun->addText(', kami yang bertanda tangan dibawah ini :');
 
         $partyTable = $section->addTable(['cellMargin' => 50]);
@@ -751,8 +751,8 @@ class KontrakController extends Controller
 
         $nominalKontrak = (float) ($contractData['nominal_kontrak'] ?? 0);
         $dpNominal = $nominalKontrak * ($dpPersentase / 100);
-        $dpTerbilangValue = terbilang((int)$dpNominal);
-        $totalTerbilangValue = terbilang((int)$nominalKontrak);
+        $dpTerbilangValue = terbilang((int)$dpNominal) . ' Rupiah';
+        $totalTerbilangValue = terbilang((int)$nominalKontrak) . ' Rupiah';
 
         $this->addRightAlignedText($section, 'Tangerang, ' . ($contractData['tanggal'] ?? ''));
         $section->addTextBreak(1);

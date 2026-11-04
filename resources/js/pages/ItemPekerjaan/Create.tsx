@@ -1,5 +1,6 @@
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import SearchableSelect from '@/pages/ItemPekerjaan/components/SearchableSelect';
 import { Head, router } from '@inertiajs/react';
 import React, { useState } from 'react';
 
@@ -915,50 +916,25 @@ export default function Create({
                                                                                             *
                                                                                         </span>
                                                                                     </label>
-                                                                                    <select
-                                                                                        value={
-                                                                                            produk.produk_id
-                                                                                        }
-                                                                                        onChange={(
-                                                                                            e,
-                                                                                        ) =>
+                                                                                    <SearchableSelect
+                                                                                        value={produk.produk_id}
+                                                                                        onChange={(val) =>
                                                                                             updateProdukInRuangan(
                                                                                                 ruangan.temp_id,
                                                                                                 produk.temp_id,
                                                                                                 'produk_id',
-                                                                                                e
-                                                                                                    .target
-                                                                                                    .value,
+                                                                                                val,
                                                                                             )
                                                                                         }
-                                                                                        className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                                                                                        options={produks.map((p) => ({
+                                                                                            value: p.id,
+                                                                                            label: p.nama_produk,
+                                                                                        }))}
+                                                                                        placeholder="-- Pilih Produk --"
+                                                                                        searchPlaceholder="Cari nama produk..."
+                                                                                        size="md"
                                                                                         required
-                                                                                    >
-                                                                                        <option value="">
-                                                                                            --
-                                                                                            Pilih
-                                                                                            Produk
-                                                                                            --
-                                                                                        </option>
-                                                                                        {produks.map(
-                                                                                            (
-                                                                                                p,
-                                                                                            ) => (
-                                                                                                <option
-                                                                                                    key={
-                                                                                                        p.id
-                                                                                                    }
-                                                                                                    value={
-                                                                                                        p.id
-                                                                                                    }
-                                                                                                >
-                                                                                                    {
-                                                                                                        p.nama_produk
-                                                                                                    }
-                                                                                                </option>
-                                                                                            ),
-                                                                                        )}
-                                                                                    </select>
+                                                                                    />
                                                                                 </div>
                                                                                 <div>
                                                                                     <label className="mb-1 block text-sm font-medium text-slate-700">
@@ -1242,50 +1218,27 @@ export default function Create({
                                                                                                                 }
                                                                                                                 className="flex items-center gap-2"
                                                                                                             >
-                                                                                                                <select
-                                                                                                                    value={
-                                                                                                                        item.item_id
-                                                                                                                    }
-                                                                                                                    onChange={(
-                                                                                                                        e,
-                                                                                                                    ) =>
+                                                                                                                <SearchableSelect
+                                                                                                                    value={item.item_id}
+                                                                                                                    onChange={(val) =>
                                                                                                                         updateItemInRuangan(
                                                                                                                             ruangan.temp_id,
                                                                                                                             produk.temp_id,
                                                                                                                             jenisItem.temp_id,
                                                                                                                             item.temp_id,
                                                                                                                             'item_id',
-                                                                                                                            e
-                                                                                                                                .target
-                                                                                                                                .value,
+                                                                                                                            val,
                                                                                                                         )
                                                                                                                     }
-                                                                                                                    className="flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
-                                                                                                                >
-                                                                                                                    <option value="">
-                                                                                                                        --
-                                                                                                                        Pilih
-                                                                                                                        --
-                                                                                                                    </option>
-                                                                                                                    {availableItems.map(
-                                                                                                                        (
-                                                                                                                            ai,
-                                                                                                                        ) => (
-                                                                                                                            <option
-                                                                                                                                key={
-                                                                                                                                    ai.id
-                                                                                                                                }
-                                                                                                                                value={
-                                                                                                                                    ai.id
-                                                                                                                                }
-                                                                                                                            >
-                                                                                                                                {
-                                                                                                                                    ai.nama_item
-                                                                                                                                }
-                                                                                                                            </option>
-                                                                                                                        ),
-                                                                                                                    )}
-                                                                                                                </select>
+                                                                                                                    options={availableItems.map((ai) => ({
+                                                                                                                        value: ai.id,
+                                                                                                                        label: ai.nama_item,
+                                                                                                                    }))}
+                                                                                                                    placeholder="-- Pilih Item --"
+                                                                                                                    searchPlaceholder="Cari nama item..."
+                                                                                                                    className="flex-1"
+                                                                                                                    size="sm"
+                                                                                                                />
                                                                                                                 {isAksesoris && (
                                                                                                                     <input
                                                                                                                         type="number"

@@ -110,7 +110,11 @@ class SurveyResultsController extends Controller
                     : ($surveyResult ? $surveyResult->jenisPengukuran()->exists() : false);
                 $hasMomFile = !empty($order->mom_file) || !empty($order->mom_files);
 
-                $hasAnyDraftData = $hasFeedback || $hasLayoutFiles || $hasFotoFiles || $hasJenisPengukuran || $hasMomFile;
+                $hasSurveyContent = $hasFeedback || $hasLayoutFiles || $hasFotoFiles || $hasJenisPengukuran;
+                $hasAnyDraftData = $hasSurveyContent;
+                $effectiveIsDraft = $surveyResult
+                    ? ((bool) $surveyResult->is_draft || !$hasSurveyContent)
+                    : false;
 
                 return [
                     'id' => $order->id,
@@ -124,14 +128,13 @@ class SurveyResultsController extends Controller
                     // Survey status checks
                     'has_survey' => $surveyResult !== null
                         && $surveyResult->response_time !== null
-                        && $surveyResult->is_draft == false
-                        && ($surveyResult->feedback || $surveyResult->layout_files || $surveyResult->foto_lokasi_files || $hasMomFile),
+                        && !$effectiveIsDraft
+                        && ($hasSurveyContent || $hasMomFile),
 
-                    'is_draft' => $surveyResult ? $surveyResult->is_draft : false,
-                    // A draft should be treated as "has draft" even if only partial fields are filled
-                    // (e.g. jenis_pengukuran_ids or MOM file). This avoids the UI looking like it didn't save.
+                    'is_draft' => $effectiveIsDraft,
+                    // A draft should be treated as "has draft" when survey draft fields have been saved.
                     'has_draft' => $surveyResult !== null
-                        && $surveyResult->is_draft == true
+                        && $effectiveIsDraft
                         && $hasAnyDraftData,
 
                     // Survey data
@@ -182,12 +185,15 @@ class SurveyResultsController extends Controller
 
             // Update or create survey result
             if ($order->surveyResults) {
-                $order->surveyResults->update([
+                $surveyResult = $order->surveyResults;
+                $hasSurveyData = !empty($surveyResult->feedback) || !empty($surveyResult->layout_files) || !empty($surveyResult->foto_lokasi_files);
+                $surveyResult->update([
                     'response_time' => now(),
                     'response_by' => auth()->user()->name ?? 'Admin',
+                    'is_draft' => $hasSurveyData ? $surveyResult->is_draft : true,
                 ]);
             } else {
-                SurveyResults::create([
+                $surveyResult = SurveyResults::create([
                     'order_id' => $order->id,
                     'response_time' => now(),
                     'response_by' => auth()->user()->name ?? 'Admin',
@@ -226,7 +232,7 @@ class SurveyResultsController extends Controller
 
             ActivityLogService::log(
                 $order->id,
-                $order->surveyResults,
+                $surveyResult,
                 'response',
                 'Respon Survey Dicatat',
                 'Mencatat respon survey oleh ' . (auth()->user()->name ?? 'Staff'),
@@ -251,7 +257,7 @@ class SurveyResultsController extends Controller
      */
     public function create(string $orderId)
     {
-        $order = Order::with(['jenisInterior', 'surveyResults', 'users.role'])->findOrFail($orderId);
+        $order = Order::with(['jenisInterior', 'surveyResults.jenisPengukuran', 'users.role'])->findOrFail($orderId);
         $jenisPengukuran = JenisPengukuran::all();
 
         // Check if user has clicked Response button first
@@ -260,15 +266,13 @@ class SurveyResultsController extends Controller
                 ->with('error', 'Please click "Response" button first before creating survey.');
         }
 
-        // Check if published survey already exists
+        // Check if published survey already exists with actual survey content
         if (
             !$order->surveyResults->is_draft &&
             (
                 $order->surveyResults->feedback
                 || $order->surveyResults->layout_files
                 || $order->surveyResults->foto_lokasi_files
-                || $order->mom_file
-                || $order->mom_files
             )
         ) {
             return redirect()->route('survey-results.edit', $order->surveyResults->id)
@@ -292,14 +296,47 @@ class SurveyResultsController extends Controller
             'survey_id' => 'required|exists:survey_results,id',
             'feedback' => 'nullable|string',
             'layout_files' => 'nullable|array',
-            'layout_files.*' => 'file|mimes:pdf,jpg,jpeg,png,dwg,dxf,cad,skp|max:10240',
+            'layout_files.*' => [
+                'file',
+                function ($attribute, $value, $fail) {
+                    $ext = strtolower($value->getClientOriginalExtension());
+                    if (!in_array($ext, ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'dwg', 'dxf', 'cad', 'skp'])) {
+                        $fail("File layout ({$value->getClientOriginalName()}) harus berformat PDF, JPG, PNG, WEBP, DWG, DXF, CAD, atau SKP.");
+                    }
+                },
+            ],
             'foto_lokasi_files' => 'nullable|array',
-            'foto_lokasi_files.*' => 'file|mimes:jpg,jpeg,png|max:5120',
+            'foto_lokasi_files.*' => [
+                'file',
+                function ($attribute, $value, $fail) {
+                    $ext = strtolower($value->getClientOriginalExtension());
+                    if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'heic'])) {
+                        $fail("Foto lokasi ({$value->getClientOriginalName()}) harus berformat JPG, JPEG, PNG, atau WEBP.");
+                    }
+                },
+            ],
             // Backwards compatible single-file key
-            'mom_file' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
+            'mom_file' => [
+                'nullable',
+                'file',
+                function ($attribute, $value, $fail) {
+                    $ext = strtolower($value->getClientOriginalExtension());
+                    if (!in_array($ext, ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'])) {
+                        $fail("File MoM ({$value->getClientOriginalName()}) harus berformat PDF, DOC, atau DOCX.");
+                    }
+                },
+            ],
             // New multi-file key
             'mom_files' => 'nullable|array',
-            'mom_files.*' => 'file|mimes:pdf,doc,docx|max:2048',
+            'mom_files.*' => [
+                'file',
+                function ($attribute, $value, $fail) {
+                    $ext = strtolower($value->getClientOriginalExtension());
+                    if (!in_array($ext, ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'])) {
+                        $fail("File MoM ({$value->getClientOriginalName()}) harus berformat PDF, DOC, atau DOCX.");
+                    }
+                },
+            ],
             'jenis_pengukuran_ids' => 'nullable|array',
             'jenis_pengukuran_ids.*' => 'exists:jenis_pengukuran,id',
             'action' => 'required|in:save_draft,publish',
@@ -346,8 +383,9 @@ class SurveyResultsController extends Controller
 
 
             /* ===============================
-             * UPLOAD LAYOUT FILES
+             * UPLOAD LAYOUT FILES (APPEND TO EXISTING IF ANY)
              * =============================== */
+            $existingLayoutFiles = $survey->layout_files ?? [];
             $layoutFilesPaths = [];
             $layoutUploadErrors = [];
 
@@ -357,13 +395,15 @@ class SurveyResultsController extends Controller
                         $fileName = $file->getClientOriginalName();
                         \Log::info("[Survey Store] Uploading layout file #{$index}: {$fileName}");
                         
-                        if (in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png'])) {
+                        $ext = strtolower($file->getClientOriginalExtension());
+                        if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
                             $result = app(ImageService::class)->saveImageWithThumbnail($file, 'survey_layouts', 2000, 85, 500, 70);
                         } else {
                             $result = app(ImageService::class)->saveRawFile($file, 'survey_layouts');
                         }
                         
                         $layoutFilesPaths[] = $result;
+                        $existingLayoutFiles[] = $result;
                         \Log::info("[Survey Store] Layout file #{$index} uploaded successfully: {$result['path']}");
                     } catch (\Exception $fileError) {
                         // Cleanup previously uploaded files
@@ -387,11 +427,12 @@ class SurveyResultsController extends Controller
                 }
             }
 
-            $validated['layout_files'] = $layoutFilesPaths ?: null;
+            $validated['layout_files'] = !empty($existingLayoutFiles) ? array_values($existingLayoutFiles) : null;
 
             /* ===============================
-             * UPLOAD FOTO LOKASI
+             * UPLOAD FOTO LOKASI (APPEND TO EXISTING IF ANY)
              * =============================== */
+            $existingFotoFiles = $survey->foto_lokasi_files ?? [];
             $fotoLokasiFilesPaths = [];
             $fotoUploadErrors = [];
 
@@ -403,6 +444,7 @@ class SurveyResultsController extends Controller
                         
                         $result = app(ImageService::class)->saveImageWithThumbnail($file, 'survey_photos', 1600, 80, 400, 70);
                         $fotoLokasiFilesPaths[] = $result;
+                        $existingFotoFiles[] = $result;
                         
                         \Log::info("[Survey Store] Photo #{$index} uploaded successfully: {$result['path']}");
                     } catch (\Exception $fileError) {
@@ -427,11 +469,14 @@ class SurveyResultsController extends Controller
                 }
             }
 
-            $validated['foto_lokasi_files'] = $fotoLokasiFilesPaths ?: null;
+            $validated['foto_lokasi_files'] = !empty($existingFotoFiles) ? array_values($existingFotoFiles) : null;
 
             /* ===============================
              * UPDATE SURVEY
              * =============================== */
+            if ((!isset($validated['feedback']) || $validated['feedback'] === '') && !empty($survey->feedback)) {
+                $validated['feedback'] = $survey->feedback;
+            }
             $validated['is_draft'] = $isDraft;
             $survey->update($validated);
 
@@ -646,7 +691,8 @@ class SurveyResultsController extends Controller
             \Log::error('Error storing survey: ' . $e->getMessage());
             return back()
                 ->withInput()
-                ->with('error', 'Failed to save survey. Please try again.');
+                ->withErrors(['general' => 'Gagal menyimpan hasil survey: ' . $e->getMessage()])
+                ->with('error', 'Failed to save survey: ' . $e->getMessage());
         }
     }
 
@@ -693,14 +739,47 @@ class SurveyResultsController extends Controller
         $validated = $request->validate([
             'feedback' => 'nullable|string',
             'layout_files' => 'nullable|array',
-            'layout_files.*' => 'file|mimes:pdf,jpg,jpeg,png,dwg,dxf,cad,skp',
+            'layout_files.*' => [
+                'file',
+                function ($attribute, $value, $fail) {
+                    $ext = strtolower($value->getClientOriginalExtension());
+                    if (!in_array($ext, ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'dwg', 'dxf', 'cad', 'skp'])) {
+                        $fail("File layout ({$value->getClientOriginalName()}) harus berformat PDF, JPG, PNG, WEBP, DWG, DXF, CAD, atau SKP.");
+                    }
+                },
+            ],
             'foto_lokasi_files' => 'nullable|array',
-            'foto_lokasi_files.*' => 'file|mimes:jpg,jpeg,png',
+            'foto_lokasi_files.*' => [
+                'file',
+                function ($attribute, $value, $fail) {
+                    $ext = strtolower($value->getClientOriginalExtension());
+                    if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'heic'])) {
+                        $fail("Foto lokasi ({$value->getClientOriginalName()}) harus berformat JPG, JPEG, PNG, atau WEBP.");
+                    }
+                },
+            ],
             // Backwards compatible single-file key
-            'mom_file' => 'nullable|file|mimes:pdf,doc,docx',
+            'mom_file' => [
+                'nullable',
+                'file',
+                function ($attribute, $value, $fail) {
+                    $ext = strtolower($value->getClientOriginalExtension());
+                    if (!in_array($ext, ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'])) {
+                        $fail("File MoM ({$value->getClientOriginalName()}) harus berformat PDF, DOC, atau DOCX.");
+                    }
+                },
+            ],
             // New multi-file key
             'mom_files' => 'nullable|array',
-            'mom_files.*' => 'file|mimes:pdf,doc,docx',
+            'mom_files.*' => [
+                'file',
+                function ($attribute, $value, $fail) {
+                    $ext = strtolower($value->getClientOriginalExtension());
+                    if (!in_array($ext, ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'])) {
+                        $fail("File MoM ({$value->getClientOriginalName()}) harus berformat PDF, DOC, atau DOCX.");
+                    }
+                },
+            ],
             'jenis_pengukuran_ids' => 'nullable|array',
             'jenis_pengukuran_ids.*' => 'exists:jenis_pengukuran,id',
             'action' => 'required|in:save_draft,publish',
@@ -757,7 +836,8 @@ class SurveyResultsController extends Controller
                         $fileName = $file->getClientOriginalName();
                         \Log::info("[Survey Update] Uploading layout file #{$index}: {$fileName}");
                         
-                        if (in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png'])) {
+                        $ext = strtolower($file->getClientOriginalExtension());
+                        if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
                             $result = app(ImageService::class)->saveImageWithThumbnail($file, 'survey_layouts', 2000, 85, 500, 70);
                         } else {
                             $result = app(ImageService::class)->saveRawFile($file, 'survey_layouts');
@@ -1047,7 +1127,8 @@ class SurveyResultsController extends Controller
             \Log::error('Error updating survey: ' . $e->getMessage());
             return back()
                 ->withInput()
-                ->with('error', 'Failed to update survey. Please try again.');
+                ->withErrors(['general' => 'Gagal memperbarui hasil survey: ' . $e->getMessage()])
+                ->with('error', 'Failed to update survey: ' . $e->getMessage());
         }
     }
 

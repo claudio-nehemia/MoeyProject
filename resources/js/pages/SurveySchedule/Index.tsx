@@ -58,19 +58,21 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing, isProjec
   const [statusFilter, setStatusFilter] = useState('semua');
   const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
 
+  const isOrderScheduled = (o: Order) => Boolean(o.tanggal_survey && o.survey_users && o.survey_users.length > 0);
+
   const countBelum = useMemo(() =>
-    orders.filter(o => !o.tanggal_survey).length,
+    orders.filter(o => !isOrderScheduled(o)).length,
     [orders]
   );
 
   const countSudah = useMemo(() =>
-    orders.filter(o => !!o.tanggal_survey).length,
+    orders.filter(o => isOrderScheduled(o)).length,
     [orders]
   );
 
   const filteredOrders = useMemo(() =>
     orders.filter(order => {
-      const isCompleted = !!order.tanggal_survey;
+      const isCompleted = isOrderScheduled(order);
       const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
       if (!matchesWorkTab) return false;
 
@@ -79,9 +81,9 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing, isProjec
       if (statusFilter === 'pending_response') {
         meetsStatus = !order.survey_response_time;
       } else if (statusFilter === 'pending_schedule') {
-        meetsStatus = !!order.survey_response_time && !order.tanggal_survey;
+        meetsStatus = !!order.survey_response_time && !isCompleted;
       } else if (statusFilter === 'scheduled') {
-        meetsStatus = !!order.tanggal_survey;
+        meetsStatus = isCompleted;
       }
 
       if (!meetsStatus) return false;
@@ -128,7 +130,7 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing, isProjec
 
   const openModal = (order: Order) => {
     setSelectedOrder(order);
-    if (order.tanggal_survey) {
+    if (isOrderScheduled(order) && order.tanggal_survey) {
       const parts = order.tanggal_survey.split(' ');
       setTanggalSurvey(parts[0]);
       setJamSurvey(parts[1] ? parts[1].substring(0, 5) : '');
@@ -318,7 +320,7 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing, isProjec
                                     {/* Status Survey */}
                                     <td className="px-5 py-4 align-top">
                                         <div className="space-y-2">
-                                            {order.tanggal_survey ? (
+                                            {isOrderScheduled(order) && order.tanggal_survey ? (
                                                 <div className="max-w-[220px] rounded border border-indigo-200 bg-indigo-50 p-2 whitespace-normal">
                                                     <div className="flex items-center gap-1 text-[11px] font-bold text-indigo-700 mb-1">
                                                         <Calendar className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
@@ -380,7 +382,7 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing, isProjec
                                                     className="inline-flex items-center justify-center gap-1.5 w-full rounded-md bg-indigo-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-indigo-700 text-center"
                                                 >
                                                     <Calendar className="w-3.5 h-3.5" />
-                                                    <span>{order.tanggal_survey ? 'Edit Schedule' : 'Isi Tanggal Survey'}</span>
+                                                    <span>{isOrderScheduled(order) ? 'Edit Schedule' : 'Isi Tanggal Survey'}</span>
                                                 </button>
                                             )}
 
@@ -420,7 +422,7 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing, isProjec
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <h2 className="text-xl font-bold mb-2">
-                {selectedOrder.tanggal_survey ? 'Edit' : 'Isi'} Tanggal Survey
+                {isOrderScheduled(selectedOrder) ? 'Edit' : 'Isi'} Tanggal Survey
               </h2>
               <p className="text-stone-600 mb-6">
                 {selectedOrder.nama_project}

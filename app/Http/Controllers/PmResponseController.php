@@ -650,6 +650,7 @@ class PmResponseController extends Controller
                 'order_id' => $orderId,
                 'pm_response_time' => now(),
                 'pm_response_by' => auth()->user()->name,
+                'is_draft' => true,
             ]);
             \Log::info('Survey Result created with ID: ' . $surveyResult->id);
         } else {

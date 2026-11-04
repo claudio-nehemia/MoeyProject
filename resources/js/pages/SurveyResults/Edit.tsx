@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Head, useForm, router, Link } from '@inertiajs/react';
+import { Head, useForm, router, Link, usePage } from '@inertiajs/react';
 import JenisPengukuranModal from '@/components/JenisPengukuranModal';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
@@ -62,6 +62,7 @@ interface Props {
 }
 
 export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }: Props) {
+    const { flash } = usePage<{ flash?: { error?: string; success?: string } }>().props;
     const [selectedPengukuran, setSelectedPengukuran] = useState<number[]>(selectedPengukuranIds || []);
 
     const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -138,6 +139,19 @@ export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }:
         });
     };
     const [clientErrors, setClientErrors] = useState<Record<string, string>>({});
+
+    const getFieldErrors = (prefix: string): string[] => {
+        const list: string[] = [];
+        if (clientErrors[prefix]) list.push(clientErrors[prefix]);
+        const errMap = errors as Record<string, string>;
+        if (errMap[prefix]) list.push(errMap[prefix]);
+        Object.keys(errMap).forEach((key) => {
+            if (key.startsWith(`${prefix}.`) && errMap[key]) {
+                list.push(errMap[key]);
+            }
+        });
+        return Array.from(new Set(list));
+    };
 
     const handleSubmit = (action: 'save_draft' | 'publish') => {
         if (processing) return;
@@ -336,6 +350,19 @@ export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }:
                             </div>
 
                             <div className="p-8 space-y-6">
+                                {(flash?.error || (errors as any).general || Object.keys(errors).length > 0 || Object.keys(clientErrors).length > 0) && (
+                                    <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs space-y-1">
+                                        <p className="font-bold text-sm">Gagal memperbarui data survey:</p>
+                                        {flash?.error && <p>• {flash.error}</p>}
+                                        {Object.entries(errors).map(([k, v]) => (
+                                            <p key={k}>• {v}</p>
+                                        ))}
+                                        {Object.entries(clientErrors).map(([k, v]) => (
+                                            <p key={`client-${k}`}>• {v}</p>
+                                        ))}
+                                    </div>
+                                )}
+
                                 {/* Feedback */}
                                 <div>
                                     <label className="block text-sm font-semibold text-stone-700 mb-2">
@@ -444,9 +471,9 @@ export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }:
                                             ))}
                                         </div>
                                     )}
-                                    {(errors.layout_files || clientErrors.layout_files) && (
-                                        <p className="text-red-500 text-xs mt-1 font-semibold">{errors.layout_files || clientErrors.layout_files}</p>
-                                    )}
+                                    {getFieldErrors('layout_files').map((msg, idx) => (
+                                        <p key={idx} className="text-red-500 text-xs mt-1 font-semibold">{msg}</p>
+                                    ))}
                                 </div>
 
                                 {/* Foto Lokasi (Multiple) */}
@@ -543,9 +570,9 @@ export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }:
                                             ))}
                                         </div>
                                     )}
-                                    {(errors.foto_lokasi_files || clientErrors.foto_lokasi_files) && (
-                                        <p className="text-red-500 text-xs mt-1 font-semibold">{errors.foto_lokasi_files || clientErrors.foto_lokasi_files}</p>
-                                    )}
+                                    {getFieldErrors('foto_lokasi_files').map((msg, idx) => (
+                                        <p key={idx} className="text-red-500 text-xs mt-1 font-semibold">{msg}</p>
+                                    ))}
                                 </div>
 
 
@@ -699,11 +726,10 @@ export default function Edit({ survey, jenisPengukuran, selectedPengukuranIds }:
                                         </div>
                                     )}
 
-                                    {((errors as any).mom_files || clientErrors.mom_files) && (
-                                        <p className="text-red-500 text-xs mt-1 font-semibold">{(errors as any).mom_files || clientErrors.mom_files}</p>
-                                    )}
-                                    {(errors as any)['mom_files.0'] && <p className="text-red-500 text-xs mt-1">{(errors as any)['mom_files.0']}</p>}
-                                    {(errors as any).mom_file && <p className="text-red-500 text-xs mt-1">{(errors as any).mom_file}</p>}
+                                    {getFieldErrors('mom_files').map((msg, idx) => (
+                                        <p key={idx} className="text-red-500 text-xs mt-1 font-semibold">{msg}</p>
+                                    ))}
+                                    {(errors as any).mom_file && <p className="text-red-500 text-xs mt-1 font-semibold">{(errors as any).mom_file}</p>}
 
                                 </div>
                             </div>

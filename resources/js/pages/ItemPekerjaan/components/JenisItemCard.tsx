@@ -1,4 +1,5 @@
 import React from 'react';
+import SearchableSelect from '@/pages/ItemPekerjaan/components/SearchableSelect';
 
 interface JenisItem {
     id: number;
@@ -115,19 +116,16 @@ export default function JenisItemCard({
                         <div className="space-y-2">
                             {jenisItem.items.map((item) => (
                                 <div key={item.temp_id} className="flex gap-2 items-center bg-white rounded-lg p-2 border border-slate-200">
-                                    <select
+                                    <SearchableSelect
                                         value={item.item_id}
-                                        onChange={(e) => onUpdateItem(ruanganTempId, produkTempId, jenisItem.temp_id, item.temp_id, 'item_id', e.target.value)}
-                                        className={`${isAksesoris ? 'flex-1' : 'w-1/2'} border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-2 focus:ring-purple-500 focus:border-purple-500`}
+                                        onChange={(val) => onUpdateItem(ruanganTempId, produkTempId, jenisItem.temp_id, item.temp_id, 'item_id', val)}
+                                        options={availableItems.map((i) => ({ value: i.id, label: i.nama_item }))}
+                                        placeholder="-- Pilih Item --"
+                                        searchPlaceholder="Cari nama item..."
+                                        className={isAksesoris ? 'flex-1' : 'w-1/2'}
+                                        size="sm"
                                         required
-                                    >
-                                        <option value="">-- Pilih Item --</option>
-                                        {availableItems.map((i) => (
-                                            <option key={i.id} value={i.id}>
-                                                {i.nama_item}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    />
 
                                     {!isAksesoris && (
                                         <input

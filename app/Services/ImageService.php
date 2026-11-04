@@ -34,9 +34,10 @@ class ImageService
         
         $encoded = $image->toJpeg(quality: $quality);
 
-        // Use original filename with timestamp to avoid collision
-        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-        $filename = $originalName . '_' . time() . '.jpg';
+        // Use original filename with timestamp + unique suffix to avoid collision
+        $originalName = preg_replace('/[^A-Za-z0-9_\-]/', '_', pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) ?: 'file';
+        $uniqueSuffix = time() . '_' . substr(uniqid(), -5);
+        $filename = $originalName . '_' . $uniqueSuffix . '.jpg';
         $path = "{$directory}/{$filename}";
 
         Storage::disk('public')->put($path, (string) $encoded);
@@ -67,9 +68,10 @@ class ImageService
         
         $encoded = $thumb->toJpeg(quality: $quality);
 
-        // Use original filename for thumbnail with timestamp
-        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-        $filename = 'thumb_' . $originalName . '_' . time() . '.jpg';
+        // Use original filename for thumbnail with timestamp + unique suffix
+        $originalName = preg_replace('/[^A-Za-z0-9_\-]/', '_', pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) ?: 'file';
+        $uniqueSuffix = time() . '_' . substr(uniqid(), -5);
+        $filename = 'thumb_' . $originalName . '_' . $uniqueSuffix . '.jpg';
         $path = "{$directory}/thumbnails/{$filename}";
 
         Storage::disk('public')->put($path, (string) $encoded);
@@ -91,40 +93,47 @@ class ImageService
         int $thumbnailWidth = 400,
         int $thumbnailQuality = 70
     ): array {
-        $image = $this->manager->read($file);
+        try {
+            $image = $this->manager->read($file);
 
-        if ($image->width() > $maxWidth) {
-            $image->scale(width: $maxWidth);
+            if ($image->width() > $maxWidth) {
+                $image->scale(width: $maxWidth);
+            }
+
+            $encodedMain = $image->toJpeg(quality: $quality);
+            $mainBinary = (string) $encodedMain;
+
+            // Use original filename with timestamp + unique suffix to avoid collision
+            $originalName = preg_replace('/[^A-Za-z0-9_\-]/', '_', pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) ?: 'file';
+            $uniqueSuffix = time() . '_' . substr(uniqid(), -5);
+            $mainFilename = $originalName . '_' . $uniqueSuffix . '.jpg';
+            $mainPath = "{$directory}/{$mainFilename}";
+            Storage::disk('public')->put($mainPath, $mainBinary);
+
+            // Generate thumbnail from the already-scaled main image bytes
+            $thumbImage = $this->manager->read($mainBinary);
+            if ($thumbImage->width() > $thumbnailWidth) {
+                $thumbImage->scale(width: $thumbnailWidth);
+            }
+
+            $encodedThumb = $thumbImage->toJpeg(quality: $thumbnailQuality);
+            $thumbFilename = 'thumb_' . $originalName . '_' . $uniqueSuffix . '.jpg';
+            $thumbPath = "{$directory}/thumbnails/{$thumbFilename}";
+            Storage::disk('public')->put($thumbPath, (string) $encodedThumb);
+
+            return [
+                'path' => $mainPath,
+                'original_name' => $file->getClientOriginalName(),
+                'mime_type' => 'image/jpeg',
+                'size' => Storage::disk('public')->size($mainPath),
+                'thumbnail' => $thumbPath,
+            ];
+        } catch (\Throwable $e) {
+            \Log::warning("[ImageService] GD image processing failed for {$file->getClientOriginalName()}, falling back to raw file storage: " . $e->getMessage());
+            $raw = $this->saveRawFile($file, $directory);
+            $raw['thumbnail'] = $raw['path'];
+            return $raw;
         }
-
-        $encodedMain = $image->toJpeg(quality: $quality);
-        $mainBinary = (string) $encodedMain;
-
-        // Use original filename with timestamp to avoid collision
-        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-        $timestamp = time();
-        $mainFilename = $originalName . '_' . $timestamp . '.jpg';
-        $mainPath = "{$directory}/{$mainFilename}";
-        Storage::disk('public')->put($mainPath, $mainBinary);
-
-        // Generate thumbnail from the already-scaled main image bytes
-        $thumbImage = $this->manager->read($mainBinary);
-        if ($thumbImage->width() > $thumbnailWidth) {
-            $thumbImage->scale(width: $thumbnailWidth);
-        }
-
-        $encodedThumb = $thumbImage->toJpeg(quality: $thumbnailQuality);
-        $thumbFilename = 'thumb_' . $originalName . '_' . $timestamp . '.jpg';
-        $thumbPath = "{$directory}/thumbnails/{$thumbFilename}";
-        Storage::disk('public')->put($thumbPath, (string) $encodedThumb);
-
-        return [
-            'path' => $mainPath,
-            'original_name' => $file->getClientOriginalName(),
-            'mime_type' => 'image/jpeg',
-            'size' => Storage::disk('public')->size($mainPath),
-            'thumbnail' => $thumbPath,
-        ];
     }
 
     /**
@@ -132,16 +141,17 @@ class ImageService
      */
     public function saveRawFile(UploadedFile $file, string $directory): array
     {
-        // Use original filename with timestamp to avoid collision
-        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-        $extension = $file->getClientOriginalExtension();
-        $filename = $originalName . '_' . time() . '.' . $extension;
+        // Use original filename with timestamp + unique suffix to avoid collision
+        $originalName = preg_replace('/[^A-Za-z0-9_\-]/', '_', pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) ?: 'file';
+        $extension = strtolower($file->getClientOriginalExtension() ?: 'bin');
+        $uniqueSuffix = time() . '_' . substr(uniqid(), -5);
+        $filename = $originalName . '_' . $uniqueSuffix . '.' . $extension;
         $path = $file->storeAs($directory, $filename, 'public');
 
         return [
             'path' => $path,
             'original_name' => $file->getClientOriginalName(),
-            'mime_type' => $file->getMimeType(),
+            'mime_type' => $file->getMimeType() ?: 'application/octet-stream',
             'size' => $file->getSize(),
         ];
     }

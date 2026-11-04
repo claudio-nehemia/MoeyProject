@@ -35,7 +35,9 @@ class SurveyScheduleController extends Controller
             ->visibleToSurveyUser($user)
             ->where(function ($query) {
                 $query->whereRaw("LOWER(payment_status) LIKE '%dp%'")
-                    ->orWhereNotNull('tanggal_survey')
+                    ->orWhereHas('surveyUsers')
+                    ->orWhereHas('taskResponses', fn($tq) => $tq->where('tahap', 'survey_schedule'))
+                    ->orWhere('tahap_survey', 'survey_ulang')
                     ->orWhereNotNull('survey_response_time')
                     ->orWhereNotNull('pm_survey_response_time');
             })

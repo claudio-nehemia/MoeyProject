@@ -317,9 +317,11 @@ class NotificationApiController extends Controller
         $survey = $order->surveyResults;
         if ($survey) {
             if (!$survey->response_time) {
+                $hasSurveyData = !empty($survey->feedback) || !empty($survey->layout_files) || !empty($survey->foto_lokasi_files);
                 $survey->update([
                     'response_time' => now(),
                     'response_by' => auth()->user()->name ?? 'Admin',
+                    'is_draft' => $hasSurveyData ? $survey->is_draft : true,
                 ]);
             }
         } else {
@@ -327,6 +329,7 @@ class NotificationApiController extends Controller
                 'order_id' => $order->id,
                 'response_time' => now(),
                 'response_by' => auth()->user()->name ?? 'Admin',
+                'is_draft' => true,
             ]);
         }
 
@@ -1284,6 +1287,7 @@ class NotificationApiController extends Controller
                         'order_id' => $order->id,
                         'pm_response_time' => $pmTime,
                         'pm_response_by' => $pmName,
+                        'is_draft' => true,
                         // DON'T set response_time or response_by - that's for staff!
                     ]);
                 } else {

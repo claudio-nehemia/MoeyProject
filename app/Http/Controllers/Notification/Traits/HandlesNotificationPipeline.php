@@ -30,9 +30,11 @@ trait HandlesNotificationPipeline
         $survey = $order->surveyResults;
         if ($survey) {
             if (!$survey->response_time) {
+                $hasSurveyData = !empty($survey->feedback) || !empty($survey->layout_files) || !empty($survey->foto_lokasi_files);
                 $survey->update([
                     'response_time' => now(),
                     'response_by' => auth()->user()->name ?? 'Admin',
+                    'is_draft' => $hasSurveyData ? $survey->is_draft : true,
                 ]);
             }
         } else {
@@ -40,6 +42,7 @@ trait HandlesNotificationPipeline
                 'order_id' => $order->id,
                 'response_time' => now(),
                 'response_by' => auth()->user()->name ?? 'Admin',
+                'is_draft' => true,
             ]);
         }
 
