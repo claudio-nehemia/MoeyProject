@@ -52,7 +52,7 @@ class Role extends Model
         if ($cachedId !== null) {
             return $cachedId;
         }
-        $role = static::where('nama_role', 'Kepala Marketing')->first();
+        $role = static::whereIn('nama_role', ['Kepala Marketing', 'Manager Marketing'])->first();
         $cachedId = $role ? (int) $role->id : 11;
         return $cachedId;
     }
@@ -66,7 +66,7 @@ class Role extends Model
         if ($cachedId !== null) {
             return $cachedId;
         }
-        $role = static::where('nama_role', 'Desainer')->first();
+        $role = static::whereIn('nama_role', ['Desainer', 'Designer'])->first();
         $cachedId = $role ? (int) $role->id : 7;
         return $cachedId;
     }

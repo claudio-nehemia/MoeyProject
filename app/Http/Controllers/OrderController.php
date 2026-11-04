@@ -45,34 +45,37 @@ class OrderController extends Controller
      */
     private function getOrderTeamUsers()
     {
-        $surveyorId = Role::where('nama_role', 'like', '%Surveyor%')->pluck('id');
-        $drafterId = Role::where('nama_role', 'like', '%Drafter%')->pluck('id');
-        $desainerId = Role::where('nama_role', 'like', '%Designer%')->pluck('id');
-        $supervisorId = Role::where('nama_role', 'like', '%Supervisor%')->pluck('id');
-        $pmId = Role::where('nama_role', 'like', '%Project Manager%')->pluck('id');
-        $kmId = Role::where('nama_role', 'like', '%Manager Marketing%')->pluck('id');
+        $kmId = Role::getKepalaMarketingRoleId();
+        $desainerId = Role::getDesainerRoleId();
+        $surveyorId = Role::getSurveyorRoleId();
+        $drafterId = Role::getDrafterRoleId();
+        $supervisorId = Role::getSupervisorRoleId();
+        $pmId = Role::getProjectManagerRoleId();
 
         $marketings = User::where(function ($query) use ($kmId) {
-            $query->whereIn('role_id', $kmId)
-                ->orWhere('role_id', 1);
-        })->get(['id', 'name', 'role_id']);
+            $query->where('role_id', $kmId)
+                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $kmId));
+        })->get(['id', 'name', 'email', 'role_id']);
 
         $drafters = User::where(function ($query) use ($surveyorId, $drafterId) {
-            $query->whereIn('role_id', $surveyorId)
-                ->orWhereIn('role_id', $drafterId);
-        })->get(['id', 'name', 'role_id']);
+            $query->whereIn('role_id', [$surveyorId, $drafterId])
+                ->orWhereHas('roles', fn($q) => $q->whereIn('roles.id', [$surveyorId, $drafterId]));
+        })->get(['id', 'name', 'email', 'role_id']);
 
         $desainers = User::where(function ($query) use ($desainerId) {
-            $query->whereIn('role_id', $desainerId);
-        })->get(['id', 'name', 'role_id']);
+            $query->where('role_id', $desainerId)
+                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $desainerId));
+        })->get(['id', 'name', 'email', 'role_id']);
 
         $supervisors = User::where(function ($query) use ($supervisorId) {
-            $query->whereIn('role_id', $supervisorId);
-        })->get(['id', 'name', 'role_id']);
+            $query->where('role_id', $supervisorId)
+                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $supervisorId));
+        })->get(['id', 'name', 'email', 'role_id']);
 
         $projectManagers = User::where(function ($query) use ($pmId) {
-            $query->whereIn('role_id', $pmId);
-        })->get(['id', 'name', 'role_id']);
+            $query->where('role_id', $pmId)
+                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $pmId));
+        })->get(['id', 'name', 'email', 'role_id']);
 
         return [
             'marketings' => $marketings,

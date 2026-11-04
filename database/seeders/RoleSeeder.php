@@ -21,7 +21,7 @@ class RoleSeeder extends Seeder
             'Surveyor',
             'Drafter',
             'Estimator',
-            'Desainer',
+            'Designer',
             'Owner',
             'Supervisor',
             'Project Manager',
