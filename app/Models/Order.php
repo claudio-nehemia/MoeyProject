@@ -129,6 +129,11 @@ class Order extends Model
         return $this->hasOne(MeetingVendor::class);
     }
 
+    public function taskResponses()
+    {
+        return $this->hasMany(TaskResponse::class);
+    }
+
     /**
      * Scope untuk filter order berdasarkan role dan team
      */
