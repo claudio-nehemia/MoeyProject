@@ -47,10 +47,10 @@ class OrderController extends Controller
     {
         $surveyorId = Role::where('nama_role', 'like', '%Surveyor%')->pluck('id');
         $drafterId = Role::where('nama_role', 'like', '%Drafter%')->pluck('id');
-        $desainerId = Role::where('nama_role', 'like', '%Desainer%')->pluck('id');
+        $desainerId = Role::where('nama_role', 'like', '%Designer%')->pluck('id');
         $supervisorId = Role::where('nama_role', 'like', '%Supervisor%')->pluck('id');
         $pmId = Role::where('nama_role', 'like', '%Project Manager%')->pluck('id');
-        $kmId = Role::where('nama_role', 'like', '%Kepala Marketing%')->pluck('id');
+        $kmId = Role::where('nama_role', 'like', '%Manager Marketing%')->pluck('id');
 
         $marketings = User::where(function ($query) use ($kmId) {
             $query->whereIn('role_id', $kmId)
