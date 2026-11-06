@@ -438,7 +438,7 @@ export default function Index({ presensiData, filters }: Props) {
             <Modal 
                 show={showDetailModal} 
                 onClose={() => setShowDetailModal(false)}
-                maxWidth="4xl"
+                maxWidth="6xl"
             >
                 {selectedPresence && (
                     <div className="bg-white rounded-2xl overflow-hidden shadow-2xl relative">
@@ -464,10 +464,10 @@ export default function Index({ presensiData, filters }: Props) {
                         </div>
 
                         {/* Modal Body */}
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-12 gap-6 max-h-[75vh] overflow-y-auto">
+                        <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 max-h-[75vh] overflow-y-auto">
                             
-                            {/* Left Panel: Photo & Details (5/12 cols) */}
-                            <div className="md:col-span-5 space-y-5">
+                            {/* Left Panel: Photo & Details (7/12 cols) */}
+                            <div className="lg:col-span-7 space-y-4">
                                 
                                 {/* Toggle Buttons: Check-In vs Check-Out */}
                                 <div className="flex bg-stone-100 p-0.5 rounded-xl border border-stone-200 shadow-inner">
@@ -489,75 +489,80 @@ export default function Index({ presensiData, filters }: Props) {
                                     </button>
                                 </div>
 
-                                {/* Presence Selfie Photo */}
-                                <div className="bg-stone-50 border border-stone-200 rounded-2xl overflow-hidden aspect-[4/3] flex items-center justify-center relative shadow-inner">
-                                    {activeDetailType === 'in' ? (
-                                        selectedPresence.foto_in ? (
-                                            <img 
-                                                src={`/storage/uploads/absensi/${selectedPresence.foto_in}`}
-                                                alt="Foto Check-In Karyawan"
-                                                className="w-full h-full object-cover"
-                                            />
+                                {/* Photo & Details Row */}
+                                <div className="flex flex-col sm:flex-row gap-4 items-stretch">
+                                    {/* Presence Selfie Photo */}
+                                    <div className="w-full sm:w-52 shrink-0 aspect-[3/4] bg-stone-50 border border-stone-200 rounded-2xl overflow-hidden flex items-center justify-center relative shadow-inner">
+                                        {activeDetailType === 'in' ? (
+                                            selectedPresence.foto_in ? (
+                                                <img 
+                                                    src={`/storage/uploads/absensi/${selectedPresence.foto_in}`}
+                                                    alt="Foto Check-In Karyawan"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="text-center p-6 space-y-1.5 text-stone-400">
+                                                    <Camera className="mx-auto text-stone-300" size={32} />
+                                                    <p className="text-xs font-bold">Tidak ada foto Check-In</p>
+                                                </div>
+                                            )
                                         ) : (
-                                            <div className="text-center p-6 space-y-1.5 text-stone-400">
-                                                <Camera className="mx-auto text-stone-300" size={32} />
-                                                <p className="text-xs font-bold">Tidak ada foto Check-In</p>
-                                            </div>
-                                        )
-                                    ) : (
-                                        selectedPresence.foto_out ? (
-                                            <img 
-                                                src={`/storage/uploads/absensi/${selectedPresence.foto_out}`}
-                                                alt="Foto Check-Out Karyawan"
-                                                className="w-full h-full object-cover"
-                                            />
-                                        ) : (
-                                            <div className="text-center p-6 space-y-1.5 text-stone-400">
-                                                <Camera className="mx-auto text-stone-300" size={32} />
-                                                <p className="text-xs font-bold">Tidak ada foto Check-Out</p>
-                                            </div>
-                                        )
-                                    )}
-                                                                 {/* Profile detail information Table */}
-                                <div className="border border-stone-200/80 rounded-2xl overflow-hidden bg-stone-50/30">
-                                    <table className="w-full text-xs text-left">
-                                        <tbody>
-                                            <tr className="border-b border-stone-100">
-                                                <th className="px-4 py-2.5 font-bold text-stone-500 bg-stone-50/50 w-1/3">Waktu Absen</th>
-                                                <td className="px-4 py-2.5 font-bold text-stone-800">
-                                                    {activeDetailType === 'in' 
-                                                        ? (selectedPresence.jam_in ?? '-') 
-                                                        : (selectedPresence.jam_out ?? '-')}
-                                                </td>
-                                            </tr>
-                                            <tr className="border-b border-stone-100">
-                                                <th className="px-4 py-2.5 font-bold text-stone-500 bg-stone-50/50">Jadwal Shift</th>
-                                                <td className="px-4 py-2.5 font-medium text-stone-700">
-                                                    {selectedPresence.nama_jam_kerja} ({selectedPresence.jk_jam_masuk} - {selectedPresence.jk_jam_pulang})
-                                                </td>
-                                            </tr>
-                                            <tr className="border-b border-stone-100">
-                                                <th className="px-4 py-2.5 font-bold text-stone-500 bg-stone-50/50">Status Harian</th>
-                                                <td className="px-4 py-2.5">
-                                                    {getStatusBadge(selectedPresence.status)}
-                                                </td>
-                                            </tr>
-                                            {activeDetailType === 'in' && isCheckInLate(selectedPresence.jam_in, selectedPresence.jk_jam_masuk) && (
-                                                <tr>
-                                                    <th className="px-4 py-2.5 font-bold text-stone-500 bg-stone-50/50">Keterlambatan</th>
-                                                    <td className="px-4 py-2.5 text-xs font-extrabold text-rose-600 bg-rose-50/40">
-                                                        Terlambat Masuk Kerja
+                                            selectedPresence.foto_out ? (
+                                                <img 
+                                                    src={`/storage/uploads/absensi/${selectedPresence.foto_out}`}
+                                                    alt="Foto Check-Out Karyawan"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="text-center p-6 space-y-1.5 text-stone-400">
+                                                    <Camera className="mx-auto text-stone-300" size={32} />
+                                                    <p className="text-xs font-bold">Tidak ada foto Check-Out</p>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+
+                                    {/* Profile detail information Table */}
+                                    <div className="flex-1 border border-stone-200/80 rounded-2xl overflow-hidden bg-stone-50/30 flex flex-col justify-center shadow-sm">
+                                        <table className="w-full text-xs text-left">
+                                            <tbody>
+                                                <tr className="border-b border-stone-100">
+                                                    <th className="px-4 py-3 font-bold text-stone-500 bg-stone-50/60 w-32 whitespace-nowrap">Waktu Absen</th>
+                                                    <td className="px-4 py-3 font-bold text-stone-800 whitespace-nowrap">
+                                                        {activeDetailType === 'in' 
+                                                            ? (selectedPresence.jam_in ?? '-') 
+                                                            : (selectedPresence.jam_out ?? '-')}
                                                     </td>
                                                 </tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>  </div>
+                                                <tr className="border-b border-stone-100">
+                                                    <th className="px-4 py-3 font-bold text-stone-500 bg-stone-50/60 w-32 whitespace-nowrap">Jadwal Shift</th>
+                                                    <td className="px-4 py-3 font-medium text-stone-700">
+                                                        {selectedPresence.nama_jam_kerja} ({selectedPresence.jk_jam_masuk} - {selectedPresence.jk_jam_pulang})
+                                                    </td>
+                                                </tr>
+                                                <tr className="border-b border-stone-100">
+                                                    <th className="px-4 py-3 font-bold text-stone-500 bg-stone-50/60 w-32 whitespace-nowrap">Status Harian</th>
+                                                    <td className="px-4 py-3">
+                                                        {getStatusBadge(selectedPresence.status)}
+                                                    </td>
+                                                </tr>
+                                                {activeDetailType === 'in' && isCheckInLate(selectedPresence.jam_in, selectedPresence.jk_jam_masuk) && (
+                                                    <tr>
+                                                        <th className="px-4 py-3 font-bold text-stone-500 bg-stone-50/60 w-32 whitespace-nowrap">Keterlambatan</th>
+                                                        <td className="px-4 py-3 text-xs font-extrabold text-rose-600 bg-rose-50/40">
+                                                            Terlambat Masuk Kerja
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
 
                             </div>
 
-                            {/* Right Panel: Map Plotting (7/12 cols) */}
-                            <div className="md:col-span-7 space-y-4">
+                            {/* Right Panel: Map Plotting (5/12 cols) */}
+                            <div className="lg:col-span-5 space-y-4">
                                 <div className="flex justify-between items-center pb-2 border-b border-stone-100">
                                     <h4 className="text-xs font-extrabold text-stone-800 flex items-center gap-1.5">
                                         <MapPin size={14} className="text-sky-600" />
