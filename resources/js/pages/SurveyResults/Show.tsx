@@ -345,7 +345,7 @@ export default function Show({ survey, activityLogs = [] }: Props) {
                         </div>
 
                         {/* Files Summary */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+                        <div className={`grid grid-cols-1 sm:grid-cols-2 ${survey.jenis_pengukuran && survey.jenis_pengukuran.length > 0 ? 'lg:grid-cols-4' : 'md:grid-cols-3'} gap-3 sm:gap-4`}>
                             {/* Layout Files Count */}
                             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg sm:rounded-xl p-4 sm:p-5 border-2 border-blue-200">
                                 <div className="flex items-center gap-2 sm:gap-3 mb-3">
@@ -384,16 +384,16 @@ export default function Show({ survey, activityLogs = [] }: Props) {
 
                            {/* Jenis Pengukuran */}
                             {survey.jenis_pengukuran && survey.jenis_pengukuran.length > 0 && (
-                                <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg sm:rounded-xl p-4 sm:p-5 border-2 border-amber-200">
+                                <div className="bg-gradient-to-br from-indigo-50 to-purple-100 rounded-lg sm:rounded-xl p-4 sm:p-5 border-2 border-indigo-200">
                                     <div className="flex items-center gap-2 sm:gap-3 mb-3">
-                                        <svg className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        <svg className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                         </svg>
-                                        <span className="font-semibold text-amber-900 text-sm sm:text-base">Jenis Pengukuran</span>
+                                        <span className="font-semibold text-indigo-900 text-sm sm:text-base">Jenis Pengukuran</span>
                                     </div>
                                     <div className="flex flex-wrap gap-2">
                                         {survey.jenis_pengukuran.map((jp) => (
-                                            <span key={jp.id} className="inline-block px-3 py-1 bg-amber-100 text-amber-800 text-xs sm:text-sm font-semibold rounded-full">
+                                            <span key={jp.id} className="inline-block px-3 py-1 bg-white/80 text-indigo-800 border border-indigo-200 text-xs sm:text-sm font-semibold rounded-full shadow-xs">
                                                 {jp.nama_pengukuran}
                                             </span>
                                         ))}
@@ -691,25 +691,6 @@ export default function Show({ survey, activityLogs = [] }: Props) {
                         </div>
                         );
                     })()}
-
-                    {/* Jenis Pengukuran Section */}
-                    {survey.jenis_pengukuran && survey.jenis_pengukuran.length > 0 && (
-                        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-stone-200 p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8">
-                            <h2 className="text-lg sm:text-xl font-semibold text-stone-900 mb-4 flex items-center gap-2">
-                                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                </svg>
-                                <span className="text-sm sm:text-base lg:text-xl">Jenis Pengukuran</span>
-                            </h2>
-                            <div className="flex flex-wrap gap-2">
-                                {survey.jenis_pengukuran.map((jp) => (
-                                    <span key={jp.id} className="inline-block px-4 py-2 bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-800 text-sm font-semibold rounded-lg border border-indigo-200">
-                                        {jp.nama_pengukuran}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                    )}
 
                     {/* Metadata */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">

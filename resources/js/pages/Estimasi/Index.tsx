@@ -119,6 +119,13 @@ export default function EstimasiIndex({ moodboards }: Props) {
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type: string } | null>(null);
     const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
+    const [focusedOrderId, setFocusedOrderId] = useState<number | null>(() => {
+        if (typeof window !== 'undefined') {
+            const param = new URLSearchParams(window.location.search).get('order_id');
+            return param ? Number(param) : null;
+        }
+        return null;
+    });
     // Dual task response state: { [orderId]: { regular?: TaskResponse, marketing?: TaskResponse } }
     const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: TaskResponse; marketing?: TaskResponse }>>({});
     const [showExtendModal, setShowExtendModal] = useState<{ orderId: number; tahap: string; isMarketing: boolean; taskResponse: TaskResponse } | null>(null);
@@ -170,7 +177,23 @@ export default function EstimasiIndex({ moodboards }: Props) {
         });
     }, [moodboards]);
 
+    useEffect(() => {
+        if (focusedOrderId) {
+            const target = moodboards.find((m) => m.order?.id === focusedOrderId);
+            if (target) {
+                const totalFiles = target.kasar_files.length;
+                const uploadedFiles = target.kasar_files.filter((f) => f.estimasi_file).length;
+                const isCompleted = totalFiles > 0 && uploadedFiles === totalFiles;
+                setWorkTab(isCompleted ? 'sudah' : 'belum');
+                setExpandedCards(new Set([target.id]));
+            }
+        }
+    }, [focusedOrderId, moodboards]);
+
     const filteredMoodboards = moodboards.filter((moodboard) => {
+        if (focusedOrderId && moodboard.order?.id !== focusedOrderId) {
+            return false;
+        }
         const search = searchQuery.toLowerCase();
         const matchesSearch = 
             moodboard.order?.nama_project.toLowerCase().includes(search) ||
@@ -333,6 +356,36 @@ export default function EstimasiIndex({ moodboards }: Props) {
                         </p>
                     </div>
 
+                    {/* Focused Order Detail Banner */}
+                    {focusedOrderId && (
+                        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-indigo-200 bg-indigo-50/90 px-5 py-3.5 shadow-sm">
+                            <div className="flex items-center gap-3">
+                                <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-600 text-xs font-bold text-white">
+                                    #{focusedOrderId}
+                                </span>
+                                <div>
+                                    <p className="text-sm font-bold text-indigo-950">
+                                        Menampilkan Detail Estimasi:{' '}
+                                        {moodboards.find((m) => m.order?.id === focusedOrderId)?.order?.nama_project || `Order #${focusedOrderId}`}
+                                    </p>
+                                    <p className="text-xs text-indigo-700">
+                                        Detail file desain kasar & estimasi telah dibuka otomatis dari notifikasi.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setFocusedOrderId(null);
+                                    window.history.replaceState({}, '', window.location.pathname);
+                                }}
+                                className="rounded-xl border border-indigo-300 bg-white px-3.5 py-2 text-xs font-semibold text-indigo-800 shadow-sm transition-colors hover:bg-indigo-100"
+                            >
+                                Tampilkan Semua Proyek
+                            </button>
+                        </div>
+                    )}
+
                     {/* Work Status Tabs */}
                     <WorkStatusTabs
                         activeTab={workTab}
@@ -428,6 +481,12 @@ export default function EstimasiIndex({ moodboards }: Props) {
                                                     <td className="px-5 py-4">
                                                         <div className="font-bold text-slate-800 text-sm leading-tight transition-colors group-hover:text-indigo-600">{order.nama_project}</div>
                                                         <div className="text-xs text-slate-400 mt-1 font-medium italic">{order.company_name}</div>
+                                                        {moodboard.notes && (
+                                                            <div className="mt-1.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-orange-50 border border-orange-200/70 text-orange-700 text-[10px] font-semibold">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                                                                Catatan Moodboard{moodboard.status === 'revisi' ? ' (Revisi)' : ''}
+                                                            </div>
+                                                        )}
                                                     </td>
 
                                                     {/* Deadline */}
@@ -549,6 +608,31 @@ export default function EstimasiIndex({ moodboards }: Props) {
                                                                     )}
                                                                 </div>
 
+                                                                {moodboard.notes && (
+                                                                    <div className="mb-6 p-5 bg-orange-50/60 border border-orange-200/60 rounded-2xl relative overflow-hidden">
+                                                                        <div className="flex items-start gap-4 relative z-10">
+                                                                            <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600 flex-shrink-0 shadow-sm border border-orange-200">
+                                                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                                                </svg>
+                                                                            </div>
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                                    <h5 className="font-bold text-orange-900 text-sm tracking-tight">Catatan Moodboard / Revisi</h5>
+                                                                                    {moodboard.status === 'revisi' && (
+                                                                                        <span className="px-2 py-0.5 rounded-full bg-orange-200/70 text-orange-800 text-[10px] font-bold uppercase tracking-wider">
+                                                                                            Revisi
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                                <div className="mt-2 text-sm text-orange-800 leading-relaxed font-medium bg-white/70 p-3.5 rounded-xl border border-orange-100 italic whitespace-pre-line">
+                                                                                    "{moodboard.notes}"
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
                                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                                     {moodboard.kasar_files.map((file) => (
                                                                         <div key={file.id} className="bg-white rounded-xl border border-slate-100 p-3 shadow-sm hover:border-indigo-200 transition-colors">
@@ -636,6 +720,17 @@ export default function EstimasiIndex({ moodboards }: Props) {
                                         <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest italic mt-0.5">Reference Document</div>
                                     </div>
                                 </div>
+
+                                {selectedMoodboard?.notes && (
+                                    <div className="mb-6 p-3.5 bg-orange-50/70 border border-orange-200/70 rounded-2xl">
+                                        <div className="text-[10px] font-bold text-orange-800 uppercase tracking-wider mb-1">
+                                            Catatan Moodboard / Revisi
+                                        </div>
+                                        <div className="text-xs text-orange-900 italic leading-relaxed whitespace-pre-line">
+                                            "{selectedMoodboard.notes}"
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="mb-8">
                                     <input

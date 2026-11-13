@@ -239,9 +239,9 @@ class MeetingVendorController extends Controller
             $meeting,
             'scheduled_meeting_vendor',
             'Jadwal Meeting Vendor Disimpan',
-            'Jadwal meeting diatur pada ' . $validated['tanggal_meeting'] . ' ' . $validated['jam_meeting'] . ' oleh ' . auth()->user()->name . '. Tahapan berlanjut ke Approval Material.'
+            'Jadwal meeting diatur pada ' . $validated['tanggal_meeting'] . ' ' . $validated['jam_meeting'] . ' oleh ' . auth()->user()->name . '. Tahapan berlanjut ke Gambar Kerja Final.'
         );
 
-        return redirect()->route('meeting-vendor.index')->with('success', 'Jadwal Meeting Vendor berhasil disimpan. Notifikasi Approval Material telah dikirim.');
+        return redirect()->route('meeting-vendor.index')->with('success', 'Jadwal Meeting Vendor berhasil disimpan. Notifikasi Gambar Kerja Final telah dikirim.');
     }
 }

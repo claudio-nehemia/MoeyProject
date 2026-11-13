@@ -107,7 +107,9 @@ export default function RuanganCard({
     onRemoveItemInRuangan,
     onUpdateItemInRuangan,
 }: RuanganCardProps) {
-    const [isExpanded, setIsExpanded] = React.useState(false);
+    const [isExpanded, setIsExpanded] = React.useState(
+        () => ruangan.produks.length === 0 || !ruangan.nama_ruangan,
+    );
 
     return (
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">

@@ -50,7 +50,7 @@ class LogController extends Controller
             'survey_schedule' => 'Survey Schedule',
             'survey_ulang' => 'Survey Ulang',
             'gambar_kerja' => 'Gambar Kerja',
-            'approval_material' => 'Approval Material',
+            'approval_material' => 'Gambar Kerja Final',
             'workplan' => 'Workplan',
             'produksi' => 'Produksi',
         ];
@@ -313,7 +313,7 @@ class LogController extends Controller
             'survey_schedule' => 'Survey Schedule',
             'survey_ulang' => 'Survey Ulang',
             'gambar_kerja' => 'Gambar Kerja',
-            'approval_material' => 'Approval Material',
+            'approval_material' => 'Gambar Kerja Final',
             'workplan' => 'Workplan',
             'produksi' => 'Produksi',
         ];

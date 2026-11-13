@@ -20,6 +20,7 @@ interface Props {
     marketings: User[];
     drafters: User[];
     desainers: User[];
+    estimators?: User[];
     supervisors?: User[];
     projectManagers?: User[];
     jenisInteriors: JenisInterior[];
@@ -30,6 +31,7 @@ export default function Create({
     marketings = [],
     drafters = [],
     desainers = [],
+    estimators = [],
     supervisors = [],
     projectManagers = [],
     jenisInteriors = [],
@@ -45,6 +47,7 @@ export default function Create({
     const [selectedMarketings, setSelectedMarketings] = useState<number[]>([]);
     const [selectedDrafters, setSelectedDrafters] = useState<number[]>([]);
     const [selectedDesainers, setSelectedDesainers] = useState<number[]>([]);
+    const [selectedEstimators, setSelectedEstimators] = useState<number[]>([]);
     const [selectedSupervisors, setSelectedSupervisors] = useState<number[]>([]);
     const [selectedProjectManagers, setSelectedProjectManagers] = useState<number[]>([]);
 
@@ -92,7 +95,7 @@ export default function Create({
 
     const handleUserToggle = (
         userId: number,
-        category: 'marketing' | 'drafter' | 'desainer' | 'supervisor' | 'projectManager',
+        category: 'marketing' | 'drafter' | 'desainer' | 'estimator' | 'supervisor' | 'projectManager',
     ) => {
         if (category === 'marketing') {
             setSelectedMarketings((prev) => {
@@ -103,6 +106,7 @@ export default function Create({
                     newSelection,
                     selectedDrafters,
                     selectedDesainers,
+                    selectedEstimators,
                     selectedSupervisors,
                     selectedProjectManagers,
                 );
@@ -117,6 +121,7 @@ export default function Create({
                     selectedMarketings,
                     newSelection,
                     selectedDesainers,
+                    selectedEstimators,
                     selectedSupervisors,
                     selectedProjectManagers,
                 );
@@ -130,6 +135,22 @@ export default function Create({
                 updateUserIds(
                     selectedMarketings,
                     selectedDrafters,
+                    newSelection,
+                    selectedEstimators,
+                    selectedSupervisors,
+                    selectedProjectManagers,
+                );
+                return newSelection;
+            });
+        } else if (category === 'estimator') {
+            setSelectedEstimators((prev) => {
+                const newSelection = prev.includes(userId)
+                    ? prev.filter((id) => id !== userId)
+                    : [...prev, userId];
+                updateUserIds(
+                    selectedMarketings,
+                    selectedDrafters,
+                    selectedDesainers,
                     newSelection,
                     selectedSupervisors,
                     selectedProjectManagers,
@@ -145,6 +166,7 @@ export default function Create({
                     selectedMarketings,
                     selectedDrafters,
                     selectedDesainers,
+                    selectedEstimators,
                     newSelection,
                     selectedProjectManagers,
                 );
@@ -159,6 +181,7 @@ export default function Create({
                     selectedMarketings,
                     selectedDrafters,
                     selectedDesainers,
+                    selectedEstimators,
                     selectedSupervisors,
                     newSelection,
                 );
@@ -171,6 +194,7 @@ export default function Create({
         marketings: number[],
         drafters: number[],
         designers: number[],
+        estimators: number[],
         supervisors: number[],
         projectManagers: number[],
     ) => {
@@ -178,6 +202,7 @@ export default function Create({
             ...marketings,
             ...drafters,
             ...designers,
+            ...estimators,
             ...supervisors,
             ...projectManagers,
         ];
@@ -1036,6 +1061,69 @@ export default function Create({
                                     )}
                                 </div>
 
+                                {/* Estimator Selection */}
+                                <div className="mb-8">
+                                    <div className="mb-4 flex items-center justify-between rounded-xl border border-cyan-200 bg-gradient-to-r from-cyan-50 to-teal-50 p-4">
+                                        <div className="flex items-center gap-3">
+                                            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600 text-xs font-bold text-white shadow-sm">
+                                                E
+                                            </span>
+                                            <h3 className="text-sm font-bold text-stone-800">
+                                                Estimator Team
+                                            </h3>
+                                        </div>
+                                        <span className="text-xs font-semibold text-cyan-700">
+                                            Selected: {selectedEstimators.length}{' '}
+                                            member
+                                            {selectedEstimators.length !== 1
+                                                ? 's'
+                                                : ''}
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                        {estimators.map((user) => (
+                                            <div
+                                                key={user.id}
+                                                onClick={() =>
+                                                    handleUserToggle(
+                                                        user.id,
+                                                        'estimator',
+                                                    )
+                                                }
+                                                className={`user-card flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition-all ${
+                                                    selectedEstimators.includes(
+                                                        user.id,
+                                                    )
+                                                        ? 'selected border-cyan-400 bg-gradient-to-br from-cyan-50 to-teal-50 shadow-md'
+                                                        : 'border-stone-200 bg-white hover:border-cyan-300 hover:shadow-sm'
+                                                }`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedEstimators.includes(
+                                                        user.id,
+                                                    )}
+                                                    onChange={() => {}}
+                                                    className="checkbox-custom mt-0.5"
+                                                />
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="truncate text-sm font-semibold text-stone-900">
+                                                        {user.name}
+                                                    </p>
+                                                    <p className="truncate text-xs text-stone-500">
+                                                        {user.email}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {estimators.length === 0 && (
+                                        <p className="text-sm text-stone-400 italic">
+                                            No estimator staff available
+                                        </p>
+                                    )}
+                                </div>
+
                                 {/* Supervisor Selection */}
                                 <div className="mb-8">
                                     <div className="mb-4 flex items-center justify-between rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50 p-4">
@@ -1166,6 +1254,7 @@ export default function Create({
                                 {(selectedMarketings.length > 0 ||
                                     selectedDrafters.length > 0 ||
                                     selectedDesainers.length > 0 ||
+                                    selectedEstimators.length > 0 ||
                                     selectedSupervisors.length > 0 ||
                                     selectedProjectManagers.length > 0) && (
                                     <div className="mt-6 rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50 p-5 shadow-sm">
@@ -1189,6 +1278,7 @@ export default function Create({
                                                         {selectedMarketings.length +
                                                             selectedDrafters.length +
                                                             selectedDesainers.length +
+                                                            selectedEstimators.length +
                                                             selectedSupervisors.length +
                                                             selectedProjectManagers.length}
                                                     </span>{' '}
@@ -1196,6 +1286,7 @@ export default function Create({
                                                     {selectedMarketings.length +
                                                         selectedDrafters.length +
                                                         selectedDesainers.length +
+                                                        selectedEstimators.length +
                                                         selectedSupervisors.length +
                                                         selectedProjectManagers.length !==
                                                     1
@@ -1219,6 +1310,12 @@ export default function Create({
                                                     </span>
                                                     <span className="text-rose-600">
                                                         {selectedDesainers.length} Designer
+                                                    </span>
+                                                    <span className="mx-2">
+                                                        •
+                                                    </span>
+                                                    <span className="text-cyan-700">
+                                                        {selectedEstimators.length} Estimator
                                                     </span>
                                                     <span className="mx-2">
                                                         •

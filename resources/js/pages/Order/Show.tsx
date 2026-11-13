@@ -1,8 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import ActivityLogTimeline, { ActivityLogItem } from '@/components/ActivityLogTimeline';
+import {
+    ArrowRight,
+    Bell,
+    CheckCircle2,
+    Clock,
+    FileCheck2,
+    Layers,
+} from 'lucide-react';
 
 interface User {
     id: number;
@@ -43,6 +51,124 @@ interface OrderDetail {
     mom_file: string | null;
     created_at: string;
     updated_at: string;
+    survey_response_time?: string | null;
+    survey_response_by?: string | null;
+    pm_survey_response_time?: string | null;
+    pm_survey_response_by?: string | null;
+    survey_results?: {
+        id: number;
+        is_draft?: boolean;
+        response_time?: string | null;
+        response_by?: string | null;
+        pm_response_time?: string | null;
+        pm_response_by?: string | null;
+    } | null;
+    survey_ulang?: {
+        id: number;
+        survey_time?: string | null;
+        response_time?: string | null;
+        response_by?: string | null;
+        pm_response_time?: string | null;
+        pm_response_by?: string | null;
+    } | null;
+    moodboard?: {
+        id: number;
+        status?: string | null;
+        notes?: string | null;
+        moodboard_kasar?: string | null;
+        moodboard_final?: string | null;
+        files?: Array<{ id: number }>;
+        final_files?: Array<{ id: number }>;
+        response_time?: string | null;
+        response_by?: string | null;
+        pm_response_time?: string | null;
+        pm_response_by?: string | null;
+        response_final_time?: string | null;
+        response_final_by?: string | null;
+        pm_response_final_time?: string | null;
+        pm_response_final_by?: string | null;
+        commitment_fee?: {
+            id: number;
+            payment_status?: string | null;
+            total_fee?: number | string | null;
+            response_time?: string | null;
+            response_by?: string | null;
+            pm_response_time?: string | null;
+            pm_response_by?: string | null;
+        } | null;
+    } | null;
+    estimasi?: {
+        id: number;
+        file_path?: string | null;
+        estimated_cost?: number | string | null;
+        response_time?: string | null;
+        response_by?: string | null;
+        pm_response_time?: string | null;
+        pm_response_by?: string | null;
+    } | null;
+    gambar_kerja?: {
+        id: number;
+        status?: string | null;
+        response_time?: string | null;
+        response_by?: string | null;
+        pm_response_time?: string | null;
+        pm_response_by?: string | null;
+    } | null;
+    meeting_vendor?: {
+        id: number;
+        tanggal_meeting?: string | null;
+        response_time?: string | null;
+        response_by?: string | null;
+        pm_response_time?: string | null;
+        pm_response_by?: string | null;
+    } | null;
+    item_pekerjaans?: Array<{
+        id: number;
+        is_draft?: boolean;
+        response_time?: string | null;
+        response_by?: string | null;
+        pm_response_time?: string | null;
+        pm_response_by?: string | null;
+        approval_rab_response_time?: string | null;
+        approval_rab_response_by?: string | null;
+        pm_approval_rab_response_time?: string | null;
+        pm_approval_rab_response_by?: string | null;
+        produks?: Array<{
+            id: number;
+            workplan_items?: Array<{
+                id: number;
+                response_time?: string | null;
+                response_by?: string | null;
+                pm_response_time?: string | null;
+                pm_response_by?: string | null;
+            }>;
+        }>;
+        rab_internal?: {
+            id: number;
+            response_time?: string | null;
+            response_by?: string | null;
+            pm_response_time?: string | null;
+            pm_response_by?: string | null;
+        } | null;
+        kontrak?: {
+            id: number;
+            harga_kontrak?: number | string | null;
+            signed_contract_path?: string | null;
+            response_time?: string | null;
+            response_by?: string | null;
+            pm_response_time?: string | null;
+            pm_response_by?: string | null;
+        } | null;
+        invoices?: Array<{
+            id: number;
+            invoice_number?: string | null;
+            status?: string | null;
+            response_time?: string | null;
+            response_by?: string | null;
+            pm_response_time?: string | null;
+            pm_response_by?: string | null;
+        }>;
+    }>;
 }
 
 interface Props {
@@ -51,6 +177,19 @@ interface Props {
 }
 
 export default function Show({ order, activityLogs = [] }: Props) {
+    const { auth } = usePage<{
+        auth: {
+            user?: {
+                permissions?: string[];
+                role?: { nama_role?: string } | null;
+            };
+        };
+    }>().props;
+    const userPermissions = auth?.user?.permissions || [];
+    const isAdmin = auth?.user?.role?.nama_role === 'Admin';
+    const hasPermission = (perm: string) =>
+        isAdmin || userPermissions.includes(perm);
+
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 1024;
@@ -145,10 +284,15 @@ useEffect(() => {
 
     const getRoleColor = (role: string) => {
         switch(role.toLowerCase()) {
-            case 'marketing': return 'bg-amber-100 text-amber-700';
+            case 'marketing':
+            case 'kepala marketing': return 'bg-amber-100 text-amber-700';
             case 'surveyor':
             case 'drafter': return 'bg-emerald-100 text-emerald-700';
-            case 'desainer': return 'bg-rose-100 text-rose-700';
+            case 'desainer':
+            case 'designer': return 'bg-rose-100 text-rose-700';
+            case 'estimator': return 'bg-cyan-100 text-cyan-700';
+            case 'supervisor': return 'bg-indigo-100 text-indigo-700';
+            case 'project manager': return 'bg-sky-100 text-sky-700';
             default: return 'bg-stone-100 text-stone-700';
         }
     };
@@ -329,42 +473,59 @@ useEffect(() => {
                 <div className="p-3 mt-20">
                     {/* Header */}
                     <div className={`mb-8 ${mounted ? 'fadeInUp' : 'opacity-0'}`}>
-                        <div className="flex items-center justify-between mb-6">
+                        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                             <div className="flex items-center gap-3">
                                 <Link
-                                    href="/order"
+                                    href={hasPermission('order.index') ? '/order' : '/dashboard'}
                                     className="p-2 text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
+                                    title={hasPermission('order.index') ? 'Kembali ke Daftar Order' : 'Kembali ke Dashboard'}
                                 >
                                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                                     </svg>
                                 </Link>
                                 <div>
-                                    <h1 className="text-3xl font-light text-stone-800" style={{ fontFamily: "'Playfair Display', serif" }}>
+                                    <div className="flex items-center gap-2">
+                                        <span className="inline-flex items-center rounded-md bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200">
+                                            Dashboard Detail Order #{String(order.id).padStart(4, '0')}
+                                        </span>
+                                    </div>
+                                    <h1 className="text-3xl font-light text-stone-800 mt-1" style={{ fontFamily: "'Playfair Display', serif" }}>
                                         {order.nama_project}
                                     </h1>
                                     <p className="text-sm text-stone-500 mt-1">{order.company_name}</p>
                                 </div>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <Link
-                                    href={`/order/${order.id}/edit`}
-                                    className="action-button inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                                    href="/notifications"
+                                    className="inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 shadow-xs transition-all hover:border-amber-300 hover:bg-amber-50 hover:text-amber-800"
                                 >
-                                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                    Edit
+                                    <Bell className="h-4 w-4 text-amber-600" />
+                                    <span>Notifikasi</span>
                                 </Link>
-                                <button
-                                    onClick={handleDelete}
-                                    className="action-button inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-                                >
-                                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                    Delete
-                                </button>
+                                {hasPermission('order.edit') && (
+                                    <Link
+                                        href={`/order/${order.id}/edit`}
+                                        className="action-button inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                                    >
+                                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                        Edit
+                                    </Link>
+                                )}
+                                {hasPermission('order.delete') && (
+                                    <button
+                                        onClick={handleDelete}
+                                        className="action-button inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                                    >
+                                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        Delete
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -458,6 +619,279 @@ useEffect(() => {
                         )}
                     </div>
 
+                    {/* Ringkasan Progres & Status Tahapan Proyek */}
+                    <div className={`bg-white rounded-2xl shadow-lg border border-stone-200 p-8 mb-8 ${mounted ? 'fadeInUp' : 'opacity-0'}`} style={{ animationDelay: '0.12s' }}>
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
+                            <h2 className="text-xl font-semibold text-stone-900 flex items-center gap-2">
+                                <Layers className="w-6 h-6 text-amber-600" />
+                                Ringkasan Status & Progres Tahapan Proyek
+                            </h2>
+                            <span className="text-xs font-medium text-stone-500">
+                                Tahap Aktif: <strong className="text-stone-800">{formatTahapan(order.tahapan_proyek)}</strong>
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {/* 1. Survey */}
+                            <div className="rounded-xl border border-stone-200 bg-stone-50/70 p-4 flex flex-col justify-between">
+                                <div>
+                                    <div className="flex items-center justify-between gap-2 mb-2">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-teal-700">1. Survey Lokasi</span>
+                                        {order.survey_results && !order.survey_results.is_draft ? (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+                                                <CheckCircle2 className="h-3 w-3" /> Selesai
+                                            </span>
+                                        ) : order.survey_results?.response_time || order.survey_response_time ? (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
+                                                <Clock className="h-3 w-3" /> Dalam Proses
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center rounded-full bg-stone-200 px-2.5 py-0.5 text-[11px] font-medium text-stone-600">
+                                                Menunggu
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-stone-600">
+                                        Jadwal: <span className="font-medium text-stone-800">{formatSurveyDateTime(order.tanggal_survey)}</span>
+                                    </p>
+                                    {(order.survey_results?.response_by || order.survey_response_by) && (
+                                        <p className="text-xs text-stone-500 mt-1">
+                                            Di-response: <span className="font-medium text-stone-700">{order.survey_results?.response_by || order.survey_response_by}</span>
+                                        </p>
+                                    )}
+                                    {(order.survey_results?.pm_response_by || order.pm_survey_response_by) && (
+                                        <p className="text-xs text-purple-700 mt-0.5">
+                                            Marketing Response: <span className="font-medium">{order.survey_results?.pm_response_by || order.pm_survey_response_by}</span>
+                                        </p>
+                                    )}
+                                </div>
+                                {hasPermission('survey-results.show') && order.survey_results?.id && (
+                                    <Link
+                                        href={`/survey-results/${order.survey_results.id}`}
+                                        className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-800"
+                                    >
+                                        <span>Lihat Hasil Survey</span>
+                                        <ArrowRight className="h-3.5 w-3.5" />
+                                    </Link>
+                                )}
+                            </div>
+
+                            {/* 2. Moodboard */}
+                            <div className="rounded-xl border border-stone-200 bg-stone-50/70 p-4 flex flex-col justify-between">
+                                <div>
+                                    <div className="flex items-center justify-between gap-2 mb-2">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-pink-700">2. Moodboard & Desain</span>
+                                        {order.moodboard?.status === 'approved' ? (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+                                                <CheckCircle2 className="h-3 w-3" /> Approved
+                                            </span>
+                                        ) : order.moodboard ? (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
+                                                <Clock className="h-3 w-3" /> {order.moodboard.status || 'Proses'}
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center rounded-full bg-stone-200 px-2.5 py-0.5 text-[11px] font-medium text-stone-600">
+                                                Menunggu
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-stone-600">
+                                        File Desain Kasar: <span className="font-medium text-stone-800">{order.moodboard?.files?.length || (order.moodboard?.moodboard_kasar ? 1 : 0)} file</span>
+                                    </p>
+                                    {order.moodboard?.response_by && (
+                                        <p className="text-xs text-stone-500 mt-1">
+                                            Di-response: <span className="font-medium text-stone-700">{order.moodboard.response_by}</span>
+                                        </p>
+                                    )}
+                                    {order.moodboard?.pm_response_by && (
+                                        <p className="text-xs text-purple-700 mt-0.5">
+                                            Marketing Response: <span className="font-medium">{order.moodboard.pm_response_by}</span>
+                                        </p>
+                                    )}
+                                </div>
+                                {hasPermission('moodboard.index') && (
+                                    <Link
+                                        href={`/moodboard?order_id=${order.id}`}
+                                        className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-800"
+                                    >
+                                        <span>Buka Moodboard</span>
+                                        <ArrowRight className="h-3.5 w-3.5" />
+                                    </Link>
+                                )}
+                            </div>
+
+                            {/* 3. Estimasi & Commitment Fee */}
+                            <div className="rounded-xl border border-stone-200 bg-stone-50/70 p-4 flex flex-col justify-between">
+                                <div>
+                                    <div className="flex items-center justify-between gap-2 mb-2">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-amber-700">3. Estimasi & Commitment Fee</span>
+                                        {order.moodboard?.commitment_fee?.payment_status === 'completed' ? (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+                                                <CheckCircle2 className="h-3 w-3" /> CF Lunas
+                                            </span>
+                                        ) : order.estimasi?.file_path ? (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700">
+                                                <FileCheck2 className="h-3 w-3" /> Estimasi Ada
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center rounded-full bg-stone-200 px-2.5 py-0.5 text-[11px] font-medium text-stone-600">
+                                                Menunggu
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-stone-600">
+                                        Estimasi: <span className="font-medium text-stone-800">{order.estimasi?.response_by ? `Di-response (${order.estimasi.response_by})` : 'Belum di-response'}</span>
+                                    </p>
+                                    <p className="text-xs text-stone-600 mt-0.5">
+                                        Commitment Fee: <span className="font-medium text-stone-800">{order.moodboard?.commitment_fee?.payment_status === 'completed' ? 'Lunas' : order.moodboard?.commitment_fee ? 'Pending' : 'Belum ada'}</span>
+                                    </p>
+                                    {(order.estimasi?.pm_response_by || order.moodboard?.commitment_fee?.pm_response_by) && (
+                                        <p className="text-xs text-purple-700 mt-0.5">
+                                            Marketing Response: <span className="font-medium">{order.moodboard?.commitment_fee?.pm_response_by || order.estimasi?.pm_response_by}</span>
+                                        </p>
+                                    )}
+                                </div>
+                                {hasPermission('estimasi.index') && (
+                                    <Link
+                                        href={`/estimasi?order_id=${order.id}`}
+                                        className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-800"
+                                    >
+                                        <span>Buka Estimasi</span>
+                                        <ArrowRight className="h-3.5 w-3.5" />
+                                    </Link>
+                                )}
+                            </div>
+
+                            {/* 4. Desain Final & Gambar Kerja */}
+                            <div className="rounded-xl border border-stone-200 bg-stone-50/70 p-4 flex flex-col justify-between">
+                                <div>
+                                    <div className="flex items-center justify-between gap-2 mb-2">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-cyan-700">4. Desain Final & Gambar Kerja</span>
+                                        {(order.moodboard?.final_files?.length || 0) > 0 || order.moodboard?.moodboard_final ? (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+                                                <CheckCircle2 className="h-3 w-3" /> Terupload
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center rounded-full bg-stone-200 px-2.5 py-0.5 text-[11px] font-medium text-stone-600">
+                                                Menunggu
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-stone-600">
+                                        Desain Final: <span className="font-medium text-stone-800">{order.moodboard?.final_files?.length || (order.moodboard?.moodboard_final ? 1 : 0)} file</span>
+                                    </p>
+                                    <p className="text-xs text-stone-600 mt-0.5">
+                                        Gambar Kerja: <span className="font-medium text-stone-800">{order.gambar_kerja?.status || 'Belum mulai'}</span>
+                                    </p>
+                                    {(order.moodboard?.pm_response_final_by || order.gambar_kerja?.pm_response_by) && (
+                                        <p className="text-xs text-purple-700 mt-0.5">
+                                            Marketing Response: <span className="font-medium">{order.gambar_kerja?.pm_response_by || order.moodboard?.pm_response_final_by}</span>
+                                        </p>
+                                    )}
+                                </div>
+                                {hasPermission('gambar-kerja.index') && (
+                                    <Link
+                                        href={`/gambar-kerja?order_id=${order.id}`}
+                                        className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-800"
+                                    >
+                                        <span>Buka Gambar Kerja</span>
+                                        <ArrowRight className="h-3.5 w-3.5" />
+                                    </Link>
+                                )}
+                            </div>
+
+                            {/* 5. Item Pekerjaan & RAB */}
+                            <div className="rounded-xl border border-stone-200 bg-stone-50/70 p-4 flex flex-col justify-between">
+                                <div>
+                                    <div className="flex items-center justify-between gap-2 mb-2">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-blue-700">5. Item Pekerjaan & RAB</span>
+                                        {order.item_pekerjaans?.[0]?.rab_internal ? (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+                                                <CheckCircle2 className="h-3 w-3" /> RAB Tersedia
+                                            </span>
+                                        ) : order.item_pekerjaans?.[0] ? (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
+                                                <Clock className="h-3 w-3" /> Proses
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center rounded-full bg-stone-200 px-2.5 py-0.5 text-[11px] font-medium text-stone-600">
+                                                Menunggu
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-stone-600">
+                                        Produk Terdaftar: <span className="font-medium text-stone-800">{order.item_pekerjaans?.[0]?.produks?.length || 0} item produk</span>
+                                    </p>
+                                    {order.item_pekerjaans?.[0]?.rab_internal?.response_by && (
+                                        <p className="text-xs text-stone-500 mt-1">
+                                            RAB Di-response: <span className="font-medium text-stone-700">{order.item_pekerjaans[0].rab_internal.response_by}</span>
+                                        </p>
+                                    )}
+                                    {order.item_pekerjaans?.[0]?.rab_internal?.pm_response_by && (
+                                        <p className="text-xs text-purple-700 mt-0.5">
+                                            Marketing Response: <span className="font-medium">{order.item_pekerjaans[0].rab_internal.pm_response_by}</span>
+                                        </p>
+                                    )}
+                                </div>
+                                {hasPermission('rab-internal.index') && (
+                                    <Link
+                                        href={
+                                            order.item_pekerjaans?.[0]?.rab_internal?.id && hasPermission('rab-internal.show')
+                                                ? `/rab-internal/${order.item_pekerjaans[0].rab_internal.id}/show`
+                                                : `/rab-internal?order_id=${order.id}`
+                                        }
+                                        className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-800"
+                                    >
+                                        <span>Lihat RAB Internal</span>
+                                        <ArrowRight className="h-3.5 w-3.5" />
+                                    </Link>
+                                )}
+                            </div>
+
+                            {/* 6. Kontrak, Invoice & Produksi */}
+                            <div className="rounded-xl border border-stone-200 bg-stone-50/70 p-4 flex flex-col justify-between">
+                                <div>
+                                    <div className="flex items-center justify-between gap-2 mb-2">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-purple-700">6. Kontrak, Invoice & Produksi</span>
+                                        {order.item_pekerjaans?.[0]?.kontrak?.signed_contract_path ? (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+                                                <CheckCircle2 className="h-3 w-3" /> Kontrak Signed
+                                            </span>
+                                        ) : order.item_pekerjaans?.[0]?.kontrak ? (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
+                                                <Clock className="h-3 w-3" /> Kontrak Dibuat
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center rounded-full bg-stone-200 px-2.5 py-0.5 text-[11px] font-medium text-stone-600">
+                                                Menunggu
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-stone-600">
+                                        Kontrak: <span className="font-medium text-stone-800">{order.item_pekerjaans?.[0]?.kontrak?.response_by ? `Di-response (${order.item_pekerjaans[0].kontrak.response_by})` : 'Belum ada'}</span>
+                                    </p>
+                                    <p className="text-xs text-stone-600 mt-0.5">
+                                        Invoice Termin: <span className="font-medium text-stone-800">{order.item_pekerjaans?.[0]?.invoices?.length || 0} invoice</span>
+                                    </p>
+                                    {(order.item_pekerjaans?.[0]?.kontrak?.pm_response_by || order.item_pekerjaans?.[0]?.invoices?.[0]?.pm_response_by) && (
+                                        <p className="text-xs text-purple-700 mt-0.5">
+                                            Marketing Response: <span className="font-medium">{order.item_pekerjaans?.[0]?.kontrak?.pm_response_by || order.item_pekerjaans?.[0]?.invoices?.[0]?.pm_response_by}</span>
+                                        </p>
+                                    )}
+                                </div>
+                                {hasPermission('project-management.show') && (
+                                    <Link
+                                        href={`/project-management/${order.id}`}
+                                        className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-800"
+                                    >
+                                        <span>Buka Project Management</span>
+                                        <ArrowRight className="h-3.5 w-3.5" />
+                                    </Link>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Team Members */}
                     <div className={`bg-white rounded-2xl shadow-lg border border-stone-200 p-8 mb-8 ${mounted ? 'fadeInUp' : 'opacity-0'}`} style={{ animationDelay: '0.15s' }}>
                         <h2 className="text-xl font-semibold text-stone-900 mb-6 flex items-center gap-2">
@@ -476,12 +910,14 @@ useEffect(() => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 8.048M12 4.354L8.646 7.708a4 4 0 000 5.686m0 0l3.354 3.354M12 4.354l3.354 3.354a4 4 0 010 5.686m0 0l-3.354 3.354" />
                                 </svg>
                                 <p className="text-stone-600 font-medium">No team members assigned yet</p>
-                                <p className="text-stone-500 text-sm mt-1">
-                                    <Link href={`/order/${order.id}/edit`} className="text-cyan-600 hover:text-cyan-700 font-semibold">
-                                        Edit this order
-                                    </Link>
-                                    {' '}to add team members
-                                </p>
+                                {hasPermission('order.edit') && (
+                                    <p className="text-stone-500 text-sm mt-1">
+                                        <Link href={`/order/${order.id}/edit`} className="text-cyan-600 hover:text-cyan-700 font-semibold">
+                                            Edit this order
+                                        </Link>
+                                        {' '}to add team members
+                                    </p>
+                                )}
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

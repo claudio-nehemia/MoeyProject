@@ -25,7 +25,9 @@ class SurveyUlangController extends Controller
         $surveys = Order::with(['surveyUlang', 'jenisInterior'])
             ->visibleToSurveyUser($user)
             ->where(function ($q) {
-                $q->whereRaw("LOWER(tahapan_proyek) = 'survey_ulang'");
+                $q->whereRaw("LOWER(tahapan_proyek) = 'survey_ulang'")
+                    ->orWhereHas('surveyUlang')
+                    ->orWhereHas('taskResponses', fn($tq) => $tq->where('tahap', 'survey_ulang'));
             })
             ->orderBy('created_at', 'desc')
             ->get()
@@ -38,7 +40,7 @@ class SurveyUlangController extends Controller
                     // Check if survey details have been filled (survey_time exists)
                     if ($o->surveyUlang->survey_time) {
                         $status = 'done'; // Sudah lengkap input detail
-                    } else {
+                    } elseif ($o->surveyUlang->response_time) {
                         $status = 'waiting_input'; // Sudah response, belum input detail
                     }
                 }
@@ -176,6 +178,17 @@ class SurveyUlangController extends Controller
             'survey_by' => auth()->user()->name ?? 'System',
         ]);
 
+        // Pastikan jika ada duplikat record survey_ulangs untuk order yang sama ikut terupdate
+        SurveyUlang::where('order_id', $order->id)
+            ->where('id', '!=', $surveyUlang->id)
+            ->update([
+                'catatan' => $validated['catatan'] ?? null,
+                'temuan' => json_encode($validated['temuan'] ?? []),
+                'foto' => json_encode($fotoPaths),
+                'survey_time' => now(),
+                'survey_by' => auth()->user()->name ?? 'System',
+            ]);
+
         // Create gambar kerja if not exists
         if (!$order->gambarKerja) {
             GambarKerja::create([
@@ -310,6 +323,8 @@ class SurveyUlangController extends Controller
             'catatan' => $validated['catatan'],
             'temuan' => $validated['temuan'],
             'foto' => $fotoPaths,
+            'survey_time' => $surveyUlang->survey_time ?? now(),
+            'survey_by' => $surveyUlang->survey_by ?? (auth()->user()->name ?? 'System'),
         ]);
 
         ActivityLogService::log(

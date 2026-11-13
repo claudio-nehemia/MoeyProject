@@ -74,7 +74,8 @@ trait HasMoodboardReview
             Log::info('Moodboard processed with ID: ' . $moodboard->id);
             Log::info('=== RESPONSE MOODBOARD END ===');
 
-            return back()->with('success', 'Response moodboard berhasil dicatat.');
+            return redirect()->route('moodboard.index', ['order_id' => $order->id, 'action' => 'upload'])
+                ->with('success', 'Response moodboard berhasil dicatat. Silakan upload file moodboard.');
         } catch (\Exception $e) {
             Log::error('Response moodboard error: ' . $e->getMessage());
             Log::error('Stack trace: ' . $e->getTraceAsString());

@@ -90,7 +90,8 @@
             vertical-align: top;
         }
 
-        .produk-row { background: #fffdf5; }
+        .produk-row-even { background: #ffffff; }
+        .produk-row-odd { background: #f8fafc; }
 
         .produk-name {
             font-weight: bold;
@@ -301,7 +302,7 @@
                 @foreach ($grouped as $roomName => $roomProduks)
                     <tr>
                         <td colspan="7" class="room-header">
-                            📍 {{ $roomName }} ({{ count($roomProduks) }} Produk)
+                            RUANGAN: {{ $roomName }} ({{ count($roomProduks) }} Produk)
                         </td>
                     </tr>
 
@@ -323,17 +324,11 @@
                             }
 
                             $aksesorisData = $produk['aksesoris'] ?? [];
-                            $maxRows = max(
-                                count($bahanBakuNames),
-                                count($finishingDalamItems),
-                                count($finishingLuarItems),
-                                count($aksesorisData),
-                                1
-                            );
+                            $maxRows = max(count($aksesorisData), 1);
                         @endphp
 
                         @for ($rowIndex = 0; $rowIndex < $maxRows; $rowIndex++)
-                            <tr class="{{ $rowIndex === 0 ? 'produk-row' : '' }}">
+                            <tr class="{{ $index % 2 === 0 ? 'produk-row-even' : 'produk-row-odd' }}">
                                 @if ($rowIndex === 0)
                                     <td rowspan="{{ $maxRows }}">
                                         <div class="produk-name">{{ $index + 1 }}. {{ $produk['nama_produk'] }}</div>
@@ -343,27 +338,37 @@
                                             </div>
                                         @endif
                                     </td>
-                                @endif
 
-                                <td>
-                                    @if (isset($bahanBakuNames[$rowIndex]))
-                                        • {{ $bahanBakuNames[$rowIndex] }}
-                                    @endif
-                                </td>
+                                    <td rowspan="{{ $maxRows }}">
+                                        @if (!empty($bahanBakuNames))
+                                            @foreach ($bahanBakuNames as $bbName)
+                                                <div>• {{ $bbName }}</div>
+                                            @endforeach
+                                        @else
+                                            <span style="color: #94a3b8;">-</span>
+                                        @endif
+                                    </td>
 
-                                <td class="finishing-cell">
-                                    @if (isset($finishingDalamItems[$rowIndex]))
-                                        • {{ $finishingDalamItems[$rowIndex] }}
-                                    @endif
-                                </td>
+                                    <td rowspan="{{ $maxRows }}" class="finishing-cell">
+                                        @if (!empty($finishingDalamItems))
+                                            @foreach ($finishingDalamItems as $fdItem)
+                                                <div>• {{ $fdItem }}</div>
+                                            @endforeach
+                                        @else
+                                            <span style="color: #94a3b8;">-</span>
+                                        @endif
+                                    </td>
 
-                                <td class="finishing-cell">
-                                    @if (isset($finishingLuarItems[$rowIndex]))
-                                        • {{ $finishingLuarItems[$rowIndex] }}
-                                    @endif
-                                </td>
+                                    <td rowspan="{{ $maxRows }}" class="finishing-cell">
+                                        @if (!empty($finishingLuarItems))
+                                            @foreach ($finishingLuarItems as $flItem)
+                                                <div>• {{ $flItem }}</div>
+                                            @endforeach
+                                        @else
+                                            <span style="color: #94a3b8;">-</span>
+                                        @endif
+                                    </td>
 
-                                @if ($rowIndex === 0)
                                     <td rowspan="{{ $maxRows }}" class="text-center" style="font-weight: bold;">
                                         {{ $produk['qty_produk'] }}
                                     </td>
@@ -372,12 +377,16 @@
                                 <td>
                                     @if (isset($aksesorisData[$rowIndex]))
                                         • {{ $aksesorisData[$rowIndex]['nama_aksesoris'] }}
+                                    @else
+                                        <span style="color: #94a3b8;">-</span>
                                     @endif
                                 </td>
 
                                 <td class="text-center">
                                     @if (isset($aksesorisData[$rowIndex]))
                                         {{ $aksesorisData[$rowIndex]['qty_aksesoris'] }}
+                                    @else
+                                        -
                                     @endif
                                 </td>
                             </tr>
@@ -455,9 +464,21 @@
             </thead>
             <tbody>
                 @foreach ($grouped as $roomName => $roomProduks)
+                    @php
+                        $roomSubtotal = 0;
+                        foreach ($roomProduks as $rp) {
+                            if (strtolower($rp['kategori'] ?? 'internal') === 'internal') {
+                                $roomSubtotal += $rp['harga_akhir'] ?? 0;
+                            }
+                        }
+                    @endphp
                     <tr>
                         <td colspan="17" class="room-header">
-                            {{ $roomName }}
+                            <span style="float: left;">RUANGAN: {{ $roomName }} ({{ count($roomProduks) }} Produk)</span>
+                            @if ($roomSubtotal > 0)
+                                <span style="float: right;">Subtotal Ruangan: Rp {{ number_format($roomSubtotal, 0, ',', '.') }}</span>
+                            @endif
+                            <div style="clear: both;"></div>
                         </td>
                     </tr>
 
@@ -486,18 +507,11 @@
 
                             $totalBBPlusFinishing = $produk['harga_dasar'] + $finishingDalamTotal + $finishingLuarTotal;
                             $aksesorisData = $produk['aksesoris'] ?? [];
-
-                            $maxRows = max(
-                                count($bahanBakuNames),
-                                count($finishingDalamItems),
-                                count($finishingLuarItems),
-                                count($aksesorisData),
-                                1
-                            );
+                            $maxRows = max(count($aksesorisData), 1);
                         @endphp
 
                         @for ($rowIndex = 0; $rowIndex < $maxRows; $rowIndex++)
-                            <tr class="{{ $rowIndex === 0 ? 'produk-row' : '' }}">
+                            <tr class="{{ $index % 2 === 0 ? 'produk-row-even' : 'produk-row-odd' }}">
                                 @if ($rowIndex === 0)
                                     <td rowspan="{{ $maxRows }}">
                                         <div class="produk-name">{{ $index + 1 }}. {{ $produk['nama_produk'] }}</div>
@@ -512,33 +526,41 @@
                                             </div>
                                         @endif
                                     </td>
-                                @endif
 
-                                <td>
-                                    @if (isset($bahanBakuNames[$rowIndex]))
-                                        • {{ $bahanBakuNames[$rowIndex] }}
-                                    @endif
-                                </td>
+                                    <td rowspan="{{ $maxRows }}">
+                                        @if (!empty($bahanBakuNames))
+                                            @foreach ($bahanBakuNames as $bbName)
+                                                <div>• {{ $bbName }}</div>
+                                            @endforeach
+                                        @else
+                                            <span style="color: #94a3b8;">-</span>
+                                        @endif
+                                    </td>
 
-                                <td class="finishing-cell">
-                                    @if (isset($finishingDalamItems[$rowIndex]))
-                                        • {{ $finishingDalamItems[$rowIndex] }}
-                                    @endif
-                                </td>
+                                    <td rowspan="{{ $maxRows }}" class="finishing-cell">
+                                        @if (!empty($finishingDalamItems))
+                                            @foreach ($finishingDalamItems as $fdItem)
+                                                <div>• {{ $fdItem }}</div>
+                                            @endforeach
+                                        @else
+                                            <span style="color: #94a3b8;">-</span>
+                                        @endif
+                                    </td>
 
-                                @if ($rowIndex === 0)
                                     <td rowspan="{{ $maxRows }}" class="harga-finishing-cell">
                                         {{ $isItemInternal ? 'Rp ' . number_format($finishingDalamTotal, 0, ',', '.') : '-' }}
                                     </td>
-                                @endif
 
-                                <td class="finishing-cell">
-                                    @if (isset($finishingLuarItems[$rowIndex]))
-                                        • {{ $finishingLuarItems[$rowIndex] }}
-                                    @endif
-                                </td>
+                                    <td rowspan="{{ $maxRows }}" class="finishing-cell">
+                                        @if (!empty($finishingLuarItems))
+                                            @foreach ($finishingLuarItems as $flItem)
+                                                <div>• {{ $flItem }}</div>
+                                            @endforeach
+                                        @else
+                                            <span style="color: #94a3b8;">-</span>
+                                        @endif
+                                    </td>
 
-                                @if ($rowIndex === 0)
                                     <td rowspan="{{ $maxRows }}" class="harga-finishing-cell">
                                         {{ $isItemInternal ? 'Rp ' . number_format($finishingLuarTotal, 0, ',', '.') : '-' }}
                                     </td>
@@ -562,21 +584,29 @@
                                 <td>
                                     @if (isset($aksesorisData[$rowIndex]))
                                         • {{ $aksesorisData[$rowIndex]['nama_aksesoris'] }}
+                                    @else
+                                        <span style="color: #94a3b8;">-</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if (isset($aksesorisData[$rowIndex]))
                                         {{ $aksesorisData[$rowIndex]['qty_aksesoris'] }}
+                                    @else
+                                        -
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if (isset($aksesorisData[$rowIndex]))
                                         {{ $isItemInternal ? $aksesorisData[$rowIndex]['markup_aksesoris'] . '%' : '-' }}
+                                    @else
+                                        -
                                     @endif
                                 </td>
                                 <td class="text-right">
                                     @if (isset($aksesorisData[$rowIndex]))
                                         {{ $isItemInternal ? 'Rp ' . number_format($aksesorisData[$rowIndex]['harga_total'], 0, ',', '.') : '-' }}
+                                    @else
+                                        -
                                     @endif
                                 </td>
 
@@ -604,7 +634,7 @@
                             GRAND TOTAL RAB INTERNAL
                         </div>
                         <div class="final-total-sublabel">
-                            Total produk internal ({{ collect($produks)->filter(fn($p) => strtolower($p['kategori'] ?? 'internal') === 'internal')->count() }} produk)
+                            Total produk internal ({{ collect($produks)->filter(fn($p) => strtolower($p['kategori'] ?? 'internal') === 'internal')->count() }} produk • {{ count($grouped) }} ruangan)
                         </div>
                     </td>
                     <td style="width: 35%;" class="final-total-amount">

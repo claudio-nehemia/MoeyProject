@@ -312,7 +312,7 @@
         <div class="article-title">Pasal 4<br/>JANGKA WAKTU PELAKSANAAN</div>
         <div class="article-content">
             1. Pelaksanaan pada Pasal 2 diatas dimulai setelah Surat Perjanjian ini ditandatangani oleh kedua belah pihak, Gambar kerja & Persetujuan Material sudah disetujui oleh PIHAK KEDUA dan area kerja dinyatakan sudah siap oleh PARA PIHAK.<br/>
-            2. Terhitung pelaksanaan pekerjaan dimulai H+7, setelah Gambar kerja & tanda tangan approval material oleh PIHAK KEDUA.<br/>
+            2. Terhitung pelaksanaan pekerjaan dimulai H+7, setelah Gambar kerja & tanda tangan gambar kerja final oleh PIHAK KEDUA.<br/>
             3. Pelaksanaan pekerjaan, harus sudah selesai 100% paling lambat {{ $contractData['durasi_kontrak'] ?? $kontrak->durasi_kontrak ?? 90 }} ({{ $contractData['durasi_terbilang'] ?? ucwords(terbilang((int)($kontrak->durasi_kontrak ?? 90))) }} Hari Kerja) setelah pekerjaan dimulai ( sesuai poin pertama ).<br/>
             4. Waktu penyelesaian tersebut tidak dapat dirubah oleh PIHAK KEDUA kecuali dalam keadaan memaksa.<br/>
             5. Masa kontrak adalah diluar penyelesaian keluhan/complaint, pekerjaan free dan pekerjaan tambah.<br/>
@@ -347,15 +347,15 @@
         <div class="no-break">
             <div class="article-title">Pasal 7<br/>CARA PEMBAYARAN</div>
             <div class="article-content">
-                Pembayaran dilaksanakan sesuai termin pembayaran dan sesuai dengan prestasi pekerjaan yang telah disepakati dalam proses terhadap kontrak dengan ketentuan sebagai berikut :<br/>
+                Pembayaran dilaksanakan sesuai termin pembayaran yang dihitung dari sisa nilai kontrak setelah dikurangi commitment fee dan sesuai dengan prestasi pekerjaan yang telah disepakati dalam proses terhadap kontrak dengan ketentuan sebagai berikut :<br/>
                 @if($kontrak->termin && $kontrak->termin->tahapan)
                     @foreach($kontrak->termin->tahapan as $idx => $tahap)
-                        {{ $idx + 1 }}. Pembayaran ke-{{ $idx + 1 }} sebesar {{ $tahap['persentase'] }}% dari nilai kontrak ({{ $tahap['text'] }}).<br/>
+                        {{ $idx + 1 }}. Pembayaran ke-{{ $idx + 1 }} sebesar {{ $tahap['persentase'] }}% dari sisa nilai kontrak setelah dikurangi commitment fee ({{ $tahap['text'] }}).<br/>
                     @endforeach
                 @else
-                    1. Pembayaran I (Pertama) sebesar 50% dari nilai kontrak yang berlaku sebagai Down Payment.<br/>
-                    2. Pembayaran II (Kedua) sebesar 40% dari nilai kontrak, dibayarkan paling lambat 3 (tiga) hari setelah pengiriman barang.<br/>
-                    3. Pembayaran III (Ketiga) sebesar 10 % dari nilai kontrak yang akan dibayarkan paling lambat 3 (tiga) hari setelah serah terima.<br/>
+                    1. Pembayaran I (Pertama) sebesar 50% dari sisa nilai kontrak setelah dikurangi commitment fee yang berlaku sebagai Down Payment.<br/>
+                    2. Pembayaran II (Kedua) sebesar 40% dari sisa nilai kontrak setelah dikurangi commitment fee, dibayarkan paling lambat 3 (tiga) hari setelah pengiriman barang.<br/>
+                    3. Pembayaran III (Ketiga) sebesar 10 % dari sisa nilai kontrak setelah dikurangi commitment fee yang akan dibayarkan paling lambat 3 (tiga) hari setelah serah terima.<br/>
                 @endif
                 4. Jika ada penambahan pekerjaan/adendum, maka pembayaran nilai pekerjaan tambah dibayarkan lunas (tanpa termin pembayaran), sebelum pekerjaan tambah dimulai.<br/>
                 5. Segala bentuk pembayaran yang dilakukan diluar rekening yang tercantum di invoice, PIHAK PERTAMA tidak bertanggung jawab.
@@ -436,13 +436,18 @@
             }
         }
 
+        $commitmentFee = $kontrak->itemPekerjaan->moodboard?->commitmentFee;
+        $commitmentFeeAmount = (float) ($commitmentFee?->total_fee ?? 0);
+        $nominalKontrak = (float) ($contractData['nominal_kontrak'] ?? 0);
+        $sisaKontrak = max(0, $nominalKontrak - $commitmentFeeAmount);
+
         $dpPersentase = 50;
         $dpText = 'DP 50%';
         if($kontrak->termin && $kontrak->termin->tahapan && count($kontrak->termin->tahapan) > 0) {
             $dpPersentase = $kontrak->termin->tahapan[0]['persentase'];
             $dpText = $kontrak->termin->tahapan[0]['text'] ?? ('DP ' . $dpPersentase . '%');
         }
-        $dpNominal = ($contractData['nominal_kontrak'] * $dpPersentase) / 100;
+        $dpNominal = ($sisaKontrak * $dpPersentase) / 100;
         $dpTerbilangRaw = terbilang($dpNominal);
         $dpTerbilangValue = str_ends_with(strtolower($dpTerbilangRaw), 'rupiah') ? $dpTerbilangRaw : ($dpTerbilangRaw . ' Rupiah');
         $totalTerbilangRaw = terbilang($contractData['nominal_kontrak']);
@@ -477,7 +482,7 @@
         <p style="margin-top: 20pt;">Dengan Hormat,</p>
 
         <p class="justify">
-            Sehubungan dengan rencana Kerjasama Pelaksanaan Project Interior <strong>{{ $contractData['project']['nama'] }}</strong>, bersama ini Kami bermaksud mengajukan permohonan pembayaran {{ $dpText }} sebesar <strong>Rp. {{ number_format($dpNominal, 0, ',', '.') }},- ({{ $dpTerbilangValue }})</strong> dari jumlah harga yang disetujui yaitu <strong>Rp. {{ number_format($contractData['nominal_kontrak'], 0, ',', '.') }},- ({{ $totalTerbilangValue }})</strong>.
+            Sehubungan dengan rencana Kerjasama Pelaksanaan Project Interior <strong>{{ $contractData['project']['nama'] }}</strong>, bersama ini Kami bermaksud mengajukan permohonan pembayaran {{ $dpText }} sebesar <strong>Rp. {{ number_format($dpNominal, 0, ',', '.') }},- ({{ $dpTerbilangValue }})</strong> yang dihitung dari sisa nilai kontrak setelah dikurangi commitment fee (sebesar Rp. {{ number_format($sisaKontrak, 0, ',', '.') }},-) dari jumlah harga yang disetujui yaitu <strong>Rp. {{ number_format($contractData['nominal_kontrak'], 0, ',', '.') }},- ({{ $totalTerbilangValue }})</strong>.
         </p>
 
         <p>Berikut ini Kami lampirkan Kwitansi, Quotation, Invoice dan Kelengkapan Administrasi.</p>
@@ -571,7 +576,7 @@
             <tr>
                 <td style="font-style: italic; padding-top: 15pt;">Untuk Pembayaran</td>
                 <td style="padding-top: 15pt;">:</td>
-                <td style="padding-top: 15pt;">{{ $dpText }} untuk Pelaksanaan Project Interior {{ $contractData['project']['nama'] }}</td>
+                <td style="padding-top: 15pt;">{{ $dpText }} (dihitung dari sisa nilai kontrak setelah dikurangi commitment fee) untuk Pelaksanaan Project Interior {{ $contractData['project']['nama'] }}</td>
             </tr>
         </table>
 

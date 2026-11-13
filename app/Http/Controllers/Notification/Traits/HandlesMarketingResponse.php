@@ -16,6 +16,7 @@ use App\Models\RabInternal;
 use App\Models\Kontrak;
 use App\Models\Invoice;
 use App\Models\GambarKerja;
+use App\Http\Controllers\WorkplanItemController;
 use Illuminate\Support\Facades\DB;
 
 trait HandlesMarketingResponse
@@ -84,7 +85,8 @@ trait HandlesMarketingResponse
                 }
 
                 $this->markMarketingTaskResponseDone($order, 'survey');
-                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Survey).');
+                return redirect()->route('order.show', $order->id)
+                    ->with('success', 'Marketing response berhasil dicatat (Survey).');
             }
 
             case Notification::TYPE_SURVEY_SCHEDULE_REQUEST: {
@@ -95,19 +97,23 @@ trait HandlesMarketingResponse
 
                 // Marketing task for early stage uses tahap 'survey'
                 $this->markMarketingTaskResponseDone($order, 'survey_schedule');
-                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Survey Schedule).');
+                return redirect()->route('order.show', $order->id)
+                    ->with('success', 'Marketing response berhasil dicatat (Survey Schedule).');
             }
 
             case Notification::TYPE_FINAL_DESIGN_REQUEST: {
-                // No record creation, just mark task as done
-                $order->moodboard->update([
-                    'pm_response_final_time' => now(),
-                    'pm_response_final_by' => auth()->user()->name ?? 'Admin',
-                ]);
+                if ($order->moodboard) {
+                    $order->moodboard->update([
+                        'pm_response_final_time' => now(),
+                        'pm_response_final_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                }
                 $this->markMarketingTaskResponseDone($order, 'desain_final');
-                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Design Approval).');
+                return redirect()->route('order.show', $order->id)
+                    ->with('success', 'Marketing response berhasil dicatat (Desain Final).');
             }
 
+            case Notification::TYPE_DESIGN_APPROVAL:
             case Notification::TYPE_MOODBOARD_REQUEST: {
                 $moodboard = $order->moodboard;
                 if (!$moodboard) {
@@ -125,12 +131,14 @@ trait HandlesMarketingResponse
                 }
 
                 $this->markMarketingTaskResponseDone($order, 'moodboard');
-                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Moodboard).');
+                return redirect()->route('order.show', $order->id)
+                    ->with('success', 'Marketing response berhasil dicatat (Moodboard).');
             }
 
             case Notification::TYPE_ESTIMASI_REQUEST: {
                 if (!$order->moodboard) {
-                    return redirect()->route('notifications.index')->with('error', 'Moodboard belum ada untuk order ini.');
+                    return redirect()->route('order.show', $order->id)
+                        ->with('error', 'Moodboard belum ada untuk order ini.');
                 }
 
                 // Create placeholder estimasi if not exists.
@@ -149,12 +157,14 @@ trait HandlesMarketingResponse
                 }
 
                 $this->markMarketingTaskResponseDone($order, 'estimasi');
-                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Estimasi).');
+                return redirect()->route('order.show', $order->id)
+                    ->with('success', 'Marketing response berhasil dicatat (Estimasi).');
             }
 
             case Notification::TYPE_COMMITMENT_FEE_REQUEST: {
                 if (!$order->moodboard) {
-                    return redirect()->route('notifications.index')->with('error', 'Moodboard belum ada untuk order ini.');
+                    return redirect()->route('order.show', $order->id)
+                        ->with('error', 'Moodboard belum ada untuk order ini.');
                 }
 
                 $commitmentFee = $order->moodboard->commitmentFee;
@@ -173,13 +183,14 @@ trait HandlesMarketingResponse
                 }
 
                 $this->markMarketingTaskResponseDone($order, 'cm_fee');
-                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Commitment Fee).');
+                return redirect()->route('order.show', $order->id)
+                    ->with('success', 'Marketing response berhasil dicatat (Commitment Fee).');
             }
 
             case Notification::TYPE_SURVEY_ULANG_REQUEST: {
                 $surveyUlang = $order->surveyUlang;
                 if (!$surveyUlang) {
-                    SurveyUlang::create([
+                    $surveyUlang = SurveyUlang::create([
                         'order_id' => $order->id,
                         'pm_response_time' => now(),
                         'pm_response_by' => auth()->user()->name ?? 'Admin',
@@ -192,7 +203,8 @@ trait HandlesMarketingResponse
                 }
 
                 $this->markMarketingTaskResponseDone($order, 'survey_ulang');
-                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Survey Ulang).');
+                return redirect()->route('order.show', $order->id)
+                    ->with('success', 'Marketing response berhasil dicatat (Survey Ulang).');
             }
 
             case Notification::TYPE_GAMBAR_KERJA_REQUEST: {
@@ -205,17 +217,19 @@ trait HandlesMarketingResponse
                 }
 
                 $this->markMarketingTaskResponseDone($order, 'gambar_kerja');
-                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Gambar Kerja).');
+                return redirect()->route('order.show', $order->id)
+                    ->with('success', 'Marketing response berhasil dicatat (Gambar Kerja).');
             }
 
             case Notification::TYPE_ITEM_PEKERJAAN_REQUEST: {
                 if (!$order->moodboard) {
-                    return redirect()->route('notifications.index')->with('error', 'Moodboard belum ada untuk order ini.');
+                    return redirect()->route('order.show', $order->id)
+                        ->with('error', 'Moodboard belum ada untuk order ini.');
                 }
 
                 $existingItem = $order->itemPekerjaans->first();
                 if (!$existingItem) {
-                    ItemPekerjaan::create([
+                    $existingItem = ItemPekerjaan::create([
                         'moodboard_id' => $order->moodboard->id,
                         'pm_response_time' => now(),
                         'pm_response_by' => auth()->user()->name ?? 'Admin',
@@ -228,19 +242,24 @@ trait HandlesMarketingResponse
                 }
 
                 $this->markMarketingTaskResponseDone($order, 'item_pekerjaan');
-                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Item Pekerjaan).');
+
+                return redirect()->route('order.show', $order->id)
+                    ->with('success', 'Marketing response berhasil dicatat (Item Pekerjaan).');
             }
 
-            case Notification::TYPE_RAB_INTERNAL_REQUEST: {
+            case Notification::TYPE_RAB_INTERNAL_REQUEST:
+            case 'approval_rab_update': {
                 $itemPekerjaan = $order->itemPekerjaans->first();
+                $rabInternal = null;
                 if ($itemPekerjaan) {
                     if ($itemPekerjaan->rabInternal) {
-                        $itemPekerjaan->rabInternal->update([
+                        $rabInternal = $itemPekerjaan->rabInternal;
+                        $rabInternal->update([
                             'pm_response_time' => now(),
                             'pm_response_by' => auth()->user()->name ?? 'Admin',
                         ]);
                     } else {
-                        RabInternal::create([
+                        $rabInternal = RabInternal::create([
                             'item_pekerjaan_id' => $itemPekerjaan->id,
                             'pm_response_time' => now(),
                             'pm_response_by' => auth()->user()->name ?? 'Admin',
@@ -277,11 +296,13 @@ trait HandlesMarketingResponse
                     'user_id' => auth()->id(),
                 ]);
 
-                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (RAB Internal).');
+                return redirect()->route('order.show', $order->id)
+                    ->with('success', 'Marketing response berhasil dicatat (RAB Internal).');
             }
 
             case Notification::TYPE_INVOICE_REQUEST: {
                 $itemPekerjaan = $order->itemPekerjaans->first();
+                $invoice = null;
                 if ($itemPekerjaan) {
                     $invoice = $itemPekerjaan->invoices?->sortBy('termin_step')->first();
                     if ($invoice) {
@@ -289,13 +310,18 @@ trait HandlesMarketingResponse
                             'pm_response_time' => now(),
                             'pm_response_by' => auth()->user()->name ?? 'Admin',
                         ]);
-                    } else {
-                        Invoice::create([
+                    } elseif ($itemPekerjaan->rabKontrak) {
+                        $invoice = Invoice::create([
                             'item_pekerjaan_id' => $itemPekerjaan->id,
                             'rab_kontrak_id' => $itemPekerjaan->rabKontrak->id,
+                            'termin_step' => 1,
                             'pm_response_time' => now(),
                             'pm_response_by' => auth()->user()->name ?? 'Admin',
+                            'status' => 'pending',
                         ]);
+                    }
+                    if ($invoice) {
+                        $invoice = $this->ensureFirstInvoiceInitialized($itemPekerjaan, $invoice);
                     }
                 }
 
@@ -328,13 +354,15 @@ trait HandlesMarketingResponse
                     'user_id' => auth()->id(),
                 ]);
 
-                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Invoice).');
+                return redirect()->route('order.show', $order->id)
+                    ->with('success', 'Marketing response berhasil dicatat (Invoice).');
             }
 
             case Notification::TYPE_KONTRAK_REQUEST: {
                 $itemPekerjaan = $order->itemPekerjaans->first();
                 if (!$itemPekerjaan) {
-                    return redirect()->route('notifications.index')->with('error', 'Item pekerjaan belum ada untuk order ini.');
+                    return redirect()->route('order.show', $order->id)
+                        ->with('error', 'Item pekerjaan belum ada untuk order ini.');
                 }
 
                 if ($itemPekerjaan->kontrak) {
@@ -351,7 +379,8 @@ trait HandlesMarketingResponse
                 }
 
                 $this->markMarketingTaskResponseDone($order, 'kontrak');
-                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Kontrak).');
+                return redirect()->route('order.show', $order->id)
+                    ->with('success', 'Marketing response berhasil dicatat (Kontrak).');
             }
 
             case Notification::TYPE_WORKPLAN_REQUEST: {
@@ -397,10 +426,12 @@ trait HandlesMarketingResponse
                 }
 
                 $this->markMarketingTaskResponseDone($order, 'workplan');
-                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Workplan).');
+                return redirect()->route('order.show', $order->id)
+                    ->with('success', 'Marketing response berhasil dicatat (Workplan).');
             }
 
-            case Notification::TYPE_JADWAL_MEETING_VENDOR_REQUEST: {
+            case Notification::TYPE_JADWAL_MEETING_VENDOR_REQUEST:
+            case Notification::TYPE_JADWAL_MEETING_APPROVAL_REQUEST: {
                 $meeting = $order->meetingVendor;
                 if ($meeting) {
                     $meeting->update([
@@ -416,7 +447,8 @@ trait HandlesMarketingResponse
                 }
 
                 $this->markMarketingTaskResponseDone($order, 'meeting_vendor');
-                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Meeting Vendor).');
+                return redirect()->route('order.show', $order->id)
+                    ->with('success', 'Marketing response berhasil dicatat (Meeting Vendor).');
             }
 
             case Notification::TYPE_APPROVAL_MATERIAL_REQUEST: {
@@ -429,13 +461,25 @@ trait HandlesMarketingResponse
                 }
 
                 $this->markMarketingTaskResponseDone($order, 'approval_material');
-                return redirect()->route('notifications.index')->with('success', 'Marketing response berhasil dicatat (Approval Material).');
+                return redirect()->route('order.show', $order->id)
+                    ->with('success', 'Marketing response berhasil dicatat (Gambar Kerja Final).');
+            }
+
+            case Notification::TYPE_PROJECT_MANAGEMENT_REQUEST: {
+                return redirect()->route('order.show', $order->id)
+                    ->with('info', 'Menampilkan detail order.');
             }
 
             default:
-                return redirect()->route('notifications.index')
-                    ->with('error', 'Notification type tidak mendukung marketing response.');
+                $actionUrl = $notification->data['action_url'] ?? null;
+                if ($actionUrl) {
+                    if ($actionUrl === '/cashflow-manual') {
+                        $actionUrl = '/cashflow/' . $order->id;
+                    }
+                    return redirect($actionUrl);
+                }
+                return redirect()->route('order.show', $order->id)
+                    ->with('info', 'Menampilkan detail order.');
         }
     }
-
 }

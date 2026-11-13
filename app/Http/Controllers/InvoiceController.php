@@ -45,8 +45,8 @@ class InvoiceController extends Controller
                 $commitmentFeeAmount = (float) ($commitmentFee?->total_fee ?? 0);
                 $commitmentFeePaid = $commitmentFee?->payment_status === 'completed';
 
-                // Sisa pembayaran = Harga Kontrak - Commitment Fee (if paid)
-                $sisaPembayaran = $commitmentFeePaid ? max(0, $hargaKontrak - $commitmentFeeAmount) : $hargaKontrak;
+                // Sisa pembayaran = Harga Kontrak - Commitment Fee
+                $sisaPembayaran = max(0, $hargaKontrak - $commitmentFeeAmount);
 
                 // Get termin info from kontrak
                 $termin = $itemPekerjaan->kontrak?->termin;
@@ -290,8 +290,8 @@ class InvoiceController extends Controller
         $commitmentFeeAmount = (float) ($commitmentFee?->total_fee ?? 0);
         $commitmentFeePaid = $commitmentFee?->payment_status === 'completed';
 
-        // Sisa pembayaran = Harga Kontrak - Commitment Fee (if paid)
-        $sisaPembayaran = $commitmentFeePaid ? max(0, $hargaKontrak - $commitmentFeeAmount) : $hargaKontrak;
+        // Sisa pembayaran = Harga Kontrak - Commitment Fee
+        $sisaPembayaran = max(0, $hargaKontrak - $commitmentFeeAmount);
 
         $tahap = $tahapan[$requestedStep - 1] ?? null;
         $persentase = (float) ($tahap['persentase'] ?? 0);
@@ -416,8 +416,8 @@ class InvoiceController extends Controller
         $commitmentFeeAmount = (float) ($commitmentFee?->total_fee ?? 0);
         $commitmentFeePaid = $commitmentFee?->payment_status === 'completed';
 
-        // Calculate sisa pembayaran
-        $sisaPembayaran = $commitmentFeePaid ? max(0, $hargaKontrak - $commitmentFeeAmount) : $hargaKontrak;
+        // Calculate sisa pembayaran = Harga Kontrak - Commitment Fee
+        $sisaPembayaran = max(0, $hargaKontrak - $commitmentFeeAmount);
 
         // Get all invoices for this item pekerjaan with payment details
         $allInvoices = $invoice->itemPekerjaan->invoices->map(function ($inv) {
@@ -699,8 +699,8 @@ class InvoiceController extends Controller
         $commitmentFeeAmount = (float) ($commitmentFee?->total_fee ?? 0);
         $commitmentFeePaid = $commitmentFee?->payment_status === 'completed';
 
-        // Calculate sisa pembayaran
-        $sisaPembayaran = $commitmentFeePaid ? max(0, $hargaKontrak - $commitmentFeeAmount) : $hargaKontrak;
+        // Calculate sisa pembayaran = Harga Kontrak - Commitment Fee
+        $sisaPembayaran = max(0, $hargaKontrak - $commitmentFeeAmount);
 
         // Get all invoices for this item pekerjaan
         $allInvoices = $invoice->itemPekerjaan->invoices->map(function ($inv) use ($tahapan) {

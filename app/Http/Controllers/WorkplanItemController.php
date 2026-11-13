@@ -245,13 +245,16 @@ class WorkplanItemController extends Controller
             'moodboard.itemPekerjaans.kontrak',
         ])->findOrFail($orderId);
 
-        // GUARD: Check if user has responded
+        // GUARD: Check if user has responded (regular or marketing response)
         $workplanItems = $order->moodboard
             ->itemPekerjaans
             ->flatMap(fn($ip) => $ip->produks)
             ->flatMap(fn($produk) => $produk->workplanItems);
 
-        if ($workplanItems->isEmpty() || !WorkplanItem::hasAnyResponded($workplanItems)) {
+        $hasResponded = WorkplanItem::hasAnyResponded($workplanItems)
+            || $workplanItems->contains(fn($i) => $i->pm_response_time !== null);
+
+        if ($workplanItems->isEmpty() || !$hasResponded) {
             return redirect()->route('workplan.index')
                 ->with('error', 'Anda harus merespons permintaan workplan terlebih dahulu sebelum mengisi detail.');
         }

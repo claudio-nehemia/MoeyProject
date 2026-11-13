@@ -33,6 +33,17 @@ class GambarKerjaController extends Controller
                     return $file;
                 });
 
+                if ($item->order && $item->order->surveyUlang) {
+                    $su = $item->order->surveyUlang;
+                    $fotoUrls = [];
+                    if (!empty($su->foto) && is_array($su->foto)) {
+                        foreach ($su->foto as $f) {
+                            $fotoUrls[] = str_starts_with($f, 'http') || str_starts_with($f, '/storage') ? $f : Storage::url($f);
+                        }
+                    }
+                    $su->setAttribute('foto_urls', $fotoUrls);
+                }
+
                 $item->has_response = !empty($item->response_time);
                 return $item;
             });

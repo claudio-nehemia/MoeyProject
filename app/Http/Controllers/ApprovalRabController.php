@@ -6,18 +6,18 @@ use Inertia\Inertia;
 use App\Models\TaskResponse;
 use Illuminate\Http\Request;
 use App\Models\ItemPekerjaan;
-use App\Models\ItemPekerjaanItem;
+use App\Models\GambarKerjaFinalFile;
 use App\Services\NotificationService;
-use App\Models\ItemPekerjaanProdukBahanBaku;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
+use ZipArchive;
 
 class ApprovalRabController extends Controller
 {
     /**
      * ======================================================
      * INDEX
-     * approval-material.index
+     * approval-material.index (Gambar Kerja Final)
      * ======================================================
      */
     public function index()
@@ -26,8 +26,7 @@ class ApprovalRabController extends Controller
 
         $items = ItemPekerjaan::with([
             'moodboard.order',
-            'produks.jenisItems.items.item',
-            'produks.bahanBakus.item', // 🔥 eager load bahan baku
+            'gambarKerjaFinalFiles',
         ])
             ->whereHas('moodboard.order', function ($query) use ($user) {
                 $query->visibleToSurveyUser($user);
@@ -39,19 +38,19 @@ class ApprovalRabController extends Controller
             ->orderByDesc('created_at')
             ->get()
             ->map(function ($ip) {
+                $files = $ip->gambarKerjaFinalFiles->map(function ($file) {
+                    return [
+                        'id' => $file->id,
+                        'original_name' => $file->original_name,
+                        'file_path' => $file->file_path,
+                        'file_size' => $file->file_size,
+                        'url' => Storage::url($file->file_path),
+                        'uploaded_by' => $file->uploaded_by,
+                        'created_at' => $file->created_at?->toIso8601String(),
+                    ];
+                });
 
-                $allItems = $ip->produks
-                    ->flatMap(
-                        fn($produk) =>
-                        $produk->jenisItems->flatMap(
-                            fn($jenis) =>
-                            $jenis->items
-                        )
-                    );
-
-                // 🔥 Ambil semua bahan baku dari semua produk
-                $allBahanBaku = $ip->produks
-                    ->flatMap(fn($produk) => $produk->bahanBakus);
+                $isCompleted = $files->count() > 0;
 
                 return [
                     'id' => $ip->id,
@@ -59,35 +58,21 @@ class ApprovalRabController extends Controller
                     'project_name' => $ip->moodboard->order->nama_project,
                     'company_name' => $ip->moodboard->order->company_name,
                     'customer_name' => $ip->moodboard->order->customer_name,
-                    'total_items' => $allItems->count(),
-                    'total_bahan_baku' => $allBahanBaku->count(), // 🔥 tambahan
-                    
+                    'files' => $files,
+                    'total_files' => $files->count(),
+                    'is_completed' => $isCompleted,
+
                     // Response tracking
                     'approval_rab_response_time' => $ip->approval_rab_response_time,
                     'approval_rab_response_by' => $ip->approval_rab_response_by,
                     'pm_approval_rab_response_time' => $ip->pm_approval_rab_response_time,
                     'pm_approval_rab_response_by' => $ip->pm_approval_rab_response_by,
-    
-                    // ⚠️ INI PENTING → supaya items_preview TIDAK undefined
-                    'items_preview' => $allItems
-                        ->map(fn($item) => [
-                            'id' => $item->id,
-                            'item_name' => $item->item->nama_item,
-                            'quantity' => $item->quantity,
-                            'keterangan_material' => $item->keterangan_material,
-                        ])
-                        ->values(),
 
-                    // 🔥 tambahan preview bahan baku
-                    'bahan_baku_preview' => $allBahanBaku
-                        ->map(fn($bahan) => [
-                            'id' => $bahan->id,
-                            'item_name' => $bahan->item->nama_item,
-                            'harga_dasar' => $bahan->harga_dasar,
-                            'harga_jasa' => $bahan->harga_jasa,
-                            'keterangan_bahan_baku' => $bahan->keterangan_bahan_baku,
-                        ])
-                        ->values(),
+                    // Backward compatibility placeholders
+                    'total_items' => 0,
+                    'total_bahan_baku' => 0,
+                    'items_preview' => [],
+                    'bahan_baku_preview' => [],
                 ];
             });
 
@@ -98,223 +83,278 @@ class ApprovalRabController extends Controller
 
     /**
      * ======================================================
-     * EDIT
+     * EDIT / DETAIL FILE MANAGEMENT
      * approval-material.edit
-     * (masih bisa dipakai kalau mau halaman detail)
      * ======================================================
      */
     public function edit($itemPekerjaanId)
     {
         $itemPekerjaan = ItemPekerjaan::with([
             'moodboard.order',
-            'produks.produk',
-            'produks.jenisItems.items.item',
-            'produks.jenisItems.jenisItem.items', // 🔥 master items
-            'produks.bahanBakus.item', // 🔥 eager load bahan baku
+            'gambarKerjaFinalFiles',
         ])->findOrFail($itemPekerjaanId);
 
-        $items = $itemPekerjaan->produks
-            ->flatMap(
-                fn($produk) =>
-                $produk->jenisItems->flatMap(
-                    fn($jenis) =>
-                    $jenis->items->map(fn($item) => [
-                        'id' => $item->id,
+        $order = $itemPekerjaan->moodboard->order;
 
-                        // 🔥 penting untuk select
-                        'item_id' => $item->item_id,
-                        'item_name' => $item->item->nama_item,
-
-                        'produk' => $produk->produk->nama_produk,
-                        'jenis_item' => $jenis->jenisItem->nama_jenis_item,
-                        'quantity' => $item->quantity,
-                        'keterangan_material' => $item->keterangan_material,
-                        'kode_material' => $item->kode_material ?? [],
-                        'brand_spek' => $item->brand_spek ?? [],
-                        'area' => $item->area,
-                        'foto' => $item->foto ? Storage::url($item->foto) : null,
-
-                        // 🔥 list dropdown
-                        'available_items' => $jenis->jenisItem->items->map(fn($i) => [
-                            'id' => $i->id,
-                            'name' => $i->nama_item,
-                        ])->values(),
-                    ])
-                )
-            )
-            ->values();
-
-        // 🔥 Ambil bahan baku dari semua produk
-        $bahanBakus = $itemPekerjaan->produks
-            ->flatMap(
-                fn($produk) =>
-                $produk->bahanBakus->map(fn($bahan) => [
-                    'id' => $bahan->id,
-                    'item_name' => $bahan->item->nama_item,
-                    'produk' => $produk->produk->nama_produk,
-                    'harga_dasar' => $bahan->harga_dasar,
-                    'harga_jasa' => $bahan->harga_jasa,
-                    'keterangan_bahan_baku' => $bahan->keterangan_bahan_baku,
-                    'kode_material' => $bahan->kode_material ?? [],
-                    'brand_spek' => $bahan->brand_spek ?? [],
-                    'area' => $bahan->area,
-                    'foto' => $bahan->foto ? Storage::url($bahan->foto) : null,
-                ])
-            )
-            ->values();
+        $files = $itemPekerjaan->gambarKerjaFinalFiles->map(function ($file) {
+            return [
+                'id' => $file->id,
+                'original_name' => $file->original_name,
+                'file_path' => $file->file_path,
+                'file_size' => $file->file_size,
+                'url' => Storage::url($file->file_path),
+                'uploaded_by' => $file->uploaded_by,
+                'created_at' => $file->created_at?->toIso8601String(),
+            ];
+        });
 
         return Inertia::render('ApprovalRab/Edit', [
             'itemPekerjaan' => [
                 'id' => $itemPekerjaan->id,
-                'project_name' => $itemPekerjaan->moodboard->order->nama_project,
-                'company_name' => $itemPekerjaan->moodboard->order->company_name,
-                'customer_name' => $itemPekerjaan->moodboard->order->customer_name,
-                'items' => $items,
-                'bahan_bakus' => $bahanBakus, // 🔥 tambahan
+                'order_id' => $order->id,
+                'project_name' => $order->nama_project,
+                'company_name' => $order->company_name,
+                'customer_name' => $order->customer_name,
+                'files' => $files,
+                'total_files' => $files->count(),
+                'approval_rab_response_time' => $itemPekerjaan->approval_rab_response_time,
+                'approval_rab_response_by' => $itemPekerjaan->approval_rab_response_by,
             ],
         ]);
     }
 
     /**
      * ======================================================
-     * UPDATE (MASS UPDATE KETERANGAN MATERIAL)
+     * UPLOAD FILES (Gambar Kerja Final)
+     * approval-material.upload
+     * ======================================================
+     */
+    public function uploadFiles(Request $request, $itemPekerjaanId)
+    {
+        $request->validate([
+            'files' => 'required|array|min:1',
+            'files.*' => 'file|max:51200', // max 50MB per file
+        ]);
+
+        $itemPekerjaan = ItemPekerjaan::with('moodboard.order')->findOrFail($itemPekerjaanId);
+        $order = $itemPekerjaan->moodboard->order;
+
+        foreach ($request->file('files') as $file) {
+            $path = $file->store('gambar-kerja-final/' . $itemPekerjaan->id, 'public');
+
+            GambarKerjaFinalFile::create([
+                'item_pekerjaan_id' => $itemPekerjaan->id,
+                'order_id' => $order ? $order->id : null,
+                'file_path' => $path,
+                'original_name' => $file->getClientOriginalName(),
+                'file_size' => $file->getSize(),
+                'uploaded_by' => auth()->user()->name ?? 'System',
+            ]);
+        }
+
+        // Complete task response for approval_material and advance to workplan
+        if ($order) {
+            $taskResponse = TaskResponse::where('order_id', $order->id)
+                ->where('tahap', 'approval_material')
+                ->orderByDesc('extend_time')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
+                ->first();
+
+            if ($taskResponse) {
+                if ($taskResponse->isOverdue()) {
+                    $taskResponse->update([
+                        'status' => 'telat_submit',
+                        'update_data_time' => now(),
+                    ]);
+                } else {
+                    $taskResponse->update([
+                        'update_data_time' => now(),
+                        'status' => 'selesai',
+                    ]);
+                }
+
+                // Create task response untuk tahap selanjutnya (workplan) jika belum ada
+                $nextTaskExists = TaskResponse::where('order_id', $order->id)
+                    ->where('tahap', 'workplan')
+                    ->exists();
+
+                if (!$nextTaskExists) {
+                    TaskResponse::create([
+                        'order_id' => $order->id,
+                        'user_id' => null,
+                        'tahap' => 'workplan',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3),
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                    ]);
+
+                    TaskResponse::create([
+                        'order_id' => $order->id,
+                        'user_id' => null,
+                        'tahap' => 'workplan',
+                        'start_time' => now(),
+                        'deadline' => now()->addDays(3),
+                        'duration' => 3,
+                        'duration_actual' => 3,
+                        'extend_time' => 0,
+                        'status' => 'menunggu_response',
+                        'is_marketing' => true,
+                    ]);
+                }
+            }
+
+            // Update order stage if applicable
+            $order->update(['tahapan_proyek' => 'workplan']);
+
+            // Send notification to PM and Estimator
+            $notificationService = new NotificationService();
+            $notificationService->sendWorkplanRequestNotification($order);
+        }
+
+        return back()->with('success', 'Berkas gambar kerja final berhasil diunggah.');
+    }
+
+    /**
+     * ======================================================
+     * DELETE FILE
+     * approval-material.delete-file
+     * ======================================================
+     */
+    public function deleteFile($fileId)
+    {
+        $file = GambarKerjaFinalFile::findOrFail($fileId);
+
+        if (Storage::disk('public')->exists($file->file_path)) {
+            Storage::disk('public')->delete($file->file_path);
+        }
+
+        $file->delete();
+
+        return back()->with('success', 'Berkas berhasil dihapus.');
+    }
+
+    /**
+     * ======================================================
+     * DOWNLOAD SINGLE FILE
+     * approval-material.download-file
+     * ======================================================
+     */
+    public function downloadFile($fileId)
+    {
+        $file = GambarKerjaFinalFile::findOrFail($fileId);
+
+        if (!Storage::disk('public')->exists($file->file_path)) {
+            return back()->with('error', 'File tidak ditemukan di server.');
+        }
+
+        $filename = $file->original_name ?: basename($file->file_path);
+        return Storage::disk('public')->download($file->file_path, $filename);
+    }
+
+    /**
+     * ======================================================
+     * DOWNLOAD ALL (ZIP)
+     * approval-material.download-all
+     * ======================================================
+     */
+    public function downloadAllFiles($itemPekerjaanId)
+    {
+        try {
+            $itemPekerjaan = ItemPekerjaan::with(['gambarKerjaFinalFiles', 'moodboard.order'])
+                ->findOrFail($itemPekerjaanId);
+            $files = $itemPekerjaan->gambarKerjaFinalFiles;
+
+            if ($files->isEmpty()) {
+                return back()->with('error', 'Tidak ada berkas gambar kerja final untuk didownload.');
+            }
+
+            // Single file: direct download
+            if ($files->count() === 1) {
+                $file = $files->first();
+                if (!Storage::disk('public')->exists($file->file_path)) {
+                    return back()->with('error', 'File tidak ditemukan di server.');
+                }
+                $filename = $file->original_name ?: basename($file->file_path);
+                return Storage::disk('public')->download($file->file_path, $filename);
+            }
+
+            // Multiple files: ZIP
+            $projectName = $itemPekerjaan->moodboard?->order?->nama_project ?? 'Project';
+            $sanitizedProjectName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $projectName);
+            $zipName = 'Gambar_Kerja_Final_' . $sanitizedProjectName . '_' . date('YmdHis') . '.zip';
+            $tempDir = storage_path('app/temp');
+            if (!file_exists($tempDir)) {
+                mkdir($tempDir, 0755, true);
+            }
+            $zipPath = $tempDir . '/' . $zipName;
+
+            $zip = new ZipArchive();
+            if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+                return back()->with('error', 'Gagal membuat file ZIP.');
+            }
+
+            $addedCount = 0;
+            foreach ($files as $index => $file) {
+                if (Storage::disk('public')->exists($file->file_path)) {
+                    $fullPath = Storage::disk('public')->path($file->file_path);
+                    $originalName = $file->original_name ?: basename($file->file_path);
+                    $entryName = ($index + 1) . '_' . $originalName;
+                    $zip->addFile($fullPath, $entryName);
+                    $addedCount++;
+                }
+            }
+            $zip->close();
+
+            if ($addedCount === 0) {
+                if (file_exists($zipPath)) {
+                    @unlink($zipPath);
+                }
+                return back()->with('error', 'Tidak ada berkas valid di server.');
+            }
+
+            return response()->download($zipPath, $zipName)->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            \Log::error('Download All Gambar Kerja Final Error: ' . $e->getMessage());
+            return back()->with('error', 'Terjadi kesalahan saat memproses download ZIP.');
+        }
+    }
+
+    /**
+     * ======================================================
+     * UPDATE FROM EDIT PAGE
      * approval-material.update
      * ======================================================
      */
     public function update(Request $request, $itemPekerjaanId)
     {
-        $validated = $request->validate([
-            'items' => 'required|array',
-            'items.*.id' => 'required|exists:item_pekerjaan_items,id',
-            'items.*.item_id' => 'required|exists:items,id',
-            'items.*.keterangan_material' => 'nullable|string|max:1000',
-            'items.*.kode_material' => 'nullable|array',
-            'items.*.kode_material.*' => 'nullable|string|max:255',
-            'items.*.brand_spek' => 'nullable|array',
-            'items.*.brand_spek.*' => 'nullable|string|max:255',
-            'items.*.area' => 'nullable|string|max:500',
-            'items.*.foto' => 'nullable|file|image|max:10240',
-            'bahan_bakus' => 'nullable|array',
-            'bahan_bakus.*.id' => 'required|exists:item_pekerjaan_produk_bahan_bakus,id',
-            'bahan_bakus.*.keterangan_bahan_baku' => 'nullable|string|max:1000',
-            'bahan_bakus.*.kode_material' => 'nullable|array',
-            'bahan_bakus.*.kode_material.*' => 'nullable|string|max:255',
-            'bahan_bakus.*.brand_spek' => 'nullable|array',
-            'bahan_bakus.*.brand_spek.*' => 'nullable|string|max:255',
-            'bahan_bakus.*.area' => 'nullable|string|max:500',
-            'bahan_bakus.*.foto' => 'nullable|file|image|max:10240',
-        ]);
-
-        foreach ($validated['items'] as $index => $row) {
-            $dataToUpdate = [
-                'item_id' => $row['item_id'],
-                'keterangan_material' => $row['keterangan_material'],
-                'kode_material' => $row['kode_material'] ?? null,
-                'brand_spek' => $row['brand_spek'] ?? null,
-                'area' => $row['area'] ?? null,
-            ];
-
-            if ($request->hasFile("items.{$index}.foto")) {
-                $path = $request->file("items.{$index}.foto")->store('approval-material', 'public');
-                $dataToUpdate['foto'] = $path;
-            }
-
-            ItemPekerjaanItem::where('id', $row['id'])->update($dataToUpdate);
+        if ($request->hasFile('files')) {
+            return $this->uploadFiles($request, $itemPekerjaanId);
         }
-
-        // Update bahan baku jika ada
-        if (isset($validated['bahan_bakus'])) {
-            foreach ($validated['bahan_bakus'] as $index => $bahan) {
-                $dataToUpdate = [
-                    'keterangan_bahan_baku' => $bahan['keterangan_bahan_baku'],
-                    'kode_material' => $bahan['kode_material'] ?? null,
-                    'brand_spek' => $bahan['brand_spek'] ?? null,
-                    'area' => $bahan['area'] ?? null,
-                ];
-
-                if ($request->hasFile("bahan_bakus.{$index}.foto")) {
-                    $path = $request->file("bahan_bakus.{$index}.foto")->store('approval-material', 'public');
-                    $dataToUpdate['foto'] = $path;
-                }
-
-                ItemPekerjaanProdukBahanBaku::where('id', $bahan['id'])->update($dataToUpdate);
-            }
-        }
-
-        // Get Order from ItemPekerjaan to send notification
-        $itemPekerjaan = ItemPekerjaan::with('moodboard.order')->findOrFail($itemPekerjaanId);
-        $order = $itemPekerjaan->moodboard->order;
-
-        $taskResponse = TaskResponse::where('order_id', $order->id)
-            ->where('tahap', 'approval_material')
-            ->orderByDesc('extend_time')
-            ->orderByDesc('updated_at')
-            ->orderByDesc('id')
-            ->first();
-
-        if ($taskResponse) {
-            if ($taskResponse->isOverdue()) {
-                $taskResponse->update([
-                    'status' => 'telat_submit',
-                    'update_data_time' => now(),
-                ]);
-            } else {
-                $taskResponse->update([
-                    'update_data_time' => now(),
-                    'status' => 'selesai',
-                ]);
-            }
-
-            // Create task response untuk tahap selanjutnya (cm_fee)
-            $nextTaskExists = TaskResponse::where('order_id', $order->id)
-                ->where('tahap', 'workplan')
-                ->exists();
-
-            if (!$nextTaskExists) {
-                TaskResponse::create([
-                    'order_id' => $order->id,
-                    'user_id' => null,
-                    'tahap' => 'workplan',
-                    'start_time' => now(),
-                    'deadline' => now()->addDays(3), // Deadline untuk workplan
-                    'duration' => 3,
-                    'duration_actual' => 3,
-                    'extend_time' => 0,
-                    'status' => 'menunggu_response',
-                ]);
-
-                TaskResponse::create([
-                    'order_id' => $order->id,
-                    'user_id' => null,
-                    'tahap' => 'workplan',
-                    'start_time' => now(),
-                    'deadline' => now()->addDays(3), // Deadline untuk workplan
-                    'duration' => 3,
-                    'duration_actual' => 3,
-                    'extend_time' => 0,
-                    'status' => 'menunggu_response',
-                    'is_marketing' => true,
-                ]);
-            }
-        }
-
-        // Send notification to PM and Estimator
-        $notificationService = new NotificationService();
-        $notificationService->sendWorkplanRequestNotification($order);
 
         return redirect()
             ->route('approval-material.index')
-            ->with('success', 'Keterangan material dan bahan baku berhasil disimpan dan notifikasi telah dikirim.');
+            ->with('success', 'Data gambar kerja final tersimpan.');
     }
 
+    /**
+     * ======================================================
+     * RESPONSES
+     * approval-material.responses
+     * ======================================================
+     */
     public function responses(Request $request, $itemPekerjaanId)
     {
         $itemPekerjaan = ItemPekerjaan::with('moodboard.order')->findOrFail($itemPekerjaanId);
-        if($itemPekerjaan->approval_rab_response_by) {
+        if ($itemPekerjaan->approval_rab_response_by) {
             return redirect()
                 ->route('approval-material.index')
-                ->with('error', 'RAB sudah pernah direspon.');
+                ->with('error', 'Gambar kerja final sudah pernah direspon.');
         }
+
         $itemPekerjaan->update([
             'approval_rab_response_by' => auth()->user()->name,
             'approval_rab_response_time' => now(),
@@ -346,12 +386,12 @@ class ApprovalRabController extends Controller
 
         return redirect()
             ->route('approval-material.index')
-            ->with('success', 'RAB berhasil Diresponses.');
+            ->with('success', 'Gambar kerja final berhasil direspon.');
     }
 
     /**
      * ======================================================
-     * EXPORT PDF - Approval Material
+     * EXPORT PDF
      * ======================================================
      */
     public function exportPdf($itemPekerjaanId)
@@ -361,18 +401,18 @@ class ApprovalRabController extends Controller
         $pdf = Pdf::loadView('pdf.approval-material', $data);
         $pdf->setPaper('A4', 'landscape');
 
-        $filename = 'Approval_Material_' . str_replace(' ', '_', $data['project']) . '.pdf';
+        $filename = 'Gambar_Kerja_Final_' . str_replace(' ', '_', $data['project']) . '.pdf';
         return $pdf->stream($filename);
     }
 
     /**
-     * Export Approval Material as Word
+     * Export as Word
      */
     public function exportWord($itemPekerjaanId)
     {
         $data = $this->getExportData($itemPekerjaanId);
         $html = view('pdf.approval-material', $data)->render();
-        $filename = 'Approval_Material_' . str_replace(' ', '_', $data['project']) . '.doc';
+        $filename = 'Gambar_Kerja_Final_' . str_replace(' ', '_', $data['project']) . '.doc';
 
         return response($html)
             ->header('Content-Type', 'application/vnd.ms-word')
@@ -387,22 +427,24 @@ class ApprovalRabController extends Controller
             'produks.jenisItems.items.item',
             'produks.jenisItems.jenisItem',
             'produks.bahanBakus.item',
+            'gambarKerjaFinalFiles',
         ])->findOrFail($itemPekerjaanId);
 
         $order = $itemPekerjaan->moodboard->order;
 
-        // Flatten items (finishing & aksesoris)
         $finishingItems = $itemPekerjaan->produks
             ->flatMap(
                 fn($produk) =>
                 $produk->jenisItems->flatMap(
                     fn($jenis) =>
                     $jenis->items->map(fn($item) => (object) [
-                        'item_name' => $item->item->nama_item,
-                        'jenis_item' => $jenis->jenisItem->nama_jenis_item,
+                        'nama_ruangan' => $produk->nama_ruangan ?: 'Tanpa Ruangan',
+                        'produk' => $produk->produk->nama_produk ?? '-',
+                        'item_name' => $item->item->nama_item ?? '-',
+                        'jenis_item' => $jenis->jenisItem->nama_jenis_item ?? '-',
                         'brand_spek' => $item->brand_spek ?? [],
                         'kode_material' => $item->kode_material ?? [],
-                        'area' => $item->area ?? '-',
+                        'area' => $item->area ?: ($produk->nama_ruangan ?: '-'),
                         'keterangan_material' => $item->keterangan_material ?? '',
                         'foto' => $item->foto,
                     ])
@@ -410,15 +452,16 @@ class ApprovalRabController extends Controller
             )
             ->values();
 
-        // Flatten bahan baku
         $bahanBakuItems = $itemPekerjaan->produks
             ->flatMap(
                 fn($produk) =>
                 $produk->bahanBakus->map(fn($bahan) => (object) [
-                    'item_name' => $bahan->item->nama_item,
+                    'nama_ruangan' => $produk->nama_ruangan ?: 'Tanpa Ruangan',
+                    'produk' => $produk->produk->nama_produk ?? '-',
+                    'item_name' => $bahan->item->nama_item ?? '-',
                     'brand_spek' => $bahan->brand_spek ?? [],
                     'kode_material' => $bahan->kode_material ?? [],
-                    'area' => $bahan->area ?? '-',
+                    'area' => $bahan->area ?: ($produk->nama_ruangan ?: '-'),
                     'keterangan_material' => $bahan->keterangan_bahan_baku ?? '',
                     'foto' => $bahan->foto,
                 ])
@@ -432,6 +475,7 @@ class ApprovalRabController extends Controller
             'tanggal' => now()->translatedFormat('d F Y'),
             'bahanBakuItems' => $bahanBakuItems,
             'finishingItems' => $finishingItems,
+            'files' => $itemPekerjaan->gambarKerjaFinalFiles,
         ];
     }
 }

@@ -683,8 +683,8 @@ class ProjectManagementController extends Controller
         $commitmentFeeAmount = (float) ($commitmentFee?->total_fee ?? 0);
         $commitmentFeePaid = $commitmentFee?->payment_status === 'completed';
 
-        // Sisa pembayaran = Harga Kontrak - Commitment Fee (if paid)
-        $sisaPembayaran = $commitmentFeePaid ? max(0, $hargaKontrak - $commitmentFeeAmount) : $hargaKontrak;
+        // Sisa pembayaran = Harga Kontrak - Commitment Fee
+        $sisaPembayaran = max(0, $hargaKontrak - $commitmentFeeAmount);
 
         // Get invoices
         $allInvoices = $itemPekerjaan->invoices;

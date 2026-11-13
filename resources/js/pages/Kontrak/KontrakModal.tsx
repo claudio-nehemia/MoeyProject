@@ -195,21 +195,32 @@ export default function KontrakModal({ show, onClose, itemPekerjaan, termins }: 
                         {/* Tampilkan Tahapan Termin */}
                         {selectedTermin?.tahapan && (
                             <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                <h4 className="text-sm font-semibold text-blue-900 mb-2">Tahapan Pembayaran:</h4>
+                                <h4 className="text-sm font-semibold text-blue-900 mb-2">
+                                    Tahapan Pembayaran (dihitung dari Sisa Pembayaran: {formatRupiah(sisaPembayaran)}):
+                                </h4>
                                 <div className="space-y-1.5">
-                                    {selectedTermin.tahapan.map((tahap, index) => (
-                                        <div key={index} className="flex items-center gap-2 text-sm">
-                                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold">
-                                                {tahap.step}
-                                            </span>
-                                            <span className="text-gray-700">{tahap.text}</span>
-                                            {tahap.persentase && (
-                                                <span className="ml-auto text-xs font-bold text-blue-600">
-                                                    {tahap.persentase}%
-                                                </span>
-                                            )}
-                                        </div>
-                                    ))}
+                                    {selectedTermin.tahapan.map((tahap, index) => {
+                                        const persentase = tahap.persentase ?? tahap.percentage ?? 0;
+                                        const nominalTahap = sisaPembayaran * (persentase / 100);
+                                        return (
+                                            <div key={index} className="flex items-center justify-between gap-2 text-sm bg-white/70 p-2 rounded border border-blue-100">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold">
+                                                        {tahap.step}
+                                                    </span>
+                                                    <span className="text-gray-700 font-medium">{tahap.text}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-xs font-bold text-blue-600 mr-2">
+                                                        {persentase}%
+                                                    </span>
+                                                    <span className="text-xs font-bold text-gray-900">
+                                                        {formatRupiah(nominalTahap)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}

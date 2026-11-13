@@ -98,9 +98,18 @@ export default function ProdukCard({
     onRemoveItem,
     onUpdateItem,
 }: ProdukCardProps) {
-    const [isExpanded, setIsExpanded] = React.useState(false);
+    const [isExpanded, setIsExpanded] = React.useState(() => !produk.produk_id);
     const selectedProduk = produksList.find((p) => p.id.toString() === produk.produk_id.toString());
-    const masterBahanBakus = selectedProduk?.bahan_bakus || [];
+    const masterBahanBakus = React.useMemo(
+        () =>
+            [...(selectedProduk?.bahan_bakus || [])].sort((a, b) =>
+                a.nama_item.localeCompare(b.nama_item, 'id', {
+                    sensitivity: 'base',
+                    numeric: true,
+                }),
+            ),
+        [selectedProduk?.bahan_bakus],
+    );
 
     const getAvailableItems = (jenisItemId: string | number) => {
         return items.filter((item) => item.jenis_item_id === parseInt(jenisItemId.toString()));

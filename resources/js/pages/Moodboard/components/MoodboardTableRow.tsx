@@ -137,24 +137,39 @@ export default function MoodboardTableRow({
                 {/* Files */}
                 <td className="px-5 py-3.5 text-center">
                     <div className="flex items-center justify-center -space-x-1.5">
-                        {moodboard?.kasar_files.slice(0, 3).map((file) => (
-                            <div key={file.id} className="relative">
-                                <img 
-                                    src={file.url} 
-                                    className={`w-8 h-8 rounded-lg object-cover border-2 border-white shadow-sm
-                                        ${moodboard.moodboard_kasar === file.file_path && moodboard.status === 'approved' ? 'ring-2 ring-emerald-400 ring-offset-1' : ''}
-                                    `}
-                                    alt="Moodboard"
-                                />
-                                {moodboard.moodboard_kasar === file.file_path && moodboard.status === 'approved' && (
-                                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border border-white flex items-center justify-center">
-                                        <svg className="w-1.5 h-1.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                        </svg>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
+                        {moodboard?.kasar_files.slice(0, 3).map((file) => {
+                            const isPdf = (file.original_name || file.url).toLowerCase().split('?')[0].endsWith('.pdf');
+                            const isSelected = moodboard.moodboard_kasar === file.file_path && moodboard.status === 'approved';
+                            return (
+                                <div key={file.id} className="relative">
+                                    {isPdf ? (
+                                        <div
+                                            title={file.original_name}
+                                            className={`w-8 h-8 rounded-lg bg-rose-50 text-rose-600 border-2 border-white shadow-sm flex items-center justify-center text-[8px] font-black uppercase ${
+                                                isSelected ? 'ring-2 ring-emerald-400 ring-offset-1' : ''
+                                            }`}
+                                        >
+                                            PDF
+                                        </div>
+                                    ) : (
+                                        <img 
+                                            src={file.url} 
+                                            className={`w-8 h-8 rounded-lg object-cover border-2 border-white shadow-sm
+                                                ${isSelected ? 'ring-2 ring-emerald-400 ring-offset-1' : ''}
+                                            `}
+                                            alt="Moodboard"
+                                        />
+                                    )}
+                                    {isSelected && (
+                                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border border-white flex items-center justify-center">
+                                            <svg className="w-1.5 h-1.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                            </svg>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                         {moodboard && moodboard.kasar_files.length > 3 && (
                             <div className="w-8 h-8 rounded-lg bg-slate-100 border-2 border-white flex items-center justify-center text-[9px] font-bold text-slate-500 shadow-sm">
                                 +{moodboard.kasar_files.length - 3}

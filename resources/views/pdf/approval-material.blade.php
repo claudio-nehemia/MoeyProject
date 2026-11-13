@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Approval Material PDF</title>
+    <title>Gambar Kerja Final PDF</title>
 
     <style>
         body {
@@ -71,6 +71,14 @@
             font-weight: bold;
             font-size: 15px;
             padding: 10px 12px;
+        }
+
+        .room-header td {
+            background-color: #0891b2;
+            color: #fff;
+            font-weight: bold;
+            font-size: 13px;
+            padding: 8px 12px;
         }
 
         .center { text-align: center; }
@@ -184,10 +192,22 @@
             <tr class="section-header">
                 <td colspan="7">A. BAHAN BAKU</td>
             </tr>
-            @foreach($bahanBakuItems as $idx => $item)
+            @php
+                $groupedBahanBaku = $bahanBakuItems->groupBy(fn($i) => $i->nama_ruangan ?? 'Tanpa Ruangan');
+            @endphp
+            @foreach($groupedBahanBaku as $roomName => $roomItems)
+            <tr class="room-header">
+                <td colspan="7">RUANGAN: {{ $roomName }} ({{ $roomItems->count() }} Item)</td>
+            </tr>
+            @foreach($roomItems->values() as $idx => $item)
             <tr>
                 <td class="center">{{ $idx + 1 }}</td>
-                <td style="font-weight: bold;">{{ $item->item_name }}</td>
+                <td>
+                    <div style="font-weight: bold;">{{ $item->item_name }}</div>
+                    @if(!empty($item->produk) && $item->produk !== '-')
+                        <div style="font-size: 11px; color: #555; margin-top: 2px;">Produk: {{ $item->produk }}</div>
+                    @endif
+                </td>
                 <td class="center">
                     @if($item->foto)
                         <img src="{{ public_path('storage/' . $item->foto) }}" class="foto-img">
@@ -221,6 +241,7 @@
                 <td>{{ $item->keterangan_material ?? '-' }}</td>
             </tr>
             @endforeach
+            @endforeach
             @endif
 
             {{-- ===== B. FINISHING & AKSESORIS ===== --}}
@@ -228,10 +249,22 @@
             <tr class="section-header">
                 <td colspan="7">B. FINISHING & AKSESORIS</td>
             </tr>
-            @foreach($finishingItems as $idx => $item)
+            @php
+                $groupedFinishing = $finishingItems->groupBy(fn($i) => $i->nama_ruangan ?? 'Tanpa Ruangan');
+            @endphp
+            @foreach($groupedFinishing as $roomName => $roomItems)
+            <tr class="room-header">
+                <td colspan="7">RUANGAN: {{ $roomName }} ({{ $roomItems->count() }} Item)</td>
+            </tr>
+            @foreach($roomItems->values() as $idx => $item)
             <tr>
                 <td class="center">{{ $idx + 1 }}</td>
-                <td style="font-weight: bold;">{{ $item->item_name }}</td>
+                <td>
+                    <div style="font-weight: bold;">{{ $item->item_name }}</div>
+                    @if(!empty($item->produk) && $item->produk !== '-')
+                        <div style="font-size: 11px; color: #555; margin-top: 2px;">Produk: {{ $item->produk }}</div>
+                    @endif
+                </td>
                 <td class="center">
                     @if($item->foto)
                         <img src="{{ public_path('storage/' . $item->foto) }}" class="foto-img">
@@ -264,6 +297,7 @@
                 <td>{{ $item->area ?? '-' }}</td>
                 <td>{{ $item->keterangan_material ?? '-' }}</td>
             </tr>
+            @endforeach
             @endforeach
             @endif
         </tbody>

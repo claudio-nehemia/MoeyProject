@@ -126,4 +126,18 @@ class Role extends Model
         $cachedId = $role ? (int) $role->id : 10;
         return $cachedId;
     }
+
+    /**
+     * Get ID of Estimator role
+     */
+    public static function getEstimatorRoleId(): int
+    {
+        static $cachedId = null;
+        if ($cachedId !== null) {
+            return $cachedId;
+        }
+        $role = static::where('nama_role', 'Estimator')->first();
+        $cachedId = $role ? (int) $role->id : 6;
+        return $cachedId;
+    }
 }

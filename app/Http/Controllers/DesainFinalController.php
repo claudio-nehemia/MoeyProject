@@ -443,4 +443,84 @@ class DesainFinalController extends Controller
             return back()->with('error', 'Gagal ganti file: ' . $e->getMessage());
         }
     }
+
+    public function downloadDesainFinalFile($fileId)
+    {
+        try {
+            $file = MoodboardFile::where('id', $fileId)
+                ->where('file_type', 'final')
+                ->firstOrFail();
+
+            if (!Storage::disk('public')->exists($file->file_path)) {
+                return back()->with('error', 'File tidak ditemukan di storage.');
+            }
+
+            $filename = $file->original_name ?: basename($file->file_path);
+            return Storage::disk('public')->download($file->file_path, $filename);
+        } catch (\Exception $e) {
+            Log::error('Download desain final file error: ' . $e->getMessage());
+            return back()->with('error', 'Gagal download file: ' . $e->getMessage());
+        }
+    }
+
+    public function downloadAllFiles($moodboardId)
+    {
+        try {
+            $moodboard = Moodboard::with(['finalFiles', 'order'])->findOrFail($moodboardId);
+            $files = $moodboard->finalFiles;
+
+            if ($files->isEmpty()) {
+                return back()->with('error', 'Tidak ada file desain final untuk didownload.');
+            }
+
+            // If only 1 file, download directly
+            if ($files->count() === 1) {
+                $file = $files->first();
+                if (!Storage::disk('public')->exists($file->file_path)) {
+                    return back()->with('error', 'File tidak ditemukan di storage.');
+                }
+                $filename = $file->original_name ?: basename($file->file_path);
+                return Storage::disk('public')->download($file->file_path, $filename);
+            }
+
+            // Multiple files: Create ZIP
+            $projectName = $moodboard->order ? $moodboard->order->nama_project : 'Project';
+            $sanitizedProjectName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $projectName);
+            $zipName = 'Desain-Final-' . $sanitizedProjectName . '-' . date('YmdHis') . '.zip';
+            $tempDir = storage_path('app/temp');
+            if (!file_exists($tempDir)) {
+                mkdir($tempDir, 0755, true);
+            }
+            $zipPath = $tempDir . '/' . $zipName;
+
+            $zip = new \ZipArchive();
+            if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+                return back()->with('error', 'Gagal membuat file ZIP.');
+            }
+
+            $addedCount = 0;
+            foreach ($files as $index => $file) {
+                if (Storage::disk('public')->exists($file->file_path)) {
+                    $fullPath = Storage::disk('public')->path($file->file_path);
+                    $originalName = $file->original_name ?: basename($file->file_path);
+                    $entryName = ($index + 1) . '-' . $originalName;
+                    $zip->addFile($fullPath, $entryName);
+                    $addedCount++;
+                }
+            }
+            $zip->close();
+
+            if ($addedCount === 0) {
+                if (file_exists($zipPath)) {
+                    @unlink($zipPath);
+                }
+                return back()->with('error', 'Tidak ada file valid yang ditemukan di storage.');
+            }
+
+            return response()->download($zipPath, $zipName)->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            Log::error('Download all desain final files error: ' . $e->getMessage());
+            return back()->with('error', 'Gagal download semua file: ' . $e->getMessage());
+        }
+    }
 }

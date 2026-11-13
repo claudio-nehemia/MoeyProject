@@ -49,6 +49,7 @@ class OrderController extends Controller
         $desainerId = Role::getDesainerRoleId();
         $surveyorId = Role::getSurveyorRoleId();
         $drafterId = Role::getDrafterRoleId();
+        $estimatorId = Role::getEstimatorRoleId();
         $supervisorId = Role::getSupervisorRoleId();
         $pmId = Role::getProjectManagerRoleId();
 
@@ -67,6 +68,11 @@ class OrderController extends Controller
                 ->orWhereHas('roles', fn($q) => $q->where('roles.id', $desainerId));
         })->get(['id', 'name', 'email', 'role_id']);
 
+        $estimators = User::where(function ($query) use ($estimatorId) {
+            $query->where('role_id', $estimatorId)
+                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $estimatorId));
+        })->get(['id', 'name', 'email', 'role_id']);
+
         $supervisors = User::where(function ($query) use ($supervisorId) {
             $query->where('role_id', $supervisorId)
                 ->orWhereHas('roles', fn($q) => $q->where('roles.id', $supervisorId));
@@ -81,6 +87,7 @@ class OrderController extends Controller
             'marketings' => $marketings,
             'drafters' => $drafters,
             'desainers' => $desainers,
+            'estimators' => $estimators,
             'supervisors' => $supervisors,
             'projectManagers' => $projectManagers,
         ];
@@ -100,6 +107,7 @@ class OrderController extends Controller
             'jenisInteriors' => JenisInterior::all(),
             'drafters' => $teamUsers['drafters'],
             'desainers' => $teamUsers['desainers'],
+            'estimators' => $teamUsers['estimators'],
             'supervisors' => $teamUsers['supervisors'],
             'projectManagers' => $teamUsers['projectManagers'],
             'marketings' => $teamUsers['marketings'],
@@ -112,7 +120,32 @@ class OrderController extends Controller
      */
     public function show(Order $order)
     {
-        $order->load(['users.role', 'jenisInterior', 'activityLogs.user']);
+        $user = auth()->user();
+        if ($user && method_exists($user, 'isCustomer') && $user->isCustomer()) {
+            return redirect()->route('customer.portal');
+        }
+
+        $order->load([
+            'users.role',
+            'jenisInterior',
+            'activityLogs.user',
+            'surveyUsers',
+            'surveyResults',
+            'surveyUlang',
+            'moodboard.files',
+            'moodboard.finalFiles',
+            'moodboard.estimasi',
+            'moodboard.commitmentFee',
+            'estimasi',
+            'gambarKerja',
+            'meetingVendor',
+            'itemPekerjaans.rabInternal',
+            'itemPekerjaans.rabKontrak',
+            'itemPekerjaans.kontrak',
+            'itemPekerjaans.invoices',
+            'itemPekerjaans.produks.produk',
+            'itemPekerjaans.produks.workplanItems',
+        ]);
 
         return Inertia::render('Order/Show', [
             'order' => $order,
@@ -137,6 +170,7 @@ class OrderController extends Controller
             'jenisInteriors' => JenisInterior::all(),
             'drafters' => $teamUsers['drafters'],
             'desainers' => $teamUsers['desainers'],
+            'estimators' => $teamUsers['estimators'],
             'supervisors' => $teamUsers['supervisors'],
             'projectManagers' => $teamUsers['projectManagers'],
             'marketings' => $teamUsers['marketings'],

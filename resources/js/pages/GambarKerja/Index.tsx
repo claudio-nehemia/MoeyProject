@@ -5,15 +5,32 @@ import Sidebar from '@/components/Sidebar';
 import { Head, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { useEffect, useState, useMemo } from 'react';
-import { Eye, Trash2, Upload, Edit3, Check } from 'lucide-react';
+import { Eye, Trash2, Upload, Edit3, Check, ClipboardList, Camera, Calendar, User, FileText, X } from 'lucide-react';
 
 /* ================= TYPES ================= */
+
+interface SurveyUlangInfo {
+    id: number;
+    order_id?: number;
+    catatan: string | null;
+    temuan?: string[] | null;
+    foto?: string[] | null;
+    foto_urls?: string[] | null;
+    survey_time: string | null;
+    survey_by: string | null;
+    response_time?: string | null;
+    response_by?: string | null;
+    pm_response_time?: string | null;
+    pm_response_by?: string | null;
+}
 
 interface Order {
     id: number;
     nama_project: string;
     company_name: string;
     customer_name: string;
+    survey_ulang?: SurveyUlangInfo | null;
+    surveyUlang?: SurveyUlangInfo | null;
 }
 
 interface GambarKerjaFile {
@@ -53,6 +70,13 @@ export default function GambarKerjaIndex({ items }: Props) {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('semua');
     const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
+    const [focusedOrderId, setFocusedOrderId] = useState<number | null>(() => {
+        if (typeof window !== 'undefined') {
+            const param = new URLSearchParams(window.location.search).get('order_id');
+            return param ? Number(param) : null;
+        }
+        return null;
+    });
     // Dual task response state
     const [taskResponses, setTaskResponses] = useState<
         Record<number, { regular?: any; marketing?: any }>
@@ -63,6 +87,12 @@ export default function GambarKerjaIndex({ items }: Props) {
         isMarketing: boolean;
         taskResponse: any;
     } | null>(null);
+    const [selectedSurveyModal, setSelectedSurveyModal] = useState<{
+        orderName: string;
+        customerName: string;
+        survey: SurveyUlangInfo;
+    } | null>(null);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
 
     const { auth } = usePage<{
         auth: { user: { isKepalaMarketing: boolean } };
@@ -145,7 +175,19 @@ export default function GambarKerjaIndex({ items }: Props) {
         [items]
     );
 
+    useEffect(() => {
+        if (focusedOrderId) {
+            const target = items.find((i) => i.order?.id === focusedOrderId);
+            if (target) {
+                setWorkTab(target.status === 'approved' ? 'sudah' : 'belum');
+            }
+        }
+    }, [focusedOrderId, items]);
+
     const filteredItems = items.filter((item) => {
+        if (focusedOrderId && item.order?.id !== focusedOrderId) {
+            return false;
+        }
         const isCompleted = item.status === 'approved';
         const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
         if (!matchesWorkTab) return false;
@@ -317,6 +359,36 @@ export default function GambarKerjaIndex({ items }: Props) {
                     </div>
                 </div>
 
+                {/* Focused Order Detail Banner */}
+                {focusedOrderId && (
+                    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-indigo-200 bg-indigo-50/90 px-5 py-3.5 shadow-sm">
+                        <div className="flex items-center gap-3">
+                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-600 text-xs font-bold text-white">
+                                #{focusedOrderId}
+                            </span>
+                            <div>
+                                <p className="text-sm font-bold text-indigo-950">
+                                    Menampilkan Detail Gambar Kerja:{' '}
+                                    {items.find((i) => i.order?.id === focusedOrderId)?.order?.nama_project || `Order #${focusedOrderId}`}
+                                </p>
+                                <p className="text-xs text-indigo-700">
+                                    Detail gambar kerja proyek telah dibuka otomatis dari notifikasi.
+                               </p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setFocusedOrderId(null);
+                                window.history.replaceState({}, '', window.location.pathname);
+                            }}
+                            className="rounded-xl border border-indigo-300 bg-white px-3.5 py-2 text-xs font-semibold text-indigo-800 shadow-sm transition-colors hover:bg-indigo-100"
+                        >
+                            Tampilkan Semua Proyek
+                        </button>
+                    </div>
+                )}
+
                 {/* Work Status Tabs */}
                 <WorkStatusTabs
                     activeTab={workTab}
@@ -370,6 +442,7 @@ export default function GambarKerjaIndex({ items }: Props) {
                         <thead className="border-b border-slate-200 bg-[#f8fafc] text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                             <tr>
                                 <th className="px-5 py-4">Project / Client Info</th>
+                                <th className="px-5 py-4">Catatan Survey Ulang</th>
                                 <th className="px-5 py-4">Progress & Files</th>
                                 <th className="px-5 py-4">Deadline Info</th>
                                 <th className="px-5 py-4 text-right">Actions</th>
@@ -378,7 +451,7 @@ export default function GambarKerjaIndex({ items }: Props) {
                         <tbody className="divide-y divide-slate-100 bg-white">
                             {filteredItems.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4} className="py-12 text-center text-stone-500">
+                                    <td colSpan={5} className="py-12 text-center text-stone-500">
                                         Tidak ada gambar kerja ditemukan.
                                     </td>
                                 </tr>
@@ -387,6 +460,7 @@ export default function GambarKerjaIndex({ items }: Props) {
                                     const orderId = item.order.id;
                                     const taskResponse = taskResponses[orderId]?.regular;
                                     const marketingTaskResponse = taskResponses[orderId]?.marketing;
+                                    const surveyUlang = item.order?.survey_ulang || (item.order as any)?.surveyUlang;
 
                                     return (
                                         <tr key={item.id} className="transition-colors hover:bg-slate-50/50">
@@ -417,6 +491,95 @@ export default function GambarKerjaIndex({ items }: Props) {
                                                         </span>
                                                     )}
                                                 </div>
+                                            </td>
+
+                                            {/* Catatan Survey Ulang */}
+                                            <td className="px-5 py-4 align-top">
+                                                {surveyUlang ? (
+                                                    <div className="max-w-[280px] whitespace-normal">
+                                                        {surveyUlang.catatan || (surveyUlang.temuan && surveyUlang.temuan.length > 0) ? (
+                                                            <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 shadow-xs transition hover:bg-amber-50 hover:border-amber-300">
+                                                                {/* Header */}
+                                                                <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                                                                    <div className="flex items-center gap-1.5 font-bold text-amber-900 text-xs">
+                                                                        <ClipboardList className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                                                                        <span>Catatan Survey</span>
+                                                                    </div>
+                                                                    {((surveyUlang.foto_urls && surveyUlang.foto_urls.length > 0) || (surveyUlang.foto && surveyUlang.foto.length > 0)) && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setSelectedSurveyModal({
+                                                                                orderName: item.order.nama_project,
+                                                                                customerName: item.order.customer_name,
+                                                                                survey: surveyUlang,
+                                                                            })}
+                                                                            className="inline-flex items-center gap-1 rounded bg-amber-200/80 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 hover:bg-amber-300 transition cursor-pointer"
+                                                                            title="Lihat Foto Dokumentasi"
+                                                                        >
+                                                                            <Camera className="w-3 h-3 text-amber-700" />
+                                                                            <span>{(surveyUlang.foto_urls || surveyUlang.foto || []).length} Foto</span>
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* Catatan Body */}
+                                                                {surveyUlang.catatan ? (
+                                                                    <p className="text-xs text-stone-700 whitespace-pre-wrap leading-relaxed line-clamp-3 hover:line-clamp-none transition-all">
+                                                                        {surveyUlang.catatan}
+                                                                    </p>
+                                                                ) : (
+                                                                    <p className="text-xs text-stone-400 italic">Tidak ada catatan umum</p>
+                                                                )}
+
+                                                                {/* Temuan list preview */}
+                                                                {surveyUlang.temuan && surveyUlang.temuan.length > 0 && (
+                                                                    <div className="mt-2 border-t border-amber-200/60 pt-1.5">
+                                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
+                                                                            Temuan Lapangan:
+                                                                        </span>
+                                                                        <ul className="mt-1 space-y-0.5 text-[11px] text-stone-600">
+                                                                            {surveyUlang.temuan.slice(0, 2).map((t: string, idx: number) => (
+                                                                                <li key={idx} className="flex items-start gap-1">
+                                                                                    <span className="text-amber-500 font-bold">•</span>
+                                                                                    <span className="truncate">{t}</span>
+                                                                                </li>
+                                                                            ))}
+                                                                            {surveyUlang.temuan.length > 2 && (
+                                                                                <li className="text-[10px] text-amber-700 font-medium">
+                                                                                    +{surveyUlang.temuan.length - 2} temuan lainnya...
+                                                                                </li>
+                                                                            )}
+                                                                        </ul>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Footer / Surveyor & Modal Trigger */}
+                                                                <div className="mt-2.5 flex items-center justify-between border-t border-amber-200/60 pt-1.5 text-[10px] text-amber-700">
+                                                                    <span className="truncate">
+                                                                        Oleh: <strong className="font-semibold text-stone-700">{surveyUlang.survey_by || '-'}</strong>
+                                                                    </span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setSelectedSurveyModal({
+                                                                            orderName: item.order.nama_project,
+                                                                            customerName: item.order.customer_name,
+                                                                            survey: surveyUlang,
+                                                                        })}
+                                                                        className="font-bold text-amber-800 hover:text-amber-950 underline hover:no-underline ml-2 flex-shrink-0 cursor-pointer"
+                                                                    >
+                                                                        Detail »
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="rounded-lg border border-dashed border-stone-200 bg-stone-50/50 p-2.5 text-xs text-stone-400 italic">
+                                                                Belum ada catatan survey
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs text-stone-400 italic">-</span>
+                                                )}
                                             </td>
 
                                             {/* Progress & Files */}
@@ -559,11 +722,47 @@ export default function GambarKerjaIndex({ items }: Props) {
 
                 {/* ================= UPLOAD MODAL ================= */}
                 {showUploadModal && selectedItem && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-                            <h2 className="mb-3 text-lg font-bold">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                        <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+                            <h2 className="mb-1 text-lg font-bold text-stone-900">
                                 Upload Gambar Kerja
                             </h2>
+                            <p className="text-xs text-stone-500 mb-4">
+                                Project: <strong className="text-stone-700">{selectedItem.order.nama_project}</strong> ({selectedItem.order.customer_name})
+                            </p>
+
+                            {/* Catatan Survey Ulang Reminder */}
+                            {(() => {
+                                const su = selectedItem.order?.survey_ulang || (selectedItem.order as any)?.surveyUlang;
+                                if (!su || (!su.catatan && (!su.temuan || su.temuan.length === 0))) return null;
+                                return (
+                                    <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-900 max-h-48 overflow-y-auto">
+                                        <div className="flex items-center gap-1.5 font-bold text-amber-800 mb-1.5">
+                                            <ClipboardList className="w-4 h-4 text-amber-600" />
+                                            <span>Catatan dari Survey Ulang:</span>
+                                        </div>
+                                        {su.catatan && (
+                                            <p className="whitespace-pre-wrap text-stone-700 leading-relaxed mb-2">
+                                                {su.catatan}
+                                            </p>
+                                        )}
+                                        {su.temuan && su.temuan.length > 0 && (
+                                            <div className="border-t border-amber-200/60 pt-1.5">
+                                                <span className="font-semibold text-amber-800 text-[11px]">Temuan Lapangan:</span>
+                                                <ul className="list-disc list-inside mt-0.5 space-y-0.5 text-stone-600 text-[11px]">
+                                                    {su.temuan.map((t: string, idx: number) => (
+                                                        <li key={idx}>{t}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                        <div className="mt-2 text-[10px] text-amber-700">
+                                            Survey oleh: <strong>{su.survey_by || '-'}</strong>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
                             <input
                                 type="file"
                                 multiple
@@ -575,11 +774,12 @@ export default function GambarKerjaIndex({ items }: Props) {
                                             : [],
                                     )
                                 }
+                                className="w-full text-xs text-stone-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
                             />
-                            <div className="mt-4 flex gap-2">
+                            <div className="mt-5 flex gap-2">
                                 <button
                                     onClick={() => setShowUploadModal(false)}
-                                    className="flex-1 rounded border py-2"
+                                    className="flex-1 rounded-xl border border-stone-200 py-2 text-xs font-semibold text-stone-600 hover:bg-stone-50"
                                 >
                                     Batal
                                 </button>
@@ -588,11 +788,166 @@ export default function GambarKerjaIndex({ items }: Props) {
                                     disabled={
                                         loading || uploadFiles.length === 0
                                     }
-                                    className="flex-1 rounded bg-indigo-600 py-2 text-white"
+                                    className="flex-1 rounded-xl bg-indigo-600 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
                                 >
-                                    Upload
+                                    {loading ? 'Mengupload...' : 'Upload File'}
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ================= DETAIL SURVEY ULANG MODAL ================= */}
+                {selectedSurveyModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                        <div className="w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
+                            {/* Modal Header */}
+                            <div className="flex items-center justify-between border-b border-stone-100 px-6 py-4 bg-amber-50/60">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500 text-white shadow-xs">
+                                        <ClipboardList className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-base font-bold text-stone-900">
+                                            Detail Catatan Survey Ulang
+                                        </h3>
+                                        <p className="text-xs text-stone-500">
+                                            {selectedSurveyModal.orderName} • {selectedSurveyModal.customerName}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedSurveyModal(null)}
+                                    className="rounded-lg p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Modal Body */}
+                            <div className="overflow-y-auto p-6 space-y-4">
+                                {/* Catatan Umum */}
+                                <div>
+                                    <h4 className="text-xs font-bold text-stone-800 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                                        <FileText className="w-4 h-4 text-amber-600" />
+                                        Catatan Umum
+                                    </h4>
+                                    <div className="rounded-xl border border-stone-200 bg-stone-50 p-3.5 text-xs text-stone-700 whitespace-pre-wrap leading-relaxed">
+                                        {selectedSurveyModal.survey.catatan || (
+                                            <span className="text-stone-400 italic">Tidak ada catatan umum.</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Temuan Lapangan */}
+                                <div>
+                                    <h4 className="text-xs font-bold text-stone-800 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                                        <ClipboardList className="w-4 h-4 text-amber-600" />
+                                        Temuan Lapangan
+                                    </h4>
+                                    {selectedSurveyModal.survey.temuan && selectedSurveyModal.survey.temuan.length > 0 ? (
+                                        <div className="rounded-xl border border-stone-200 bg-stone-50 p-3.5">
+                                            <ul className="space-y-1.5 text-xs text-stone-700">
+                                                {selectedSurveyModal.survey.temuan.map((t, idx) => (
+                                                    <li key={idx} className="flex items-start gap-2">
+                                                        <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-700">
+                                                            {idx + 1}
+                                                        </span>
+                                                        <span className="leading-relaxed mt-0.5">{t}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs text-stone-400 italic px-1">Tidak ada temuan lapangan.</p>
+                                    )}
+                                </div>
+
+                                {/* Foto Dokumentasi */}
+                                {((selectedSurveyModal.survey.foto_urls && selectedSurveyModal.survey.foto_urls.length > 0) ||
+                                  (selectedSurveyModal.survey.foto && selectedSurveyModal.survey.foto.length > 0)) && (
+                                    <div>
+                                        <h4 className="text-xs font-bold text-stone-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                            <Camera className="w-4 h-4 text-amber-600" />
+                                            Foto Dokumentasi ({((selectedSurveyModal.survey.foto_urls || selectedSurveyModal.survey.foto) || []).length})
+                                        </h4>
+                                        <div className="grid grid-cols-3 gap-2.5">
+                                            {((selectedSurveyModal.survey.foto_urls || selectedSurveyModal.survey.foto) || []).map((img, idx) => {
+                                                const url = img.startsWith('http') || img.startsWith('/storage') ? img : `/storage/${img}`;
+                                                return (
+                                                    <div
+                                                        key={idx}
+                                                        onClick={() => setPreviewImage(url)}
+                                                        className="group relative aspect-video cursor-pointer overflow-hidden rounded-lg border border-stone-200 bg-stone-100 hover:shadow-md transition"
+                                                    >
+                                                        <img
+                                                            src={url}
+                                                            alt={`Dokumentasi ${idx + 1}`}
+                                                            className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                                                        />
+                                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center transition">
+                                                            <Eye className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition" />
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Meta Info */}
+                                <div className="rounded-xl border border-stone-100 bg-stone-50/80 p-3 text-[11px] text-stone-600 flex flex-wrap items-center justify-between gap-2">
+                                    <span className="flex items-center gap-1.5">
+                                        <User className="w-3.5 h-3.5 text-stone-400" />
+                                        Surveyor: <strong className="text-stone-800">{selectedSurveyModal.survey.survey_by || '-'}</strong>
+                                    </span>
+                                    {selectedSurveyModal.survey.survey_time && (
+                                        <span className="flex items-center gap-1.5">
+                                            <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                                            {new Date(selectedSurveyModal.survey.survey_time).toLocaleString('id-ID', {
+                                                day: 'numeric',
+                                                month: 'short',
+                                                year: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                            })}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="border-t border-stone-100 px-6 py-3 bg-stone-50 flex justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedSurveyModal(null)}
+                                    className="rounded-xl bg-stone-200 px-4 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-300 transition"
+                                >
+                                    Tutup
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Full Image Preview Modal */}
+                {previewImage && (
+                    <div
+                        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4"
+                        onClick={() => setPreviewImage(null)}
+                    >
+                        <div className="relative max-w-4xl max-h-[90vh]">
+                            <img
+                                src={previewImage}
+                                alt="Preview"
+                                className="max-h-[90vh] max-w-full rounded-lg object-contain shadow-2xl"
+                            />
+                            <button
+                                onClick={() => setPreviewImage(null)}
+                                className="absolute top-2 right-2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/90 transition"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
                     </div>
                 )}

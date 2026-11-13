@@ -46,6 +46,13 @@ export default function MeetingVendorIndex({
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('semua');
     const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
+    const [focusedOrderId, setFocusedOrderId] = useState<number | null>(() => {
+        if (typeof window !== 'undefined') {
+            const param = new URLSearchParams(window.location.search).get('order_id');
+            return param ? Number(param) : null;
+        }
+        return null;
+    });
     const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
     const [showScheduleModal, setShowScheduleModal] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -144,7 +151,23 @@ export default function MeetingVendorIndex({
         [items]
     );
 
+    useEffect(() => {
+        if (focusedOrderId) {
+            const target = items.find((i) => i.id === focusedOrderId);
+            if (target) {
+                const isScheduled = target.status_meeting === 'scheduled';
+                setWorkTab(isScheduled ? 'sudah' : 'belum');
+                if (!isScheduled && canSchedule) {
+                    openScheduleModal(target);
+                }
+            }
+        }
+    }, [focusedOrderId, items]);
+
     const filteredItems = items.filter((item) => {
+        if (focusedOrderId && item.id !== focusedOrderId) {
+            return false;
+        }
         const isCompleted = item.status_meeting === 'scheduled';
         const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
         if (!matchesWorkTab) return false;
@@ -291,6 +314,36 @@ export default function MeetingVendorIndex({
                         </div>
                     </div>
                 </div>
+
+                {/* Focused Order Detail Banner */}
+                {focusedOrderId && (
+                    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-blue-50/90 px-5 py-3.5 shadow-sm">
+                        <div className="flex items-center gap-3">
+                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-xs font-bold text-white">
+                                #{focusedOrderId}
+                            </span>
+                            <div>
+                                <p className="text-sm font-bold text-blue-950">
+                                    Menampilkan Detail Jadwal Meeting Vendor:{' '}
+                                    {items.find((i) => i.id === focusedOrderId)?.nama_project || `Order #${focusedOrderId}`}
+                                </p>
+                                <p className="text-xs text-blue-700">
+                                    Detail meeting vendor proyek telah dibuka otomatis dari notifikasi.
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setFocusedOrderId(null);
+                                window.history.replaceState({}, '', window.location.pathname);
+                            }}
+                            className="rounded-xl border border-blue-300 bg-white px-3.5 py-2 text-xs font-semibold text-blue-900 shadow-sm transition-colors hover:bg-blue-100"
+                        >
+                            Tampilkan Semua Proyek
+                        </button>
+                    </div>
+                )}
 
                 {/* Work Status Tabs */}
                 <WorkStatusTabs

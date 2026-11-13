@@ -57,6 +57,16 @@ export default function JenisItemCard({
 }: JenisItemCardProps) {
     const isAksesoris = jenisItem.jenis_item_name?.toLowerCase() === 'aksesoris';
     const availableItems = getAvailableItems(jenisItem.jenis_item_id);
+    const sortedJenisItemsList = React.useMemo(
+        () =>
+            [...jenisItemsList].sort((a, b) =>
+                a.nama_jenis_item.localeCompare(b.nama_jenis_item, 'id', {
+                    sensitivity: 'base',
+                    numeric: true,
+                }),
+            ),
+        [jenisItemsList],
+    );
 
     return (
         <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
@@ -70,7 +80,7 @@ export default function JenisItemCard({
                         required
                     >
                         <option value="">-- Pilih Jenis --</option>
-                        {jenisItemsList.map((j) => (
+                        {sortedJenisItemsList.map((j) => (
                             <option key={j.id} value={j.id}>
                                 {j.nama_jenis_item}
                             </option>

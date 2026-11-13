@@ -416,7 +416,8 @@ class CashflowController extends Controller
         $totalDiterima = 0;
         foreach ($tahapanList as $idx => $fase) {
             $pct = $fase['persentase'];
-            $proyeksi = $split['total'] * ($pct / 100);
+            $sisaKontrakCashflow = max(0, $split['total'] - (float) ($commitmentFee?->total_fee ?? 0));
+            $proyeksi = $sisaKontrakCashflow * ($pct / 100);
             $amount = 0;
             $tanggal = null;
 
@@ -428,6 +429,7 @@ class CashflowController extends Controller
             // Add commitment fee to first phase (DP)
             if ($idx === 0) {
                 $amount += $cmFeePaid;
+                $proyeksi += (float) ($commitmentFee?->total_fee ?? 0);
             }
 
             $totalDiterima += $amount;

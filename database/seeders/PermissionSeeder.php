@@ -936,23 +936,23 @@ class PermissionSeeder extends Seeder
                 'group' => 'Operations - Meeting Vendor'
             ],
 
-            // Approval Material
+            // Gambar Kerja Final
             [
                 'name' => 'approval-material.index',
-                'display_name' => 'View Approval Material',
-                'group' => 'Operations - Approval Material'
+                'display_name' => 'View Gambar Kerja Final',
+                'group' => 'Operations - Gambar Kerja Final'
             ],
 
             [
                 'name' => 'approval-material.edit',
-                'display_name' => 'Edit Approval Material',
-                'group' => 'Operations - Approval Material'
+                'display_name' => 'Edit Gambar Kerja Final',
+                'group' => 'Operations - Gambar Kerja Final'
             ],
 
             [
                 'name' => 'approval-material.update',
-                'display_name' => 'Update Approval Material',
-                'group' => 'Operations - Approval Material'
+                'display_name' => 'Update Gambar Kerja Final',
+                'group' => 'Operations - Gambar Kerja Final'
             ],
 
             

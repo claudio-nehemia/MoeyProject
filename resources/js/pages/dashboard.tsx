@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
@@ -467,6 +467,7 @@ export default function Dashboard({
                                     return (
                                     <div 
                                         key={order.id} 
+                                        onClick={() => router.visit(`/order/${order.id}`)}
                                         className={`group p-4 rounded-xl bg-gradient-to-br from-stone-50 to-white border border-stone-200 hover:border-amber-300 hover:shadow-md transition-all cursor-pointer ${mounted ? 'animate-fadeInUp' : 'opacity-0'}`} 
                                         style={{ animationDelay: `${0.5 + index * 0.1}s` }}
                                     >

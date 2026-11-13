@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import { router, Link, Head } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
@@ -329,15 +329,15 @@ export default function Show({ rabVendor }: Props) {
                                 </thead>
                                 <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
                                     {groupedByRuangan.map((ruangan, ruanganIndex) => (
-                                        <>
-                                            <tr key={`ruangan-header-${ruanganIndex}`} className="bg-gradient-to-r from-cyan-500 to-cyan-600">
+                                        <Fragment key={`ruangan-group-${ruanganIndex}`}>
+                                            <tr className="bg-gradient-to-r from-cyan-500 to-cyan-600">
                                                 <td colSpan={14} className="px-4 py-3">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-2">
                                                             <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                                                             </svg>
-                                                            <span className="text-lg font-bold text-white">{ruangan.nama_ruangan}</span>
+                                                            <span className="text-lg font-bold text-white">Ruangan: {ruangan.nama_ruangan}</span>
                                                             <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs text-white">
                                                                 {ruangan.produks.length} produk
                                                             </span>
@@ -380,129 +380,142 @@ export default function Show({ rabVendor }: Props) {
                                                 );
                                                 const totalNonAksesoris = (Number(produk.harga_akhir) || 0) - totalAksesoris;
 
-                                                const maxRows = Math.max(
-                                                    bahanBakuNames.length,
-                                                    finishingDalamItems.length,
-                                                    finishingLuarItems.length,
-                                                    produk.aksesoris.length,
-                                                    1,
-                                                );
+                                                const maxRows = Math.max(produk.aksesoris.length, 1);
+                                                const rowBgClass = produkIndex % 2 === 0
+                                                    ? "bg-white dark:bg-gray-800"
+                                                    : "bg-blue-50/25 dark:bg-blue-900/10";
 
                                                 return (
-                                                    <>
+                                                    <Fragment key={`produk-group-${produk.id}`}>
                                                         {Array.from({ length: maxRows }).map((_, rowIndex) => (
                                                             <tr
                                                                 key={`${produk.id}-${rowIndex}`}
-                                                                className={rowIndex === 0 ? 'bg-blue-50 dark:bg-blue-900/10' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}
+                                                                className={`${rowBgClass} hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-colors`}
                                                             >
                                                                 {/* Produk Column */}
                                                                 {rowIndex === 0 && (
-                                                                    <td rowSpan={maxRows} className="px-4 py-3 align-top border-r border-gray-200 dark:border-gray-700">
-                                                                        <div className="font-bold text-gray-900 dark:text-gray-100">
-                                                                            {produkIndex + 1}. {produk.nama_produk}
-                                                                        </div>
-                                                                        {produk.panjang && produk.lebar && produk.tinggi && (
-                                                                            <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                                                                                {produk.panjang} × {produk.lebar} × {produk.tinggi} m
+                                                                    <>
+                                                                        <td rowSpan={maxRows} className="px-4 py-3 align-top border-r border-gray-200 dark:border-gray-700">
+                                                                            <div className="font-bold text-gray-900 dark:text-gray-100">
+                                                                                {produkIndex + 1}. {produk.nama_produk}
                                                                             </div>
-                                                                        )}
-                                                                    </td>
-                                                                )}
+                                                                            {produk.panjang && produk.lebar && produk.tinggi && (
+                                                                                <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                                                                                    {produk.panjang} × {produk.lebar} × {produk.tinggi} m
+                                                                                </div>
+                                                                            )}
+                                                                        </td>
 
-                                                                
+                                                                        {/* Bahan Baku Column - Names only */}
+                                                                        <td rowSpan={maxRows} className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
+                                                                            {bahanBakuNames.length > 0 ? (
+                                                                                bahanBakuNames.map((name, bIdx) => (
+                                                                                    <div key={`bb-${produk.id}-${bIdx}`}>• {name}</div>
+                                                                                ))
+                                                                            ) : (
+                                                                                <span className="text-gray-400">-</span>
+                                                                            )}
+                                                                        </td>
 
-                                                                {/* Bahan Baku Column - Names only */}
-                                                                <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
-                                                                    {bahanBakuNames[rowIndex] && <div>• {bahanBakuNames[rowIndex]}</div>}
-                                                                </td>
+                                                                        {/* Finishing Dalam Column */}
+                                                                        <td rowSpan={maxRows} className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
+                                                                            {finishingDalamItems.length > 0 ? (
+                                                                                finishingDalamItems.map((item, fIdx) => (
+                                                                                    <div key={`fd-${produk.id}-${fIdx}`}>• {item.nama}</div>
+                                                                                ))
+                                                                            ) : (
+                                                                                <span className="text-gray-400">-</span>
+                                                                            )}
+                                                                        </td>
 
-                                                                {/* Finishing Dalam Column */}
-                                                                <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
-                                                                    {finishingDalamItems[rowIndex] && <div>• {finishingDalamItems[rowIndex].nama}</div>}
-                                                                </td>
+                                                                        {/* Harga Finishing Dalam Column */}
+                                                                        <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10 border-r border-gray-200 dark:border-gray-700">
+                                                                            {formatCurrency(finishingDalamTotal)}
+                                                                        </td>
 
-                                                                {/* Harga Finishing Dalam Column */}
-                                                                {rowIndex === 0 && (
-                                                                    <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10 border-r border-gray-200 dark:border-gray-700">
-                                                                        {formatCurrency(finishingDalamTotal)}
-                                                                    </td>
-                                                                )}
+                                                                        {/* Finishing Luar Column */}
+                                                                        <td rowSpan={maxRows} className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
+                                                                            {finishingLuarItems.length > 0 ? (
+                                                                                finishingLuarItems.map((item, fIdx) => (
+                                                                                    <div key={`fl-${produk.id}-${fIdx}`}>• {item.nama}</div>
+                                                                                ))
+                                                                            ) : (
+                                                                                <span className="text-gray-400">-</span>
+                                                                            )}
+                                                                        </td>
 
-                                                                {/* Finishing Luar Column */}
-                                                                <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
-                                                                    {finishingLuarItems[rowIndex] && <div>• {finishingLuarItems[rowIndex].nama}</div>}
-                                                                </td>
+                                                                        {/* Harga Finishing Luar Column */}
+                                                                        <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10 border-r border-gray-200 dark:border-gray-700">
+                                                                            {formatCurrency(finishingLuarTotal)}
+                                                                        </td>
 
-                                                                {/* Harga Finishing Luar Column */}
-                                                                {rowIndex === 0 && (
-                                                                    <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10 border-r border-gray-200 dark:border-gray-700">
-                                                                        {formatCurrency(finishingLuarTotal)}
-                                                                    </td>
-                                                                )}
+                                                                        {/* Qty Column */}
+                                                                        <td rowSpan={maxRows} className="px-4 py-3 text-center align-top text-sm font-medium text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
+                                                                            {produk.qty_produk}
+                                                                        </td>
 
-                                                                {/* Qty Column */}
-                                                                {rowIndex === 0 && (
-                                                                    <td rowSpan={maxRows} className="px-4 py-3 text-center align-top text-sm font-medium text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
-                                                                        {produk.qty_produk}
-                                                                    </td>
-                                                                )}
+                                                                        {/* Harga Dasar Column */}
+                                                                        <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10 border-r border-gray-200 dark:border-gray-700">
+                                                                            {formatCurrency(produk.harga_dasar || 0)}
+                                                                        </td>
 
-                                                                {/* Harga Dasar Column */}
-                                                                {rowIndex === 0 && (
-                                                                    <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10 border-r border-gray-200 dark:border-gray-700">
-                                                                        {formatCurrency(produk.harga_dasar || 0)}
-                                                                    </td>
-                                                                )}
-
-                                                                {/* Total Non-Aksesoris Column */}
-                                                                {rowIndex === 0 && (
-                                                                    <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-bold text-purple-700 dark:text-purple-400 bg-purple-50/50 dark:bg-purple-900/10 border-r border-gray-200 dark:border-gray-700">
-                                                                        {formatCurrency(totalNonAksesoris)}
-                                                                    </td>
+                                                                        {/* Total Non-Aksesoris Column */}
+                                                                        <td rowSpan={maxRows} className="px-4 py-3 align-top text-right text-sm font-bold text-purple-700 dark:text-purple-400 bg-purple-50/50 dark:bg-purple-900/10 border-r border-gray-200 dark:border-gray-700">
+                                                                            {formatCurrency(totalNonAksesoris)}
+                                                                        </td>
+                                                                    </>
                                                                 )}
 
                                                                 {/* Aksesoris Column */}
                                                                 <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
-                                                                    {produk.aksesoris[rowIndex] && (
-                                                        <div>• {produk.aksesoris[rowIndex].nama_aksesoris}</div>
-                                                    )}
-                                                </td>
+                                                                    {produk.aksesoris[rowIndex] ? (
+                                                                        <div>• {produk.aksesoris[rowIndex].nama_aksesoris}</div>
+                                                                    ) : (
+                                                                        <span className="text-gray-400">-</span>
+                                                                    )}
+                                                                </td>
 
-                                                {/* QTY Aksesoris Column */}
-                                                <td className="px-4 py-2 text-sm text-center text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
-                                                    {produk.aksesoris[rowIndex] && (
-                                                        <div>{produk.aksesoris[rowIndex].qty_aksesoris}</div>
-                                                    )}
-                                                </td>
+                                                                {/* QTY Aksesoris Column */}
+                                                                <td className="px-4 py-2 text-sm text-center text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
+                                                                    {produk.aksesoris[rowIndex] ? (
+                                                                        <div>{produk.aksesoris[rowIndex].qty_aksesoris}</div>
+                                                                    ) : (
+                                                                        <span className="text-gray-400">-</span>
+                                                                    )}
+                                                                </td>
 
-                                                {/* Harga Satuan Aksesoris Column */}
-                                                <td className="px-4 py-2 text-sm text-right text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
-                                                    {produk.aksesoris[rowIndex] && (
-                                                        <div>{formatCurrency(Number(produk.aksesoris[rowIndex].harga_satuan_aksesoris) || 0)}</div>
-                                                    )}
-                                                </td>
+                                                                {/* Harga Satuan Aksesoris Column */}
+                                                                <td className="px-4 py-2 text-sm text-right text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">
+                                                                    {produk.aksesoris[rowIndex] ? (
+                                                                        <div>{formatCurrency(Number(produk.aksesoris[rowIndex].harga_satuan_aksesoris) || 0)}</div>
+                                                                    ) : (
+                                                                        <span className="text-gray-400">-</span>
+                                                                    )}
+                                                                </td>
 
-                                                {/* Total Harga Aksesoris Column */}
-                                                <td className="px-4 py-2 text-sm text-right text-orange-700 dark:text-orange-400 bg-orange-50/50 dark:bg-orange-900/10 border-r border-gray-200 dark:border-gray-700">
-                                                    {produk.aksesoris[rowIndex] && (
-                                                        <div className="font-medium">{formatCurrency(Number(produk.aksesoris[rowIndex].harga_total) || 0)}</div>
-                                                    )}
-                                                </td>
+                                                                {/* Total Harga Aksesoris Column */}
+                                                                <td className="px-4 py-2 text-sm text-right text-orange-700 dark:text-orange-400 bg-orange-50/50 dark:bg-orange-900/10 border-r border-gray-200 dark:border-gray-700">
+                                                                    {produk.aksesoris[rowIndex] ? (
+                                                                        <div className="font-medium">{formatCurrency(Number(produk.aksesoris[rowIndex].harga_total) || 0)}</div>
+                                                                    ) : (
+                                                                        <span className="text-gray-400">-</span>
+                                                                    )}
+                                                                </td>
 
-                                                {/* Grand Total Column */}
-                                                {rowIndex === 0 && (
-                                                    <td rowSpan={maxRows} className="bg-gradient-to-b from-green-50 to-green-100 px-4 py-3 align-top text-right dark:from-green-900/20 dark:to-green-900/30">
-                                                        <div className="text-xl font-bold text-green-700 dark:text-green-400">
-                                                            {formatCurrency(produk.harga_akhir)}
-                                                        </div>
-                                                    </td>
-                                                )}
+                                                                {/* Grand Total Column */}
+                                                                {rowIndex === 0 && (
+                                                                    <td rowSpan={maxRows} className="bg-gradient-to-b from-green-50 to-green-100 px-4 py-3 align-top text-right dark:from-green-900/20 dark:to-green-900/30">
+                                                                        <div className="text-xl font-bold text-green-700 dark:text-green-400">
+                                                                            {formatCurrency(produk.harga_akhir)}
+                                                                        </div>
+                                                                    </td>
+                                                                )}
                                                             </tr>
                                                         ))}
-                                                    </>
+                                                    </Fragment>
                                                 );
                                             })}
-                                        </>
+                                        </Fragment>
                                     ))}
                                 </tbody>
                             </table>

@@ -654,7 +654,7 @@ class KontrakController extends Controller
 
         $this->addArticleTitle($section, 'Pasal 4', 'JANGKA WAKTU PELAKSANAAN');
         $section->addText('1. Pelaksanaan pada Pasal 2 diatas dimulai setelah Surat Perjanjian ini ditandatangani oleh kedua belah pihak, Gambar kerja & Persetujuan Material sudah disetujui oleh PIHAK KEDUA dan area kerja dinyatakan sudah siap oleh PARA PIHAK.');
-        $section->addText('2. Terhitung pelaksanaan pekerjaan dimulai H+7, setelah Gambar kerja & tanda tangan approval material oleh PIHAK KEDUA.');
+        $section->addText('2. Terhitung pelaksanaan pekerjaan dimulai H+7, setelah Gambar kerja & tanda tangan gambar kerja final oleh PIHAK KEDUA.');
         $durasiKontrak = $contractData['durasi_kontrak'] ?? ($kontrak->durasi_kontrak ?? 90);
         $durasiTerbilang = $contractData['durasi_terbilang'] ?? ucwords(terbilang((int)$durasiKontrak));
         $section->addText('3. Pelaksanaan pekerjaan, harus sudah selesai 100% paling lambat ' . $durasiKontrak . ' (' . $durasiTerbilang . ' Hari Kerja) setelah pekerjaan dimulai ( sesuai poin pertama ).');
@@ -685,7 +685,7 @@ class KontrakController extends Controller
         $section->addTextBreak(1);
 
         $this->addArticleTitle($section, 'Pasal 7', 'CARA PEMBAYARAN');
-        $section->addText('Pembayaran dilaksanakan sesuai termin pembayaran dan sesuai dengan prestasi pekerjaan yang telah disepakati dalam proses terhadap kontrak dengan ketentuan sebagai berikut :');
+        $section->addText('Pembayaran dilaksanakan sesuai termin pembayaran yang dihitung dari sisa nilai kontrak setelah dikurangi commitment fee dan sesuai dengan prestasi pekerjaan yang telah disepakati dalam proses terhadap kontrak dengan ketentuan sebagai berikut :');
         
         // ===== FIX #5: Better handling for empty termin tahapan =====
         if ($kontrak->termin && $kontrak->termin->tahapan && count($kontrak->termin->tahapan) > 0) {
@@ -695,13 +695,13 @@ class KontrakController extends Controller
                 
                 if ($persentase > 0) {
                     $tahapText = !empty($text) ? ' (' . $text . ')' : '';
-                    $section->addText(($idx + 1) . '. Pembayaran ke-' . ($idx + 1) . ' sebesar ' . $persentase . '% dari nilai kontrak' . $tahapText . '.');
+                    $section->addText(($idx + 1) . '. Pembayaran ke-' . ($idx + 1) . ' sebesar ' . $persentase . '% dari sisa nilai kontrak setelah dikurangi commitment fee' . $tahapText . '.');
                 }
             }
         } else {
-            $section->addText('1. Pembayaran I (Pertama) sebesar 50% dari nilai kontrak yang berlaku sebagai Down Payment.');
-            $section->addText('2. Pembayaran II (Kedua) sebesar 40% dari nilai kontrak, dibayarkan paling lambat 3 (tiga) hari setelah pengiriman barang.');
-            $section->addText('3. Pembayaran III (Ketiga) sebesar 10 % dari nilai kontrak yang akan dibayarkan paling lambat 3 (tiga) hari setelah serah terima.');
+            $section->addText('1. Pembayaran I (Pertama) sebesar 50% dari sisa nilai kontrak setelah dikurangi commitment fee yang berlaku sebagai Down Payment.');
+            $section->addText('2. Pembayaran II (Kedua) sebesar 40% dari sisa nilai kontrak setelah dikurangi commitment fee, dibayarkan paling lambat 3 (tiga) hari setelah pengiriman barang.');
+            $section->addText('3. Pembayaran III (Ketiga) sebesar 10 % dari sisa nilai kontrak setelah dikurangi commitment fee yang akan dibayarkan paling lambat 3 (tiga) hari setelah serah terima.');
         }
         $section->addText('4. Jika ada penambahan pekerjaan/adendum, maka pembayaran nilai pekerjaan tambah dibayarkan lunas (tanpa termin pembayaran), sebelum pekerjaan tambah dimulai.');
         $section->addText('5. Segala bentuk pembayaran yang dilakukan diluar rekening yang tercantum di invoice, PIHAK PERTAMA tidak bertanggung jawab.');
@@ -749,8 +749,11 @@ class KontrakController extends Controller
             $dpText = $kontrak->termin->tahapan[0]['text'] ?? ('DP ' . $dpPersentase . '%');
         }
 
+        $fee = $itemPekerjaan->moodboard->commitmentFee;
+        $commitmentFeeAmount = (float) ($fee?->total_fee ?? 0);
         $nominalKontrak = (float) ($contractData['nominal_kontrak'] ?? 0);
-        $dpNominal = $nominalKontrak * ($dpPersentase / 100);
+        $sisaKontrak = max(0, $nominalKontrak - $commitmentFeeAmount);
+        $dpNominal = $sisaKontrak * ($dpPersentase / 100);
         $dpTerbilangValue = terbilang((int)$dpNominal) . ' Rupiah';
         $totalTerbilangValue = terbilang((int)$nominalKontrak) . ' Rupiah';
 
@@ -775,7 +778,7 @@ class KontrakController extends Controller
         $textRun->addText($contractData['project']['nama'] ?? '', ['bold' => true]);
         $textRun->addText(', bersama ini Kami bermaksud mengajukan permohonan pembayaran ' . $dpText . ' sebesar ');
         $textRun->addText('Rp. ' . number_format($dpNominal, 0, ',', '.') . ',-', ['bold' => true]);
-        $textRun->addText(' (' . $dpTerbilangValue . ') dari jumlah harga yang disetujui yaitu ');
+        $textRun->addText(' (' . $dpTerbilangValue . ') yang dihitung dari sisa nilai kontrak setelah dikurangi commitment fee (sebesar Rp. ' . number_format($sisaKontrak, 0, ',', '.') . ',-) dari jumlah harga yang disetujui yaitu ');
         $textRun->addText('Rp. ' . number_format($nominalKontrak, 0, ',', '.') . ',-', ['bold' => true]);
         $textRun->addText(' (' . $totalTerbilangValue . ').');
 

@@ -115,6 +115,30 @@ class NotificationApiController extends Controller
 
         $notifications = $query->paginate($perPage);
 
+        $user = auth()->user();
+        $isKepalaMarketing = $user && $user->role && $user->role->nama_role === 'Kepala Marketing';
+        $webNotifController = app(\App\Http\Controllers\NotificationController::class);
+
+        $notifications->getCollection()->transform(function ($notification) use ($isKepalaMarketing, $user, $webNotifController) {
+            $canMarketingResponse = false;
+            if ($isKepalaMarketing && $notification->order) {
+                $canMarketingResponse = $notification->order
+                    ->users()
+                    ->whereHas('role', fn($q) => $q->where('nama_role', 'Kepala Marketing'))
+                    ->where('users.id', $user?->id)
+                    ->exists();
+            }
+
+            $notification->can_marketing_response = $canMarketingResponse;
+            $notification->can_update_data = $webNotifController->canUserUpdateStageData(
+                $user,
+                $notification->type,
+                is_array($notification->data) ? $notification->data : []
+            );
+
+            return $notification;
+        });
+
         // 🔥 DEBUG: Log workplan data for workplan_request notifications
         foreach ($notifications->items() as $notif) {
             if ($notif->type === Notification::TYPE_WORKPLAN_REQUEST && $notif->order) {
@@ -228,6 +252,22 @@ class NotificationApiController extends Controller
             $this->notificationService->markAsRead($id, auth()->id());
 
             $order = $notification->order;
+            $user = auth()->user();
+            $webNotifController = app(\App\Http\Controllers\NotificationController::class);
+            $canUpdateData = $webNotifController->canUserUpdateStageData(
+                $user,
+                $notification->type,
+                is_array($notification->data) ? $notification->data : []
+            );
+
+            if (!$canUpdateData) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Menampilkan detail proyek.',
+                    'action' => 'order_detail',
+                    'data' => ['order_id' => $order?->id],
+                ]);
+            }
 
             // Handle different notification types
             switch ($notification->type) {
@@ -798,7 +838,7 @@ class NotificationApiController extends Controller
         if ($itemPekerjaan->approval_rab_response_by) {
             return [
                 'success' => true,
-                'message' => 'Approval material sudah pernah direspon.',
+                'message' => 'Gambar kerja final sudah pernah direspon.',
                 'action' => 'view',
                 'data' => ['order_id' => $order->id],
             ];
@@ -814,7 +854,7 @@ class NotificationApiController extends Controller
 
         return [
             'success' => true,
-            'message' => 'Response berhasil dicatat. Silakan kelola approval material.',
+            'message' => 'Response berhasil dicatat. Silakan kelola gambar kerja final.',
             'action' => 'view',
             'data' => ['order_id' => $order->id],
         ];
@@ -1261,7 +1301,7 @@ class NotificationApiController extends Controller
                 break;
 
             case Notification::TYPE_APPROVAL_MATERIAL_REQUEST:
-                \Log::info("Checking Approval Material for PM response");
+                \Log::info("Checking Gambar Kerja Final for PM response");
                 $itemPekerjaan = $order->itemPekerjaans->first() ?? null;
                 if ($itemPekerjaan) {
                     $itemPekerjaan->update([
@@ -1273,7 +1313,7 @@ class NotificationApiController extends Controller
                 $this->markMarketingTaskResponseDone($order->id, 'approval_material');
                 return [
                     'success' => true,
-                    'message' => 'PM Response recorded successfully for Approval Material.',
+                    'message' => 'PM Response recorded successfully for Gambar Kerja Final.',
                 ];
                 break;
 

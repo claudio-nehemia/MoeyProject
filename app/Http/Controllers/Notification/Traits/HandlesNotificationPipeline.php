@@ -38,7 +38,7 @@ trait HandlesNotificationPipeline
                 ]);
             }
         } else {
-            SurveyResults::create([
+            $survey = SurveyResults::create([
                 'order_id' => $order->id,
                 'response_time' => now(),
                 'response_by' => auth()->user()->name ?? 'Admin',
@@ -77,8 +77,19 @@ trait HandlesNotificationPipeline
             ]);
         }
 
-        return redirect()->route('survey-results.index')
-            ->with('success', 'Response recorded. You can now create the survey.');
+        $hasPublishedSurvey = !$survey->is_draft && (
+            !empty($survey->feedback) ||
+            !empty($survey->layout_files) ||
+            !empty($survey->foto_lokasi_files)
+        );
+
+        if ($hasPublishedSurvey) {
+            return redirect()->route('survey-results.show', $survey->id)
+                ->with('success', 'Menampilkan detail hasil survey.');
+        }
+
+        return redirect()->route('survey-results.create', $order->id)
+            ->with('success', 'Response recorded. Silakan isi detail hasil survey.');
     }
 
     /**
@@ -100,6 +111,7 @@ trait HandlesNotificationPipeline
                 'order_id' => $order->id,
                 'response_time' => now(),
                 'response_by' => auth()->user()->name ?? 'Admin',
+                'status' => 'pending',
             ]);
         }
 
@@ -131,8 +143,8 @@ trait HandlesNotificationPipeline
             ]);
         }
 
-        return redirect()->route('moodboard.index')
-            ->with('success', 'Response recorded. You can now create the moodboard.');
+        return redirect()->route('moodboard.index', ['order_id' => $order->id, 'action' => 'upload'])
+            ->with('success', 'Response recorded. Silakan upload file moodboard untuk proyek ini.');
     }
 
     /**
@@ -141,6 +153,11 @@ trait HandlesNotificationPipeline
      */
     private function handleEstimasiRequest($order)
     {
+        if (!$order->moodboard) {
+            return redirect()->route('order.show', $order->id)
+                ->with('error', 'Moodboard belum ada untuk order ini.');
+        }
+
         // Check if estimasi already exists
         if ($order->estimasi) {
             if (!$order->estimasi->response_time) {
@@ -181,8 +198,8 @@ trait HandlesNotificationPipeline
             ]);
         }
 
-        return redirect()->route('estimasi.index')
-            ->with('success', 'Response recorded. You can now create the estimasi.');
+        return redirect()->route('estimasi.index', ['order_id' => $order->id])
+            ->with('success', 'Response recorded. Silakan kelola estimasi untuk proyek ini.');
     }
 
     /**
@@ -191,7 +208,7 @@ trait HandlesNotificationPipeline
      */
     private function handleDesignApproval($order)
     {
-        return redirect()->route('moodboard.index')
+        return redirect()->route('moodboard.index', ['order_id' => $order->id])
             ->with('info', 'Silakan cek desain untuk approval di Moodboard.');
     }
 
@@ -203,7 +220,7 @@ trait HandlesNotificationPipeline
     {
         // Check if moodboard exists
         if (!$order->moodboard) {
-            return redirect()->route('orders.show', $order->id)
+            return redirect()->route('order.show', $order->id)
                 ->with('error', 'Moodboard belum ada untuk order ini.');
         }
 
@@ -252,9 +269,9 @@ trait HandlesNotificationPipeline
             ]);
         }
 
-        // Redirect to commitment fee index to respond
-        return redirect()->route('commitment-fee.index')
-            ->with('success', 'Silakan respond dan isi commitment fee untuk project ini.');
+        // Redirect to commitment fee detail view for this order
+        return redirect()->route('commitment-fee.index', ['order_id' => $order->id])
+            ->with('success', 'Silakan lengkapi commitment fee untuk project ini.');
     }
 
     /**
@@ -265,13 +282,13 @@ trait HandlesNotificationPipeline
     {
         // Check if moodboard exists
         if (!$order->moodboard) {
-            return redirect()->route('orders.show', $order->id)
+            return redirect()->route('order.show', $order->id)
                 ->with('error', 'Moodboard belum ada untuk order ini.');
         }
 
         // Check if final design already uploaded
         if ($order->moodboard->moodboard_final || $order->moodboard->finalFiles->count() > 0) {
-            return redirect()->route('moodboard.index')
+            return redirect()->route('desain-final.index', ['order_id' => $order->id])
                 ->with('info', 'Final design sudah ada untuk project ini.');
         }
 
@@ -308,8 +325,8 @@ trait HandlesNotificationPipeline
             ]);
         }
 
-        // Redirect to moodboard index to upload final design
-        return redirect()->route('desain-final.index')
+        // Redirect to desain final detail view for this order
+        return redirect()->route('desain-final.index', ['order_id' => $order->id, 'action' => 'upload'])
             ->with('success', 'Silakan upload final design untuk project ini.');
     }
 
@@ -319,16 +336,21 @@ trait HandlesNotificationPipeline
      */
     private function handleItemPekerjaanRequest($order)
     {
-        $existingItem = $order->itemPekerjaans->first();
-        if ($existingItem) {
-            if (!$existingItem->response_time) {
-                $existingItem->update([
+        if (!$order->moodboard) {
+            return redirect()->route('order.show', $order->id)
+                ->with('error', 'Moodboard belum ada untuk order ini.');
+        }
+
+        $itemPekerjaan = $order->itemPekerjaans->first();
+        if ($itemPekerjaan) {
+            if (!$itemPekerjaan->response_time) {
+                $itemPekerjaan->update([
                     'response_by' => auth()->user()->name,
                     'response_time' => now(),
                 ]);
             }
         } else {
-            ItemPekerjaan::create([
+            $itemPekerjaan = ItemPekerjaan::create([
                 'moodboard_id' => $order->moodboard->id,
                 'response_by' => auth()->user()->name,
                 'response_time' => now(),
@@ -359,9 +381,17 @@ trait HandlesNotificationPipeline
             ]);
         }
 
-        // Redirect to item pekerjaan page
-        return redirect()->route('item-pekerjaan.index', ['order_id' => $order->id])
-            ->with('success', 'Response recorded. Please manage the item pekerjaan for this order.');
+        if ($itemPekerjaan->produks()->exists()) {
+            if ($itemPekerjaan->is_draft) {
+                return redirect()->route('item-pekerjaan.edit', $itemPekerjaan->id)
+                    ->with('success', 'Response recorded. Silakan lanjutkan pengisian item pekerjaan.');
+            }
+            return redirect()->route('item-pekerjaan.show', $itemPekerjaan->id)
+                ->with('success', 'Menampilkan detail item pekerjaan.');
+        }
+
+        return redirect()->route('item-pekerjaan.create', $itemPekerjaan->id)
+            ->with('success', 'Response recorded. Silakan isi item pekerjaan untuk proyek ini.');
     }
 
     /**
@@ -371,21 +401,22 @@ trait HandlesNotificationPipeline
     private function handleRabInternalRequest($order)
     {
         if (!$order->itemPekerjaans || $order->itemPekerjaans->isEmpty()) {
-            return redirect()->route('item-pekerjaan.index', ['order_id' => $order->id])
+            return redirect()->route('order.show', $order->id)
                 ->with('error', 'Item pekerjaan belum ada untuk order ini. Silakan buat item pekerjaan terlebih dahulu.');
         }
 
-        $existingRab = $order->itemPekerjaans->first()?->rabInternal;
-        if ($existingRab) {
-            if (!$existingRab->response_time) {
-                $existingRab->update([
+        $itemPekerjaan = $order->itemPekerjaans->first();
+        $rabInternal = $itemPekerjaan?->rabInternal;
+        if ($rabInternal) {
+            if (!$rabInternal->response_time) {
+                $rabInternal->update([
                     'response_by' => auth()->user()->name,
                     'response_time' => now(),
                 ]);
             }
         } else {
-            RabInternal::create([
-                'item_pekerjaan_id' => $order->itemPekerjaans->first()->id,
+            $rabInternal = RabInternal::create([
+                'item_pekerjaan_id' => $itemPekerjaan->id,
                 'response_by' => auth()->user()->name,
                 'response_time' => now(),
             ]);
@@ -419,9 +450,13 @@ trait HandlesNotificationPipeline
             ]);
         }
 
-        // Redirect to RAB Internal page
-        return redirect()->route('rab-internal.index', ['order_id' => $order->id])
-            ->with('success', 'Response recorded. Please manage the RAB Internal for this order.');
+        if ($rabInternal->rabProduks()->exists()) {
+            return redirect()->route('rab-internal.show', $rabInternal->id)
+                ->with('success', 'Menampilkan detail RAB Internal.');
+        }
+
+        return redirect()->route('rab-internal.create', $rabInternal->id)
+            ->with('success', 'Response recorded. Silakan isi RAB Internal untuk proyek ini.');
     }
 
     /**
@@ -486,6 +521,66 @@ trait HandlesNotificationPipeline
     }
 
     /**
+     * Ensure the step-1 invoice has calculated termin amount & invoice number so invoice.show renders properly
+     */
+    protected function ensureFirstInvoiceInitialized(ItemPekerjaan $itemPekerjaan, Invoice $invoice): Invoice
+    {
+        if ($invoice->total_amount > 0 && !empty($invoice->invoice_number)) {
+            return $invoice;
+        }
+
+        $itemPekerjaan->loadMissing([
+            'rabKontrak.rabKontrakProduks',
+            'kontrak.termin',
+            'moodboard.commitmentFee',
+        ]);
+
+        $termin = $itemPekerjaan->kontrak?->termin;
+        $tahapan = $termin?->tahapan ?? [];
+        $tahap1 = $tahapan[0] ?? null;
+
+        $hargaKontrak = (float) ($itemPekerjaan->kontrak?->harga_kontrak ?? 0);
+        if ($hargaKontrak <= 0 && $itemPekerjaan->rabKontrak) {
+            $hargaKontrak = (float) $itemPekerjaan->rabKontrak->rabKontrakProduks->sum('harga_akhir');
+        }
+
+        $commitmentFee = $itemPekerjaan->moodboard?->commitmentFee;
+        $commitmentFeeAmount = (float) ($commitmentFee?->total_fee ?? 0);
+        $commitmentFeePaid = $commitmentFee?->payment_status === 'completed';
+        $sisaPembayaran = $commitmentFeePaid ? max(0, $hargaKontrak - $commitmentFeeAmount) : $hargaKontrak;
+
+        $persentase = (float) ($tahap1['persentase'] ?? 100);
+        $terminText = $tahap1['text'] ?? 'Tahap 1';
+        $totalAmount = $sisaPembayaran * ($persentase / 100);
+
+        $invoiceNumber = $invoice->invoice_number;
+        if (empty($invoiceNumber)) {
+            $year = date('Y');
+            $month = date('m');
+            $lastInvoice = Invoice::whereYear('created_at', $year)
+                ->whereMonth('created_at', $month)
+                ->whereNotNull('invoice_number')
+                ->where('invoice_number', '!=', '')
+                ->orderBy('id', 'desc')
+                ->first();
+
+            $sequence = $lastInvoice ? (intval(substr($lastInvoice->invoice_number, -4)) + 1) : 1;
+            $invoiceNumber = sprintf('INV/%s/%s/%04d', $year, $month, $sequence);
+        }
+
+        $invoice->update([
+            'invoice_number' => $invoiceNumber,
+            'termin_step' => $invoice->termin_step ?: 1,
+            'termin_text' => $invoice->termin_text ?: $terminText,
+            'termin_persentase' => $invoice->termin_persentase ?: $persentase,
+            'total_amount' => $invoice->total_amount > 0 ? $invoice->total_amount : $totalAmount,
+            'status' => $invoice->status ?: 'pending',
+        ]);
+
+        return $invoice->fresh();
+    }
+
+    /**
      * Handle invoice request notification
      * CREATES RECORD with response info
      */
@@ -493,31 +588,40 @@ trait HandlesNotificationPipeline
     {
         $itemPekerjaan = $order->itemPekerjaans->first();
         if (!$itemPekerjaan) {
-            return redirect()->route('item-pekerjaan.index', ['order_id' => $order->id])
+            return redirect()->route('order.show', $order->id)
                 ->with('error', 'Item pekerjaan belum ada untuk order ini. Silakan buat item pekerjaan terlebih dahulu.');
         }
 
         // Check if invoice already exists and has response
-        $invoice = $itemPekerjaan->invoices()->first();
+        $invoice = $itemPekerjaan->invoices()->orderBy('termin_step')->first();
         if ($invoice && $invoice->response_time) {
-            return redirect()->route('invoice.index', ['order_id' => $order->id])
-                ->with('info', 'Invoice untuk order ini sudah di-respond.');
+            $invoice = $this->ensureFirstInvoiceInitialized($itemPekerjaan, $invoice);
+            return redirect()->route('invoice.show', $invoice->id)
+                ->with('info', 'Menampilkan detail invoice untuk order ini.');
         }
 
-        // Update response info if invoice exists, or it will be set when creating invoice
+        // Update response info if invoice exists, or create it
         if ($invoice) {
             $invoice->update([
                 'response_time' => now(),
                 'response_by' => auth()->user()->name,
             ]);
         } else {
-            Invoice::create([
+            if (!$itemPekerjaan->rabKontrak) {
+                return redirect()->route('invoice.index', ['order_id' => $order->id])
+                    ->with('error', 'RAB Kontrak belum ada untuk order ini.');
+            }
+            $invoice = Invoice::create([
                 'item_pekerjaan_id' => $itemPekerjaan->id,
                 'rab_kontrak_id' => $itemPekerjaan->rabKontrak->id,
+                'termin_step' => 1,
                 'response_time' => now(),
                 'response_by' => auth()->user()->name,
+                'status' => 'pending',
             ]);
         }
+
+        $invoice = $this->ensureFirstInvoiceInitialized($itemPekerjaan, $invoice);
 
         $taskResponse = TaskResponse::where('order_id', $order->id)
             ->where('tahap', 'invoice')
@@ -559,9 +663,9 @@ trait HandlesNotificationPipeline
             ]);
         }
 
-        // Redirect to Invoice page
-        return redirect()->route('invoice.index', ['order_id' => $order->id])
-            ->with('success', 'Response recorded. Please manage the Invoice for this order.');
+        // Redirect directly to Invoice Show page
+        return redirect()->route('invoice.show', $invoice->id)
+            ->with('success', 'Response recorded. Menampilkan detail Invoice untuk order ini.');
     }
 
     /**
@@ -572,8 +676,8 @@ trait HandlesNotificationPipeline
     {
         // Check if already responded
         if ($order->survey_response_time) {
-            return redirect()->route('survey-schedule.index')
-                ->with('info', 'Survey schedule sudah di-response sebelumnya.');
+            return redirect()->route('survey-schedule.index', ['order_id' => $order->id])
+                ->with('info', 'Menampilkan jadwal survey untuk project ini.');
         }
 
         // Update order with response info
@@ -606,8 +710,8 @@ trait HandlesNotificationPipeline
             ]);
         }
 
-        // Redirect to Survey Schedule page to fill details
-        return redirect()->route('survey-schedule.index')
+        // Redirect to Survey Schedule page focused on this order
+        return redirect()->route('survey-schedule.index', ['order_id' => $order->id])
             ->with('success', 'Response recorded. Silakan jadwalkan survey untuk project ini.');
     }
 
@@ -619,15 +723,16 @@ trait HandlesNotificationPipeline
     private function handleSurveyUlangRequest($order)
     {
         // Check if survey ulang already exists
-        if ($order->surveyUlang) {
-            if (!$order->surveyUlang->response_time) {
-                $order->surveyUlang->update([
+        $surveyUlang = $order->surveyUlang;
+        if ($surveyUlang) {
+            if (!$surveyUlang->response_time) {
+                $surveyUlang->update([
                     'response_time' => now(),
                     'response_by' => auth()->user()->name ?? 'Admin',
                 ]);
             }
         } else {
-            SurveyUlang::create([
+            $surveyUlang = SurveyUlang::create([
                 'order_id' => $order->id,
                 'response_time' => now(),
                 'response_by' => auth()->user()->name ?? 'Admin',
@@ -660,6 +765,11 @@ trait HandlesNotificationPipeline
             ]);
         }
 
+        if ($surveyUlang->survey_time) {
+            return redirect()->route('survey-ulang.show', $surveyUlang->id)
+                ->with('success', 'Menampilkan detail hasil survey ulang.');
+        }
+
         // Redirect to create page to fill in details
         return redirect()->route('survey-ulang.create', $order->id)
             ->with('success', 'Response recorded. Silakan isi detail survey ulang.');
@@ -673,14 +783,14 @@ trait HandlesNotificationPipeline
     {
         // Check if gambar kerja already exists
         if (!$order->gambarKerja) {
-            return redirect()->route('gambar-kerja.index')
+            return redirect()->route('gambar-kerja.index', ['order_id' => $order->id])
                 ->with('error', 'Gambar Kerja belum dibuat. Silakan lengkapi survey ulang terlebih dahulu.');
         }
 
         // Check if already responded
         if ($order->gambarKerja->response_time) {
-            return redirect()->route('gambar-kerja.index')
-                ->with('info', 'Gambar Kerja sudah di-response sebelumnya.');
+            return redirect()->route('gambar-kerja.index', ['order_id' => $order->id])
+                ->with('info', 'Menampilkan detail Gambar Kerja untuk proyek ini.');
         }
 
         // Update existing gambar kerja with response info (tidak create baru)
@@ -718,7 +828,7 @@ trait HandlesNotificationPipeline
             ]);
         }
 
-        // Redirect to Gambar Kerja page
+        // Redirect to Gambar Kerja page focused on this order
         return redirect()->route('gambar-kerja.index', ['order_id' => $order->id])
             ->with('success', 'Response berhasil. Silakan upload gambar kerja.');
     }
@@ -771,7 +881,7 @@ trait HandlesNotificationPipeline
             ]);
         }
 
-        return redirect()->route('meeting-vendor.index')
+        return redirect()->route('meeting-vendor.index', ['order_id' => $order->id])
             ->with('success', 'Response berhasil dicatat. Silakan buat jadwal meeting vendor.');
     }
 
@@ -786,9 +896,9 @@ trait HandlesNotificationPipeline
      */
     private function handleApprovalMaterialRequest($order)
     {
-        // Redirect to Approval Material page
+        // Redirect to Approval Material edit/detail page
         if (!$order->itemPekerjaans || $order->itemPekerjaans->isEmpty()) {
-            return redirect()->route('item-pekerjaan.index', ['order_id' => $order->id])
+            return redirect()->route('order.show', $order->id)
                 ->with('error', 'Item pekerjaan belum ada untuk order ini. Silakan buat item pekerjaan terlebih dahulu.');
         }
 
@@ -796,8 +906,8 @@ trait HandlesNotificationPipeline
 
         // Check if already responded
         if ($itemPekerjaan->approval_rab_response_by) {
-            return redirect()->route('approval-material.index')
-                ->with('info', 'Approval material sudah pernah direspon.');
+            return redirect()->route('approval-material.edit', $itemPekerjaan->id)
+                ->with('info', 'Menampilkan detail gambar kerja final.');
         }
 
         // Update response record
@@ -830,9 +940,10 @@ trait HandlesNotificationPipeline
             ]);
         }
 
-        return redirect()->route('approval-material.index')
-            ->with('success', 'Response berhasil dicatat. Silakan kelola approval material.');
+        return redirect()->route('approval-material.edit', $itemPekerjaan->id)
+            ->with('success', 'Response berhasil dicatat. Silakan kelola gambar kerja final.');
     }
+
     /**
      * Handle workplan request notification
      * Logic: If workplan not exist -> create new with response info
@@ -840,16 +951,21 @@ trait HandlesNotificationPipeline
      */
     private function handleWorkplanRequest($order)
     {
+        if (!$order->moodboard) {
+            return redirect()->route('order.show', $order->id)
+                ->with('error', 'Moodboard belum ada untuk order ini.');
+        }
+
         // Check if workplan exists and already responded
         $workplanItems = $order->moodboard
             ->itemPekerjaans
             ->flatMap(fn($ip) => $ip->produks)
             ->flatMap(fn($produk) => $produk->workplanItems);
 
-        // If workplan already exists and responded
+        // If workplan already exists and responded -> go straight to workplan.create (detail/editor page)
         if ($workplanItems->isNotEmpty() && WorkplanItem::hasAnyResponded($workplanItems)) {
-            return redirect()->route('workplan.index')
-                ->with('info', 'Permintaan workplan sudah diterima sebelumnya.');
+            return redirect()->route('workplan.create', $order->id)
+                ->with('info', 'Menampilkan detail workplan untuk proyek ini.');
         }
 
         DB::transaction(function () use ($order, $workplanItems) {
@@ -910,7 +1026,7 @@ trait HandlesNotificationPipeline
             ]);
         }
 
-        return redirect()->route('workplan.index')
+        return redirect()->route('workplan.create', $order->id)
             ->with('success', 'Permintaan workplan berhasil diterima. Silakan lengkapi detail workplan.');
     }
 
@@ -920,9 +1036,9 @@ trait HandlesNotificationPipeline
      */
     private function handleProjectManagementRequest($order)
     {
-        // Redirect to Project Management page
-        return redirect()->route('project-management.index', ['order_id' => $order->id])
-            ->with('info', 'Please manage the Project Management for this order.');
+        // Redirect directly to Project Management show/detail page
+        return redirect()->route('project-management.show', $order->id)
+            ->with('info', 'Menampilkan detail Project Management untuk proyek ini.');
     }
 
 

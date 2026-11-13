@@ -151,12 +151,17 @@ class ItemPekerjaanController extends Controller
     {
         $itemPekerjaan = ItemPekerjaan::with('moodboard.order')->findOrFail($itemPekerjaanId);
 
-        // Get master data
-        $produks = Produk::with('bahanBakus')->select('id', 'nama_produk')->get();
+        // Get master data (sorted alphabetically)
+        $produks = Produk::with(['bahanBakus' => function ($q) {
+            $q->orderBy('nama_item', 'asc');
+        }])->select('id', 'nama_produk')->orderBy('nama_produk', 'asc')->get();
         $jenisItems = JenisItem::where('nama_jenis_item', '!=', 'Bahan Baku')
             ->select('id', 'nama_jenis_item')
+            ->orderBy('nama_jenis_item', 'asc')
             ->get();
-        $items = Item::select('id', 'nama_item', 'jenis_item_id')->get();
+        $items = Item::select('id', 'nama_item', 'jenis_item_id')
+            ->orderBy('nama_item', 'asc')
+            ->get();
 
         return Inertia::render('ItemPekerjaan/Create', [
             'itemPekerjaan' => [
@@ -204,12 +209,17 @@ class ItemPekerjaanController extends Controller
             'produks.jenisItems.items.item'
         ])->findOrFail($itemPekerjaanId);
 
-        // Get master data
-        $produks = Produk::with('bahanBakus')->select('id', 'nama_produk')->get();
+        // Get master data (sorted alphabetically)
+        $produks = Produk::with(['bahanBakus' => function ($q) {
+            $q->orderBy('nama_item', 'asc');
+        }])->select('id', 'nama_produk')->orderBy('nama_produk', 'asc')->get();
         $jenisItems = JenisItem::where('nama_jenis_item', '!=', 'Bahan Baku')
             ->select('id', 'nama_jenis_item')
+            ->orderBy('nama_jenis_item', 'asc')
             ->get();
-        $items = Item::select('id', 'nama_item', 'jenis_item_id')->get();
+        $items = Item::select('id', 'nama_item', 'jenis_item_id')
+            ->orderBy('nama_item', 'asc')
+            ->get();
 
         return Inertia::render('ItemPekerjaan/Edit', [
             'itemPekerjaan' => [
@@ -336,6 +346,4 @@ class ItemPekerjaanController extends Controller
             ],
         ]);
     }
-
-
 }

@@ -40,7 +40,7 @@ export default function ExtendModal({
         gambar_kerja: 'Gambar Kerja',
         meeting_vendor: 'Meeting Vendor',
         meeting_approval: 'Meeting Vendor',
-        approval_material: 'Approval Material',
+        approval_material: 'Gambar Kerja Final',
         workplan: 'Workplan',
         produksi: 'Produksi',
     };

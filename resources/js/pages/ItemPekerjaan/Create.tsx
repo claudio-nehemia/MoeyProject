@@ -1096,7 +1096,18 @@ export default function Create({
                                                                                             </div>
                                                                                         </div>
                                                                                         <div className="flex flex-wrap gap-2">
-                                                                                            {selectedProdukData.bahan_bakus.map(
+                                                                                            {[...selectedProdukData.bahan_bakus]
+                                                                                                .sort((a, b) =>
+                                                                                                    a.nama_item.localeCompare(
+                                                                                                        b.nama_item,
+                                                                                                        'id',
+                                                                                                        {
+                                                                                                            sensitivity: 'base',
+                                                                                                            numeric: true,
+                                                                                                        },
+                                                                                                    ),
+                                                                                                )
+                                                                                                .map(
                                                                                                 (
                                                                                                     bb,
                                                                                                 ) => (

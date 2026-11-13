@@ -74,6 +74,13 @@ export default function Index({ moodboards }: Props) {
     const [expandedCards, setExpandedCards] = useState<Record<number, boolean>>(
         {},
     );
+    const [focusedOrderId, setFocusedOrderId] = useState<number | null>(() => {
+        if (typeof window !== 'undefined') {
+            const param = new URLSearchParams(window.location.search).get('order_id');
+            return param ? Number(param) : null;
+        }
+        return null;
+    });
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('semua');
     const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
@@ -362,8 +369,22 @@ export default function Index({ moodboards }: Props) {
         return getFileExtension(filename) === 'pdf';
     };
 
+    useEffect(() => {
+        if (focusedOrderId) {
+            const target = moodboards.find((m) => m.order?.id === focusedOrderId);
+            if (target) {
+                const isCompleted = target.commitmentFee?.payment_status === 'completed';
+                setWorkTab(isCompleted ? 'sudah' : 'belum');
+                setExpandedCards({ [target.id]: true });
+            }
+        }
+    }, [focusedOrderId, moodboards]);
+
     // Filter moodboards based on search query and status filter
     const filteredMoodboards = moodboards.filter((moodboard) => {
+        if (focusedOrderId && moodboard.order?.id !== focusedOrderId) {
+            return false;
+        }
         const cf = moodboard.commitmentFee;
         const isCompleted = cf?.payment_status === 'completed';
         const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
@@ -416,6 +437,36 @@ export default function Index({ moodboards }: Props) {
                                 approved
                             </p>
                         </div>
+
+                        {/* Focused Order Detail Banner */}
+                        {focusedOrderId && (
+                            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/90 px-5 py-3.5 shadow-sm">
+                                <div className="flex items-center gap-3">
+                                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-amber-600 text-xs font-bold text-white">
+                                        #{focusedOrderId}
+                                    </span>
+                                    <div>
+                                        <p className="text-sm font-bold text-amber-950">
+                                            Menampilkan Detail Commitment Fee:{' '}
+                                            {moodboards.find((m) => m.order?.id === focusedOrderId)?.order?.nama_project || `Order #${focusedOrderId}`}
+                                        </p>
+                                        <p className="text-xs text-amber-800">
+                                            Detail commitment fee proyek telah dibuka otomatis dari notifikasi.
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setFocusedOrderId(null);
+                                        window.history.replaceState({}, '', window.location.pathname);
+                                    }}
+                                    className="rounded-xl border border-amber-300 bg-white px-3.5 py-2 text-xs font-semibold text-amber-900 shadow-sm transition-colors hover:bg-amber-100"
+                                >
+                                    Tampilkan Semua Proyek
+                                </button>
+                            </div>
+                        )}
 
                         {/* Work Status Tabs */}
                         <WorkStatusTabs

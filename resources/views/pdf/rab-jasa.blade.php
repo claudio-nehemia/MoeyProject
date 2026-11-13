@@ -107,8 +107,20 @@
             vertical-align: top;
         }
 
-        .produk-row {
+        .produk-row-even {
+            background: #ffffff;
+        }
+
+        .produk-row-odd {
             background: #f0fdf4;
+        }
+
+        .room-header {
+            background: #0891b2;
+            color: white;
+            font-weight: bold;
+            font-size: 9.5px;
+            padding: 6px 8px;
         }
 
         .produk-name {
@@ -316,7 +328,28 @@
             </tr>
         </thead>
         <tbody>
-            @foreach ($produks as $index => $produk)
+            @php
+                $grouped = [];
+                foreach ($produks as $produk) {
+                    $ruangan = $produk['nama_ruangan'] ?: 'Tanpa Ruangan';
+                    $grouped[$ruangan][] = $produk;
+                }
+            @endphp
+            @foreach ($grouped as $roomName => $roomProduks)
+                @php
+                    $roomSubtotal = 0;
+                    foreach ($roomProduks as $rp) {
+                        $roomSubtotal += $rp['harga_akhir'] ?? 0;
+                    }
+                @endphp
+                <tr>
+                    <td colspan="8" class="room-header">
+                        <span style="float: left;">RUANGAN: {{ $roomName }} ({{ count($roomProduks) }} Produk)</span>
+                        <span style="float: right;">Subtotal Ruangan: Rp {{ number_format($roomSubtotal, 0, ',', '.') }}</span>
+                        <div style="clear: both;"></div>
+                    </td>
+                </tr>
+                @foreach ($roomProduks as $index => $produk)
                 @php
                     // Get bahan baku names from selected bahan baku
                     $bahanBakuNames = $produk['bahan_baku_names'] ?? [];
@@ -342,55 +375,57 @@
                     }
 
                     $totalItems = $finishingDalamTotal + $finishingLuarTotal;
-                    $maxRows = max(count($bahanBakuNames), count($finishingDalamItems), count($finishingLuarItems), 1);
                 @endphp
 
-                @for ($rowIndex = 0; $rowIndex < $maxRows; $rowIndex++)
-                    <tr class="{{ $rowIndex === 0 ? 'produk-row' : '' }}">
-                        @if ($rowIndex === 0)
-                            <td rowspan="{{ $maxRows }}">
-                                <div class="produk-name">{{ $index + 1 }}. {{ $produk['nama_produk'] }}</div>
-                                @if ($produk['panjang'] && $produk['lebar'] && $produk['tinggi'])
-                                    <div class="produk-dim">{{ $produk['panjang'] }} × {{ $produk['lebar'] }} ×
-                                        {{ $produk['tinggi'] }} cm</div>
-                                @endif
-                            </td>
-                            <td rowspan="{{ $maxRows }}" class="harga-jasa-cell">
-                                Rp {{ number_format($produk['harga_dasar'] ?? 0, 0, ',', '.') }}
-                            </td>
+                <tr class="{{ $index % 2 === 0 ? 'produk-row-even' : 'produk-row-odd' }}">
+                    <td>
+                        <div class="produk-name">{{ $index + 1 }}. {{ $produk['nama_produk'] }}</div>
+                        @if ($produk['panjang'] && $produk['lebar'] && $produk['tinggi'])
+                            <div class="produk-dim">{{ $produk['panjang'] }} × {{ $produk['lebar'] }} ×
+                                {{ $produk['tinggi'] }} cm</div>
                         @endif
-
-                        <td>
-                            @if (isset($bahanBakuNames[$rowIndex]))
-                                • {{ $bahanBakuNames[$rowIndex] }}
-                            @endif
-                        </td>
-
-                        <td>
-                            @if (isset($finishingDalamItems[$rowIndex]))
-                                • {{ $finishingDalamItems[$rowIndex] }}
-                            @endif
-                        </td>
-
-                        <td>
-                            @if (isset($finishingLuarItems[$rowIndex]))
-                                • {{ $finishingLuarItems[$rowIndex] }}
-                            @endif
-                        </td>
-
-                        @if ($rowIndex === 0)
-                            <td rowspan="{{ $maxRows }}" class="text-center">
-                                {{ $produk['qty_produk'] }}
-                            </td>
-                            <td rowspan="{{ $maxRows }}" class="total-items-cell">
-                                Rp {{ number_format($totalItems, 0, ',', '.') }}
-                            </td>
-                            <td rowspan="{{ $maxRows }}" class="grand-total-cell">
-                                Rp {{ number_format($produk['harga_akhir'] ?? 0, 0, ',', '.') }}
-                            </td>
+                    </td>
+                    <td class="harga-jasa-cell">
+                        Rp {{ number_format($produk['harga_dasar'] ?? 0, 0, ',', '.') }}
+                    </td>
+                    <td>
+                        @if (!empty($bahanBakuNames))
+                            @foreach ($bahanBakuNames as $bbName)
+                                <div>• {{ $bbName }}</div>
+                            @endforeach
+                        @else
+                            <span style="color: #9ca3af;">-</span>
                         @endif
-                    </tr>
-                @endfor
+                    </td>
+                    <td>
+                        @if (!empty($finishingDalamItems))
+                            @foreach ($finishingDalamItems as $fdItem)
+                                <div>• {{ $fdItem }}</div>
+                            @endforeach
+                        @else
+                            <span style="color: #9ca3af;">-</span>
+                        @endif
+                    </td>
+                    <td>
+                        @if (!empty($finishingLuarItems))
+                            @foreach ($finishingLuarItems as $flItem)
+                                <div>• {{ $flItem }}</div>
+                            @endforeach
+                        @else
+                            <span style="color: #9ca3af;">-</span>
+                        @endif
+                    </td>
+                    <td class="text-center">
+                        {{ $produk['qty_produk'] }}
+                    </td>
+                    <td class="total-items-cell">
+                        Rp {{ number_format($totalItems, 0, ',', '.') }}
+                    </td>
+                    <td class="grand-total-cell">
+                        Rp {{ number_format($produk['harga_akhir'] ?? 0, 0, ',', '.') }}
+                    </td>
+                </tr>
+                @endforeach
             @endforeach
         </tbody>
     </table>
@@ -401,7 +436,7 @@
             <tr>
                 <td style="width: 60%;">
                     <div class="final-total-label">GRAND TOTAL</div>
-                    <div class="final-total-sublabel">Total semua produk ({{ count($produks) }} produk)</div>
+                    <div class="final-total-sublabel">Total semua produk ({{ count($produks) }} produk • {{ count($grouped) }} ruangan)</div>
                 </td>
                 <td style="width: 40%;" class="final-total-amount">
                     Rp {{ number_format($totalSemuaProduk, 0, ',', '.') }}

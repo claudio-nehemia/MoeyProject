@@ -81,7 +81,16 @@
             vertical-align: top;
         }
 
-        .produk-row { background: #faf5ff; }
+        .produk-row-even { background: #ffffff; }
+        .produk-row-odd { background: #faf5ff; }
+
+        .room-header {
+            background: #0891b2;
+            color: white;
+            font-weight: bold;
+            font-size: 9.5px;
+            padding: 6px 8px;
+        }
 
         .produk-name {
             font-weight: bold;
@@ -222,7 +231,30 @@
             </tr>
         </thead>
         <tbody>
-            @foreach ($produks as $index => $produk)
+            @php
+                $grouped = [];
+                foreach ($produks as $produk) {
+                    $ruangan = $produk['nama_ruangan'] ?: 'Tanpa Ruangan';
+                    $grouped[$ruangan][] = $produk;
+                }
+            @endphp
+            @foreach ($grouped as $roomName => $roomProduks)
+                @php
+                    $roomSubtotal = 0;
+                    foreach ($roomProduks as $rp) {
+                        $rDiskon = $rp['diskon_per_produk'] ?? 0;
+                        $rSebelum = ($rp['harga_satuan'] ?? 0) + ($rp['harga_total_aksesoris'] ?? 0);
+                        $roomSubtotal += $rp['harga_akhir'] ?? ($rSebelum - ($rSebelum * $rDiskon / 100));
+                    }
+                @endphp
+                <tr>
+                    <td colspan="12" class="room-header">
+                        <span style="float: left;">RUANGAN: {{ $roomName }} ({{ count($roomProduks) }} Produk)</span>
+                        <span style="float: right;">Subtotal Ruangan: Rp {{ number_format($roomSubtotal, 0, ',', '.') }}</span>
+                        <div style="clear: both;"></div>
+                    </td>
+                </tr>
+                @foreach ($roomProduks as $index => $produk)
                 @php
                     $bahanBakuNames = $produk['bahan_baku_names'] ?? [];
 
@@ -258,18 +290,11 @@
                     $totalItem = $hargaSetelahDiskon - $totalAksesoris;
 
                     $aksesorisData = $produk['aksesoris'] ?? [];
-
-                    $maxRows = max(
-                        count($bahanBakuNames),
-                        count($finishingDalamItems),
-                        count($finishingLuarItems),
-                        count($aksesorisData),
-                        1,
-                    );
+                    $maxRows = max(count($aksesorisData), 1);
                 @endphp
 
                 @for ($rowIndex = 0; $rowIndex < $maxRows; $rowIndex++)
-                    <tr class="{{ $rowIndex === 0 ? 'produk-row' : '' }}">
+                    <tr class="{{ $index % 2 === 0 ? 'produk-row-even' : 'produk-row-odd' }}">
                         @if ($rowIndex === 0)
                             <td rowspan="{{ $maxRows }}">
                                 <div class="produk-name">{{ $index + 1 }}. {{ $produk['nama_produk'] }}</div>
@@ -278,27 +303,37 @@
                                         {{ $produk['tinggi'] }} cm</div>
                                 @endif
                             </td>
-                        @endif
 
-                        <td>
-                            @if (isset($bahanBakuNames[$rowIndex]))
-                                • {{ $bahanBakuNames[$rowIndex] }}
-                            @endif
-                        </td>
+                            <td rowspan="{{ $maxRows }}">
+                                @if (!empty($bahanBakuNames))
+                                    @foreach ($bahanBakuNames as $bbName)
+                                        <div>• {{ $bbName }}</div>
+                                    @endforeach
+                                @else
+                                    <span style="color: #9ca3af;">-</span>
+                                @endif
+                            </td>
 
-                        <td>
-                            @if (isset($finishingDalamItems[$rowIndex]))
-                                • {{ $finishingDalamItems[$rowIndex] }}
-                            @endif
-                        </td>
+                            <td rowspan="{{ $maxRows }}">
+                                @if (!empty($finishingDalamItems))
+                                    @foreach ($finishingDalamItems as $fdItem)
+                                        <div>• {{ $fdItem }}</div>
+                                    @endforeach
+                                @else
+                                    <span style="color: #9ca3af;">-</span>
+                                @endif
+                            </td>
 
-                        <td>
-                            @if (isset($finishingLuarItems[$rowIndex]))
-                                • {{ $finishingLuarItems[$rowIndex] }}
-                            @endif
-                        </td>
+                            <td rowspan="{{ $maxRows }}">
+                                @if (!empty($finishingLuarItems))
+                                    @foreach ($finishingLuarItems as $flItem)
+                                        <div>• {{ $flItem }}</div>
+                                    @endforeach
+                                @else
+                                    <span style="color: #9ca3af;">-</span>
+                                @endif
+                            </td>
 
-                        @if ($rowIndex === 0)
                             <td rowspan="{{ $maxRows }}" class="text-center">
                                 {{ $produk['qty_produk'] }}
                             </td>
@@ -313,16 +348,22 @@
                         <td>
                             @if (isset($aksesorisData[$rowIndex]))
                                 <div>• {{ $aksesorisData[$rowIndex]['nama_aksesoris'] }}</div>
+                            @else
+                                <span style="color: #9ca3af;">-</span>
                             @endif
                         </td>
                         <td class="text-right">
                             @if (isset($aksesorisData[$rowIndex]))
                                 {{ $aksesorisData[$rowIndex]['qty_aksesoris'] }}
+                            @else
+                                -
                             @endif
                         </td>
                         <td class="text-right">
                             @if (isset($aksesorisData[$rowIndex]))
                                 Rp {{ number_format($aksesorisData[$rowIndex]['harga_satuan_aksesoris'] ?? 0, 0, ',', '.') }}
+                            @else
+                                -
                             @endif
                         </td>
 
@@ -337,6 +378,7 @@
                         @endif
                     </tr>
                 @endfor
+                @endforeach
             @endforeach
         </tbody>
     </table>
@@ -347,7 +389,7 @@
             <tr>
                 <td style="width: 60%;">
                     <div class="final-total-label">GRAND TOTAL</div>
-                    <div class="final-total-sublabel">Total semua produk ({{ count($produks) }} produk)</div>
+                    <div class="final-total-sublabel">Total semua produk ({{ count($produks) }} produk • {{ count($grouped) }} ruangan)</div>
                 </td>
                 <td style="width: 40%;" class="final-total-amount">
                     Rp {{ number_format($totalSemuaProduk, 0, ',', '.') }}

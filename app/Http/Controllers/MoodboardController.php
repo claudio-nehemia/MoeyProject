@@ -30,9 +30,7 @@ class MoodboardController extends Controller
             ->orderBy('created_at', 'desc')
             ->where(function ($query) {
                 $query->where('tahapan_proyek', 'moodboard')
-                    ->orWhereHas('moodboard', function ($moodboardQuery) {
-                        $moodboardQuery->where('status', 'approved');
-                    });
+                    ->orWhereHas('moodboard');
             })
             ->get()
             ->map(function ($order) {

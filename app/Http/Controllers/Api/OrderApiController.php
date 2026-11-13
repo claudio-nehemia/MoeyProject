@@ -50,6 +50,7 @@ class OrderApiController extends Controller
         $desainerId = \App\Models\Role::getDesainerRoleId();
         $surveyorId = \App\Models\Role::getSurveyorRoleId();
         $drafterId = \App\Models\Role::getDrafterRoleId();
+        $estimatorId = \App\Models\Role::getEstimatorRoleId();
         $supervisorId = \App\Models\Role::getSupervisorRoleId();
         $pmId = \App\Models\Role::getProjectManagerRoleId();
 
@@ -66,6 +67,11 @@ class OrderApiController extends Controller
         $desainers = User::where(function ($query) use ($desainerId) {
             $query->where('role_id', $desainerId)
                 ->orWhereHas('roles', fn($q) => $q->where('roles.id', $desainerId));
+        })->get(['id', 'name', 'email']);
+
+        $estimators = User::where(function ($query) use ($estimatorId) {
+            $query->where('role_id', $estimatorId)
+                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $estimatorId));
         })->get(['id', 'name', 'email']);
 
         $supervisors = User::where(function ($query) use ($supervisorId) {
@@ -86,6 +92,7 @@ class OrderApiController extends Controller
                 'marketings' => $marketings,
                 'drafters' => $drafters,
                 'desainers' => $desainers,
+                'estimators' => $estimators,
                 'supervisors' => $supervisors,
                 'project_managers' => $projectManagers,
                 'jenis_interiors' => $jenisInteriors,

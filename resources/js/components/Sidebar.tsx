@@ -686,7 +686,7 @@ export default function Sidebar({
         },
 
         {
-            name: 'Approval Material',
+            name: 'Gambar Kerja Final',
             href: '/approval-material',
             page: 'approval-material',
             permission: 'approval-material.index',

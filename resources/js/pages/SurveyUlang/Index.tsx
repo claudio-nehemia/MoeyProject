@@ -203,9 +203,9 @@ export default function Index({ surveys }: Props) {
         }
 
         return (
-            s.nama_project.toLowerCase().includes(search.toLowerCase()) ||
-            s.company_name.toLowerCase().includes(search.toLowerCase()) ||
-            s.customer_name.toLowerCase().includes(search.toLowerCase())
+            (s.nama_project || '').toLowerCase().includes(search.toLowerCase()) ||
+            (s.company_name || '').toLowerCase().includes(search.toLowerCase()) ||
+            (s.customer_name || '').toLowerCase().includes(search.toLowerCase())
         );
     });
 
@@ -448,7 +448,7 @@ export default function Index({ surveys }: Props) {
                                                         </Link>
                                                     )}
 
-                                                    {isNotKepalaMarketing && s.status_survey_ulang === 'done' && (
+                                                    {s.status_survey_ulang === 'done' && (
                                                         <>
                                                             <Link
                                                                 href={`/survey-ulang/show/${s.survey_ulang_id}`}
@@ -457,13 +457,15 @@ export default function Index({ surveys }: Props) {
                                                                 <Eye className="w-3.5 h-3.5" />
                                                                 <span>View</span>
                                                             </Link>
-                                                            <Link
-                                                                href={`/survey-ulang/edit/${s.survey_ulang_id}`}
-                                                                className="inline-flex items-center justify-center gap-1.5 w-full rounded-md border border-stone-300 bg-white px-3 py-1.5 text-[11px] font-medium text-stone-700 shadow-sm transition hover:bg-stone-50 mt-1 text-center"
-                                                            >
-                                                                <Pencil className="w-3.5 h-3.5" />
-                                                                <span>Edit</span>
-                                                            </Link>
+                                                            {isNotKepalaMarketing && (
+                                                                <Link
+                                                                    href={`/survey-ulang/edit/${s.survey_ulang_id}`}
+                                                                    className="inline-flex items-center justify-center gap-1.5 w-full rounded-md border border-stone-300 bg-white px-3 py-1.5 text-[11px] font-medium text-stone-700 shadow-sm transition hover:bg-stone-50 mt-1 text-center"
+                                                                >
+                                                                    <Pencil className="w-3.5 h-3.5" />
+                                                                    <span>Edit</span>
+                                                                </Link>
+                                                            )}
                                                         </>
                                                     )}
                                                 </div>

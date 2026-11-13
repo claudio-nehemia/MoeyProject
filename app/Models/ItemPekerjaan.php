@@ -93,6 +93,11 @@ class ItemPekerjaan extends Model
         return $this->hasOne(Kontrak::class);
     }
 
+    public function gambarKerjaFinalFiles()
+    {
+        return $this->hasMany(GambarKerjaFinalFile::class);
+    }
+
     public function invoice()
     {
         return $this->hasOne(Invoice::class);

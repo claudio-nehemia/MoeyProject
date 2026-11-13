@@ -91,6 +91,26 @@ export default function Index({ itemPekerjaans, termins }: Props) {
     const isNotKepalaMarketing = !isKepalaMarketing;
     const [searchQuery, setSearchQuery] = useState('');
     const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
+    const [focusedOrderId, setFocusedOrderId] = useState<number | null>(() => {
+        if (typeof window !== 'undefined') {
+            const param = new URLSearchParams(window.location.search).get('order_id');
+            return param ? Number(param) : null;
+        }
+        return null;
+    });
+
+    useEffect(() => {
+        if (focusedOrderId) {
+            const target = itemPekerjaans.find((item) => item.order.id === focusedOrderId);
+            if (target) {
+                setWorkTab(target.kontrak?.signed_contract_path ? 'sudah' : 'belum');
+                if (isNotKepalaMarketing && !target.kontrak?.tanggal_mulai) {
+                    setSelectedItemPekerjaan(target);
+                    setIsModalOpen(true);
+                }
+            }
+        }
+    }, [focusedOrderId, itemPekerjaans, isNotKepalaMarketing]);
 
     const countBelum = useMemo(() =>
         itemPekerjaans.filter(item => !item.kontrak?.signed_contract_path).length,
@@ -104,6 +124,9 @@ export default function Index({ itemPekerjaans, termins }: Props) {
 
     const filteredItemPekerjaans = useMemo(() =>
         itemPekerjaans.filter(item => {
+            if (focusedOrderId && item.order.id !== focusedOrderId) {
+                return false;
+            }
             const isCompleted = !!item.kontrak?.signed_contract_path;
             const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
             if (!matchesWorkTab) return false;
@@ -114,7 +137,7 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                 item.order.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
             );
         }),
-        [itemPekerjaans, searchQuery, workTab]
+        [itemPekerjaans, searchQuery, workTab, focusedOrderId]
     );
 
     // Fetch dual task responses (regular & marketing)
@@ -257,6 +280,36 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                     Kontrak Management
                                 </h2>
 
+                                {/* Focused Order Detail Banner */}
+                                {focusedOrderId && (
+                                    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-cyan-200 bg-cyan-50/90 px-5 py-3.5 shadow-sm">
+                                        <div className="flex items-center gap-3">
+                                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-600 text-xs font-bold text-white">
+                                                #{focusedOrderId}
+                                            </span>
+                                            <div>
+                                                <p className="text-sm font-bold text-cyan-950">
+                                                    Menampilkan Detail Kontrak:{' '}
+                                                    {itemPekerjaans.find((i) => i.order.id === focusedOrderId)?.order.nama_project || `Order #${focusedOrderId}`}
+                                                </p>
+                                                <p className="text-xs text-cyan-800">
+                                                    Detail kontrak proyek telah dibuka otomatis dari notifikasi.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setFocusedOrderId(null);
+                                                window.history.replaceState({}, '', window.location.pathname);
+                                            }}
+                                            className="rounded-xl border border-cyan-300 bg-white px-3.5 py-2 text-xs font-semibold text-cyan-900 shadow-sm transition-colors hover:bg-cyan-100"
+                                        >
+                                            Tampilkan Semua Proyek
+                                        </button>
+                                    </div>
+                                )}
+
                                 {/* Work Status Tabs */}
                                 <WorkStatusTabs
                                     activeTab={workTab}
@@ -300,7 +353,7 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                     Sisa Pembayaran
                                                 </th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
-                                                    Termin & Tahap 1
+                                                    Termin & Tahapan
                                                 </th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                                     Durasi
@@ -428,53 +481,41 @@ export default function Index({ itemPekerjaans, termins }: Props) {
                                                                 </div>
                                                             </td>
                                                             <td className="px-6 py-4">
-                                                                {item.kontrak
-                                                                    ?.termin ? (
-                                                                    <div className="text-sm">
-                                                                        <div className="mb-2 font-medium text-gray-900">
-                                                                            {
-                                                                                item
-                                                                                    .kontrak
-                                                                                    .termin
-                                                                                    .nama
-                                                                            }
+                                                                {item.kontrak?.termin ? (
+                                                                    <div className="text-sm space-y-1.5 min-w-[200px]">
+                                                                        <div className="font-semibold text-gray-900">
+                                                                            {item.kontrak.termin.nama}
                                                                         </div>
-                                                                        {tahap1 && (
-                                                                            <div className="rounded-lg border border-amber-200 bg-amber-50 p-2">
-                                                                                <div className="flex items-center gap-2 text-xs">
-                                                                                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 font-bold text-white">
-                                                                                        1
-                                                                                    </span>
-                                                                                    <span className="font-medium text-amber-800">
-                                                                                        {
-                                                                                            tahap1.text
-                                                                                        }
-                                                                                    </span>
-                                                                                </div>
-                                                                                {tahap1Persentase >
-                                                                                    0 && (
-                                                                                    <div className="mt-1 text-xs text-amber-700">
-                                                                                        <span className="font-bold">
-                                                                                            {
-                                                                                                tahap1Persentase
-                                                                                            }
-
-                                                                                            %
-                                                                                        </span>{' '}
-                                                                                        ={' '}
-                                                                                        {formatRupiah(
-                                                                                            tahap1Nominal,
-                                                                                        )}
-                                                                                    </div>
-                                                                                )}
+                                                                        {item.kontrak.termin.tahapan && item.kontrak.termin.tahapan.length > 0 ? (
+                                                                            <div className="space-y-1">
+                                                                                {item.kontrak.termin.tahapan.map((tahap, tIdx) => {
+                                                                                    const persentase = tahap.persentase || 0;
+                                                                                    const nominal = item.sisa_pembayaran * (persentase / 100);
+                                                                                    return (
+                                                                                        <div key={tIdx} className="rounded border border-amber-200 bg-amber-50/70 p-1.5 text-xs">
+                                                                                            <div className="flex items-center justify-between gap-1">
+                                                                                                <div className="flex items-center gap-1 font-medium text-amber-900">
+                                                                                                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">
+                                                                                                        {tahap.step}
+                                                                                                    </span>
+                                                                                                    <span className="truncate max-w-[120px]">{tahap.text}</span>
+                                                                                                </div>
+                                                                                                <span className="font-bold text-amber-700 whitespace-nowrap">
+                                                                                                    {persentase}%
+                                                                                                </span>
+                                                                                            </div>
+                                                                                            <div className="mt-0.5 text-right font-bold text-amber-800">
+                                                                                                {formatRupiah(nominal)}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
                                                                             </div>
-                                                                        )}
+                                                                        ) : null}
                                                                     </div>
                                                                 ) : (
                                                                     <span className="text-sm text-gray-400">
-                                                                        Belum
-                                                                        ada
-                                                                        kontrak
+                                                                        Belum ada kontrak
                                                                     </span>
                                                                 )}
                                                             </td>

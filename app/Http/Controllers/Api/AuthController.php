@@ -198,7 +198,7 @@ class AuthController extends Controller
             'survey_schedule' => 'jadwal survey',
             'survey_ulang' => 'survey ulang',
             'gambar_kerja' => 'gambar kerja',
-            'approval_material' => 'approval material',
+            'approval_material' => 'gambar kerja final',
             'workplan' => 'workplan',
         ];
 
@@ -211,6 +211,7 @@ class AuthController extends Controller
 
             $alerts['overdue_task'] = [
                 'id' => $overdueTask->id,
+                'order_id' => $overdueTask->order_id,
                 'tahap' => $overdueTask->tahap,
                 'nama_project' => $projectName,
                 'message' => "Ada task terlambat terkait {$tahapName} project \"{$projectName}\"",
@@ -228,6 +229,7 @@ class AuthController extends Controller
 
             $alerts['nearest_task'] = [
                 'id' => $nearestTask->id,
+                'order_id' => $nearestTask->order_id,
                 'tahap' => $nearestTask->tahap,
                 'nama_project' => $projectName,
                 'message' => "Ada task terdekat terkait {$tahapName} project \"{$projectName}\"",
@@ -288,6 +290,7 @@ class AuthController extends Controller
                     $daysLeft = now()->startOfDay()->diffInDays($targetDate, false);
                     $alerts['nearest_payment'] = [
                         'id' => $nearestPayment->id,
+                        'order_id' => $nearestPayment->order_id,
                         'nama_project' => $nearestPayment->order->nama_project,
                         'vendor_name' => $nearestPayment->vendor_name ?? $nearestPayment->label,
                         'message' => "Reminder: Pembayaran terdekat untuk project \"{$nearestPayment->order->nama_project}\" (Vendor: {$nearestPayment->vendor_name}) jatuh tempo.",

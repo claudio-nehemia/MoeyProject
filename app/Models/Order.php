@@ -103,7 +103,7 @@ class Order extends Model
 
     public function surveyUlang()
     {
-        return $this->hasOne(SurveyUlang::class);
+        return $this->hasOne(SurveyUlang::class)->latestOfMany();
     }
 
     public function surveyScheduleUsers()
@@ -170,6 +170,23 @@ class Order extends Model
         if ($user->relationLoaded('roles')) {
             $userRoleIds = array_merge($userRoleIds, $user->roles->pluck('id')->toArray());
         }
+
+        $estimatorRoleId = Role::getEstimatorRoleId();
+        if (in_array($estimatorRoleId, $userRoleIds)) {
+            return $query->where(function ($q) use ($user, $estimatorRoleId) {
+                $q->whereHas('users', fn($uq) => $uq->where('users.id', $user->id))
+                    ->orWhereHas('surveyUsers', fn($sq) => $sq->where('users.id', $user->id))
+                    ->orWhere(function ($noEstimator) use ($estimatorRoleId) {
+                        $noEstimator->whereDoesntHave('users', function ($uq) use ($estimatorRoleId) {
+                            $uq->where('users.role_id', $estimatorRoleId)
+                                ->orWhereHas('roles', fn($rq) => $rq->where('roles.id', $estimatorRoleId));
+                        })->whereDoesntHave('surveyUsers', function ($sq) use ($estimatorRoleId) {
+                            $sq->where('users.role_id', $estimatorRoleId)
+                                ->orWhereHas('roles', fn($rq) => $rq->where('roles.id', $estimatorRoleId));
+                        });
+                    });
+            });
+        }
         
         $isRestricted = count(array_intersect($userRoleIds, $restrictedRoleIds)) > 0;
         
@@ -229,6 +246,23 @@ class Order extends Model
         $userRoleIds = array_filter([$user->role_id]);
         if ($user->relationLoaded('roles')) {
             $userRoleIds = array_merge($userRoleIds, $user->roles->pluck('id')->toArray());
+        }
+
+        $estimatorRoleId = Role::getEstimatorRoleId();
+        if (in_array($estimatorRoleId, $userRoleIds)) {
+            return $query->where(function ($q) use ($user, $estimatorRoleId) {
+                $q->whereHas('users', fn($uq) => $uq->where('users.id', $user->id))
+                    ->orWhereHas('surveyUsers', fn($sq) => $sq->where('users.id', $user->id))
+                    ->orWhere(function ($noEstimator) use ($estimatorRoleId) {
+                        $noEstimator->whereDoesntHave('users', function ($uq) use ($estimatorRoleId) {
+                            $uq->where('users.role_id', $estimatorRoleId)
+                                ->orWhereHas('roles', fn($rq) => $rq->where('roles.id', $estimatorRoleId));
+                        })->whereDoesntHave('surveyUsers', function ($sq) use ($estimatorRoleId) {
+                            $sq->where('users.role_id', $estimatorRoleId)
+                                ->orWhereHas('roles', fn($rq) => $rq->where('roles.id', $estimatorRoleId));
+                        });
+                    });
+            });
         }
 
         // Cek apakah user memiliki role yang dibatasi

@@ -254,10 +254,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('permission:order.index')->get('order', [OrderController::class, 'index'])->name('order.index');
     Route::middleware('permission:order.create')->get('order/create', [OrderController::class, 'create'])->name('order.create');
     Route::middleware('permission:order.create')->post('order', [OrderController::class, 'store'])->name('order.store');
-    Route::middleware('permission:order.edit')->get('order/{order}/edit', [OrderController::class, 'edit'])->name('order.edit');
-    Route::middleware('permission:order.edit')->put('order/{order}', [OrderController::class, 'update'])->name('order.update');
-    Route::middleware('permission:order.show')->get('order/{order}', [OrderController::class, 'show'])->name('order.show');
-    Route::middleware('permission:order.delete')->delete('order/{order}', [OrderController::class, 'destroy'])->name('order.destroy');
+    Route::middleware('permission:order.edit')->get('order/{order}/edit', [OrderController::class, 'edit'])->whereNumber('order')->name('order.edit');
+    Route::middleware('permission:order.edit')->put('order/{order}', [OrderController::class, 'update'])->whereNumber('order')->name('order.update');
+    Route::get('order/{order}', [OrderController::class, 'show'])->whereNumber('order')->name('order.show');
+    Route::middleware('permission:order.delete')->delete('order/{order}', [OrderController::class, 'destroy'])->whereNumber('order')->name('order.destroy');
     Route::middleware('permission:order.index')->get('order-export-pdf', [OrderController::class, 'exportPdf'])->name('order.export-pdf');
     Route::middleware('permission:order.index')->get('order-export-excel', [OrderController::class, 'exportExcel'])->name('order.export-excel');
 
@@ -370,6 +370,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:desain-final.delete')->name('desain-final.file.delete');
         Route::post('desain-final/file/{fileId}/replace', [DesainFinalController::class, 'replaceDesainFinalFile'])
             ->middleware('permission:desain-final.edit')->name('desain-final.file.replace');
+        Route::get('desain-final/file/{fileId}/download', [DesainFinalController::class, 'downloadDesainFinalFile'])
+            ->name('desain-final.file.download');
+        Route::get('desain-final/moodboard/{moodboardId}/download-all', [DesainFinalController::class, 'downloadAllFiles'])
+            ->name('desain-final.download-all');
     });
 
     // INPUT ITEM ROUTES ITEM PEKERJAAN ROUTES
@@ -498,9 +502,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // PROJECT MANAGEMENT ROUTES
     Route::middleware(['permission:project-management.index'])->group(function () {
-        Route::get('/project-management', [ProjectManagementController::class, 'index']);
+        Route::get('/project-management', [ProjectManagementController::class, 'index'])
+            ->name('project-management.index');
         Route::get('/project-management/{id}', [ProjectManagementController::class, 'show'])
-            ->middleware('permission:project-management.show');
+            ->middleware('permission:project-management.show')
+            ->name('project-management.show');
         Route::post('/produk/{id}/update-stage', [ProjectManagementController::class, 'updateStage'])
             ->middleware('permission:project-management.update-stage');
         Route::post('/item-pekerjaan/{id}/generate-bast', [ProjectManagementController::class, 'generateBast'])
@@ -662,6 +668,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/{itemPekerjaan}', [ApprovalRabController::class, 'update'])
             ->middleware('permission:approval-material.update')
             ->name('update');
+        Route::post('/{itemPekerjaan}/upload', [ApprovalRabController::class, 'uploadFiles'])
+            ->middleware('permission:approval-material.update')
+            ->name('upload');
+        Route::delete('/files/{fileId}', [ApprovalRabController::class, 'deleteFile'])
+            ->middleware('permission:approval-material.update')
+            ->name('delete-file');
+        Route::get('/files/{fileId}/download', [ApprovalRabController::class, 'downloadFile'])
+            ->middleware('permission:approval-material.index')
+            ->name('download-file');
+        Route::get('/{itemPekerjaan}/download-all', [ApprovalRabController::class, 'downloadAllFiles'])
+            ->middleware('permission:approval-material.index')
+            ->name('download-all');
         Route::post('/{itemPekerjaan}/responses', [ApprovalRabController::class, 'responses'])
             ->middleware('permission:approval-material.index')
             ->name('responses');

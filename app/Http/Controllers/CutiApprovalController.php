@@ -29,28 +29,60 @@ class CutiApprovalController extends Controller
             abort(403, 'Anda tidak memiliki hak akses untuk menyetujui pengajuan.');
         }
 
-        $izinabsen = $this->getPendingIzinAbsen();
-        $izincuti = $this->getPendingIzinCuti();
-        $izinsakit = $this->getPendingIzinSakit();
-        $izindinas = $this->getPendingIzinDinas();
-        $koreksi = $this->getPendingKoreksi();
-        $lembur = $this->getPendingLembur();
+        $izinabsen = $this->getIzinAbsenByStatus([0]);
+        $izincuti = $this->getIzinCutiByStatus([0]);
+        $izinsakit = $this->getIzinSakitByStatus([0]);
+        $izindinas = $this->getIzinDinasByStatus([0]);
+        $koreksi = $this->getKoreksiByStatus([0]);
+        $lembur = $this->getLemburByStatus([0]);
 
-        $allPending = $izinabsen->concat($izincuti)
-            ->concat($izinsakit)
-            ->concat($izindinas)
-            ->concat($koreksi)
-            ->concat($lembur)
-            ->sortByDesc(function ($item) {
+        $allPending = $this->formatRequestList(
+            $izinabsen->concat($izincuti)
+                ->concat($izinsakit)
+                ->concat($izindinas)
+                ->concat($koreksi)
+                ->concat($lembur),
+            false
+        );
+
+        $historyList = $this->formatRequestList(
+            $this->getIzinAbsenByStatus([1, 2])
+                ->concat($this->getIzinCutiByStatus([1, 2]))
+                ->concat($this->getIzinSakitByStatus([1, 2]))
+                ->concat($this->getIzinDinasByStatus([1, 2]))
+                ->concat($this->getKoreksiByStatus([1, 2]))
+                ->concat($this->getLemburByStatus([1, 2])),
+            true
+        );
+
+        return Inertia::render('Cuti/Approval', [
+            'pendingList' => $allPending,
+            'historyList' => $historyList,
+        ]);
+    }
+
+    private function formatRequestList($collection, bool $sortByUpdated = false): array
+    {
+        return $collection
+            ->sortByDesc(function ($item) use ($sortByUpdated) {
+                if ($sortByUpdated && !empty($item->updated_at)) {
+                    return strtotime($item->updated_at);
+                }
                 return $item->created_at ? strtotime($item->created_at) : strtotime($item->tanggal);
             })
             ->values()
             ->map(function ($item) {
                 $item->id = (string) $item->id;
+                $item->status = (int) ($item->status ?? 0);
                 $createdAt = $item->created_at ? \Carbon\Carbon::parse($item->created_at)->timezone('Asia/Jakarta') : null;
                 $item->jam_pengajuan = $createdAt ? $createdAt->format('H:i:s') : null;
                 $item->waktu_pengajuan = $createdAt ? $createdAt->translatedFormat('d F Y, H:i:s') : null;
                 $item->created_at_raw = $createdAt ? $createdAt->toIso8601String() : null;
+
+                $updatedAt = $item->updated_at ? \Carbon\Carbon::parse($item->updated_at)->timezone('Asia/Jakarta') : null;
+                $item->jam_diproses = $updatedAt ? $updatedAt->format('H:i') : null;
+                $item->waktu_diproses = $updatedAt ? $updatedAt->translatedFormat('d M Y, H:i') : null;
+                $item->updated_at_raw = $updatedAt ? $updatedAt->toIso8601String() : null;
 
                 $item->doc_url = null;
                 if (!empty($item->doc_cuti)) {
@@ -68,21 +100,19 @@ class CutiApprovalController extends Controller
                 return $item;
             })
             ->all();
-
-        return Inertia::render('Cuti/Approval', [
-            'pendingList' => $allPending
-        ]);
     }
 
-    private function getPendingIzinAbsen()
+    private function getIzinAbsenByStatus(array $statuses)
     {
         $hasDoc = \Illuminate\Support\Facades\Schema::hasColumn('presensi_izinabsen', 'doc_izin');
-        return Izinabsen::where('status', 0)
+        return Izinabsen::whereIn('presensi_izinabsen.status', $statuses)
             ->join('karyawan', 'presensi_izinabsen.nik', '=', 'karyawan.nik')
             ->select(
                 'presensi_izinabsen.kode_izin as id',
                 'presensi_izinabsen.tanggal',
                 'presensi_izinabsen.created_at',
+                'presensi_izinabsen.updated_at',
+                'presensi_izinabsen.status',
                 'presensi_izinabsen.keterangan',
                 'presensi_izinabsen.dari',
                 'presensi_izinabsen.sampai',
@@ -94,15 +124,17 @@ class CutiApprovalController extends Controller
             ->get();
     }
 
-    private function getPendingIzinCuti()
+    private function getIzinCutiByStatus(array $statuses)
     {
         $hasDocCuti = \Illuminate\Support\Facades\Schema::hasColumn('presensi_izincuti', 'doc_cuti');
-        return Izincuti::where('status', 0)
+        return Izincuti::whereIn('presensi_izincuti.status', $statuses)
             ->join('karyawan', 'presensi_izincuti.nik', '=', 'karyawan.nik')
             ->select(
                 'presensi_izincuti.kode_izin_cuti as id',
                 'presensi_izincuti.tanggal',
                 'presensi_izincuti.created_at',
+                'presensi_izincuti.updated_at',
+                'presensi_izincuti.status',
                 'presensi_izincuti.keterangan',
                 'presensi_izincuti.dari',
                 'presensi_izincuti.sampai',
@@ -114,14 +146,16 @@ class CutiApprovalController extends Controller
             ->get();
     }
 
-    private function getPendingIzinSakit()
+    private function getIzinSakitByStatus(array $statuses)
     {
-        return Izinsakit::where('status', 0)
+        return Izinsakit::whereIn('presensi_izinsakit.status', $statuses)
             ->join('karyawan', 'presensi_izinsakit.nik', '=', 'karyawan.nik')
             ->select(
                 'presensi_izinsakit.kode_izin_sakit as id',
                 'presensi_izinsakit.tanggal',
                 'presensi_izinsakit.created_at',
+                'presensi_izinsakit.updated_at',
+                'presensi_izinsakit.status',
                 'presensi_izinsakit.keterangan',
                 'presensi_izinsakit.dari',
                 'presensi_izinsakit.sampai',
@@ -133,15 +167,17 @@ class CutiApprovalController extends Controller
             ->get();
     }
 
-    private function getPendingIzinDinas()
+    private function getIzinDinasByStatus(array $statuses)
     {
         $hasDoc = \Illuminate\Support\Facades\Schema::hasColumn('presensi_izindinas', 'doc_dinas');
-        return Izindinas::where('status', 0)
+        return Izindinas::whereIn('presensi_izindinas.status', $statuses)
             ->join('karyawan', 'presensi_izindinas.nik', '=', 'karyawan.nik')
             ->select(
                 'presensi_izindinas.kode_izin_dinas as id',
                 'presensi_izindinas.tanggal',
                 'presensi_izindinas.created_at',
+                'presensi_izindinas.updated_at',
+                'presensi_izindinas.status',
                 'presensi_izindinas.keterangan',
                 'presensi_izindinas.dari',
                 'presensi_izindinas.sampai',
@@ -153,15 +189,17 @@ class CutiApprovalController extends Controller
             ->get();
     }
 
-    private function getPendingKoreksi()
+    private function getKoreksiByStatus(array $statuses)
     {
         $hasDoc = \Illuminate\Support\Facades\Schema::hasColumn('presensi_koreksi', 'doc_koreksi');
-        return Koreksi::where('status', 0)
+        return Koreksi::whereIn('presensi_koreksi.status', $statuses)
             ->join('karyawan', 'presensi_koreksi.nik', '=', 'karyawan.nik')
             ->select(
                 'presensi_koreksi.kode_koreksi as id',
                 'presensi_koreksi.tanggal',
                 'presensi_koreksi.created_at',
+                'presensi_koreksi.updated_at',
+                'presensi_koreksi.status',
                 'presensi_koreksi.jam_in',
                 'presensi_koreksi.jam_out',
                 'presensi_koreksi.keterangan',
@@ -175,12 +213,24 @@ class CutiApprovalController extends Controller
             ->get();
     }
 
-    private function getPendingLembur()
+    private function getLemburByStatus(array $statuses)
     {
-        return Lembur::where('status', 0)
+        return Lembur::whereIn('lembur.status', $statuses)
             ->join('karyawan', 'lembur.nik', '=', 'karyawan.nik')
-            ->select('lembur.id as id', 'lembur.tanggal', 'lembur.created_at', 'lembur.keterangan', 'lembur.lembur_mulai as dari', 'lembur.lembur_selesai as sampai', DB::raw("'Lembur' as tipe"), 'karyawan.nama_karyawan', 'karyawan.nik')
-            ->get()->map(function($item) {
+            ->select(
+                'lembur.id as id',
+                'lembur.tanggal',
+                'lembur.created_at',
+                'lembur.updated_at',
+                'lembur.status',
+                'lembur.keterangan',
+                'lembur.lembur_mulai as dari',
+                'lembur.lembur_selesai as sampai',
+                DB::raw("'Lembur' as tipe"),
+                'karyawan.nama_karyawan',
+                'karyawan.nik'
+            )
+            ->get()->map(function ($item) {
                 $item->id = (string) $item->id;
                 return $item;
             });

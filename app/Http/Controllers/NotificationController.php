@@ -43,6 +43,7 @@ class NotificationController extends Controller
         $isKepalaMarketing = $user && $user->role && $user->role->nama_role === 'Kepala Marketing';
 
         $notifications = Notification::where('user_id', auth()->id())
+            ->where('is_read', false)
             ->with([
                 'order.surveyResults',
                 'order.surveyUlang',
@@ -62,7 +63,9 @@ class NotificationController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        // Add flag for frontend: any Kepala Marketing assigned to the order can do marketing response
+        // Add flags for frontend:
+        // - can_marketing_response: any Kepala Marketing assigned to the order can do marketing response
+        // - can_update_data: whether the current user is the action role responsible for updating data on this stage
         $notifications->getCollection()->transform(function ($notification) use ($isKepalaMarketing, $user) {
             $canMarketingResponse = false;
 
@@ -77,6 +80,7 @@ class NotificationController extends Controller
             }
 
             $notification->can_marketing_response = $canMarketingResponse;
+            $notification->can_update_data = $this->canUserUpdateStageData($user, $notification->type, $notification->data ?? []);
             return $notification;
         });
 
@@ -131,10 +135,112 @@ class NotificationController extends Controller
     }
 
     /**
+     * Check whether the given user is an action role responsible for performing data updates on this notification stage.
+     * Marketing (Kepala Marketing) and management/monitoring roles that do not perform data updates return false.
+     */
+    public function canUserUpdateStageData($user, string $type, array $data = []): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        if (method_exists($user, 'isAdmin') && $user->isAdmin()) {
+            return true;
+        }
+
+        $roleName = $user->role?->nama_role ?? '';
+
+        if (in_array($roleName, ['Kepala Marketing', 'Owner', 'Customer Service', 'Customer'], true)) {
+            return false;
+        }
+
+        switch ($type) {
+            case Notification::TYPE_SURVEY_REQUEST:
+                return $user->hasPermission('survey-results.index')
+                    && $user->hasAnyPermission(['survey-results.create', 'survey-results.edit']);
+
+            case Notification::TYPE_SURVEY_SCHEDULE_REQUEST:
+                return $user->hasPermission('survey-schedule.index')
+                    && $user->hasAnyPermission(['survey-schedule.store', 'survey-schedule.create', 'survey-schedule.edit']);
+
+            case Notification::TYPE_MOODBOARD_REQUEST:
+                return $user->hasPermission('moodboard.index')
+                    && $user->hasAnyPermission(['moodboard.upload-kasar', 'moodboard.edit']);
+
+            case Notification::TYPE_DESIGN_APPROVAL:
+                return $user->hasPermission('moodboard.index')
+                    && $user->hasAnyPermission(['moodboard.accept', 'moodboard.revise', 'moodboard.upload-kasar', 'moodboard.edit']);
+
+            case Notification::TYPE_ESTIMASI_REQUEST:
+                return $user->hasPermission('estimasi.index')
+                    && $user->hasAnyPermission(['estimasi.create', 'estimasi.edit']);
+
+            case Notification::TYPE_COMMITMENT_FEE_REQUEST:
+                return $user->hasPermission('commitment-fee.index')
+                    && $user->hasAnyPermission(['commitment-fee.create', 'commitment-fee.edit']);
+
+            case Notification::TYPE_FINAL_DESIGN_REQUEST:
+                return $user->hasPermission('desain-final.index')
+                    && $user->hasAnyPermission(['desain-final.create', 'desain-final.edit', 'moodboard.upload-final']);
+
+            case Notification::TYPE_ITEM_PEKERJAAN_REQUEST:
+                return $user->hasPermission('item-pekerjaan.index')
+                    && $user->hasAnyPermission(['item-pekerjaan.create', 'item-pekerjaan.edit']);
+
+            case Notification::TYPE_RAB_INTERNAL_REQUEST:
+            case 'approval_rab_update':
+                return $user->hasPermission('rab-internal.index')
+                    && $user->hasAnyPermission(['rab-internal.create', 'rab-internal.edit']);
+
+            case Notification::TYPE_KONTRAK_REQUEST:
+                return $user->hasPermission('kontrak.index')
+                    && $user->hasAnyPermission(['kontrak.create', 'kontrak.edit']);
+
+            case Notification::TYPE_INVOICE_REQUEST:
+                return $user->hasPermission('invoice.index')
+                    && $user->hasAnyPermission(['invoice.create', 'invoice.edit']);
+
+            case Notification::TYPE_SURVEY_ULANG_REQUEST:
+                return $user->hasPermission('survey-ulang.index')
+                    && $user->hasAnyPermission(['survey-ulang.create', 'survey-ulang.store', 'survey-ulang.edit', 'survey-ulang.update']);
+
+            case Notification::TYPE_GAMBAR_KERJA_REQUEST:
+                return $user->hasPermission('gambar-kerja.index')
+                    && $user->hasAnyPermission(['gambar-kerja.upload', 'gambar-kerja.response'])
+                    && in_array($roleName, ['Drafter', 'Desainer', 'Surveyor'], true);
+
+            case Notification::TYPE_JADWAL_MEETING_VENDOR_REQUEST:
+            case Notification::TYPE_JADWAL_MEETING_APPROVAL_REQUEST:
+                return $user->hasPermission('meeting-vendor.index')
+                    && $user->hasAnyPermission(['meeting-vendor.store', 'meeting-vendor.response']);
+
+            case Notification::TYPE_APPROVAL_MATERIAL_REQUEST:
+                return $user->hasPermission('approval-material.index')
+                    && $user->hasAnyPermission(['approval-material.edit', 'approval-material.update']);
+
+            case Notification::TYPE_WORKPLAN_REQUEST:
+                return $user->hasPermission('workplan.index')
+                    && $user->hasAnyPermission(['workplan.create', 'workplan.edit']);
+
+            case Notification::TYPE_PROJECT_MANAGEMENT_REQUEST:
+                return $user->hasPermission('project-management.index')
+                    && $user->hasAnyPermission(['project-management.update-stage', 'project-management.show']);
+
+            default:
+                $actionUrl = $data['action_url'] ?? '';
+                if (is_string($actionUrl) && str_starts_with($actionUrl, '/cashflow')) {
+                    return $user->hasPermission('cashflow.index') && $user->hasAnyPermission(['cashflow.create', 'cashflow.edit']);
+                }
+                return false;
+        }
+    }
+
+    /**
      * Handle notification response based on type
      */
     public function handleResponse(Request $request, $id)
     {
+        $user = auth()->user();
         $notification = Notification::where('id', $id)
             ->where('user_id', auth()->id())
             ->firstOrFail();
@@ -167,6 +273,18 @@ class NotificationController extends Controller
             return redirect($actionUrl);
         }
 
+        // Explicit "Detail Order" click OR user is Marketing / non-action role (bukan melakukan aksi terhadap update data)
+        $canUpdateData = $this->canUserUpdateStageData($user, $notification->type, $notification->data ?? []);
+        if ($request->boolean('is_detail_only') || !$canUpdateData) {
+            // If Kepala Marketing is assigned to this order, also record Marketing Response automatically so KPI/TaskResponse is fulfilled
+            if ($user && $user->role && $user->role->nama_role === 'Kepala Marketing' && $this->ensureOriginalKepalaMarketing($order) === null) {
+                return $this->handleMarketingResponse($notification, $order);
+            }
+
+            return redirect()->route('order.show', $order->id)
+                ->with('info', 'Menampilkan detail order.');
+        }
+
         // Handle different notification types
         switch ($notification->type) {
             case Notification::TYPE_SURVEY_REQUEST:
@@ -191,6 +309,7 @@ class NotificationController extends Controller
                 return $this->handleItemPekerjaanRequest($order);
 
             case Notification::TYPE_RAB_INTERNAL_REQUEST:
+            case 'approval_rab_update':
                 return $this->handleRabInternalRequest($order);
 
             case Notification::TYPE_KONTRAK_REQUEST:
@@ -229,8 +348,8 @@ class NotificationController extends Controller
                     }
                     return redirect($actionUrl);
                 }
-                return redirect()->route('notifications.index')
-                    ->with('error', 'Unknown notification type.');
+                return redirect()->route('order.show', $order->id)
+                    ->with('info', 'Menampilkan detail order.');
         }
     }
 }

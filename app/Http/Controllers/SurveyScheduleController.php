@@ -18,20 +18,39 @@ class SurveyScheduleController extends Controller
         $isProjectManager = $user->role_id == \App\Models\Role::getProjectManagerRoleId() || ($user->role && $user->role->nama_role === 'Project Manager');
         $isAdmin = $user->role && $user->role->nama_role === 'Admin';
 
-        // USER YANG BOLEH IKUT SURVEY
-        $desainerId = \App\Models\Role::getDesainerRoleId();
-        $kmId = \App\Models\Role::getKepalaMarketingRoleId();
-        $surveyUsers = User::where(function ($q) use ($desainerId, $kmId) {
-            $q->whereHas('role', fn($rq) => $rq->whereIn('nama_role', [
-                'Surveyor',
-                'Drafter',
-                'Supervisi',
-                'Project Manager',
-            ]))
-            ->orWhereIn('role_id', [$desainerId, $kmId]);
-        })->select('id', 'name', 'email')->get();
+        // USER YANG BOLEH IKUT SURVEY (gunakan Role ID + multi-role pivot agar tahan perubahan nama role)
+        $allowedRoleIds = [
+            \App\Models\Role::getSurveyorRoleId(),
+            \App\Models\Role::getDrafterRoleId(),
+            \App\Models\Role::getEstimatorRoleId(),
+            \App\Models\Role::getSupervisorRoleId(),
+            \App\Models\Role::getProjectManagerRoleId(),
+            \App\Models\Role::getDesainerRoleId(),
+            \App\Models\Role::getKepalaMarketingRoleId(),
+        ];
+        $surveyUsers = User::with(['role:id,nama_role', 'roles:id,nama_role'])
+            ->where(function ($q) use ($allowedRoleIds) {
+                $q->whereIn('role_id', $allowedRoleIds)
+                    ->orWhereHas('roles', fn($rq) => $rq->whereIn('roles.id', $allowedRoleIds))
+                    ->orWhereHas('role', fn($rq) => $rq->whereIn('nama_role', [
+                        'Surveyor',
+                        'Drafter',
+                        'Supervisor',
+                        'Supervisi',
+                        'Project Manager',
+                        'Estimator',
+                    ]));
+            })
+            ->select('id', 'name', 'email', 'role_id')
+            ->get()
+            ->map(fn($u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'role_name' => $u->role?->nama_role ?? $u->roles->pluck('nama_role')->first(),
+            ]);
 
-        $orders = Order::with(['surveyUsers:id,name'])
+        $orders = Order::with(['surveyUsers:id,name', 'users:id,name'])
             ->visibleToSurveyUser($user)
             ->where(function ($query) {
                 $query->whereRaw("LOWER(payment_status) LIKE '%dp%'")
@@ -58,6 +77,7 @@ class SurveyScheduleController extends Controller
                     'id' => $u->id,
                     'name' => $u->name,
                 ]),
+                'order_team_user_ids' => $o->users->pluck('id')->values(),
             ]);
 
         return Inertia::render('SurveySchedule/Index', [

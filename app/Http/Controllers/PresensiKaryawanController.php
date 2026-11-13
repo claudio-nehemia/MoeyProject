@@ -36,6 +36,8 @@ class PresensiKaryawanController extends Controller
         }
 
         $presensiData = $query->orderBy('presensi.tanggal', 'desc')
+            ->orderByRaw('presensi.jam_in IS NULL ASC')
+            ->orderBy('presensi.jam_in', 'asc')
             ->paginate(15)
             ->withQueryString();
 
@@ -76,7 +78,10 @@ class PresensiKaryawanController extends Controller
             });
         }
 
-        $records = $query->orderBy('presensi.tanggal', 'desc')->get();
+        $records = $query->orderBy('presensi.tanggal', 'desc')
+            ->orderByRaw('presensi.jam_in IS NULL ASC')
+            ->orderBy('presensi.jam_in', 'asc')
+            ->get();
 
         $headers = [
             'Content-Type' => 'text/csv',

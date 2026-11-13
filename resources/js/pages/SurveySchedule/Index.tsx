@@ -12,6 +12,7 @@ interface SurveyUser {
   id: number;
   name: string;
   email?: string;
+  role_name?: string | null;
 }
 
 interface Order {
@@ -25,6 +26,7 @@ interface Order {
   pm_survey_response_time: string | null;
   pm_survey_response_by: string | null;
   survey_users: SurveyUser[];
+  order_team_user_ids?: number[];
 }
 
 interface TaskResponse {
@@ -57,6 +59,13 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing, isProjec
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('semua');
   const [workTab, setWorkTab] = useState<'belum' | 'sudah'>('belum');
+  const [focusedOrderId, setFocusedOrderId] = useState<number | null>(() => {
+    if (typeof window !== 'undefined') {
+      const param = new URLSearchParams(window.location.search).get('order_id');
+      return param ? Number(param) : null;
+    }
+    return null;
+  });
 
   const isOrderScheduled = (o: Order) => Boolean(o.tanggal_survey && o.survey_users && o.survey_users.length > 0);
 
@@ -70,8 +79,24 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing, isProjec
     [orders]
   );
 
+  useEffect(() => {
+    if (focusedOrderId) {
+      const target = orders.find(o => o.id === focusedOrderId);
+      if (target) {
+        const scheduled = isOrderScheduled(target);
+        setWorkTab(scheduled ? 'sudah' : 'belum');
+        if (!scheduled && canSetScheduleDirectly) {
+          openModal(target);
+        }
+      }
+    }
+  }, [focusedOrderId, orders]);
+
   const filteredOrders = useMemo(() =>
     orders.filter(order => {
+      if (focusedOrderId && order.id !== focusedOrderId) {
+        return false;
+      }
       const isCompleted = isOrderScheduled(order);
       const matchesWorkTab = workTab === 'belum' ? !isCompleted : isCompleted;
       if (!matchesWorkTab) return false;
@@ -94,7 +119,7 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing, isProjec
         order.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }),
-    [orders, searchQuery, statusFilter, workTab]
+    [orders, searchQuery, statusFilter, workTab, focusedOrderId]
   );
 
   useEffect(() => {
@@ -223,6 +248,36 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing, isProjec
           <p className="text-stone-600 mb-6">
             Order yang perlu dijadwalkan survey
           </p>
+
+          {/* Focused Order Detail Banner */}
+          {focusedOrderId && (
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-200 bg-sky-50/90 px-5 py-3.5 shadow-sm">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-sky-600 text-xs font-bold text-white">
+                  #{focusedOrderId}
+                </span>
+                <div>
+                  <p className="text-sm font-bold text-sky-950">
+                    Menampilkan Jadwal Survey:{' '}
+                    {orders.find((o) => o.id === focusedOrderId)?.nama_project || `Order #${focusedOrderId}`}
+                  </p>
+                  <p className="text-xs text-sky-800">
+                    Detail jadwal survey proyek telah dibuka otomatis dari notifikasi.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setFocusedOrderId(null);
+                  window.history.replaceState({}, '', window.location.pathname);
+                }}
+                className="rounded-xl border border-sky-300 bg-white px-3.5 py-2 text-xs font-semibold text-sky-900 shadow-sm transition-colors hover:bg-sky-100"
+              >
+                Tampilkan Semua Proyek
+              </button>
+            </div>
+          )}
 
           {/* Work Status Tabs */}
           <WorkStatusTabs
@@ -458,24 +513,41 @@ export default function Index({ orders, surveyUsers, isKepalaMarketing, isProjec
               {/* USER PICKER */}
               <label className="block mb-2 font-semibold">Tim Survey</label>
               <div className="space-y-2 mb-6 max-h-60 overflow-y-auto">
-                {surveyUsers.map(user => (
-                  <div
-                    key={user.id}
-                    onClick={() => toggleUser(user.id)}
-                    className={`cursor-pointer rounded-lg border p-3 transition ${
-                      selectedUsers.includes(user.id)
-                        ? 'border-indigo-500 bg-indigo-50'
-                        : 'hover:border-stone-300'
-                    }`}
-                  >
-                    <div className="font-medium">{user.name}</div>
-                    {user.email && (
-                      <div className="text-sm text-stone-500">
-                        {user.email}
+                {surveyUsers.map(user => {
+                  const isInitialTeam = selectedOrder.order_team_user_ids?.includes(user.id);
+                  return (
+                    <div
+                      key={user.id}
+                      onClick={() => toggleUser(user.id)}
+                      className={`cursor-pointer rounded-lg border p-3 transition ${
+                        selectedUsers.includes(user.id)
+                          ? 'border-indigo-500 bg-indigo-50'
+                          : 'hover:border-stone-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-medium">{user.name}</div>
+                        <div className="flex items-center gap-1.5">
+                          {isInitialTeam && (
+                            <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                              Tim Awal
+                            </span>
+                          )}
+                          {user.role_name && (
+                            <span className="rounded bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-600">
+                              {user.role_name}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      {user.email && (
+                        <div className="text-sm text-stone-500">
+                          {user.email}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               {/* ACTIONS */}

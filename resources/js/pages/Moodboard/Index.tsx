@@ -5,7 +5,7 @@ import Sidebar from '@/components/Sidebar';
 import WorkStatusTabs from '@/components/WorkStatusTabs';
 import { Head, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import MoodboardFilterBar from './components/MoodboardFilterBar';
 import MoodboardTable from './components/MoodboardTable';
 import { Order, TaskResponse } from './types';
@@ -38,6 +38,14 @@ export default function Index({ orders }: PageProps) {
     const [modalMode, setModalMode] = useState<'create' | 'upload-kasar' | 'revise'>('create');
     const [filteredOrders, setFilteredOrders] = useState(orders);
     const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
+    const [focusedOrderId, setFocusedOrderId] = useState<number | null>(() => {
+        if (typeof window !== 'undefined') {
+            const param = new URLSearchParams(window.location.search).get('order_id');
+            return param ? Number(param) : null;
+        }
+        return null;
+    });
+    const autoOpenedOrderRef = useRef<number | null>(null);
     
     // State untuk dua jenis TaskResponse
     const [taskResponses, setTaskResponses] = useState<Record<number, { regular?: TaskResponse; marketing?: TaskResponse }>>({});
@@ -138,7 +146,48 @@ export default function Index({ orders }: PageProps) {
     }, [orders]);
 
     useEffect(() => {
+        if (focusedOrderId) {
+            const target = orders.find((o) => o.id === focusedOrderId);
+            if (target) {
+                setWorkTab(target.moodboard?.status === 'approved' ? 'sudah' : 'belum');
+                setExpandedCards(new Set([target.id]));
+
+                const actionParam = typeof window !== 'undefined'
+                    ? new URLSearchParams(window.location.search).get('action')
+                    : null;
+                const needsUpload =
+                    target.moodboard &&
+                    target.moodboard.status !== 'approved' &&
+                    (actionParam === 'upload' ||
+                        (target.moodboard.kasar_files?.length ?? 0) === 0 ||
+                        target.moodboard.status === 'revisi');
+
+                if (isNotKepalaMarketing && needsUpload && autoOpenedOrderRef.current !== target.id) {
+                    autoOpenedOrderRef.current = target.id;
+                    setSelectedOrder(target);
+                    setModalMode('upload-kasar');
+                    setShowModal(true);
+
+                    if (typeof window !== 'undefined' && actionParam) {
+                        const params = new URLSearchParams(window.location.search);
+                        params.delete('action');
+                        const nextQuery = params.toString();
+                        window.history.replaceState(
+                            {},
+                            '',
+                            nextQuery ? `${window.location.pathname}?${nextQuery}` : window.location.pathname,
+                        );
+                    }
+                }
+            }
+        }
+    }, [focusedOrderId, orders, isNotKepalaMarketing]);
+
+    useEffect(() => {
         const filtered = orders.filter((order) => {
+            if (focusedOrderId && order.id !== focusedOrderId) {
+                return false;
+            }
             const matchesWorkTab = workTab === 'belum' 
                 ? order.moodboard?.status !== 'approved' 
                 : order.moodboard?.status === 'approved';
@@ -162,7 +211,7 @@ export default function Index({ orders }: PageProps) {
             return matchesWorkTab && matchesSearch && matchesStatus;
         });
         setFilteredOrders(filtered);
-    }, [searchQuery, statusFilter, workTab, orders]);
+    }, [searchQuery, statusFilter, workTab, orders, focusedOrderId]);
 
     const formatDeadline = (value: string | null | undefined) => {
         if (value == null || value === '') return '-';
@@ -192,7 +241,7 @@ export default function Index({ orders }: PageProps) {
         router.post(`/moodboard/response/${order.id}`, {}, {
             preserveScroll: true,
             onSuccess: () => {
-                router.visit(window.location.pathname, {
+                router.visit(`/moodboard?order_id=${order.id}&action=upload`, {
                     preserveScroll: true,
                     preserveState: false,
                 });
@@ -270,6 +319,36 @@ export default function Index({ orders }: PageProps) {
                         </p>
                     </div>
 
+                    {/* Focused Order Detail Banner */}
+                    {focusedOrderId && (
+                        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-200 bg-violet-50/90 px-5 py-3.5 shadow-sm">
+                            <div className="flex items-center gap-3">
+                                <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-violet-600 text-xs font-bold text-white">
+                                    #{focusedOrderId}
+                                </span>
+                                <div>
+                                    <p className="text-sm font-bold text-violet-950">
+                                        Menampilkan Detail Moodboard:{' '}
+                                        {orders.find((o) => o.id === focusedOrderId)?.nama_project || `Order #${focusedOrderId}`}
+                                    </p>
+                                    <p className="text-xs text-violet-700">
+                                        Detail proyek telah dibuka otomatis dari notifikasi.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setFocusedOrderId(null);
+                                    window.history.replaceState({}, '', window.location.pathname);
+                                }}
+                                className="rounded-xl border border-violet-300 bg-white px-3.5 py-2 text-xs font-semibold text-violet-800 shadow-sm transition-colors hover:bg-violet-100"
+                            >
+                                Tampilkan Semua Proyek
+                            </button>
+                        </div>
+                    )}
+
                     {/* Work Status Tabs */}
                     <WorkStatusTabs
                         activeTab={workTab}
@@ -307,13 +386,13 @@ export default function Index({ orders }: PageProps) {
             </main>
 
             {/* Moodboard Modal */}
-            {selectedOrder && taskResponses[selectedOrder.id]?.regular && (
+            {selectedOrder && (
                 <MoodboardModal
                     show={showModal}
                     order={selectedOrder}
                     mode={modalMode}
                     onClose={closeModal}
-                    taskResponse={taskResponses[selectedOrder.id]!.regular!}
+                    taskResponse={taskResponses[selectedOrder.id]?.regular}
                     onShowExtendModal={(orderId, tahap) => {
                         const task = taskResponses[orderId]?.regular;
                         if (task) setShowExtendModal({ orderId, tahap, isMarketing: false, taskResponse: task });

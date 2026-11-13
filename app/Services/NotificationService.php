@@ -344,10 +344,18 @@ class NotificationService
     public function sendEstimasiRequestNotification(Order $order)
     {
         if ($this->dispatchDynamicNotification('stage_estimasi', $order, Notification::TYPE_ESTIMASI_REQUEST, ['action_url' => '/estimasi'])) return;
-        // Get ALL users with Estimator role
-        $estimators = User::whereHas('role', function ($query) {
-            $query->where('nama_role', 'Estimator');
+        // Get estimators from order team first, fallback to all Estimators
+        $estimatorRoleId = \App\Models\Role::getEstimatorRoleId();
+        $estimators = $order->users()->where(function ($query) use ($estimatorRoleId) {
+            $query->where('role_id', $estimatorRoleId)
+                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $estimatorRoleId));
         })->get();
+        if ($estimators->isEmpty()) {
+            $estimators = User::where(function ($query) use ($estimatorRoleId) {
+                $query->where('role_id', $estimatorRoleId)
+                    ->orWhereHas('roles', fn($q) => $q->where('roles.id', $estimatorRoleId));
+            })->get();
+        }
 
         foreach ($estimators as $estimator) {
             $notification = Notification::create([
@@ -593,10 +601,18 @@ class NotificationService
     public function sendRabInternalRequestNotification(Order $order)
     {
         if ($this->dispatchDynamicNotification('stage_rab_internal', $order, Notification::TYPE_RAB_INTERNAL_REQUEST, ['action_url' => '/rab-internal'])) return;
-        // Get estimator from order team
-        $estimators = User::whereHas('role', function ($query) {
-            $query->where('nama_role', 'Estimator');
+        // Get estimator from order team first, fallback to all Estimators
+        $estimatorRoleId = \App\Models\Role::getEstimatorRoleId();
+        $estimators = $order->users()->where(function ($query) use ($estimatorRoleId) {
+            $query->where('role_id', $estimatorRoleId)
+                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $estimatorRoleId));
         })->get();
+        if ($estimators->isEmpty()) {
+            $estimators = User::where(function ($query) use ($estimatorRoleId) {
+                $query->where('role_id', $estimatorRoleId)
+                    ->orWhereHas('roles', fn($q) => $q->where('roles.id', $estimatorRoleId));
+            })->get();
+        }
 
         foreach ($estimators as $estimator) {
             $notification = Notification::create([
@@ -1025,8 +1041,8 @@ class NotificationService
                 'user_id' => $drafter->id,
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_APPROVAL_MATERIAL_REQUEST,
-                'title' => 'Approval Material Request - ' . $order->nama_project,
-                'message' => 'Gambar kerja telah selesai untuk project "' . $order->nama_project . '". Silakan lakukan approval material.',
+                'title' => 'Gambar Kerja Final Request - ' . $order->nama_project,
+                'message' => 'Meeting vendor telah selesai untuk project "' . $order->nama_project . '". Silakan upload gambar kerja final.',
                 'data' => [
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
@@ -1056,8 +1072,8 @@ class NotificationService
                 'user_id' => $pm->id,
                 'order_id' => $order->id,
                 'type' => Notification::TYPE_APPROVAL_MATERIAL_REQUEST,
-                'title' => 'Approval Material Request - ' . $order->nama_project,
-                'message' => 'Gambar kerja telah selesai untuk project "' . $order->nama_project . '". Drafter sedang melakukan approval material.',
+                'title' => 'Gambar Kerja Final Request - ' . $order->nama_project,
+                'message' => 'Meeting vendor telah selesai untuk project "' . $order->nama_project . '". Drafter sedang mengunggah gambar kerja final.',
                 'data' => [
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
@@ -1163,9 +1179,17 @@ class NotificationService
             $query->where('id', \App\Models\Role::getKepalaMarketingRoleId());
         })->get();
 
-        $estimators = User::whereHas('role', function ($query) {
-            $query->where('nama_role', 'Estimator');
+        $estimatorRoleId = \App\Models\Role::getEstimatorRoleId();
+        $estimators = $order->users()->where(function ($query) use ($estimatorRoleId) {
+            $query->where('role_id', $estimatorRoleId)
+                ->orWhereHas('roles', fn($q) => $q->where('roles.id', $estimatorRoleId));
         })->get();
+        if ($estimators->isEmpty()) {
+            $estimators = User::where(function ($query) use ($estimatorRoleId) {
+                $query->where('role_id', $estimatorRoleId)
+                    ->orWhereHas('roles', fn($q) => $q->where('roles.id', $estimatorRoleId));
+            })->get();
+        }
 
         // Merge both collections
         $users = $kepalaMarketingInTeam->merge($estimators);
@@ -1340,7 +1364,7 @@ class NotificationService
             'gambar_kerja' => 'Gambar Kerja',
             'meeting_vendor' => 'Meeting Vendor',
             'meeting_approval' => 'Meeting Vendor',
-            'approval_material' => 'Approval Material',
+            'approval_material' => 'Gambar Kerja Final',
             'workplan' => 'Workplan',
             'produksi' => 'Produksi',
         ];
@@ -1571,7 +1595,7 @@ class NotificationService
                 'order_id' => $order->id,
                 'type' => 'fee_reminder',
                 'title' => "💰 Reminder Fee Proyek - {$order->nama_project}",
-                'message' => "Fee Team/PM untuk project \"{$order->nama_project}\" harus segera disetujui ({$daysOffset} hari setelah Meeting Approval Material).",
+                'message' => "Fee Team/PM untuk project \"{$order->nama_project}\" harus segera disetujui ({$daysOffset} hari setelah Gambar Kerja Final).",
                 'data' => [
                     'order_name' => $order->nama_project,
                     'customer_name' => $order->customer_name,
